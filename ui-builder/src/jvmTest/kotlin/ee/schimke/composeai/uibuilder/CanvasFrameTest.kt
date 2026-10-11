@@ -13,10 +13,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The canvas frames a Wear widget by its host container, not by the environment.
- *
- * Widget designs carry the phone fixture's 1280x800dp environment, and framing by it drew the
- * widget as a small tile in the middle of an empty tablet that "Fit" then fitted.
+ * The canvas frames a Wear widget by its host container, not by the environment (widget designs
+ * carry the phone fixture's 1280x800dp).
  */
 class CanvasFrameTest {
   private val tablet =

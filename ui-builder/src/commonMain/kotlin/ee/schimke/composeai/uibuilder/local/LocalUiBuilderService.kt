@@ -50,24 +50,15 @@ fun interface LocalCatalogSource {
 }
 
 /**
- * The UI-builder service, in the page.
+ * The UI-builder service, in the page. Answers the same released v1 requests as the server, from
+ * designs held in this browser's storage, so the editor is the same editor talking to an in-process
+ * service.
  *
- * It answers the same released v1 requests the server answers, from designs held in this browser's
- * storage, so the editor above it is the *same editor* — same protocol client, same drain loop,
- * same revision bookkeeping — talking to a service that happens to be a few frames down its own
- * call stack instead of across a socket. The alternative was a second editor host wired to the
- * reducer directly, which would have been a second implementation of every ordering rule the live
- * session already got right.
+ * Access control, catalog upgrades, deltas and exports are refused by name (see [unsupported]):
+ * they're meaningless for a single-browser design or need the server.
  *
- * What it deliberately does not answer: access control, catalog upgrades, deltas and exports. Those
- * are either meaningless for a design only this browser has (there is nobody to share it with) or
- * they are work the server does that a Wasm page cannot (rendering a PNG). Each is refused by name
- * rather than by silence — see [unsupported].
- *
- * Catalogs are the one thing it cannot make up. A design is meaningless without the component
- * capabilities it is pinned to, so those come from [catalogs], which the browser backs with a
- * network-first, storage-second source: online, the catalog is fetched and remembered; offline, the
- * remembered one opens the design.
+ * Catalogs come from [catalogs], backed network-first then storage, so offline sessions open
+ * remembered catalogs.
  */
 class LocalUiBuilderService(
   private val store: LocalDesignStore,
@@ -83,8 +74,7 @@ class LocalUiBuilderService(
 
   /**
    * Another tab of this browser wrote (or deleted) [designId]. An open session for it stops saving
-   * ([LocalDesignSession.changedElsewhere]); returns whether one was open, which is when the editor
-   * has something to tell the person.
+   * ([LocalDesignSession.changedElsewhere]); returns whether one was open.
    */
   fun changedElsewhere(designId: String): Boolean {
     val session = sessions[designId] ?: return false
@@ -115,10 +105,8 @@ class LocalUiBuilderService(
     }
 
   /**
-   * Creates a design this browser did not already hold.
-   *
-   * Refuses one it does, for the reason the server's `PUT` refuses it: create is not replace, and a
-   * "New design" that silently overwrote a design of the same name would lose work with no undo.
+   * Creates a design this browser did not already hold; refuses an existing id, as the server's
+   * `PUT` does (create is not replace).
    */
   suspend fun create(document: UiBuilderDocument): UiBuilderResponseV1 {
     val catalogSystemId =
@@ -246,11 +234,8 @@ class LocalUiBuilderService(
   }
 
   /**
-   * The open session for [designId], replayed from storage the first time it is asked for.
-   *
-   * Kept for the life of the page: replaying a log is cheap once and wasteful on every keystroke,
-   * and the reducer state it produces — tombstones, the compensation history undo reads — is what
-   * makes a second edit behave like the first.
+   * The open session for [designId], replayed from storage the first time and kept for the page's
+   * life (the reducer state carries undo history).
    */
   private suspend fun openSession(designId: String): LocalDesignSession? {
     sessions[designId]?.let {
@@ -270,13 +255,8 @@ class LocalUiBuilderService(
   }
 
   /**
-   * The same catalog rules the server admits a mutation against, or none when the catalog is not
-   * available.
-   *
-   * "None" is the honest state rather than a refusal to open: the editor validates every edit
-   * against the catalog it is drawing with before it submits one, so an offline session whose
-   * catalog could not be loaded has already failed to open a canvas — there is nothing left for a
-   * second validator to protect.
+   * The same catalog rules the server admits a mutation against, or none when the catalog is
+   * unavailable (the editor already validates each edit against the catalog it draws with).
    */
   private suspend fun validatorsFor(catalogSystemId: String): LocalDesignValidators {
     val capability = catalogFor(catalogSystemId) ?: return LocalDesignValidators()
@@ -300,14 +280,9 @@ class LocalUiBuilderService(
     }
 
   /**
-   * [read] answered, or an error naming the stored design as unreadable.
-   *
-   * The stored record decodes loosely — a node's properties are kept as JSON — so a value the
-   * protocol's types do not know (a `"type"` no `UiValueV1` subclass declares) survives the read
-   * and only throws when the session projects the document to the protocol's strict shape. Thrown
-   * out of here, it ended the editor's open coroutine with nothing but a console line and left the
-   * boot screen up forever. As a service error it reaches the editor the way a hosted server's
-   * refusal does, and the editor already shows that.
+   * [read] answered, or an error naming the stored design as unreadable. Loosely decoded records
+   * can throw when projected to the strict protocol shape; returned as a service error, the editor
+   * shows it instead of hanging at the boot screen.
    */
   private inline fun readable(
     designId: String,
@@ -346,13 +321,7 @@ class LocalUiBuilderService(
   }
 }
 
-/**
- * The catalog a candidate document is pinned to.
- *
- * `catalogPin` is carried untyped on [UiBuilderDocument] — the renderer model keeps the protocol's
- * own shapes as JSON rather than restating them — so the one field this service needs is read out
- * rather than the whole pin being decoded.
- */
+/** The catalog a candidate document is pinned to, read from the untyped `catalogPin`. */
 private fun JsonObject.systemId(): String? = (this["systemId"] as? JsonPrimitive)?.contentOrNull
 
 private fun DesignSubmissionV1.designId(): String =

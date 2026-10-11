@@ -16,12 +16,9 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 
 /**
- * A design draws the same whatever content colour its host sets.
- *
- * `UiBuilderSurface` installs the design's `MaterialTheme`, which sets no content colour, so text
- * with no colour of its own inherited the host's: light on the editor canvas, whose chrome is dark,
- * and black inside a device pane's scene, where no local crosses. A Wear widget label was white in
- * one and black beside it.
+ * A design draws the same whatever content colour its host sets: `UiBuilderSurface` must set the
+ * design's own content colour, since its `MaterialTheme` sets none and uncoloured text would
+ * otherwise inherit the editor's or a device scene's.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class SurfaceContentColorTest {

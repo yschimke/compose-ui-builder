@@ -10,11 +10,8 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
 /**
- * The one thing an offline session cannot derive.
- *
- * A design is component ids and property values; the catalog is what they mean. Without a
- * remembered copy, a reload with the server unreachable has a document it cannot draw, so this is
- * the piece that decides whether "mostly offline" is true at all.
+ * The one thing an offline session can't derive: the catalog that gives a design's ids and values
+ * meaning. Without a remembered copy, an offline reload has a document it can't draw.
  */
 class CachingLocalCatalogSourceTest {
   private val storage = InMemoryLocalDesignStorage()

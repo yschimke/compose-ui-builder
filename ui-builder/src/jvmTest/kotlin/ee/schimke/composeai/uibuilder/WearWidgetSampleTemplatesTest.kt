@@ -16,11 +16,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The two worked Wear widget designs, checked against the catalog they claim.
- *
- * Validation is the whole point of the test: a template is the one document an author never wrote,
- * so nothing else would catch a property the catalog does not declare or a child a slot refuses —
- * it would open as an editor full of issues.
+ * The two worked Wear widget designs, validated against the catalog they claim (templates are
+ * documents nobody authored, so nothing else catches their mistakes).
  */
 class WearWidgetSampleTemplatesTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
@@ -31,12 +28,8 @@ class WearWidgetSampleTemplatesTest {
       .document
 
   /**
-   * Each sample, host scaffold and all, validates against the `remote-m3` catalog it is offered
-   * for.
-   *
-   * Its text is `remote-m3/remote-text`, the id the published catalog declares, rather than the
-   * borrowed `m3/text`, which the published catalog does not: a sample naming it was refused as
-   * `UNKNOWN_COMPONENT` on creation.
+   * Each sample, host scaffold and all, validates against `remote-m3`; its text is
+   * `remote-m3/remote-text`, which the published catalog declares (not the borrowed `m3/text`).
    */
   @Test
   fun `both samples validate against the remote-m3 catalog`() {
@@ -98,8 +91,8 @@ class WearWidgetSampleTemplatesTest {
   }
 
   /**
-   * A blank widget declares no background, so the scaffold's own default has to be the one
-   * `WearWidgetContainer` applies — nothing in the document says it.
+   * A blank widget declares no background, so the scaffold's default must be
+   * `WearWidgetContainer`'s.
    */
   @Test
   fun `an empty widget template declares no container properties at all`() {

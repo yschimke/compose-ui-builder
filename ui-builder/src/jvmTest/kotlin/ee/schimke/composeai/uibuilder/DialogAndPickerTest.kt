@@ -26,14 +26,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The dialog and the two pickers: what they arrive holding, and what they generate.
- *
- * The three share one property the rest of the catalog does not have to think about — **a render
- * must not depend on when it happens**. A date picker opens on the current month and rings today's
- * cell, and a time picker's state defaults to the current time, so all three of the golden lanes
- * (the committed renders, the visual diff, the SVG export) would see a component that changed by
- * itself. Every test here that pins a date or an hour is testing that, not a preference about which
- * day to show.
+ * The dialog and the two pickers: what they arrive holding, and what they generate. **A render must
+ * not depend on when it happens**: date and time pickers default to the current date and time,
+ * which would change committed renders, visual diffs and SVG exports by themselves. Pinned dates
+ * and hours test that.
  */
 class DialogAndPickerTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -166,9 +162,8 @@ class DialogAndPickerTest {
       properties.fold(inserted.first) { state, (name, value) ->
         reducer.reduce(state, UiBuilderEditorEvent.CommitProperty(inserted.second, name, value))
       }
-    // The whole design, with the new node inside it, rather than the node re-rooted: the export
-    // validates the graph, and a document whose root is a node that is also somebody's child is a
-    // document it correctly refuses.
+    // Export the whole design, not the node re-rooted: a root that is also someone's child is
+    // correctly refused.
     return CapabilityComposeCodeExporter.export(edited.document, catalog).requireSource()
   }
 

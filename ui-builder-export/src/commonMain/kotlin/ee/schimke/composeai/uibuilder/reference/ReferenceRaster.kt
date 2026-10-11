@@ -9,13 +9,8 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Pixels the editor can reason about, with no Compose and no platform in sight.
- *
- * Everything that *measures* the reference — the diff, the ink boxes, the layer match — runs over
- * this type, so it runs identically in a browser, on the desktop and in a JVM test that builds its
- * pictures out of rectangles. The Compose half
- * ([ImageBitmap][androidx.compose.ui.graphics.ImageBitmap] in, a raster out) is one function in
- * `ReferenceMeasure.kt`.
+ * Platform-free pixels: the diff, ink boxes and layer match all run over this type, identically in
+ * a browser, on desktop and in JVM tests. The Compose conversion lives in `ReferenceMeasure.kt`.
  *
  * [pixels] are `0xAARRGGBB`, row-major, unpremultiplied.
  */
@@ -58,12 +53,8 @@ data class RasterRect(val left: Int, val top: Int, val right: Int, val bottom: I
 
 /**
  * [source] resampled onto a [gridWidth] × [gridHeight] grid, landing in the grid rectangle
- * [left]..[right] × [top]..[bottom] (fractional grid pixels). Grid pixels it does not cover are
- * transparent.
- *
- * Each grid pixel averages up to 4 × 4 source samples from its footprint rather than taking the
- * nearest one: a 3× screenshot brought down to one sample per dp otherwise aliases text into a
- * different shape from the canvas's, and every comparison after that measures the aliasing.
+ * [left]..[right] × [top]..[bottom] (fractional grid pixels); uncovered pixels are transparent.
+ * Each grid pixel averages up to 4 × 4 source samples, so downscaled text does not alias.
  */
 fun resampleOnto(
   source: ReferenceRaster,
@@ -117,9 +108,7 @@ fun resampleOnto(
 }
 
 /**
- * Luminance, composited over white, 0..255. Transparent pixels read as white: a design with no
- * background of its own is drawn on the canvas's white, and a mock exported with a transparent
- * background was designed on one.
+ * Luminance, composited over white, 0..255; transparent reads as white, the canvas's background.
  */
 internal fun ReferenceRaster.luma(): IntArray =
   IntArray(pixels.size) { index ->
@@ -152,11 +141,8 @@ data class ReferenceDiffRegion(
 )
 
 /**
- * How far the design is from the reference, and where.
- *
- * [mismatch] is over the pixels both pictures cover; [coverage] is how much of the frame that is,
- * because "2% different" over a tenth of the screen is a different claim from the same figure over
- * all of it.
+ * How far the design is from the reference, and where. [mismatch] is over the pixels both cover;
+ * [coverage] is how much of the frame that is.
  */
 data class ReferenceDiffReport(
   val coverage: Float,
@@ -170,17 +156,10 @@ data class ReferenceDiffReport(
 }
 
 /**
- * Compare two frame-aligned rasters of the same size.
- *
- * Only pixels inside [coverage] — where the reference is placed — are compared: outside a cropped
- * component or below a short mock there is nothing to disagree with. Inside it a transparent pixel
- * is compared as the white it sits on, because a snapshot of a design with no background of its own
- * is transparent everywhere it draws nothing, and that nothing is still a statement. A pixel
- * differs when any channel is more than [tolerance] apart, which forgives anti-aliasing and
- * colour-profile drift while still catching a wrong grey.
- *
- * Regions are found on a grid of [cellPx] cells rather than per pixel: one glyph rendered half a
- * pixel over is a hundred scattered differing pixels and is one thing to look at, not a hundred.
+ * Compare two frame-aligned rasters of the same size, only inside [coverage]. Transparent pixels
+ * compare as white. A pixel differs when any channel is more than [tolerance] apart (forgiving
+ * anti-aliasing and colour drift). Regions are found on a [cellPx] grid so one shifted glyph is
+ * one region.
  */
 fun diffRasters(
   design: ReferenceRaster,
@@ -272,12 +251,8 @@ fun diffRasters(
 }
 
 /**
- * The bounding box of whatever is drawn inside [window], or null when nothing is.
- *
- * "Drawn" means differing from the window's background, and the background is the most common
- * colour along the window's edge — the colour a label sits on is the one that surrounds it. This is
- * what lets text be compared with text: a node's box includes its line-height padding, a mock's
- * glyphs do not, and the two only agree once both are reduced to the ink.
+ * The bounding box of whatever is drawn inside [window], or null. "Drawn" means differing from
+ * the most common edge colour. Reducing both sides to ink lets text be compared with text.
  */
 fun inkBox(raster: ReferenceRaster, window: RasterRect, tolerance: Int = 48): RasterRect? {
   val w = window.clampedTo(raster.width, raster.height)
@@ -322,15 +297,9 @@ private fun quantised(p: Int): Int = (p and 0xF0F0F0F0.toInt()) or 0x08080808
 /**
  * Where the patch [rect] of [design] best lines up in [reference], and at what scale.
  *
- * A plain template search: every offset within [searchPx] of where the patch sits now, at every one
- * of [scales] (about the patch's top-left corner), scored by mean absolute luminance difference —
- * coarse at a two-pixel step, then refined at one pixel around the winner. Bounded on purpose: the
- * patch is subsampled to at most a few thousand pixels, so the whole search is a few tens of
- * millions of additions, which is milliseconds on the JVM and comfortably under a frame's worth of
- * patience in a browser.
- *
- * Null when the patch has no texture to match on — a plain surface lines up equally well
- * everywhere, and an answer would be a guess. See [RasterMatch.confident] for the other refusal.
+ * A bounded template search over offsets within [searchPx] and [scales], scored by mean absolute
+ * luminance difference, coarse then refined; the patch is subsampled so it stays fast in a
+ * browser. Null when the patch has no texture to match. See [RasterMatch.confident].
  */
 fun matchPatch(
   design: ReferenceRaster,
@@ -441,11 +410,8 @@ data class RasterMatch(
   val texture: Float,
 ) {
   /**
-   * Whether this is a match rather than the least-bad place.
-   *
-   * The residual has to be small against how much the patch varies: a dark label on white has a
-   * spread near 100, and lining it up within a few grey levels is a match, where the best spot for
-   * a label whose words differ from the mock's is still a mismatch of half that.
+   * Whether this is a match rather than the least-bad place: the residual must be small relative to
+   * the patch's own variation.
    */
   val confident: Boolean
     get() = score <= max(MATCH_FLOOR, texture * 0.35f)

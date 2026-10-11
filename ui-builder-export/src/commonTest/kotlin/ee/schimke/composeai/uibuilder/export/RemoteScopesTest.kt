@@ -11,7 +11,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The three-scope tree from the design docs, asserted node by node.
+ * The three-scope tree from the design docs, asserted node by node:
  *
  * ```
  * Column → Text → Remote Compose → RemoteColumn → Text
@@ -20,8 +20,7 @@ import kotlinx.serialization.json.putJsonObject
  *                              → Text
  * ```
  *
- * Every one of those `m3/text` nodes is the same component, and which vocabulary it is written in
- * is decided entirely by where it sits — which is the claim [RemoteScopes] exists to make good on.
+ * Every `m3/text` is the same component; only its position decides the vocabulary.
  */
 class RemoteScopesTest {
 

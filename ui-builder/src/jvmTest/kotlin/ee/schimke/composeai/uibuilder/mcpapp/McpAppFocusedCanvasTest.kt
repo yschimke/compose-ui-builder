@@ -42,11 +42,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The MCP App's focused canvas (compose-ui-builder#374), driven through [McpAppEditorScreen] — the
- * same composable the browser host shows — against a fake host.
- *
- * The design is `state-actions.uid` with the button's label made a literal "Ready", so the quick
- * editor has a text field to type in rather than a state binding to show.
+ * The MCP App's focused canvas (compose-ui-builder#374), driven through [McpAppEditorScreen]
+ * against a fake host. The design is `state-actions.uid` with the button label made a literal
+ * "Ready", so the quick editor shows a text field.
  */
 @OptIn(ExperimentalTestApi::class)
 class McpAppFocusedCanvasTest {

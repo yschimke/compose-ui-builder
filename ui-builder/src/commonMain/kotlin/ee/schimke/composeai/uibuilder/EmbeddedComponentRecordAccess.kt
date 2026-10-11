@@ -4,16 +4,10 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import kotlinx.serialization.json.Json
 
 /**
- * The component record the Compose export reads, parsed once.
- *
- * The bytes are generated from `m3-catalog-components-v1.json` by
- * `:ui-builder:embedComponentRecord` so the editor cannot judge a design against a record the
- * server does not have. Parsed lazily because it costs nothing until the problems panel is opened,
- * and cached because it is immutable.
- *
- * Unknown keys are ignored for the same reason `ComponentRecordSource` ignores them: a record from
- * a newer producer should still parse, and the version judgement belongs to the generator, which
- * refuses a schema it does not understand and says so.
+ * The component record the Compose export reads, generated from `m3-catalog-components-v1.json` by
+ * `:ui-builder:embedComponentRecord` so editor and server share it. Parsed lazily (until the
+ * problems panel opens) and cached. Unknown keys are ignored, like `ComponentRecordSource`: the
+ * generator judges schema versions.
  */
 private val recordJson = Json { ignoreUnknownKeys = true }
 

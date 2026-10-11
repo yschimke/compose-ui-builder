@@ -4,35 +4,23 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * The one component every [RemoteComposeSource] is inserted as.
- *
- * Named because three places have to agree on it: the palette asks whether the pinned catalog
- * offers it, the reducer inserts it, and the renderer plays it.
+ * The one component every [RemoteComposeSource] is inserted as; the palette, reducer and renderer
+ * must agree on it.
  */
 const val REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID: String = "remote-compose/document"
 
 /**
- * The Lottie element, named for the same reason the one above is: three places agree on it.
- *
- * `remote-m3` synthesizes the component, this editor resolves its `url` into its `json` and draws
- * it, and `RemoteContentEmitter` compiles the `json` into the exported document.
+ * The Lottie element: `remote-m3` synthesizes it, this editor resolves its `url` into `json` and
+ * draws it, and `RemoteContentEmitter` compiles the `json` into the exported document.
  */
 const val LOTTIE_COMPONENT_ID: String = "remote-m3/lottie"
 
 /**
- * One published Remote Compose document the pinned catalog offers as authoring content.
+ * One published Remote Compose document the pinned catalog offers as authoring content, as bytes
+ * for the `remote-compose/document` component's `documentBase64`.
  *
- * The `remote-compose/document` component takes its child document as a Base64 `documentBase64`
- * property, and until now nothing in the editor could produce one: the inspector offered a plain
- * text field, so embedding a real component meant pasting a couple of kilobytes of Base64 by hand.
- * A source is the missing half — the catalog's own published document, named, so adding one is the
- * same gesture as adding any other component.
- *
- * It is deliberately *not* a [ee.schimke.composeai.uibuilder.capability.ComponentCapability]. The
- * `remote-m3` catalog publishes 476 stickers; declaring each of them as a component would put the
- * whole sheet through the capability wire, the validator and the exporter to describe content that
- * is always the same component with different bytes. The component stays one; the sources are a
- * list of bytes it can be given.
+ * Not a [ee.schimke.composeai.uibuilder.capability.ComponentCapability]: `remote-m3` publishes
+ * hundreds of stickers that are all the same component with different bytes.
  *
  * @property id the preview id in the serving catalog — what `render/<id>.rc` addresses.
  * @property label the catalog's own display name for it.
@@ -41,14 +29,8 @@ const val LOTTIE_COMPONENT_ID: String = "remote-m3/lottie"
 data class RemoteComposeSource(val id: String, val label: String, val group: String)
 
 /**
- * The Remote Compose documents in a `GET /{system}/api/previews` response.
- *
- * Reads the server's `remoteCompose` flag rather than probing `render/<id>.rc` per preview: the
- * host already knows which previews carry an `ir/<id>.rc` sidecar, and a catalog of Jetpack Compose
- * previews correctly yields an empty palette instead of 476 404s.
- *
- * Tolerant of unknown keys, like every other client parse of this endpoint — the previews API grows
- * fields, and a palette that empties itself over one is worse than a palette that ignores it.
+ * The Remote Compose documents in a `GET /{system}/api/previews` response, from the server's
+ * `remoteCompose` flag (no per-preview probing). Tolerant of unknown keys.
  */
 fun parseRemoteComposeSources(previewsJson: String): List<RemoteComposeSource> =
   PREVIEWS_JSON.decodeFromString(PreviewsPayload.serializer(), previewsJson)
@@ -59,10 +41,8 @@ fun parseRemoteComposeSources(previewsJson: String): List<RemoteComposeSource> =
         it.id.substringBefore(SOURCE_GROUP_SEPARATOR, missingDelimiterValue = UNGROUPED_SOURCES)
       RemoteComposeSource(
         id = it.id,
-        // Some Remote Compose catalogs have no authored preview label and repeat the full sticker
-        // id here. That id is useful for search and diagnostics, but it is not a name: in a narrow
-        // palette every row then reads `button-child__ideal__…`. Keep a real catalog label, and
-        // turn only that technical fallback into the state words after the family separator.
+        // When the label just repeats the technical sticker id, derive a readable name from the
+        // state words after the family separator.
         label = sourceLabel(it.id, it.label),
         // Keep the stable family key for ordering and search. The panel humanises it at the final
         // presentation edge, rather than changing the identity every consumer already groups by.
@@ -70,9 +50,8 @@ fun parseRemoteComposeSources(previewsJson: String): List<RemoteComposeSource> =
       )
     }
     .distinctBy(RemoteComposeSource::id)
-    // The catalog publishes the same semantic sticker once per capture frame. A design does not:
-    // the outer UI-builder environment supplies the frame the embedded document is laid out in.
-    // Keep one fetchable id for transport, but present one component choice to the author.
+    // One choice per semantic sticker: the catalog publishes one per capture frame, but the
+    // design's environment supplies the frame.
     .groupBy(::sourceWithoutCaptureFrame)
     .values
     .map { captures ->
@@ -96,9 +75,8 @@ fun filterRemoteComposeSources(
 }
 
 /**
- * `appcard__ideal__default__compact` — the catalog's own sticker-id convention, whose first segment
- * is the component family. Used for headings only; an id without one lands under
- * [UNGROUPED_SOURCES] rather than being dropped.
+ * `appcard__ideal__default__compact`: the first segment is the component family, used for headings;
+ * ids without one go under [UNGROUPED_SOURCES].
  */
 private const val SOURCE_GROUP_SEPARATOR = "__"
 

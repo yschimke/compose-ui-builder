@@ -5,29 +5,13 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Which kind of screen a builder catalog authors for, declared by the catalog.
+ * Which kind of screen a builder catalog authors for, declared by the catalog (e.g. a phone
+ * screen, a round watch screen, a Remote Compose widget body). It decides compatibility: the New
+ * design chooser groups by it, and [UiBuilderComponentPacks] merges packs only into catalogs of the
+ * same platform.
  *
- * ## Why a catalog says this
- *
- * The builder started with one catalog and a phone screen, and every catalog since has been a
- * different *platform* rather than a different flavour of the same one: `wear-m3` authors a round
- * watch screen against Wear Compose, `remote-m3` a Wear widget body that is a Remote Compose
- * document rather than a composition. Nothing said so in data. The New design chooser listed the
- * three side by side as though they were interchangeable, and there was no way to ask the question
- * that [UiBuilderComponentPacks] needs answered — *which other component sets are compatible with
- * this design at all?* — because "compatible" is a statement about the platform, not the catalog.
- *
- * A Confetti mobile component drops into a Material 3 phone screen and compiles against the same
- * foundation; it does not drop into a Wear widget, whose body is `@RemoteComposable` and cannot
- * call it. The platform is the fact that decides that, so the catalog declares it once and both the
- * chooser and the pack merge read it.
- *
- * ## Where it lives
- *
- * `CatalogCapabilityV1.statusSemantics`, under [KEY], for the reason [UiBuilderPreviewSurfaces]
- * gives: the wire type is published from compose-preview-contracts and cannot grow a field from
- * here. A catalog that says nothing is [MOBILE], which is what every catalog was before there was
- * anything else to be.
+ * Stored in `statusSemantics` under [KEY], as [UiBuilderPreviewSurfaces] explains. A catalog that
+ * says nothing is [MOBILE].
  */
 enum class UiBuilderCatalogPlatform(
   /** The word the catalog writes. */

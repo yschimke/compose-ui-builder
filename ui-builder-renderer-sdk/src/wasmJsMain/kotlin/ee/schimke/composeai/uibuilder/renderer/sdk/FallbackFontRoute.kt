@@ -3,21 +3,13 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
 /**
- * Send Compose's text-fallback downloads to the host's Noto route instead of `fonts.gstatic.com`.
+ * Send Compose's text-fallback downloads (Noto slices for glyphs no loaded font has) to the host's
+ * [NOTO_FALLBACK_ROUTE]`/<path>` instead of `fonts.gstatic.com`, which the pages' CSP blocks. A
+ * host without the route answers 404 and the fetch falls through to gstatic.
  *
- * When no loaded font has a glyph (`∞`, `☀`, a CJK character), Compose for web picks the Noto slice
- * that covers it and fetches `https://fonts.gstatic.com/s/<path>` itself, with no way to point it
- * elsewhere. Every page this bundle runs in admits only its own origin in `connect-src`, so each of
- * those fetches was a CSP error and the glyph a tofu box. The host serves the same slice at
- * [NOTO_FALLBACK_ROUTE]`/<path>`, fetched once and kept, as it does a Google Fonts family at
- * [GOOGLE_FONTS_ROUTE]; this rewrites the fetch to it. A host without the route answers 404, and
- * the fetch then goes to gstatic as it did before, which a page that allows it still completes.
- *
- * Idempotent, and called by both font registries' factories so every editor and runtime page has it
- * before its first frame lays out text. Every other request goes to the native `fetch` with its
- * arguments and its `Response` untouched, which keeps Chromium's compiled-Wasm cache (a wrapper
- * that rebuilt Responses lost it); the wrapper carries that function as `uiBuilderNativeFetch`,
- * which is what the web smoke test checks it against.
+ * Idempotent; called by both font registries before the first text layout. Other requests go to
+ * the native `fetch` untouched (preserving Chromium's compiled-Wasm cache); the native function is
+ * kept as `uiBuilderNativeFetch` for the web smoke test.
  */
 fun routeFallbackFontsThroughHost() {
   installFallbackFontRoute(GSTATIC_FALLBACK_BASE, "$NOTO_FALLBACK_ROUTE/")

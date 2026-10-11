@@ -43,28 +43,19 @@ internal val LocalCanvasExtentInputs =
 internal fun CanvasExtentLayout(
   modifier: Modifier = Modifier,
   /**
-   * Re-probes when it changes, for content whose height is decided outside this composition.
-   *
-   * A catalog runtime's surface is sized by the editor from what the runtime last measured, not by
-   * anything that reports [CanvasExtentInputs]. Once placed at the frame's height the surface's box
-   * is measured at exactly that height, so it cannot grow this layout by itself: the editor asked
-   * the runtime for the whole column and drew one frame of it, centred. The height the editor asks
-   * for is passed here so the extent follows it.
+   * Re-probes when it changes, for content whose height is decided outside this composition (a
+   * catalog runtime's surface, sized from what the runtime last measured, can't grow this layout
+   * itself).
    */
   probeKey: Any? = null,
   content: @Composable BoxScope.() -> Unit,
 ) {
   val inputs = remember { mutableStateOf<CanvasExtentInputs?>(null) }
   val updateInputs = remember { { value: CanvasExtentInputs -> inputs.value = value } }
-  // A child constrained to the previous extent cannot resize its parent by itself. Re-probe when
-  // the document or interaction state changes, including a branch switch without a saved revision.
-  //
-  // And when a font arrives. A theme's typeface loads after the first frame, and text drawn in it
-  // can wrap to more lines than the platform face did, so the content outgrows the extent it was
-  // pinned to. Nothing in the document changed, so nothing re-probed: the overflow was clipped and
-  // whatever yields to its constraints gave way — a Wear screen's `EdgeButton`, which takes its
-  // height from what is left, drew collapsed to a pill at the end of the extent. The registry's
-  // map is one snapshot-state instance, so the key is the families in it, not the map.
+  // Re-probe when the document or interaction state changes (including branch switches without a
+  // saved revision), and when fonts arrive: a theme typeface loading after the first frame can wrap
+  // text taller, and the clipped overflow would e.g. collapse a Wear `EdgeButton`. The key is the
+  // set of family names, since the registry map is a single state instance.
   val loadedFonts = LocalUiBuilderFontFamilies.current.keys.toSet()
   val policy = remember(inputs.value, probeKey, loadedFonts) { CanvasExtentMeasurePolicy() }
   CompositionLocalProvider(LocalCanvasExtentInputs provides updateInputs) {

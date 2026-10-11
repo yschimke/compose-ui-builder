@@ -5,40 +5,19 @@ import ee.schimke.composeai.discovery.ScreenGenerator
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 
 /**
- * The one answer to "would the Compose export refuse this design, and why?".
+ * The one answer to "would the Compose export refuse this design, and why?", shared by the
+ * server's export and the editor's problems panel (possible since `screen-model` 1.77.0 is
+ * multiplatform), so the panel cannot miss a refusal.
  *
- * ## Why one
- *
- * Two things asked that question and answered it differently. The server's export ran
- * [ScreenDocumentProjection] and the real `ScreenGenerator`; the browser editor's problems panel
- * ran `CapabilityComposeCodeExporter`, which has an emitter for every catalog id. So the panel
- * could say nothing was blocking an export right up until the export refused — most often with
- * `NO_COMPONENT_RECORD`, for a component the panel had no idea was unbacked.
- *
- * They can share now, and could not before: the projection and the generator are multiplatform as
- * of `ee.schimke.composeai:screen-model` 1.77.0, so the editor reaches the same code rather than
- * approximating it.
- *
- * ## Why the constants live here
- *
- * [EXPRESSION_PACKAGES] is a **security** guard, not a formatting choice — the generator refuses
- * any reference, construct or chain link outside it rather than emitting a call into a package the
- * document's author picked. A copy of it beside a second caller is a copy that can be widened
- * without the first caller's review, which is the one kind of drift that matters here. Same for
- * [PACKAGE_NAME]: a panel judging a document against a different package than the export uses would
- * disagree on exactly the shadowing cases the generator refuses.
+ * [EXPRESSION_PACKAGES] is a security guard: the generator refuses references outside it. Keeping
+ * it (and [PACKAGE_NAME]) here means no second caller can widen it without review.
  */
 object ScreenExportGate {
 
   /** The packages a generated screen may name. Narrow on purpose; widening is a reviewed act. */
-  // Bound layout spacing uses kotlin.math.max to preserve the canvas's nonnegative gap rule, and a
-  // gradient's brush takes its colours as a `List`, which `kotlin.collections.listOf` builds. A
-  // theme's Google Fonts provider decodes Play services' certificates with
-  // `kotlin.io.encoding.Base64`: that package is the codec alone, and `kotlin.io` beside it — files
-  // —
-  // stays out, because a package is matched with its subpackages and not its parent.
-  // List-detail destinations clamp an integer state, then map it to a closed role name using
-  // Int.toString and String.replace. Only those generated expressions need ranges, text and Int.
+  // `kotlin.math` for nonnegative bound spacing; `kotlin.collections` for gradient colour lists;
+  // `kotlin.io.encoding` (the Base64 codec only — subpackages match, parents don't) for Play
+  // services' font certificates; ranges, text and Int for list-detail destination role mapping.
   val EXPRESSION_PACKAGES: Set<String> =
     setOf(
       "androidx.compose",
@@ -54,12 +33,8 @@ object ScreenExportGate {
   const val PACKAGE_NAME: String = "generated.uibuilder"
 
   /**
-   * The whole answer, rather than the half each caller happened to need first.
-   *
-   * Two surfaces want two halves of this and neither should run the generator twice to get its own:
-   * the problems panel wants [Refused.reasons], the code pane wants [Emitted.source]. A gate that
-   * could only report refusals is why the editor kept a second emitter — it had no way to ask this
-   * one for the Kotlin.
+   * The whole answer: the problems panel wants [Refused.reasons], the code pane [Emitted.source],
+   * and neither should run the generator twice.
    */
   sealed interface Outcome {
     /** The Kotlin the export would write. */
@@ -70,28 +45,24 @@ object ScreenExportGate {
   }
 
   /**
-   * What the export would produce for [document], or why it would refuse.
-   *
-   * [tagNodes] adds `Modifier.testTag("<nodeId>")` to every node. Off for anything a person keeps —
-   * an export artifact, the editor's code pane — and on only for the native preview lane, where the
-   * tag is what ties a rendered rectangle back to the node that drew it.
+   * What the export would produce for [document], or why it would refuse. [tagNodes] adds
+   * `Modifier.testTag("<nodeId>")` to every node — only for the native preview lane.
    */
   fun export(
     document: DesignDocumentV1,
     record: ComponentRecordFile?,
     tagNodes: Boolean = false,
     /**
-     * The font API a theme's typefaces are written with. The code pane keeps the default, Android's
-     * `GoogleFont`; see [TypefaceTarget] for the desktop form and who asks for it.
+     * The font API theme typefaces are written with; the code pane keeps Android's `GoogleFont`.
+     * See [TypefaceTarget].
      */
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
   ): Outcome = export(document, record, tagNodes, typefaces, VariableFontExport.None)
 
   /**
    * [export], writing each variable font text's declaration with [variableFonts] and joining it
-   * into the screen's file after it. [VariableFontExport.None] (the wasm editor's code pane) leaves
-   * the calls with a note that the declarations come at export. An overload of its own, not a
-   * default argument, to keep the published JVM descriptor above.
+   * into the file. [VariableFontExport.None] (the wasm code pane) leaves a note instead. An
+   * overload to keep the published JVM descriptor above.
    */
   fun export(
     document: DesignDocumentV1,
@@ -112,12 +83,8 @@ object ScreenExportGate {
       val projected =
         ScreenDocumentProjection.project(document, tagNodes = tagNodes, typefaces = typefaces)
     ) {
-      // Both classes, not just the one that failed first. The projection and the generator refuse
-      // for unrelated reasons — one cannot express a value, the other cannot prove a call site —
-      // and running them in sequence meant the second list was invisible until the first was
-      // empty. A design holding 29 nodes of an unrecorded component reported nothing about them
-      // while any property anywhere was unexpressible, so "119 reasons" was the cost of reaching
-      // the next list rather than the cost of fixing the export.
+      // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
+      // sequencing them hid the second list until the first was empty.
       is ScreenDocumentProjection.Outcome.Refused ->
         Outcome.Refused((projected.reasons + unprovenComponents(document, record)).distinct())
       is ScreenDocumentProjection.Outcome.Projected ->
@@ -145,18 +112,9 @@ object ScreenExportGate {
 
   /**
    * The components in [document] that no record proves a call site for, in the generator's own
-   * words.
-   *
-   * Only consulted when the projection already refused — on the other path the generator says this
-   * itself, and saying it twice would double every line. The wording is copied deliberately so the
-   * two paths report one sentence rather than two spellings of one fact; `ScreenGenerator`'s
-   * `ComponentIndex` is where it is authoritative, and this walks the same two lookups in the same
-   * order for the same reason its refusals do.
-   *
-   * It reports *only* the call-site question. Whether an argument would have been accepted needs
-   * the projected arguments, which do not exist on this path — so a component that resolves here
-   * may still refuse for a parameter once the projection passes. That is honest: this closes the
-   * gap where a whole class was silent, not every gap.
+   * words (mirroring `ScreenGenerator`'s `ComponentIndex` lookups). Only consulted when the
+   * projection already refused. Answers only the call-site question; parameter refusals may still
+   * follow.
    */
   private fun unprovenComponents(
     document: DesignDocumentV1,
@@ -204,19 +162,11 @@ object ScreenExportGate {
 }
 
 /**
- * [this] with every component also named by its callable — the canonical id without the module it
- * was discovered from.
+ * [this] with every component also named by its callable — the canonical id without its module.
  *
- * `ScreenDocumentProjection`'s variant table substitutes a callable for a node when the design
- * picks a variant (`m3/card` with `style = elevated` becomes `ElevatedCard`), and the generator has
- * to resolve what it substituted. A canonical id cannot be that name: it is `<module>/<callable>`,
- * and the same catalog discovered from a differently-named module produces a different one — which
- * is exactly what happened to m3-catalog, whose shipped record says `m3-catalog/…` and whose own
- * repository says `catalog/…`.
- *
- * Added, never replacing: a component keeps every id it had. Two modules contributing the same
- * callable would collide on one alias, and they would be the same Kotlin function, so the generator
- * resolving either is the same answer.
+ * The projection's variant table substitutes callables (`ElevatedCard`), and canonical ids differ
+ * by discovering module (`m3-catalog/…` vs `catalog/…`). Aliases are added, never replacing; a
+ * collision would be the same Kotlin function anyway.
  */
 fun ComponentRecordFile.callableAliases(): ComponentRecordFile {
   val aliased = components.map { component ->

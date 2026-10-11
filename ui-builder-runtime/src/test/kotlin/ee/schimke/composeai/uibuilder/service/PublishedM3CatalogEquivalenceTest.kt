@@ -15,52 +15,17 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * Does the shelf composed from m3-catalog's published files match the shelf this server
- * synthesises?
+ * Does the shelf composed from a hand-built, well-formed m3-catalog published pair match the shelf
+ * this server synthesises, field by field for every component the frozen catalog owns? (Ids
+ * matching is not shelves matching.)
  *
- * The readiness gate answers a narrower question — the catalog-level facts agree and the component
- * IDS agree — and says so. It does not compare what a component OFFERS, and the difference is not
- * academic: a first attempt at this cutover matched all the ids while replacing every component's
- * property vocabulary with its Compose parameter list, making `onClick` a required property no
- * design sets, and stripping every modifier. Ids matching is not shelves matching, which is the
- * same mistake as counting components and calling it identity.
+ * This tests the composer, not whether m3-catalog can produce such a pair: that is
+ * [PublishedGeneratedM3CatalogEquivalenceTest], against a real `composePreviewDiscover` capture.
+ * Even together they are a floor, not a proof.
  *
- * So this compares the composed component against the frozen one field by field, for every
- * component the frozen catalog owns.
- *
- * **What it does not prove, and what happened when that was assumed.** The published fixture is
- * hand-built: its `statusSemantics.components` block was written here, keyed on the ids the frozen
- * catalog uses. That makes this a real test of the COMPOSER — given a well-formed published pair,
- * does the shelf come out right — and no test at all of whether m3-catalog can produce that pair.
- * The two were conflated once already. Swapping in a genuinely generated pair turned 14 green tests
- * into 11 failures, all one root cause: m3-catalog derived its component ids from a catalog id's
- * last segment, which names the VARIANT, so `Button/Filled`, `Card/Filled` and four more all
- * claimed `m3/filled` and 49 of 108 components collided. The fixture, keyed the way a person would
- * key it, had no collisions and hid the whole problem.
- *
- * So: passing here is necessary before `--ui-builder-published-catalogs` names `m3-catalog`, and it
- * is not sufficient. The sufficient one now exists beside it:
- * [PublishedGeneratedM3CatalogEquivalenceTest] runs the same [compare] against a pair captured from
- * a real `composePreviewDiscover`, and the `m3 catalog-level equivalence` step in `ci.yml` holds
- * that pair to the frozen catalog fact by fact. Read that one for what m3-catalog can actually
- * offer; read this one for whether the composer turns a well-formed pair into the right shelf. Even
- * together they are a floor rather than a proof: [compare] checks what a design depends on, and a
- * catalog can still differ in something no assertion here reads.
- *
- * One caution, since it is the reason this fixture exists at all: do NOT edit a generated file to
- * keep a test green. The frozen shelf and a published m3 catalog hold deliberately different
- * component sets — `UI_BUILDER_CATALOG_CONTRACT.md` says so, and a real run offers about sixty
- * components the frozen one does not. The assertion that the composed catalog offers nothing extra
- * encodes the opposite, and settling that is a decision about the contract rather than a fixture to
- * adjust.
- *
- * Everything left here compares a composed shelf against the frozen one, which is the question this
- * fixture can answer honestly. Two of the composer's REFUSALS used to live here too — a builtin
- * with a malformed `jsonType`, a slot cardinality no child count satisfies — reaching their input
- * by string-splicing this fixture. Both now sit in `PublishedUiBuilderCatalogHostileInputTest`
- * against its own two-component record, because m3-catalog's policy states the catalog owns no
- * builtins: on a regenerated fixture the splice would land nowhere and both would have passed while
- * checking nothing.
+ * Do not edit a generated file to keep a test green: the frozen and published component sets
+ * differ deliberately (`UI_BUILDER_CATALOG_CONTRACT.md`). Composer refusal tests live in
+ * `PublishedUiBuilderCatalogHostileInputTest`.
  */
 class PublishedM3CatalogEquivalenceTest {
 
@@ -92,11 +57,8 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * The three the published catalog cannot offer, and why — [yschimke/m3-catalog#317].
-   *
-   * Asserted ABSENT rather than skipped. A gap nothing states is a gap that stops being noticed,
-   * and if one of these starts composing (because the record grew the callable) this test fails and
-   * says to move it up here, rather than passing quietly with a shelf nobody re-checked.
+   * The three the published catalog cannot offer, and why (yschimke/m3-catalog#317). Asserted
+   * absent so one that starts composing fails this test.
    */
   private val knownAbsent =
     mapOf(
@@ -130,9 +92,8 @@ class PublishedM3CatalogEquivalenceTest {
       val actual = byId[expected.componentId] ?: continue
       differences += compare(expected, actual)
     }
-    // compose-ui-builder#230 let the frozen record's search field take a literal query as well as
-    // bound state; m3-catalog's published policy still says `object`, narrower rather than wrong.
-    // `PublishedGeneratedM3CatalogEquivalenceTest.REVIEWED_DIFFERENCES` records the same one.
+    // The frozen search field accepts a literal query or bound state; m3-catalog's policy says
+    // `object` (narrower, not wrong). Mirrored in `PublishedGeneratedM3CatalogEquivalenceTest`.
     val reviewed =
       setOf(
         "  m3/search-input-field.properties[value].jsonType: frozen=[\"object\",\"string\"] " +
@@ -158,11 +119,8 @@ class PublishedM3CatalogEquivalenceTest {
     check("displayName", expected.displayName, actual.displayName)
     check("role", expected.role, actual.role)
     check("traits", expected.traits.sorted(), actual.traits.sorted())
-    // Slots by name, then field by field — the same reason the properties below get it, and the
-    // one place the lesson had not been applied. `cardinality` decides how many children can be
-    // authored and `acceptedRoles`/`acceptedTraits` decide which components may go in, so a slot
-    // that kept its name while losing its shape breaks designs exactly as a changed property does
-    // and this comparison passed it (Codex, #673).
+    // Slots by name, then field by field: cardinality and accepted roles/traits break designs as
+    // surely as a changed property.
     check("slots", expected.slots.map { it.name }.sorted(), actual.slots.map { it.name }.sorted())
     val wantSlots = expected.slots.associateBy { it.name }
     val gotSlots = actual.slots.associateBy { it.name }
@@ -195,22 +153,10 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * Properties the **builder** owns on `m3/icon`, which m3-catalog does not publish.
-   *
-   * The same shape of exemption as [generatedInventory] below, and for the same reason: the two
-   * shelves are pinned independently, so equality asks a question neither repository can answer
-   * from the other side. Material Symbols names an icon and positions it on four continuous axes,
-   * which is this repository's model of an icon and not something m3-catalog has a view on.
-   *
-   * The asymmetry is what makes it safe. A property the FROZEN shelf adds is one the builder offers
-   * and the published catalog has never heard of: a design authored here still validates, and the
-   * published shelf loses nothing. The reverse — the composed catalog offering a property the
-   * builder cannot handle — is the thing that would break a design, and it is still compared
-   * strictly, because `got` is never filtered.
-   *
-   * What it costs, stated rather than hidden: serving m3-catalog's shelf under
-   * `--ui-builder-published-catalogs` would offer none of these, so a design that names an icon
-   * rather than keying one could not be authored against it until m3-catalog publishes them too.
+   * Properties the builder owns on `m3/icon` that m3-catalog does not publish (Material Symbols
+   * naming and axes). Safe to exempt because only the frozen side is filtered: the composed catalog
+   * offering something the builder cannot handle is still compared strictly. Cost: serving
+   * m3-catalog's published shelf would not offer these.
    */
   private val builderOwnedProperties =
     mapOf(
@@ -233,22 +179,9 @@ class PublishedM3CatalogEquivalenceTest {
   private val generatedInventory = setOf("iconKey")
 
   /**
-   * The one property field where equality is the wrong question: an **inventory**, not a choice.
-   *
-   * Every other allowed-value list on this shelf is an enumeration somebody authored —
-   * `m3/text`.`style`'s fifteen typography roles — and equality is exactly right for those: a value
-   * appearing or disappearing is a design decision, and it belongs in a diff.
-   *
-   * `m3/icon`.`iconKey` is not that. It is the Material icon set, generated, and the two sides are
-   * pinned independently: the frozen catalog is packaged in THIS repository, and the composed one
-   * is whatever m3-catalog last published. #710 exposed the complete inventory here while
-   * m3-catalog still ships the forty-six-icon hand-picked list, and equality then made this
-   * comparison red on a fact neither repository can act on from the other side — printing all
-   * 11,431 names into the failure, which is also how nobody reads it.
-   *
-   * The question worth asking survives the growth: **does the published catalog offer an icon the
-   * builder cannot draw?** That is containment. It is stable while the inventory grows, it fails on
-   * the thing that would actually break a design, and it names only the offending values.
+   * Allowed values compared by containment, not equality, for a generated inventory such as
+   * `m3/icon`.`iconKey`: the two sides are pinned independently. The question is whether the
+   * published catalog offers an icon the builder cannot draw.
    */
   private fun allowed(
     name: String,
@@ -267,13 +200,8 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * The other half of the shelf: the builder's own components, which m3-catalog deliberately does
-   * not publish.
-   *
-   * Its policy says why — declaring `layout/box` "would be this catalog claiming to own the
-   * builder's own vocabulary" — and it is right, so the server supplies them. Without that a
-   * published catalog replaces the synthesised one wholesale and the shelf loses its box, its image
-   * and its gradients: sixteen components here, every one of which existing designs use.
+   * The builder's own components, which m3-catalog deliberately does not publish, are supplied by
+   * the server so the shelf keeps its box, image and gradients.
    */
   @Test
   fun `a published catalog is still served the builder's own vocabulary`() {
@@ -304,12 +232,8 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * The Wear palette is not the mobile one, and handing it the mobile vocabulary is not a kindness.
-   *
-   * `WearScreenCodeExporter` refuses everything outside `layout/box`, `layout/column`, `layout/row`
-   * and `asset/image` with "no Wear Compose Material 3 counterpart this generator can write". A
-   * palette entry that cannot be exported is worse than a missing one: the author finds out at the
-   * end, with the design already built.
+   * The Wear palette does not get the mobile vocabulary: `WearScreenCodeExporter` refuses
+   * everything outside `layout/box`, `layout/column`, `layout/row` and `asset/image`.
    */
   @Test
   fun `a published catalog is handed its own platform's builder vocabulary, not every catalog's`() {
@@ -346,11 +270,8 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * `asset/image` without a registry is an image component whose keys nothing checks.
-   *
-   * `declaredAssetKeys` returns null when `statusSemantics.assetRegistry` is absent, and a null
-   * registry makes the check RETURN EARLY rather than fail — so an invented `assetKey` is accepted
-   * into a saved design and surfaces as a broken picture at render time.
+   * `asset/image` needs a registry: with none, `declaredAssetKeys` is null and the check returns
+   * early, accepting invented keys.
    */
   @Test
   fun `the donor's asset registry travels with the image component`() {
@@ -392,11 +313,7 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * An injected component arrives on the shelf it was written for.
-   *
-   * The insert panel groups by `componentMenu`, and an entry with no group falls back to a generic
-   * role heading — so injecting the builder vocabulary without the donor's groups would file the
-   * whole of it under "Container" / "Leaf" instead of Layout, Content, Styles and Embedded.
+   * An injected component arrives on the shelf it was written for, not a generic role heading.
    */
   @Test
   fun `the donor's menu entries travel with the injected components`() {
@@ -473,12 +390,8 @@ class PublishedM3CatalogEquivalenceTest {
   }
 
   /**
-   * The set this file mirrors from the runtime's `accepts`, checked against the catalogs that
-   * exist.
-   *
-   * Not proof the two agree — they are in different modules and the runtime's is a private `when` —
-   * but it makes the drift visible from the side that matters: a catalog starting to declare a type
-   * name this server would refuse fails here rather than in the field.
+   * The type-name set mirrored from the runtime's private `accepts`, checked against existing
+   * catalogs so a new type name fails here rather than in the field.
    */
   @Test
   fun `every type name the frozen catalogs declare is one the server accepts`() {
@@ -501,10 +414,7 @@ class PublishedM3CatalogEquivalenceTest {
     )
   }
 
-  /**
-   * The builder's shelves land where the donor puts them, not where the injection loop reached
-   * them.
-   */
+  /** The builder's shelves land where the donor puts them. */
   @Test
   fun `injected groups follow the donor's order, not the injection order`() {
     val served =

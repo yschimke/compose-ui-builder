@@ -20,12 +20,9 @@ public data class IconOutlineKeyV1(
 ) {
 
   /**
-   * The asset key this icon is stored under.
-   *
-   * Readable rather than hashed, because somebody reading a design's JSON to work out why an icon
-   * looks wrong should be able to see which icon it is and at what axis position. Every axis is
-   * written, defaults included: a key that changes shape when a value happens to be the default is
-   * one that two writers can spell differently for the same picture.
+   * The asset key this icon is stored under: readable, not hashed, so the design JSON shows which
+   * icon and axes. Every axis is written, defaults included, so two writers cannot spell one
+   * picture differently.
    */
   public fun assetKey(): String =
     "$PREFIX$style/$name@FILL${number(fill)},GRAD${number(grade)}," +
@@ -36,49 +33,32 @@ public data class IconOutlineKeyV1(
 
   public companion object {
     /**
-     * What marks an asset as an outline this host resolved rather than an image somebody uploaded.
-     *
-     * The two share one map because `DesignDocumentV1.assets` is the only per-design byte store the
-     * released protocol has, and it already carries everything an outline registry was specified to
-     * need: an arbitrary key, a content digest, and bytes inline. What it does not carry is the
-     * distinction, so this prefix is it. Anything walking `assets` — an export, a pack, the asset
-     * store — has to treat a key under this prefix as a picture the host can regenerate rather than
-     * one only the design has.
+     * What marks an asset as a host-resolved outline rather than an uploaded image. Both share
+     * `DesignDocumentV1.assets` (the only per-design byte store), so anything walking `assets` must
+     * treat this prefix as regenerable.
      */
     public const val PREFIX: String = "icon-outline/"
 
     /**
-     * The media type these bytes are.
-     *
-     * Not `image/svg+xml`: what is stored is an SVG *path data* string, the `d` attribute alone,
-     * which is what `ImageVector` and the export both want and what the renderer parses. Wrapping
-     * it in a document would mean every reader unwrapping it again.
+     * The media type of these bytes: SVG path data (the `d` attribute alone), not `image/svg+xml`,
+     * since that is what `ImageVector`, the export and the renderer use.
      */
     public const val MEDIA_TYPE: String = "application/vnd.composeai.icon-path-data"
   }
 }
 
 /**
- * Resolves an icon to its path data, or null when this host cannot right now.
- *
- * A seam rather than a direct call because the thing that can resolve a glyph lives in the server,
- * which sits above this module: the variable fonts, their cache and the reader are all up there,
- * and a layer cannot reach up. A host with no icon source passes nothing and every other lane is
- * exactly as it was.
+ * Resolves an icon to its path data, or null when this host cannot right now. A seam because the
+ * fonts and cache live in the server, above this module.
  */
 public fun interface IconOutlineResolver {
   public fun pathData(icon: IconOutlineKeyV1): String?
 }
 
 /**
- * Resolved icon outlines, stored in the design beside its images.
- *
- * A design records the picture it drew so that an export, a daemon render on a runner with no
- * network, and the canvas cannot disagree — and so that a later upstream refresh cannot silently
- * redraw an old design. An entry is created once by a lookup; from then on it *is* the icon, and
- * replacing it is an explicit operation that lands in the revision history like any other edit.
- *
- * See
+ * Resolved icon outlines, stored in the design beside its images, so export, offline daemon
+ * renders and the canvas agree and upstream refreshes cannot silently redraw old designs.
+ * Replacing one is an explicit, recorded edit. See
  * [`UI_BUILDER_MATERIAL_SYMBOLS.md`](../../../../../../../../../docs/design/UI_BUILDER_MATERIAL_SYMBOLS.md).
  */
 public object IconOutlineAssets {
@@ -108,12 +88,8 @@ public object IconOutlineAssets {
   public fun isOutlineKey(assetKey: String): Boolean = assetKey.startsWith(IconOutlineKeyV1.PREFIX)
 
   /**
-   * The icons [nodes] draw, read from whatever each node carries.
-   *
-   * A node names its icon with `iconName` and positions it with the four axes; anything absent is
-   * the face's own default. A node still on the old `iconKey` contributes nothing here — it draws
-   * through the generated table as it always has, and migrating it is a separate, deliberate edit
-   * rather than something a write of an unrelated property does behind somebody's back.
+   * The icons [nodes] draw (`iconName` plus the four axes, absent ones at the face default). Nodes
+   * on the old `iconKey` contribute nothing; migrating them is a separate, deliberate edit.
    */
   public fun drawnBy(nodes: Iterable<DesignNodeV1>): Set<IconOutlineKeyV1> =
     nodes
@@ -147,22 +123,10 @@ public object IconOutlineAssets {
   /**
    * [assets] with an outline present for every icon in [wanted], and nothing removed.
    *
-   * **Adding only, deliberately.** An outline nothing references looks like dead weight, and the
-   * first version of this dropped it. That is wrong: undo restores a node without restoring the
-   * assets pruned when it changed, so recreating the outline would need the resolver — and the
-   * documented cold-cache case is exactly when there is none. Undo would then return a document
-   * that is not the one it undid, with blank icons where there were pictures. So a design keeps the
-   * outline of every icon it has drawn, bounded by the distinct icons somebody chose at about 550
-   * bytes each, and pruning becomes an explicit operation if it ever earns one.
-   *
-   * [resolve] answering null leaves that icon without an entry yet. It never removes one.
-   *
-   * [maximumAssets] is the design's own asset ceiling, and it binds here because keeping every
-   * outline is otherwise unbounded: change one node's icon enough times and the additions alone
-   * could pass a limit only the upload route enforces, which would then refuse somebody's next
-   * image because of pictures nobody asked for. At the ceiling this simply stops adding — an icon
-   * without a recorded outline, the same state a host with no resolver leaves — rather than
-   * evicting one, because eviction is what undo cannot survive.
+   * Add-only because undo restores nodes but not pruned assets, and a cold cache could not recreate
+   * them. [resolve] answering null leaves that icon without an entry. [maximumAssets] (the design's
+   * asset ceiling) stops further additions rather than evicting, so outlines cannot crowd out
+   * uploads.
    */
   public fun withOutlines(
     assets: Map<String, AssetBindingV1>,

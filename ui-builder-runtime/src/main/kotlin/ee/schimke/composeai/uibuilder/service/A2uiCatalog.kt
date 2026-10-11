@@ -17,41 +17,20 @@ import kotlinx.serialization.json.putJsonObject
 /**
  * `a2ui-catalog`: the A2UI basic catalog v0.9.1 as a builder palette, packaged here.
  *
- * ## What an A2UI design is
+ * A design is the component tree an agent sends in `updateComponents`, drawn by whichever client
+ * holds the catalog (`material3-a2ui` on Android), so it is its own platform (`a2ui`) with no
+ * packs. It exports as A2UI JSON and as the Kotlin an app uses to send it, via one lowering.
  *
- * Not a screen of any one toolkit. A design built from this palette is the component tree an agent
- * sends in an A2UI `updateComponents` message, and whichever client holds the catalog draws it — on
- * Android that is `material3-a2ui`. So the palette is its own platform (`a2ui`): nothing from a
- * Material 3 phone screen, a Wear screen or a widget body can be sent to an A2UI client, and no
- * pack of theirs is offered here. It exports two ways, both through `:ui-builder-export`'s one
- * lowering: the A2UI JSON an agent streams, and the Kotlin an Android app writes to send the same
- * payload to its own processor.
+ * Transcribed from `a2ui-basic-catalog.schema.json` (as yschimke/a2ui-catalog's policy publishes):
+ * - Properties are the schema's, with enums, `required` and descriptions; composed types take
+ *   their first typed branch.
+ * - Dynamic values also accept an object, so they can bind to state (`{"path": "/<variable>"}`).
+ * - Arrays also accept an object (the builder's `list` wrapper).
+ * - `ComponentId` properties are single-child slots; `ChildList` is a slot of any size. Tabs'
+ *   `tabs` stays a list property of records.
  *
- * ## Where the vocabulary comes from
- *
- * The catalog's own JSON Schema (`a2ui-basic-catalog.schema.json`, v0.9.1), transcribed rather than
- * invented, the same projection yschimke/a2ui-catalog's `ui-builder.policy.json` publishes:
- * - **Properties** are the schema's, with its enums as allowed values, its `required` list, and its
- *   descriptions as notes. A composed type (`oneOf`, `allOf`) takes its first typed branch.
- * - A **dynamic** value (`DynamicString`, `DynamicNumber`, `DynamicBoolean`, `DynamicStringList`)
- *   accepts its literal type or an object, so a property can be bound to a state variable; the
- *   export writes that binding as the data-model path `{"path": "/<variable>"}`.
- * - An **array** accepts an object too, because the builder writes a list as a `list` wrapper,
- *   which is an object on the wire.
- * - A `ComponentId` property (`child`, `trigger`, `content`) is a single-child **slot**, required
- *   where the schema requires it; a `ChildList` (`children`) is a slot of any size. Tabs' `tabs`
- *   stays a list property: each entry is a title and a component id, which is a record, not a slot.
- *
- * Every component declares no modifiers. A2UI lays out through its own components — `Row`,
- * `Column`, `List`, and `weight` as a property — and the export refuses a modifier by name.
- *
- * ## The canvas
- *
- * `material3-a2ui` is published only as an Android AAR, which a Wasm build cannot link, so every
- * component draws on the canvas as a named placeholder holding its children: the tree an agent
- * would send, not a picture of it. The picture comes from the native lane, which renders the
- * exported payload with the library itself. [a2uiCatalog]'s `previewSurfaces` says exactly that, so
- * the editor does not offer a Preview mode whose claim is false.
+ * No modifiers: A2UI lays out through its own components. The AAR cannot run in Wasm, so the
+ * canvas draws named placeholders and `previewSurfaces` points to the native lane.
  */
 internal fun a2uiCatalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
@@ -176,9 +155,8 @@ private class A2uiComponent(
 )
 
 /**
- * A component-reference property as a slot. [single] is a `ComponentId` — one child, and required
- * where the schema requires it. Otherwise a `ChildList`, which the schema requires to be PRESENT
- * but which may be empty, so its minimum is zero.
+ * A component-reference property as a slot: [single] is a `ComponentId` (one child, required when
+ * the schema says); otherwise a `ChildList`, which must be present but may be empty.
  */
 private class A2uiSlot(val name: String, val single: Boolean, val required: Boolean) {
   fun capability(): SlotCapabilityV1 =

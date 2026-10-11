@@ -90,11 +90,10 @@ private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
 /**
  * The explicitly enabled production catalogs admitted by the v1 service.
  *
- * Resolution is exact across all four pin fields. The packaged catalog is parsed strictly and its
- * invariants are checked before it is exposed; there is no "closest" revision or permissive
- * component fallback. Export capabilities are supplied by the renderer adapter at startup, so a
- * host without the packaged daemon lane advertises Compose only instead of claiming artifacts it
- * cannot produce.
+ * Resolution is exact across all four pin fields; the packaged catalog is parsed strictly and
+ * its invariants checked, with no "closest" revision or permissive fallback. Export capabilities
+ * come from the renderer adapter at startup, so a host without the daemon lane advertises Compose
+ * only.
  */
 public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration: Configuration) :
   UiBuilderCatalogExecutor {
@@ -107,20 +106,16 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val nativeRuntimeIds = configuration.nativeRuntimeIds
 
   /**
-   * Which catalogs are served from nothing but what they publish (`UI_BUILDER_CATALOG_CUTOVER.md`).
-   * An owned catalog with no usable published file is refused at construction instead of falling
-   * back to the Kotlin catalog this build synthesises, its platform must be declared, and the
-   * synthesised generator for it is never run: the pins of designs created against the synthesised
-   * catalog are accepted from [LegacySynthesisedReferences] instead.
+   * Which catalogs are served only from what they publish (`UI_BUILDER_CATALOG_CUTOVER.md`). An
+   * owned catalog without a usable published file is refused at construction, must declare its
+   * platform, and never runs the synthesised generator; legacy pins come from
+   * [LegacySynthesisedReferences].
    */
   public val catalogOwnership: CatalogOwnership = configuration.catalogOwnership
 
   /**
-   * The original constructor, retained temporarily for binary-compatible migration.
-   *
-   * Use [Builder] for new hosts. Kotlin compiles defaulted constructors into synthetic bridges, so
-   * adding a parameter here would strand already compiled Preview Server releases. This constructor
-   * is deprecated now and can be removed only in the next planned ABI break.
+   * The original constructor, retained for binary compatibility (a new defaulted parameter would
+   * break compiled Preview Server releases). Use [Builder]; remove at the next ABI break.
    */
   @Deprecated("Use CurrentM3UiBuilderCatalogExecutor.Builder", ReplaceWith("Builder().build()"))
   public constructor(
@@ -134,9 +129,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode },
     /**
      * Component packs admitted by the host (another catalog's components, e.g. `confetti-mobile`),
-     * merged into every enabled catalog of the same platform. Merged rather than served because a
-     * pack has no scaffold or templates to pin to. The catalog records them under
-     * `statusSemantics.componentPacks`.
+     * merged into every enabled catalog of the same platform, since a pack has no scaffold or
+     * templates to pin to. Recorded under `statusSemantics.componentPacks`.
      */
     packs: List<UiBuilderComponentPackSource> = emptyList(),
     /**
@@ -211,11 +205,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     )
 
   /**
-   * The Kotlin catalogs this build writes, for the catalogs it does NOT hand to their owners.
-   *
-   * An owned catalog is left out entirely, so its generator never runs. That is the property the
-   * cutover needs proved before the generators are deleted, and [synthesisedCatalogIds] is how a
-   * test reads it.
+   * The Kotlin catalogs this build synthesises, excluding owned catalogs so their generators never
+   * run ([synthesisedCatalogIds] lets tests check that).
    */
   private val synthesisedCatalogs: Map<String, CatalogCapabilityV1> =
     synthesisers
@@ -223,10 +214,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .mapValues { (_, synthesise) -> synthesise() }
 
   /**
-   * The Kotlin catalog this build would synthesise for [systemId], built on demand whatever this
-   * executor serves, or null for an id it synthesises nothing for. For a shadow comparison
-   * ([CatalogCutoverShadow.catalogDifferences]): it changes nothing served, and an owned catalog's
-   * generator still never runs at construction.
+   * The Kotlin catalog this build would synthesise for [systemId], built on demand, or null. For
+   * shadow comparison ([CatalogCutoverShadow.catalogDifferences]); changes nothing served.
    */
   public fun synthesisedCatalog(systemId: String): CatalogCapabilityV1? =
     synthesisers[systemId]?.invoke()
@@ -237,8 +226,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 
   /**
    * Where the `remote-compose/` seams come from: the packaged catalog, overridden by any
-   * `remote-m3` publishes itself (#819). Read from `published`, not the served catalogs, because
-   * those already have seams injected.
+   * `remote-m3` publishes itself. Read from `published`, since served catalogs already have seams
+   * injected.
    */
   private val remoteComposeSeams: Map<String, ComponentCapabilityV1> = buildMap {
     baseCatalog.components
@@ -252,12 +241,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 
   /**
    * The builder vocabulary donated to published catalogs, curated per platform by
-   * [composeFoundationCatalog] (Wear gets only what `WearScreenCodeExporter` can write). Built for
-   * the platforms this deployment publishes.
+   * [composeFoundationCatalog], for the platforms this deployment publishes.
    *
-   * [platformFor] falls back to the synthesised catalog's platform for a published catalog that
-   * declares none (pinned by `WearM3ScreenCatalogTest`; goes with `synthesisedCatalogs`, #819 step
-   * 3). [donorFor] uses `getOrElse` so a caller outside construction still gets a donor.
+   * [platformFor] falls back to the synthesised catalog's platform when a published catalog
+   * declares none. [donorFor] uses `getOrElse` so callers outside construction still get a donor.
    */
   private val composeFoundation: Map<String, CatalogCapabilityV1> =
     published.values.map(::platformFor).distinct().associateWith {
@@ -300,13 +287,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     if (missing.isEmpty()) return catalog
     val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY
     var semantics = catalog.statusSemantics
-    // The donor's asset keys travel with `asset/image`, UNIONED into whatever the catalog states
-    // rather than only filling an absent registry.
-    //
-    // Filling only the absent case was half of it: the editor seeds a newly inserted image with
-    // `editor.placeholder`, a builder-owned key, so a catalog that declares a registry of its own
-    // and does not happen to list that key gets an image component it cannot insert — both write
-    // validators reject it. A catalog's own keys win a collision; it is describing its own assets.
+    // The donor's asset keys are unioned into the catalog's own registry, since the editor seeds
+    // new images with the builder-owned `editor.placeholder`. The catalog's keys win collisions.
     if (missing.any { it.componentId.startsWith("asset/") }) {
       val donorKeys = (donor.statusSemantics[registryKey] as? JsonObject)?.get("keys") as? JsonArray
       if (donorKeys != null) {
@@ -325,9 +307,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           )
       }
     }
-    // Injected components keep the donor's insert-panel shelves, in the donor's order relative to
-    // the catalog's own groups (appending put the primary Layout and Scaffolds shelves at the
-    // bottom).
+    // Injected components keep the donor's shelves, in the donor's order relative to the catalog's
+    // own groups.
     val donorGroups = donor.statusSemantics.menuGroups()
     val donorOrder = donor.statusSemantics.menuGroupOrder()
     for (component in missing) {
@@ -348,9 +329,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .build()
   }
 
-  // A published catalog wins over the synthesised one of the same id. The map is the union rather
-  // than an overlay of the synthesised keys, so an id nothing here synthesises is servable — that
-  // is the whole point, and an overlay would have quietly kept the set of possible catalogs closed.
+  // A published catalog wins over a synthesised one of the same id. A union, not an overlay, so an
+  // id nothing synthesises is still servable.
   private val availableCatalogs =
     (synthesisedCatalogs + published.mapValues { (_, catalog) -> withBuilderVocabulary(catalog) })
       .mapValues { (_, catalog) -> withFontSettingsVocabulary(catalog) }
@@ -436,9 +416,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                       } == true,
                 )
                 .let { capabilities ->
-                  // An A2UI design's JSON is the A2UI messages, not Remote Compose, so it is not
-                  // behind the Remote Compose authoring flag: offered wherever the host says its
-                  // executor writes JSON (`remoteJson`, the one JSON flag the contract has).
+                  // A2UI designs' JSON is A2UI messages, not Remote Compose, so it is offered
+                  // wherever the host writes JSON (`remoteJson`), not behind the Remote Compose
+                  // authoring flag.
                   if (catalog.platform != A2UI_PLATFORM) capabilities
                   else
                     capabilities
@@ -451,11 +431,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           .withPacks(packs.filter { it.platform == catalog.platform })
       }
   /**
-   * Where each enabled catalog came from — `published` or `synthesised` — for the startup line.
-   *
-   * Exposed rather than logged here because the cutover is the thing an operator most needs to be
-   * able to see: "the shelf changed" and "this catalog started reading its own published file" are
-   * the same event, and a host that switched sources silently would make that undiagnosable.
+   * Where each enabled catalog came from — `published` or `synthesised` — for the startup line, so
+   * a source switch is visible to operators.
    */
   public val catalogSources: Map<String, String> =
     catalogs.keys.associateWith { if (it in published) "published" else "synthesised" }
@@ -464,9 +441,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     CatalogReferenceV1(
       systemId = catalog.benchmark.catalogSystemId,
       catalogRevision = catalog.benchmark.catalogRevision,
-      // The frozen v1 fixture names this pin explicitly. When the catalog wire shape grows a
-      // digest field, this becomes the digest read from the signed catalog rather than a
-      // convention.
+      // The frozen v1 fixture names this pin. Once the wire shape has a digest field, read it from
+      // the signed catalog instead.
       capabilityDigest = CURRENT_CAPABILITY_DIGEST,
       nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
     )
@@ -474,22 +450,17 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val references = catalogs.mapValues { (_, catalog) -> referenceOf(catalog) }
 
   /**
-   * Every reference a stored design may be pinned to for a catalog this deployment serves: both the
-   * synthesised and the published source's, so flipping `--ui-builder-published-catalogs` does not
-   * strand designs (#796).
-   *
-   * One direction only: the synthesised catalog is always resident, but a server that flipped back
-   * has never seen the published file (asserted by `CatalogSourceFlipTest`; #818 closes it). Pins
-   * naming neither source are still refused.
+   * Every reference a stored design may be pinned to for a served catalog: both the synthesised
+   * and published sources', so flipping `--ui-builder-published-catalogs` does not strand designs.
+   * One direction only (asserted by `CatalogSourceFlipTest`); pins naming neither are refused.
    */
   private val acceptedReferences: Map<String, Set<CatalogReferenceV1>> =
     catalogs.mapValues { (systemId, catalog) ->
       setOfNotNull(
         referenceOf(catalog),
         synthesisedCatalogs[systemId]?.let(::referenceOf),
-        // An owned catalog's generator never runs, so the pin its designs were created against is
-        // read from the frozen table instead; `CatalogCutoverReadinessTest` holds the two equal
-        // for as long as the generators exist.
+        // An owned catalog's generator never runs, so its legacy pin comes from the frozen table;
+        // `CatalogCutoverReadinessTest` keeps them equal.
         LegacySynthesisedReferences.forCatalog(systemId).takeIf { catalogOwnership.owns(systemId) },
         // …and the same pin as a host that configured a runtime for the synthesised catalog
         // stamped it, with that runtime in place of `candidate`.
@@ -529,9 +500,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     val systemId = catalog.benchmark.catalogSystemId
     if (catalog != catalogs[systemId])
       return issue("CATALOG_MISMATCH", "catalog is not an enabled UI-builder catalog")
-    // Moves with `resolve`, and must: `unusableReason` calls `resolve` first and this second, so
-    // accepting a pin there and refusing it here would turn a stored design's CATALOG_UNAVAILABLE
-    // into an INTERNAL "invalid stored design" -- the same dead design, now blaming the document.
+    // Must agree with `resolve`: `unusableReason` asks both, and disagreeing would turn
+    // CATALOG_UNAVAILABLE into a misleading INTERNAL "invalid stored design".
     if (document.catalogPin !in acceptedReferences.getValue(systemId)) {
       return issue(
         "CATALOG_PIN_MISMATCH",
@@ -559,12 +529,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         if (key !in document.components) {
           return issue("UNKNOWN_COMPONENT", "this design declares no component $key", nodeId)
         }
-        // Children hung on a placement are drawn by nobody. Both the renderer's
-        // component-instance path and `CapabilityComposeCodeExporter.emitPlacement` draw the
-        // declared body and never look at the placement's own slots, so accepting these would
-        // commit nodes that vanish from the preview and from the generated Kotlin while the
-        // operation reported success — and the topology checker, which counts them as placed,
-        // would agree they are fine.
+        // Children on a placement are drawn by nobody: the renderer and
+        // `CapabilityComposeCodeExporter.emitPlacement` draw only the declared body. Refuse them.
         val placementSlots = node.objectOrEmpty("slots")
         val occupied = placementSlots.entries.firstOrNull { it.value.jsonArray.isNotEmpty() }
         if (occupied != null) {
@@ -575,11 +541,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
             occupied.key,
           )
         }
-        // Modifiers are the one catalog rule that does reach a placement: they are applied to
-        // whatever the body's root draws, and `CapabilityComposeCodeExporter.modifierExpression`
-        // throws on a type it cannot write. Skipping the check here let a direct `ApplyOperation`
-        // persist a design that then failed at export — the editor's `CapabilityValidator` has
-        // always resolved `placedCapability` and checked them.
+        // Modifiers do apply to a placement (to the body's root), and the exporter throws on an
+        // unwritable type, so check them here as the editor's `CapabilityValidator` does.
         val placed =
           placedCapability(node, document, encodedNodes, catalogComponents)
             ?: return issue(
@@ -691,13 +654,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         val children = childrenElement.jsonArray.map { it.jsonPrimitive.content }
         val slot =
           declaredSlots[name]
-            // An entry with no children says nothing is in that slot, which is what leaving the key
-            // out says, so withdrawing a slot from the catalog does not invalidate every stored
-            // document that never used it — and the editor writes a key for every slot declared at
-            // the moment of the insert, so those keys outlive the declaration.
-            // `CapabilityValidator`
-            // in `:ui-builder` carries the same rule; a child in an undeclared slot is still
-            // refused, because that child would be silently dropped.
+            // An empty entry means the same as an absent key, so withdrawing a slot does not
+            // invalidate documents that never used it (the editor writes a key per declared slot).
+            // A child in an undeclared slot is still refused. `CapabilityValidator` in
+            // `:ui-builder` has the same rule.
             ?: if (acceptsDynamicSlots || children.isEmpty()) null
             else
               return issue(
@@ -728,14 +688,11 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                 name,
               )
           val childComponentId = child.requiredString("componentId")
-          // A placement in a slot is judged by the body it places, which is what decides whether
-          // the slot accepts it. Resolved through the declaration rather than the catalog, for the
-          // reason above: the placement itself is not a catalog component.
+          // A placement in a slot is judged by the body it places, resolved through the
+          // declaration.
           val childCapability =
             if (childComponentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
-              // Follows nested placements: a component whose body root places another component
-              // is an ordinary composition the renderer and the exporter both traverse, and
-              // stopping at the first hop rejected every one of them.
+              // Follows nested placements, which the renderer and exporter both traverse.
               placedCapability(child, document, encodedNodes, catalogComponents)
                 ?: return issue(
                   "UNKNOWN_COMPONENT",
@@ -813,12 +770,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   }
 
   /**
-   * The colour rule: the wrapper says colour, and the value is one the canvas draws.
-   *
-   * A `string` wrapper committed, rendered, and was refused at export with a sentence about `Text`
-   * (#476); a `colorToken` the canvas does not draw committed, and the renderer threw on it. Both
-   * refused here, with the wording the `background` modifier's export refusal already had — it
-   * names the property, says what a colour looks like, and names the wrapper that was wrong.
+   * The colour rule: the wrapper says colour, and the value is one the canvas draws. Uses the same
+   * wording as the `background` modifier's export refusal.
    */
   private fun colourWriteIssue(
     node: DesignNodeV1,
@@ -851,8 +804,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 
   /**
    * The asset rule: the key must be in the catalog's `statusSemantics.assetRegistry` or the
-   * design's own pinned [pinnedAssetKeys] (#478); unchecked keys used to fail every render (#484).
-   * A catalog without a registry says nothing about keys.
+   * design's own [pinnedAssetKeys]. A catalog without a registry says nothing about keys.
    */
   private fun assetKeyWriteIssue(
     catalog: CatalogCapabilityV1,
@@ -888,9 +840,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 
     /**
      * The value-kind rules, mirrored from `PropertyValueKinds` in `:ui-builder-export`, which this
-     * module cannot reach — the same arrangement `slotAccepts` has with `SlotCapability.accepts`. A
-     * property's name states its kind: `color` and `…Color` hold a colour, `assetKey` a key into
-     * the catalog's asset registry. `docs/design/UI_BUILDER_VALUE_SEMANTICS.md` is the decision.
+     * module cannot reach. A property's name states its kind: `color`/`…Color` hold a colour,
+     * `assetKey` a registry key. See `docs/design/UI_BUILDER_VALUE_SEMANTICS.md`.
      */
     public fun isColourProperty(property: String): Boolean =
       property == "color" || property.endsWith("Color")
@@ -989,14 +940,16 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
  * A component pack as the host admits it: another catalog's finished capabilities, built by
  * `:server` (reading records is outside this module's boundary).
  *
- * @property id the pack's id: the served catalog it came from and the prefix of every component id
- *   (`confetti-mobile/session-card`). Checked like a catalog id. @property label what the editor
- *   calls the pack. @property platform the platform word (`mobile`, `wear`, `remote-compose`)
- *   naming which enabled catalogs receive it; a catalog declaring none is
- *   [CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM]. @property nativeCatalog the served
- *   catalog whose bundle compiles a design using the pack, or null. @property components the
- *   capabilities, every id prefixed `<id>/`. @property notes a sentence for the settings row; empty
- *   when there is nothing to add.
+ * @property id the pack's id: the served catalog it came from and the prefix of every component
+ *   id (`confetti-mobile/session-card`). Checked like a catalog id.
+ * @property label what the editor calls the pack.
+ * @property platform the platform word (`mobile`, `wear`, `remote-compose`) naming which enabled
+ *   catalogs receive it; a catalog declaring none is
+ *   [CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM].
+ * @property nativeCatalog the served catalog whose bundle compiles a design using the pack, or
+ *   null.
+ * @property components the capabilities, every id prefixed `<id>/`.
+ * @property notes a sentence for the settings row; empty when there is nothing to add.
  */
 public data class UiBuilderComponentPackSource(
   val id: String,
@@ -1021,18 +974,9 @@ public data class UiBuilderComponentPackSource(
 }
 
 /**
- * The Remote Compose ids `wear-m3` offers without calling them stand-ins for anything.
- *
- * A *Material* component could not be shared — a Wear card is not a Material 3 card — while a
- * *foundation* one is the same declaration on both platforms. These three are neither. They are the
- * Remote Compose seam itself — a published document, the switch into the remote vocabulary, and the
- * custom component that switches back out — and none of them is a Wear Compose component whose
- * fidelity a note could be making a claim about.
- */
-/**
  * The node that switches a subtree into the Remote Compose vocabulary. Duplicated from
- * `:ui-builder-export` to keep this module's dependency allowlist (`checkUiBuilderRuntimeBoundary`)
- * unchanged; `SlotAcceptanceTest` keeps the spellings honest.
+ * `:ui-builder-export` to keep `checkUiBuilderRuntimeBoundary` unchanged; `SlotAcceptanceTest`
+ * keeps the spellings honest.
  */
 internal const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
 
@@ -1040,16 +984,14 @@ internal const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
 internal const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
 
 /**
- * The three namespaces `compose-foundation` owns: `androidx.compose.foundation` and
- * `androidx.compose.ui` publish one Box, one Column, one Row and one Image, not one per design
+ * The namespaces `compose-foundation` owns: one Box, Column, Row and Image, not one per design
  * system.
  */
 internal val FOUNDATION_NAMESPACES = listOf("layout/", "shape/", "asset/")
 
 /**
- * The Remote Compose seams' namespace. Separate from the foundation's so [composeFoundationCatalog]
- * can take them from a Remote Compose source, letting `remote-m3` publish them (#819); still part
- * of [BUILDER_NAMESPACES].
+ * The Remote Compose seams' namespace, separate from the foundation's so `remote-m3` can publish
+ * them; still part of [BUILDER_NAMESPACES].
  */
 internal const val REMOTE_COMPOSE_NAMESPACE: String = "remote-compose/"
 
@@ -1060,9 +1002,8 @@ internal const val REMOTE_COMPOSE_NAMESPACE: String = "remote-compose/"
 internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE + DRAW_NAMESPACE
 
 /**
- * The drawing vocabulary's namespace (`draw/canvas`, `draw/rect`, …). Only the Remote Compose
- * foundation declares any, so naming it here adds them to Remote Compose catalogs and nothing to
- * the others.
+ * The drawing vocabulary's namespace (`draw/canvas`, `draw/rect`, …); only the Remote Compose
+ * foundation declares any.
  */
 internal const val DRAW_NAMESPACE: String = "draw/"
 
@@ -1074,11 +1015,9 @@ internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   )
 
 /**
- * The note a shared foundation component (Box, Column, Row, Image) carries on a Wear palette.
- * Shared by `wearM3Catalog` and [composeFoundationCatalog], which
- * `ComposeFoundationFaithfulnessTest` compares field for field. Lives here because
- * `ui-builder-catalog-literals.sh` restricts which files may name a catalog; goes with
- * `wearM3Catalog` (#819 step 3).
+ * The note a shared foundation component carries on a Wear palette, shared by `wearM3Catalog`
+ * and [composeFoundationCatalog] (compared by `ComposeFoundationFaithfulnessTest`). Lives here
+ * because `ui-builder-catalog-literals.sh` restricts which files may name a catalog.
  */
 internal const val WEAR_FOUNDATION_NOTE: String =
   "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
@@ -1091,11 +1030,8 @@ internal val CatalogCapabilityV1.platform: String
   get() = declaredPlatform ?: CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM
 
 /**
- * The platform word a catalog declares, or null when it declares none.
- *
- * Separated from [platform] because the difference matters in exactly one place: choosing a catalog
- * a published one borrows its builder vocabulary from. "Says mobile" and "says nothing" are the
- * same answer everywhere else, and must not be here -- see `donorFor`.
+ * The platform word a catalog declares, or null when it declares none. Distinct from [platform]
+ * only for choosing a donor — see `donorFor`.
  */
 internal val CatalogCapabilityV1.declaredPlatform: String?
   get() =
@@ -1167,14 +1103,6 @@ private fun CatalogCapabilityV1.withPacks(
     .build()
 }
 
-/**
- * This catalog's component menu with one more component shelved on [group].
- *
- * Every miss degrades rather than throws, exactly as [CatalogCapabilityV1.withPacks] and
- * `ComponentMenu.from` do: a catalog declaring no menu gets one holding this single entry, and a
- * group name the order does not carry is appended rather than dropped. A wrong menu must never be
- * the reason a component cannot be inserted.
- */
 /** Each component's shelf, as `componentMenu.components` states it. */
 private fun JsonObject.menuGroups(): Map<String, String> {
   val menu = (this["componentMenu"] as? JsonObject) ?: return emptyMap()
@@ -1193,12 +1121,10 @@ private fun JsonObject.menuGroupOrder(): List<String> =
   }
 
 /**
- * The componentMenu with one more entry, and its group in `groupOrder`.
+ * The componentMenu with one more entry, and its group in `groupOrder`. Degrades rather than
+ * throws: a missing menu gets one, and an unknown group is appended.
  *
- * @param reference where a NEW group belongs, when the caller knows: the donor's own order, so an
- *   injected `layout/box` puts "Layout" where the donor has it rather than wherever the injection
- *   loop reached it. Appending was how `Layout` and `Scaffolds` — the builder's primary shelves —
- *   ended up below every catalog group. Empty for callers with no opinion, which appends as before.
+ * @param reference where a new group belongs (the donor's order), or empty to append.
  */
 internal fun JsonObject.withMenuEntry(
   componentId: String,
@@ -1243,18 +1169,11 @@ internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV
 }
 
 /**
- * The first Remote M3 authoring surface is deliberately a reviewed subset, not an alias for the
- * complete Material 3 catalog. The host dimensions copy the stable 240dp-screen squircle preview
- * contract from wear-m3-catalog: 200x60dp or 200x108dp content, 8dp padding on every edge and a
- * 26dp corner radius, producing 216x76dp and 216x124dp canvases.
- */
-/**
  * The Wear widget host frame's authored parameters. `background` is the widget's own background
  * (the brush passed to `WearWidgetDocument`), defaulting to `WearWidgetContainer`'s `#FF272430`.
  *
- * Padding and corner radius are deliberately absent: the host supplies them per shape
- * (yschimke/wear-m3-catalog#623). Stored designs that carry them keep the values, but no lane reads
- * them: only the predefined host shapes are supported.
+ * Padding and corner radius are absent: the host supplies them per shape. Stored values are kept
+ * but no lane reads them.
  */
 internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
   listOf(
@@ -1285,10 +1204,9 @@ internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
       .build()
 
 /**
- * [catalog] with every text component carrying the [FontSettings] pair: a variable font's axes and
- * OpenType features, which every design system's text draws and every generator writes, so no
- * catalog has to publish them before a design can use them. Additive, like the rest of the builder
- * vocabulary: a catalog that declares either name keeps its own declaration.
+ * [catalog] with every text component carrying the [FontSettings] pair (variable font axes and
+ * OpenType features), so no catalog has to publish them. Additive: a catalog's own declaration
+ * wins.
  */
 internal fun withFontSettingsVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
   if (catalog.components.none { CatalogBuilderRoles.isText(it.componentId, it.traits) }) {
@@ -1339,9 +1257,8 @@ public data class UiBuilderRenderRequest(
   val fontScale: Float,
   val encodedDocument: String,
   /**
-   * The catalog the design is pinned to, as this host serves it ([CatalogCapabilityV1] JSON), for
-   * the renderer to draw with when it packages no catalog of its own for the pin. A host passes it
-   * under [PackagedUiBuilderRenderBundle.CATALOG_OVERRIDE_KEY]. Null for a caller that has none.
+   * The pinned catalog as this host serves it ([CatalogCapabilityV1] JSON), for a renderer that
+   * packages none for the pin; passed under [PackagedUiBuilderRenderBundle.CATALOG_OVERRIDE_KEY].
    */
   val encodedCatalog: String? = null,
 )
@@ -1358,20 +1275,12 @@ public interface UiBuilderRenderPort : Closeable {
 /** Combines the runtime-owned Compose projection with an injected renderer-neutral port. */
 public class ProductionUiBuilderExportExecutor(
   private val renderer: UiBuilderRenderPort,
-  // Required, not defaulted. It used to default to a projection this module owned, and that
-  // default is what let three different things emit Compose for one document: the real generator
-  // (`ScreenGenerator`, reached from `:server`, which is the only layer allowed to hold both the
-  // component record and this port), the editor's own exporter, and the default here — which
-  // shipped an `ALMOST_COMPILING_PROJECTION` warning on every export because it could not tell
-  // whether its output compiled. `ServeRunner` has always passed the real one, so the default was
-  // reachable only by wiring nobody does in production; a default nobody should take is worse than
-  // an argument everybody must pass.
+  // Required, not defaulted: only `:server` can hold both the component record and this port, so
+  // the real generator (`ScreenGenerator`) must be passed in.
   private val compose: UiBuilderExportExecutor,
   /**
-   * Where a design's uploaded asset bytes are. The daemon render sees one string — the projected
-   * document — so the bytes an `asset/image` names are inlined into that string here, from this
-   * store, as an embedded source. Null leaves every uploaded binding as it is, and the renderer
-   * draws its placeholder for it.
+   * Where uploaded asset bytes are. The daemon render sees only the projected document, so bytes
+   * are inlined into it here. Null leaves uploads as placeholders.
    */
   private val assets: UiBuilderAssetStore? = null,
 ) : UiBuilderExportExecutor, Closeable {
@@ -1389,19 +1298,14 @@ public class ProductionUiBuilderExportExecutor(
       ExportFormatV1.COMPOSE -> compose.export(request)
       ExportFormatV1.PNG -> request.binaryArtifact(renderer.renderPng(request.toRenderRequest()))
       ExportFormatV1.SVG -> request.svgArtifact(renderer.renderSvg(request.toRenderRequest()))
-      // Unreachable through the service: [capabilities] leaves `bundle` at its false default, and
-      // PersistentUiBuilderService refuses any format the pinned catalog does not advertise before
-      // an executor is reached. Thrown rather than folded into an `else`, so that implementing
-      // yschimke/compose-preview-server#528 starts from a compile error here instead of silently
-      // handing back Compose source for a caller that asked for a bundle. The service already
-      // wraps this call, so the throw surfaces as an export error, not a crash.
+      // Unreachable: [capabilities] leaves `bundle` false and the service refuses unadvertised
+      // formats. Thrown rather than an `else`, so implementing bundles starts from a compile error
+      // here.
       ExportFormatV1.BUNDLE ->
         throw UnsupportedOperationException(
           "bundle export is not implemented; ExportCapabilitiesV1.bundle is false for this executor"
         )
-      // The same arrangement for the two formats contracts 2.17.0 added: [capabilities] leaves
-      // `remoteJson` and `remoteDocument` at their false defaults, so the service refuses these
-      // before an executor is reached, and implementing either starts from a compile error here.
+      // Likewise for the formats contracts 2.17.0 added (`remoteJson`, `remoteDocument`).
       ExportFormatV1.JSON ->
         throw UnsupportedOperationException(
           "remote JSON export is not implemented; ExportCapabilitiesV1.remoteJson is false for " +
@@ -1473,11 +1377,8 @@ public object PackagedUiBuilderRenderBundle {
   public const val DOCUMENT_OVERRIDE_KEY: String = "uiBuilder.document.v1"
 
   /**
-   * The named string override carrying [UiBuilderRenderRequest.encodedCatalog]: the served catalog
-   * the bundle draws a design with when it packages none for the design's pin. Without it a
-   * catalog-owned catalog the bundle predates — `glimmer-catalog` — rendered every component as
-   * "Unsupported component" in its PNG export and design-card thumbnail, because the renderer had
-   * neither its canvas adapters nor even its component ids.
+   * The named string override carrying [UiBuilderRenderRequest.encodedCatalog], so the bundle can
+   * draw a catalog it predates (otherwise every component renders as "Unsupported component").
    */
   public const val CATALOG_OVERRIDE_KEY: String = "uiBuilder.catalog.v1"
 
@@ -1490,12 +1391,9 @@ public object PackagedUiBuilderRenderBundle {
   public const val GOOGLE_FONTS_DIRECTORY_PROPERTY: String = "uiBuilder.googleFontsDir"
 
   /**
-   * The bundle's own statement of the Java feature version its classes need, beside the bundle.
-   *
-   * Written by `:ui-builder-render-bundle` from the same catalog entry `:ui-builder`'s toolchain
-   * reads. A caller comparing it against the JVM it is about to render on turns a wrong-JVM launch
-   * from an `UnsupportedClassVersionError` inside a spawned daemon into one sentence naming both
-   * versions (yschimke/compose-preview-server#344).
+   * The bundle's statement of the Java feature version its classes need, written by
+   * `:ui-builder-render-bundle`. Lets a caller report a wrong JVM in one sentence instead of an
+   * `UnsupportedClassVersionError` inside a spawned daemon.
    */
   public const val MANIFEST_RESOURCE: String =
     "/ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.properties"
@@ -1514,18 +1412,10 @@ public object PackagedUiBuilderRenderBundle {
   }
 
   /**
-   * Which pipeline draws a PNG export, as a SHA-256: the packaged bundle, and the projection
-   * ([projectRendererDocument]) this runtime applies to a saved design before the bundle sees it.
-   *
-   * A host that keeps renders across restarts keys them by this, because the host's own version
-   * does not move when only its UI-builder pin does. preview.coo.ee's design-card thumbnails were
-   * keyed by the server version alone, so pictures drawn before 3.85.0 — whose projection dropped
-   * every placement's `component`, drawing each as "Unsupported component:
-   * design/component-instance → (none)" — kept serving after the release that fixed it shipped.
-   *
-   * Both halves, because that fix was in the projection: a hash of the bundle alone need not have
-   * moved with it. The projection half is the compiled class the projection lives in, read from
-   * this runtime's own jar, so any change to it changes the identity without a number to raise.
+   * Which pipeline draws a PNG export, as a SHA-256 of both the packaged bundle and the projection
+   * ([projectRendererDocument]) applied before it. Hosts key persisted renders by this, since the
+   * host version does not move with the UI-builder pin. The projection half hashes its compiled
+   * class from this runtime's jar.
    */
   public fun digest(): String =
     "bundle=${bundleBytes().sha256()}\nprojection=${projectionBytes().sha256()}".sha256()
@@ -1580,10 +1470,8 @@ public fun projectRendererDocument(document: DesignDocumentV1): String =
 /**
  * The same projection, carrying the design's `assets` with uploaded bytes inlined.
  *
- * [resolveAsset] answers the bytes behind a binding, or null. A binding it answers is rewritten as
- * an embedded source so the renderer — which sees only this string — can draw it; one it cannot
- * answer travels as it is and the renderer draws a placeholder in its place. An empty map is left
- * out altogether, so a design with no assets projects to the same bytes it always did.
+ * Bindings [resolveAsset] answers become embedded sources; others travel unchanged and draw a
+ * placeholder. An empty map is omitted, so asset-free designs project to the same bytes.
  */
 public fun projectRendererDocument(
   document: DesignDocumentV1,
@@ -1725,11 +1613,8 @@ private fun placedCapability(
 }
 
 /**
- * The modifier rule, asked of one node against the capability that decides it.
- *
- * Shared so a placement is held to its body's modifiers by the same code that holds an ordinary
- * node to its component's — two spellings of this rule would eventually disagree, and the
- * disagreement would be discovered at export.
+ * The modifier rule for one node against the capability that decides it, shared so placements
+ * and ordinary nodes are held to one implementation.
  */
 private fun JsonObject.modifierIssue(
   nodeId: String,

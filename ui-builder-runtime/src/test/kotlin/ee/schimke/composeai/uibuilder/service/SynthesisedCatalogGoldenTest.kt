@@ -12,40 +12,14 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * `wear-m3` and `remote-m3`, as JSON, checked in.
+ * `wear-m3` and `remote-m3`, as checked-in JSON: a record of what the Kotlin generators produce
+ * ([`UI_BUILDER_CATALOG_CONTRACT.md`](../../../../../../../../docs/design/UI_BUILDER_CATALOG_CONTRACT.md)),
+ * giving catalog repositories a readable description and the equivalence gate a left-hand side. The
+ * runtime still constructs these catalogs.
  *
- * ## Why a golden of something we generate
- *
- * These two catalogs are written in Kotlin **here** — synthesised from the packaged Material 3 one
- * at startup, some 1,300 lines of authored capabilities, shelves, variant properties and slot
- * policy for components this repository has never compiled. The plan
- * ([`UI_BUILDER_CATALOG_CONTRACT.md`](../../../../../../../../docs/design/UI_BUILDER_CATALOG_CONTRACT.md))
- * moves that knowledge into the repositories that own it, where it is published as data and read
- * here rather than constructed here.
- *
- * The first step of that is neither writing a loader nor deleting a generator. It is **writing down
- * what the generators currently produce**, because:
- *
- * - wear-m3-catalog cannot reduce a policy file from a description that exists only as Kotlin in
- *   another repository. This is the description, in a form somebody can read and diff.
- * - the equivalence gate needs a left-hand side. "Is wear-m3-catalog ready?" becomes "does the file
- *   it publishes still describe this catalog?", which is a check rather than a judgement.
- * - it costs nothing and rolls back to nothing. **The runtime still constructs these catalogs**;
- *   this test only records what it constructed. Every reader is untouched, so a change of mind at
- *   any later phase discards two JSON files and this test.
- *
- * ## What a failure means
- *
- * Somebody changed `wearM3Catalog` or `remoteM3Catalog` — or changed the packaged Material 3
- * catalog they are both derived from, which is the case people are surprised by. Run
- * **`scripts/regenerate-goldens.sh`**, which rewrites every committed golden this repository
- * generates and is where AGENTS.md and the `/regenerate-goldens` workflow both send people; then
- * **read the diff**: it is the diff a catalog repository will have to reproduce, and after the
- * cutover it is the diff a catalog repository will have to have caused.
- *
- * That script passes `-PuiBuilderGoldens=write`, which is what this class reads. A Gradle property
- * rather than a bare `-D`, because `-D` on the command line reaches the Gradle JVM and not the
- * forked test JVM, and the silent no-op that follows is a confusing half hour.
+ * A failure means `wearM3Catalog`/`remoteM3Catalog` or the packaged Material 3 catalog changed.
+ * Run `scripts/regenerate-goldens.sh` (which passes `-PuiBuilderGoldens=write`; a Gradle property
+ * because `-D` does not reach the forked test JVM) and read the diff.
  */
 class SynthesisedCatalogGoldenTest {
 
@@ -132,11 +106,8 @@ class SynthesisedCatalogGoldenTest {
   }
 
   /**
-   * The catalog as a `JsonObject`, sorted so the file is byte-reproducible.
-   *
-   * Round-tripped through the wire type rather than reflected over, because the golden's whole
-   * purpose is to be the same bytes a published `ui-builder.json` would be compared against, and a
-   * rendering of the in-memory object would compare a shape nothing publishes.
+   * The catalog as a sorted `JsonObject`, round-tripped through the wire type so the golden is the
+   * bytes a published `ui-builder.json` would be compared against.
    */
   private fun catalog(systemId: String): JsonObject {
     val catalog = executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
@@ -151,17 +122,8 @@ class SynthesisedCatalogGoldenTest {
     ((this["statusSemantics"] as? JsonObject)?.get("platform") as? JsonPrimitive)?.content
 
   /**
-   * Key order is not information here, and an unsorted golden would diff on it.
-   *
-   * Object keys are sorted at every depth, **including inside arrays** — a catalog's components,
-   * properties and slots all live in arrays of objects, so stopping at the array boundary left
-   * hundreds of objects per golden ordered by whatever their serializer emitted. Reordering a field
-   * in a data class would then rewrite the goldens without changing a single fact, which is the
-   * churn this sorting exists to prevent.
-   *
-   * ELEMENT order is untouched, and that is a different thing from key order. Shelf order, allowed
-   * values and modifier capabilities are all information carried by an array's sequence, and
-   * sorting one would hide a real change.
+   * Sorts object keys at every depth, including inside arrays, so data class field order cannot
+   * churn the goldens. Element order is information (shelves, allowed values) and is kept.
    */
   private fun sortKeys(value: JsonElement): JsonElement =
     when (value) {
@@ -172,10 +134,8 @@ class SynthesisedCatalogGoldenTest {
     }
 
   private fun goldenFor(systemId: String): File {
-    // A unit test runs with the module directory as its working directory; `..` reaches the
-    // repository root, the way every other fixture-reading test here does it. Resolved by the
-    // DIRECTORY rather than by the file: on the first write the file does not exist yet, and a
-    // fallback keyed on it would silently create `ui-builder-runtime/docs/design/…` instead.
+    // Tests run from the module directory; resolve the repository root by the directory, since the
+    // file may not exist on first write.
     val fixtures = "docs/design/fixtures/ui-builder"
     val dir = File("../$fixtures").takeIf { it.isDirectory } ?: File(fixtures)
     return File(dir, "$systemId-capabilities-v1.json")

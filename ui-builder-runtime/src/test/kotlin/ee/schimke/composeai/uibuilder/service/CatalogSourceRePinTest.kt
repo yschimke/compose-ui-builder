@@ -17,18 +17,10 @@ import kotlin.test.assertIs
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A design stored against one catalog source opens pinned to the one being served.
- *
- * The second half of #796, and the mirror of `CatalogSourceFlipTest` in `:server` — that one proves
- * the **server** accepts the other source's reference (#816); this proves the document the
- * **editor** is handed names the catalog in front of it (#818). Without it a stored design came
- * back from the flip and could do nothing: `ExportValidation.validateCatalogPin` compares the pin
- * field by field against the served catalog, so the browser put `CATALOG_PIN_MISMATCH` in the
- * Issues panel and both export projections, which share that fail-closed validator, refused.
- *
- * The catalog here is a stub with two accepted references because that is exactly what the
- * production runtime holds after a flip: `acceptedReferences` carries both sources' references for
- * one `systemId`, while `reference()` answers with the one this process serves.
+ * A design stored against one catalog source opens pinned to the one being served, so the
+ * editor's `ExportValidation.validateCatalogPin` does not refuse it after a source flip. Mirrors
+ * `CatalogSourceFlipTest` in `:server`. The stub holds two accepted references with one served,
+ * as the production runtime does after a flip.
  */
 class CatalogSourceRePinTest {
 
@@ -49,18 +41,9 @@ class CatalogSourceRePinTest {
   }
 
   /**
-   * The re-pin is written through, at startup, for designs nobody opens.
-   *
-   * This was the opposite assertion until #819 step 3 came into view. Leaving the rewrite in memory
-   * was defensible only while both sources' references stayed computable — `acceptedReferences`
-   * keeps the other source's catalog resident, so an old pin still resolves. Retiring a synthesised
-   * catalog takes its reference out of the process, and `rePinned` asks `resolve` first: every
-   * design not saved since the flip would then be `CATALOG_UNAVAILABLE` with no way back. So the
-   * convergence has to have happened before the fallback is removed, and it has to reach designs
-   * nobody edits.
-   *
-   * Read the file directly rather than through a service — whichever source a service serves, it
-   * re-pins what it hands out, so only the stored bytes can tell the two apart.
+   * The re-pin is written through at startup, even for designs nobody opens, so stored pins
+   * converge before a synthesised catalog (and its reference) is retired. Reads the file directly:
+   * any service re-pins what it hands out.
    */
   @Test
   fun `re-pinning writes through at startup`() {
@@ -109,13 +92,8 @@ class CatalogSourceRePinTest {
   }
 
   /**
-   * A store that cannot be written to reports and serves, rather than refusing to start.
-   *
-   * The rewrite has already been applied in memory by the time the write is attempted, so this
-   * process is correct either way; what a failure costs is the convergence, which the next boot
-   * retries. Dying here would put back exactly the trap that moving validation off startup removed
-   * — one content condition taking down a server that holds a thousand designs — and a read-only or
-   * full store is a condition an operator acts on, not one to crash over.
+   * A store that cannot be written to reports and serves rather than refusing to start: the
+   * in-memory re-pin is already correct, and the next boot retries the convergence.
    */
   @Test
   fun `a store that refuses the write is reported, not fatal`() {
@@ -138,10 +116,8 @@ class CatalogSourceRePinTest {
     )
     assertEquals(BEFORE_FLIP, storedPin(root, "checkout"))
     assertEquals(1, afterFlip.diagnostics().rePinnedDesigns)
-    // The exception's CLASS reaches diagnostics. Its message must not: `/status.json` is
-    // unauthenticated on a `--public` host, this map is owner-free by contract, and the store's
-    // real messages name the design and the absolute state path. Asserted rather than promised,
-    // because the field is a String and nothing else would stop a later edit widening it.
+    // The class reaches diagnostics, never the message: `/status.json` is unauthenticated on a
+    // `--public` host and messages name designs and state paths.
     assertEquals("IOException", afterFlip.diagnostics().rePinPersistenceFailure)
     assertFalse(
       afterFlip.diagnostics().rePinPersistenceFailure.orEmpty().contains("checkout"),
@@ -172,11 +148,8 @@ class CatalogSourceRePinTest {
       .catalogPin
 
   /**
-   * The drift check is untouched: a document the catalog refuses keeps its own pin.
-   *
-   * This is the clause the whole mechanism rests on. Re-pinning says "only the revision string is
-   * stale, the document demonstrably fits" — so a document that does not fit must not be re-pinned,
-   * or a design that has drifted would be handed to the editor wearing the served catalog's name.
+   * A document the catalog refuses keeps its own pin: re-pinning only applies when the document
+   * demonstrably fits.
    */
   @Test
   fun `a document the served catalog refuses is not re-pinned`() {

@@ -11,21 +11,16 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The watch the canvas hands the Wear components inside a design.
- *
- * [WearCanvasDeviceSizeTest] proves the canvas *uses* this; this pins the rule it uses, which is
- * the half a picture cannot state. The three sizes are the ones the Screen inspector offers and
- * `ScreenScaffoldContentPaddingTest` in wear-m3-catalog measured, and the fallback is the same one
- * the scaffold stand-in takes: a design opened on a phone frame is a design somebody has not picked
- * a watch for yet, and a 411dp watch is a worse answer than the smallest real one.
+ * The watch the canvas hands the Wear components inside a design. [WearCanvasDeviceSizeTest] proves
+ * the canvas uses it; this pins the rule: the Screen inspector's three sizes (measured by
+ * `ScreenScaffoldContentPaddingTest` in wear-m3-catalog), with the smallest real watch as the
+ * fallback for an unpicked (e.g. phone) frame.
  */
 class WearDeviceConfigurationTest {
 
   /**
-   * The frame the Wear catalog declares, from the golden on the test classpath.
-   *
-   * Read rather than written: a test that restated the diameters would keep passing after the
-   * catalog changed them, which is the failure this reader exists to remove.
+   * The frame the Wear catalog declares, read from the golden on the test classpath so the test
+   * follows catalog changes.
    */
   private val declaredFrame =
     CapabilityCatalogParser.parse(
@@ -60,9 +55,8 @@ class WearDeviceConfigurationTest {
     listOf(192, 204, 216, 227, 240).forEach { dp ->
       val device = document(dp).wearDeviceConfiguration(declaredFrame)
       assertEquals(dp, device.screenWidthDp, "screen width at ${dp}dp")
-      // A round watch's screen is as tall as it is wide, and the port reads `screenHeightDp` for
-      // its
-      // vertical content padding and its list's minimum vertical padding.
+      // A round screen is as tall as it is wide; the port reads `screenHeightDp` for vertical
+      // padding.
       assertEquals(dp, device.screenHeightDp, "screen height at ${dp}dp")
       assertTrue(device.isScreenRound, "a Wear design is drawn on a round watch at ${dp}dp")
     }
@@ -70,9 +64,7 @@ class WearDeviceConfigurationTest {
 
   @Test
   fun `a frame outside the declared range falls back to the smallest declared diameter`() {
-    // A phone frame, a tablet frame, a nonsense frame and an absent one, against a catalog that
-    // declares round watches: the components must be laid out against a real watch even when the
-    // document has not picked one.
+    // Phone, tablet, nonsense and absent frames all fall back to a real declared watch.
     listOf(411, 1280, 0, -1, null).forEach { dp ->
       assertEquals(
         declaredFrame.contentPadding.first().screenDp,
@@ -84,10 +76,8 @@ class WearDeviceConfigurationTest {
 
   @Test
   fun `a catalog that declares no frame draws the frame the document names`() {
-    // The other half of the rule, and the reason it is the catalog's rather than this build's: with
-    // nothing declared there is no claim to fall back to, so the document's own frame stands. A
-    // builder that invented a diameter here would be answering a question the catalog never
-    // answered.
+    // With no frame declared by the catalog there's nothing to fall back to, so the document's own
+    // width stands.
     assertEquals(411, document(411).wearDeviceConfiguration().screenWidthDp)
     assertEquals(1280, document(1280).wearDeviceConfiguration().screenWidthDp)
     assertEquals(
@@ -98,9 +88,7 @@ class WearDeviceConfigurationTest {
 
   @Test
   fun `the height follows the diameter rather than the frame's own height`() {
-    // A tall frame is not a tall watch: the extent a list is drawn at is the canvas's, and a Wear
-    // screen's height is its diameter. Reading `heightDp` here would give the port a 400dp-tall
-    // watch and a 40dp vertical content padding.
+    // A tall frame is the canvas's extent, not a tall watch: height is the diameter.
     val device = document(widthDp = 192, heightDp = 400).wearDeviceConfiguration()
     assertEquals(192, device.screenWidthDp)
     assertEquals(192, device.screenHeightDp)

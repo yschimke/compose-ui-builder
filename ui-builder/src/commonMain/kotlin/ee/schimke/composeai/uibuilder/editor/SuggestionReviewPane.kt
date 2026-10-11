@@ -22,14 +22,10 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
- * The canvas's stand-in while a suggestion is being looked at: the design now, the design as the
- * suggestion would leave it, and the list of what moves — with Accept and Reject on the bar.
- *
- * It **replaces** the editing canvas, for the reason [RevisionReviewPane] does: a canvas drawing a
- * proposal that nobody has accepted would take edits against a document that does not exist yet.
- * Not composing the editing surface is that rule holding itself. The pictures are drawn by the
- * renderer that draws the canvas ([RevisionPicture]), so they cannot disagree with what accepting
- * would show.
+ * The canvas's stand-in while a suggestion is viewed: the design now, the design after the
+ * suggestion, and what changes, with Accept and Reject. Replaces the editing canvas, as
+ * [RevisionReviewPane] does, so nothing edits an unaccepted proposal; pictures use
+ * [RevisionPicture].
  */
 @Composable
 internal fun SuggestionReviewPane(

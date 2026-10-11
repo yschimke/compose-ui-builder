@@ -37,11 +37,8 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.math.roundToInt
 
 /**
- * Which edges one handle moves.
- *
- * In drawing order, which is hit-test order in reverse: the corner first, so where its target
- * overlaps an edge's on a small node the single-axis handle — the one the dot under the pointer is
- * — wins.
+ * Which edges one handle moves. Drawn corner first (hit-tested last), so where targets overlap on a
+ * small node the single-axis handle wins.
  */
 internal enum class ResizeHandle(val width: Boolean, val height: Boolean, val label: String) {
   Corner(width = true, height = true, label = "size"),
@@ -61,12 +58,9 @@ internal data class ResizePreview(
 )
 
 /**
- * The new size a handle dragged by ([dx], [dy]) root pixels asks for.
- *
- * Pulled out of the composable so the snapping is a function of numbers, testable without a
- * pointer. An edge taken to within [snapPx] of the parent's edge — or past it — snaps to Fill,
- * which is the easy way to `fillMaxWidth` the issue asked for: drag the side to the side. An axis
- * the catalog will not let be a number only ever snaps, and otherwise stays as it was.
+ * The new size a handle dragged by ([dx], [dy]) root pixels asks for; pure so snapping is testable.
+ * An edge taken within [snapPx] of (or past) the parent's edge snaps to Fill. An axis the catalog
+ * will not let be a number only ever snaps.
  */
 internal fun resizePreview(
   handle: ResizeHandle,
@@ -135,23 +129,15 @@ internal fun resizeToggle(
 }
 
 /**
- * The selection's resize handles, on its end edge, its bottom edge and the corner between them.
+ * The selection's resize handles on its end edge, bottom edge and the corner between them.
  *
- * **Screen-sized, outside the design.** The handles sit in the workspace over the scaled frame,
- * like the hover editor, so a handle is a finger's width however far the design is zoomed out — the
- * visible dot is small, the target around it is not. Only the end and bottom edges: a composable is
- * laid out by its parent, so moving the start or top edge would be moving the node, which is a
- * different gesture with its own drop marker.
+ * Screen-sized and outside the scaled frame, so targets stay finger-sized at any zoom. Only end and
+ * bottom edges: moving start/top would move the node. Dragging draws the dashed new box with its
+ * size; release writes one edit; reaching the parent's edge snaps to **Fill**; double-click flips
+ * the axis between Fill and Hug.
  *
- * Drag one and the new box is drawn dashed with its size beside it; release to write it. Take the
- * edge to the parent's edge and it snaps to **Fill**. Double-click (or double-tap) a handle to flip
- * that axis between Fill and Hug. Nothing is written while the drag is in the air — one release is
- * one edit, one undo step and one round to every collaborator.
- *
- * **A handle answers the primary button only.** Its target is a finger's width, which on a short
- * node — a line of text, a chip — covers the node's middle as well as its edge. A secondary press
- * anywhere on a handle goes to [onSecondaryClick] with its root-space position, so a right-click on
- * the node opens the node's menu wherever it lands; a primary drag on the same spot still resizes.
+ * Primary button only: a secondary press on a handle (whose target can cover a small node) goes to
+ * [onSecondaryClick] in root space, so the node menu still opens.
  */
 @Composable
 internal fun ResizeHandles(
@@ -249,11 +235,8 @@ internal fun ResizeHandles(
       Box(
         Modifier.offset { targetTopLeft }
           .size(HANDLE_TARGET)
-          // First, and in the initial pass: the press is consumed before the tap and drag
-          // detectors below see it, so a right-drag never resizes and a right-click never toggles.
-          // Keyed on where the handle is, because the press is in the handle's own pixels and the
-          // block keeps what it captured: a selection that opens a pane moves the canvas, and a
-          // stale origin hit-tested the wrong node.
+          // First, in the initial pass, so right-drags never resize and right-clicks never toggle.
+          // Keyed on the handle's position, since a moved canvas would leave a stale origin.
           .onSecondaryClick(Triple(handle, targetTopLeft, origin)) { position ->
             currentOnSecondaryClick.value(
               origin + Offset(targetTopLeft.x + position.x, targetTopLeft.y + position.y)

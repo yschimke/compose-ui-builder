@@ -4,19 +4,13 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * What an attached picture *is*, measured against the frame it is being compared with.
+ * What an attached picture is, measured against the frame it is compared with, answered once so
+ * the panel, fitting and matcher agree:
  *
- * A picture arrives as pixels with no unit. Before any comparison means anything the editor has to
- * answer three questions about it, and this is where they are answered once so the panel, the
- * fitting and the matcher cannot answer them differently:
- *
- * 1. **At what density was it drawn?** A Figma export at 2× and a Pixel screenshot at 2.625× of the
- *    same 411 dp screen are 822 and 1080 pixels wide. Said by the picture where it can say it (an
- *    `@2x` file name, a Figma export scale), otherwise inferred from the frame.
- * 2. **How big is it in dp?** Pixels over density — the size the operator actually reasons in.
- * 3. **Is it the screen, or a piece of one?** A full-screen mock compares against the whole frame;
- *    a 328 × 56 dp button crop compared against the whole frame is a picture stretched over the
- *    wrong thing, and every pixel of the difference it reports is noise.
+ * 1. At what density was it drawn? Declared by the picture where possible (`@2x`, a Figma export
+ *    scale), otherwise inferred from the frame.
+ * 2. How big is it in dp?
+ * 3. Is it the screen, or a piece of one? A component crop must not be stretched over the frame.
  *
  * Pure and platform-free: the inputs are two sizes and a name.
  */
@@ -43,13 +37,8 @@ data class ReferenceFacts(
     get() = known && abs(aspectRatioDelta - 1f) <= SAME_SHAPE_TOLERANCE
 
   /**
-   * The density this picture is read at.
-   *
-   * Declared wins: a picture that says it is 2× is 2×, whatever the frame. Otherwise a picture of
-   * the frame's shape, or taller (a scrolled capture, or one with system bars), is the frame drawn
-   * at `widthPx / frameWidthDp` — screens are captured edge to edge across their width. Anything
-   * else — a crop of no stated scale — is assumed to be at the design's own density, which is what
-   * a screenshot of a component on the target device is.
+   * The density this picture is read at: declared wins; otherwise a picture of the frame's shape or
+   * taller is read at `widthPx / frameWidthDp`; any other crop is assumed at the design's density.
    */
   val density: Float
     get() =
@@ -109,11 +98,8 @@ data class ReferenceFacts(
     get() = abs(density - designDensity) < 0.01f
 
   /**
-   * The fit that lines this picture up with the frame dp for dp, or null when no fit can.
-   *
-   * [ReferenceFit.Contain] is the old default and stays right for an exact screen. A tall screen
-   * has to be fitted across its width and pinned to the top, or contain shrinks it until nothing
-   * lines up; a region is only comparable at its actual size.
+   * The fit that lines this picture up with the frame dp for dp, or null when none can: contain for
+   * an exact screen, width-pinned-top for a tall capture, actual size for a region.
    */
   val recommendedFit: ReferenceFit?
     get() =
@@ -126,12 +112,8 @@ data class ReferenceFacts(
       }
 
   /**
-   * Whether pixel comparison — Difference mode, the measured diff, matching a layer — can answer
-   * anything under [fit].
-   *
-   * Overlay and Split always can: a person can judge a translucent picture at any scale. A
-   * per-pixel subtraction can only when one dp of the picture lands on one dp of the frame, which
-   * is the fit's job — and which no fit achieves for a picture of a different shape.
+   * Whether pixel comparison (Difference mode, measured diff, layer match) means anything under
+   * [fit]: only when one picture dp lands on one frame dp. Overlay and Split always work.
    */
   fun pixelComparable(fit: ReferenceFit): Boolean =
     when (kind) {
@@ -179,10 +161,8 @@ data class ReferenceFacts(
     private val PLAUSIBLE_SCREEN_DENSITY = 0.74f..4.5f
 
     /**
-     * The densities Android ships, and Figma's export scales, with the name each is known by.
-     *
-     * Snapping to one is what turns "2.6247" into the 2.625 a Pixel actually is; a value nowhere
-     * near one is left as measured rather than forced onto the nearest.
+     * The densities Android ships and Figma's export scales, with their names. Snapping turns
+     * "2.6247" into 2.625; values near none are left as measured.
      */
     val DENSITY_BUCKETS: List<Pair<Float, String>> =
       listOf(
@@ -216,13 +196,9 @@ enum class ReferenceKind(val label: String) {
 }
 
 /**
- * How the base picture is placed in the frame before scale and nudge.
- *
- * [Contain] is the historic behaviour and the default — the whole picture visible, centred. [Width]
- * fits the picture's width to the frame and pins its top edge, which is how a tall capture lines up
- * with a screen. [Actual] draws it at its own size in dp, at the density [ReferenceFacts] reads it
- * at, from the top-left — which is the only placement under which a cropped component's pixels mean
- * anything against the canvas.
+ * How the base picture is placed in the frame before scale and nudge: [Contain] (default, whole
+ * picture centred), [Width] (fit width, pin top, for tall captures), or [Actual] (own dp size at
+ * the read density, top-left — the only placement that suits a cropped component).
  */
 enum class ReferenceFit(val wireValue: String, val label: String) {
   Contain("contain", "Fit"),
@@ -236,11 +212,8 @@ enum class ReferenceFit(val wireValue: String, val label: String) {
 }
 
 /**
- * The density a picture's own name declares, or null.
- *
- * `card@2x.png` and `Frame 12 @3x.png` are how every design tool and every iOS asset catalog has
- * spelled export scale for a decade, so it is worth reading. Only the conventional suffix, right
- * before the extension, is honoured: a `2x` in the middle of a name is a name.
+ * The density a picture's name declares (`card@2x.png`), or null. Only the conventional suffix
+ * right before the extension counts.
  */
 fun declaredDensityFromName(name: String): Float? {
   val stem = name.substringBeforeLast('.').trimEnd()

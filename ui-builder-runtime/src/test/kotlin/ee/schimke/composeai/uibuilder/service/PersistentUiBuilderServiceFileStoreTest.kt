@@ -18,12 +18,8 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The service on the per-design store, end to end.
- *
- * [FileUiBuilderDesignStoreTest] proves the store's own promises against the file tree; this proves
- * the thing that matters to an operator — that a host restarted onto the same directory serves the
- * same designs, that undo still replays, and that an edit to one design writes nothing belonging to
- * another (yschimke/compose-preview-server#578).
+ * The service on the per-design store, end to end: a restart onto the same directory serves the
+ * same designs, undo still replays, and an edit to one design writes nothing of another.
  */
 class PersistentUiBuilderServiceFileStoreTest {
   private val owner = AuthenticatedUiBuilderActor("owner")
@@ -264,11 +260,8 @@ class PersistentUiBuilderServiceFileStoreTest {
     val first = service(root)
     create(first, "checkout")
     create(first, "settings")
-    // The header is the thing that names the design and says who owns it. One that will not parse
-    // as a header — here: valid JSON whose checksum no longer matches, so the id is still
-    // recoverable but nothing else is — leaves no access record to check `delete`'s ownership
-    // question against: even the actor that created it is refused, with the reason and the
-    // directory intact. The operator's door is the one that opens.
+    // A header that will not parse leaves no access record, so even the creator's `delete` is
+    // refused (reason and directory intact); only the operator's door opens.
     val headerFile = designDirectory(root, "checkout").resolve("design.json")
     val stored = Files.readString(headerFile)
     val checksum = Regex("\"checksumSha256\":\"([0-9a-f]+)\"").find(stored)!!.groupValues[1]

@@ -107,9 +107,8 @@ fun inspectDocumentSvgExport(
         } else if (node.hasOfflineRasterBytes(document)) {
           rasterFallbacks += node.id
         }
-        // Otherwise the node has no pixels this lane can embed — an unresolved key, or an
-        // uploaded asset only a host can fetch — and the renderer draws its vector placeholder,
-        // which the recorder needs no raster correlation for.
+        // Otherwise (an unresolved key, or an uploaded asset only a host can fetch) the renderer
+        // draws its vector placeholder, which needs no raster correlation.
       }
       ClosedSvgStatus.VERIFIED ->
         if (svg.blocksExport) {

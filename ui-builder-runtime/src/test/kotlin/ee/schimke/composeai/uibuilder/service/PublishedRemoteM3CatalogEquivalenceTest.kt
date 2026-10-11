@@ -25,50 +25,18 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * What `remote-m3` gains and what it loses if `--ui-builder-published-catalogs` names it.
+ * What `remote-m3` gains and loses if `--ui-builder-published-catalogs` names it, using a pair
+ * captured verbatim from `:remote-catalog:composePreviewDiscover`.
  *
- * The m3 sibling of this test composes a fixture written by hand, which proved the composer and
- * proved nothing about the catalog — see its KDoc. **This pair is generated**, captured verbatim
- * from `:remote-catalog:composePreviewDiscover`, so the question here is the real one.
+ * - It offers Remote Compose components the synthesised shelf never had; most now export, and
+ *   those that cannot are pinned below with the reason.
+ * - The two widget containers are restored as builtins (a Glance Wear host frame has no record),
+ *   which matters because `RecordFreeExport` routes on the root component id.
+ * - `m3/text` is not lost: it is `remote-m3/remote-text`. `remote-m3/lottie` is server-built from
+ *   `asset/image`, so the catalog has nothing to publish.
  *
- * The answer is not symmetric, and that is the point of writing it down:
- * - it **offers** twenty-five Remote Compose components the synthesised shelf has never had, which
- *   until recently the record could not name at all (all 49 catalog ids collapsed onto the
- *   project's own `RemoteSticker` wrapper, two records for the whole module). When this was written
- *   not one of them could be EXPORTED, so calling them a gain would have been wrong; twenty-two of
- *   twenty-six now can, and the four that cannot are named below with the reason;
- * - it **loses** two — three until the frozen side dropped `m3/surface` — and it lost more until
- *   the two that mattered most came back.
- *
- * The loss is a blocker, and nothing else states it. `ProductionUiBuilderRuntime`'s donor unions in
- * `layout/`, `shape/`, `asset/` and `remote-compose/` and nothing else — deliberately, because
- * those are the builder's own vocabulary rather than any catalog's. Anything else the synthesised
- * shelf offers and the published file omits is simply gone.
- *
- * **The two widget containers came back as builtins**, which is what a builtin is for: the Glance
- * Wear container is a HOST frame rather than a `remote-material3` component, so nothing calls it
- * and no record can carry it, and `UiBuilderBuiltin`'s own KDoc says a policy file may declare
- * exactly that. They mattered more than two components' worth — this catalog's policy says *"a
- * Remote design starts from a container: everything else goes inside one"* and `RecordFreeExport`
- * routes on the ROOT component id, so without them a published catalog is one whose designs cannot
- * be rooted.
- *
- * That path did not work before this PR: the composer read a builtin's properties under a key the
- * policy schema forbids, dropped its slot policy, and hardcoded its traits to empty. Three defects
- * on a seam no catalog had ever crossed.
- *
- * **The other two are not losses**, which took asking the person who owns the catalog. A third,
- * `m3/surface`, was on this list until the synthesised shelf stopped borrowing it
- * (yschimke/compose-ui-builder#81): there is no Surface in Remote Compose or Wear Material 3, and
- * the emitter tells an author to reach for a `layout/box` with `background` and `clip` instead. The
- * frozen catalog no longer offers it, so there is nothing left for the published one to lose.
- * - `m3/text` — **is** `RemoteText`, published here as `remote-m3/remote-text`. The component is
- *   not missing; the id a design stores changes.
- * - `remote-m3/lottie` — the catalog draws no Lottie sticker at all, so there is nothing here to
- *   publish. It is on the synthesised shelf because the server builds one from `asset/image`.
- *
- * So the shelf comparison is settled, and what remains is export — a different question, measured
- * below.
+ * The donor only unions `layout/`, `shape/`, `asset/` and `remote-compose/`; anything else the
+ * published file omits is gone.
  */
 class PublishedRemoteM3CatalogEquivalenceTest {
 
@@ -103,23 +71,15 @@ class PublishedRemoteM3CatalogEquivalenceTest {
     get() = result.catalog
 
   /**
-   * The record behind each published component, under the builder id a design names it with.
-   *
-   * The composition's own join rather than one this test performs. It used to read
-   * `statusSemantics.components[id].record` out of the fixture and look the canonical id up itself,
-   * which measured a map production never builds — the derived-id half of the join was missing
-   * entirely, so an unannotated component could not appear. Now it is the same map `ServeRunner`
-   * hands the export executor.
+   * The record behind each published component, under its builder id — the composition's own
+   * join, the same map `ServeRunner` hands the export executor.
    */
   private val composedRecords: Map<String, ComponentRecord>
     get() = result.records
 
   /**
-   * The ones the published catalog cannot offer, and why each one.
-   *
-   * Asserted ABSENT rather than skipped, and with the reason spelled out, because a gap nothing
-   * states is a gap that stops being noticed. If one starts composing this test fails and says to
-   * move it out, rather than passing quietly.
+   * The ones the published catalog cannot offer, and why. Asserted absent rather than skipped, so
+   * one that starts composing fails this test.
    */
   private val knownAbsent =
     mapOf(
@@ -141,21 +101,13 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   private val donorNamespaces = listOf("layout/", "shape/", "asset/", "remote-compose/")
 
   /**
-   * Everything the synthesised shelf offers that the donor will NOT put back — this catalog's own
-   * components and the two it borrows from m3 alike. Both are the published file's to carry.
+   * Everything the synthesised shelf offers that the donor will not put back; the published file
+   * must carry these.
    */
   private fun frozenOwned() =
     frozen.components.filterNot { c -> donorNamespaces.any { c.componentId.startsWith(it) } }
 
-  /**
-   * Every component the pair composes, by name.
-   *
-   * A count floor was not enough and the review said so: at `size > 20` on a 27-component fixture,
-   * six could vanish — `remote-button-group`, `remote-compact-button`, the progress indicators —
-   * and no test here would notice, which is the one thing a pre-cutover gate exists to catch.
-   * remote-catalog published TWO records before the scan classpath resolved AARs by coordinate, so
-   * a regression of that size is the shape of the bug this is watching for.
-   */
+  /** Every component the pair composes, by name; a count floor would miss components vanishing. */
   @Test
   fun `the generated pair composes exactly the components it should`() {
     assertEquals(
@@ -186,11 +138,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
         "remote-m3/remote-title-card",
         "remote-m3/remote-vertical-page-indicator",
         "remote-m3/theme-specimen",
-        // Not records: the host frames the policy declares as builtins, because the Glance Wear
-        // container is a host frame rather than a `remote-material3` component and nothing calls
-        // it. Everything above is a record component. `widget-container-adaptive` is the
-        // experimental third, declared in remote-m3-catalog's policy: authored as headline /
-        // supporting / action slots and resolved to Small or Large before anything renders.
+        // Not records: host-frame builtins declared by the policy. `widget-container-adaptive` is
+        // the experimental third, resolved to Small or Large before rendering.
         "remote-m3/widget-container-adaptive",
         "remote-m3/widget-container-large",
         "remote-m3/widget-container-small",
@@ -201,23 +150,9 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * `remote-sticker` is excluded, and the exclusion now reaches every place it has to.
-   *
-   * It is the frame every preview in this catalog is drawn inside rather than a component anyone
-   * places in a design, so wear-m3-catalog#425 excludes it and publishes the reason. The exclusion
-   * takes effect where it matters: it is not served, so it cannot be inserted, and the exporter is
-   * no longer asked to write it.
-   *
-   * It used to remain on the MENU — the generator writing a palette entry for a component the
-   * consumer refuses to serve, an item that disappeared on insert — and the third assertion here
-   * pinned that as a known defect. yschimke/compose-ai-tools#5378 fixed it, the catalog has since
-   * bumped to a release carrying the fix, and this re-capture is the first fixture written by it.
-   *
-   * That assertion's own note said to delete it once the fixture was re-captured. It is INVERTED
-   * instead, and deliberately: deleting it would leave nothing watching a seam that has already
-   * been wrong once, and the fix lives in another repository on a pin this one bumps. Inverted it
-   * costs the same line and fails if a plugin bump ever puts the entry back. That is the opposite
-   * of the shortening the note was guarding against — it asks for more than before, not less.
+   * `remote-sticker` (the preview frame, not a placeable component) is excluded everywhere: not
+   * served, not exported, and not on the menu. The menu assertion guards a fix that lives in
+   * another repository.
    */
   @Test
   fun `an excluded component is not served`() {
@@ -234,10 +169,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
         }
         .keys
         .sorted()
-    // `capturing-wear-widget-preview` used to be the second entry. The catalog now uses the
-    // RELEASED `CapturingWearWidgetPreview` (wear-m3-catalog#613) rather than its own copy, so the
-    // wrapper is no longer a symbol of this module and drops out of the record entirely — which is
-    // a stronger exclusion than a stated reason, not a weaker one.
+    // The catalog uses the released `CapturingWearWidgetPreview`, so its wrapper is no longer in
+    // the record.
     assertEquals(
       listOf("remote-m3/remote-sticker"),
       excluded,
@@ -261,23 +194,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * The restored containers are the frozen ones, field by field — not just ids that match.
-   *
-   * A builtin is transcribed rather than derived, so "it composes" says nothing about whether it
-   * composes into the right thing, and the id-set test above would pass on an empty shell. Every
-   * field a design depends on is compared against the frozen shelf here: what the editor calls it,
-   * what other components' slots can match on, what may go inside, and what a person can set.
-   *
-   * There is no divergence left. The last one was the `content` slot's `max: 1` — one design per
-   * host — which a builtin could not state: `UiBuilderBuiltinSlot` said `required` and nothing
-   * about a maximum, so the frozen bound composed unbounded and this list held two lines saying so.
-   * Closed end to end: the policy schema grew `max` (yschimke/compose-ai-tools#5408), the reader
-   * carries it into `SlotCardinalityV1` (#747), and the catalog declares it
-   * (yschimke/wear-m3-catalog#446).
-   *
-   * So an empty list here is the whole of #674's first blocker: the two containers a Remote design
-   * roots itself in are on the published shelf, and they are the frozen ones rather than something
-   * that merely shares their ids.
+   * The restored containers match the frozen ones field by field (name, traits, slots including
+   * `max: 1`, properties) — not just ids. An empty list here means no divergence.
    */
   @Test
   fun `a restored widget container matches the frozen one field by field`() {
@@ -328,12 +246,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * The components reach the shelf at all, asserted so a discovery regression shows up here rather
-   * than in the builder. Every one was invisible while the AAR carrying them was off the scan
-   * classpath.
-   *
-   * Reaching the shelf is necessary and not sufficient — being offered says nothing about whether
-   * an export can write the component; see the test below, which measures that separately.
+   * The components reach the shelf at all, so a discovery regression shows up here. Exportability
+   * is measured separately below.
    */
   @Test
   fun `the Remote Compose components the catalog draws are all offered`() {
@@ -362,73 +276,13 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * Offered is not usable, and this measures one half of that.
+   * Which published components `RemoteContentEmitter` has hand-written cases for, versus the record
+   * fallback. Kept separate from the export test because the two mechanisms fail differently, and
+   * a new case should be deliberate.
    *
-   * `RemoteContentEmitter.emit` is a `when` over component ids with a hand-written function each,
-   * and it knows exactly the ids in [REMOTE_CONTENT_COMPONENT_IDS] — twelve, since
-   * `remote-m3/remote-text` joined them. Not one of the OTHER twenty-five the published catalog
-   * adds is among them, which was once the whole answer: a component you could insert and could not
-   * export.
-   *
-   * It is no longer the whole answer. The emitter falls back to the component RECORD for a
-   * component it has no case for, and twenty-two of the twenty-six now export — measured in
-   * [what the published shelf can export is the reviewed set], which is the test to read for
-   * whether the shelf is usable. This one stays because the hand-written cases and the fallback are
-   * different mechanisms with different failure modes, and a case appearing here should be a
-   * deliberate act rather than a surprise.
-   *
-   * WHICH lane a design takes is decided by its ROOT, not by its catalog:
-   * `RecordFreeExport.applies` is `roots.single().componentId` being a `WearWidgetScaffoldSize` or
-   * the Wear scaffold. So the two blockers here are coupled, and it is worth saying which way
-   * round. A Remote design is rooted at a widget container — this catalog's policy says a Remote
-   * design starts from one — and the widget containers are exactly what the published catalog
-   * loses. Restore them and every design is record-free and meets this refusal head on; leave them
-   * out and designs cannot be rooted correctly in the first place.
-   *
-   * Whether the record-driven lane is an escape was open here, and the record answers it. Its own
-   * comment says `remote-m3` "ha[s] no component record and the record-driven generator can only
-   * refuse them" — written when the record did not exist, which is the thing this work changed, so
-   * the sentence needed re-checking rather than citing. Re-checked: the record exists and the
-   * generator still refuses, and now it says why. `code.refusedReason` on 25 of the 27 names a
-   * required parameter whose TYPE has no writable value — `RemoteString`, `RemoteBoolean`,
-   * `RemoteFloat`, `Action`. A `remote-material3` component takes Remote Compose values, not Kotlin
-   * ones, and neither generator can conjure one.
-   *
-   * That reframes the cost rather than removing it, and the reframing is the useful part: six
-   * types, not twenty-five components — pinned as a histogram in
-   * [the export blocker is six value types, not twenty-five components].
-   *
-   * Note what still cannot be measured from here, so nobody mistakes the histogram for a plan.
-   * `ScreenGeneratorComposeExportExecutor` resolves a component through its own
-   * `components(catalogSystemId)` source rather than through the `catalog` on the export request:
-   * handed the real composed catalog it still answers "no component `remote-m3/remote-text` in this
-   * catalog". A probe that does not wire that source measures its own fixture, which is what two
-   * attempts at one did before this note replaced them.
-   *
-   * What is checkable without that wiring is the emitter's vocabulary, and that is what is asserted
-   * below.
-   *
-   * `RemoteM3VocabularyParityTest` already holds the synthesised palette to this invariant — a
-   * component you can insert and cannot export is worse than one that is missing, because the
-   * author finds out at the end with the design already built. It does not cover a published
-   * catalog, so the swap escapes it.
-   *
-   * Asserted as the exact current set rather than as `isEmpty()`, so the day the emitter learns
-   * these components this test fails and says to shorten the list. Raised in review on #673.
-   *
-   * That day came for exactly one of them. `remote-m3/remote-text` now goes through the same
-   * hand-written writer as the borrowed `m3/text`, because it is the same `RemoteText` call and the
-   * record fallback could not write its type scale, its size or its alignment — six scalar types is
-   * not a typography. So the list is one shorter, and the exclusion below is the statement that it
-   * was shortened deliberately.
-   *
-   * Then it came for the rest of `RemoteMaterial3`. compose-ui-builder#202 taught the emitter to
-   * write those components from their embedded record, and compose-ui-builder#214 put them in the
-   * vocabulary, so against that checkout the list is down to what `RemoteMaterial3` leaves out on
-   * purpose: `remote-icon` and the two page indicators, whose required parameters have no writable
-   * value. The published 3.44.0 this repository pins has the record but not the vocabulary, so the
-   * exclusion is taken only when the vocabulary actually names them — all of them or none, never a
-   * partial list. Once the pin moves past 3.44.0 this can become the literal three.
+   * Asserted as the exact current set. The exclusion of `RemoteMaterial3` components is taken only
+   * when the vocabulary names all of them (the pinned 3.44.0 has the record but not the
+   * vocabulary); once the pin moves past 3.44.0 this can become the literal three.
    */
   @Test
   fun `the emitter has a hand-written case for one of the components the catalog adds`() {
@@ -464,24 +318,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * Every modifier the published catalog advertises is one this lane can write.
-   *
-   * The invariant `RemoteM3VocabularyParityTest` holds the synthesised palette to, now true of a
-   * published one: a control you can apply and cannot export is worse than one that is missing,
-   * because the author finds out at the end with the design already built.
-   *
-   * It was false, and #673 pinned the three that broke it. Not one of the twenty-seven states
-   * `modifierCapabilities`, so the composer handed each the structural default — and that default
-   * is `ComponentRecordPacks`', which is a JETPACK COMPOSE default: `testTag` and `aspectRatio` on
-   * everything, `shadow` on every container. `RemoteContentEmitter` writes none of the three, so
-   * the shelf offered three controls whose use made every export of that design fail (#674 blocker
-   * 3).
-   *
-   * Fixed by narrowing to what the catalog's declared `platform` can write rather than by
-   * twenty-seven hand-written lists — which modifiers an emitter writes is the server's fact about
-   * its own emitters, and the platform word is the catalog saying which emitter it is for. Asserted
-   * as empty rather than as a set, because there is no longer a reviewed exception: a new entry
-   * here is a regression, not a longer list.
+   * Every modifier the published catalog advertises is one this lane can write: a control you can
+   * apply but not export is worse than a missing one. Asserted empty; any entry is a regression.
    */
   @Test
   fun `every modifier the published catalog advertises can be written`() {
@@ -501,31 +339,12 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * What the export blocker actually costs, from the record rather than from a count of `when`
-   * branches.
+   * What the export blocker costs, from the record's `code.refusedReason`: a histogram of required
+   * parameter types with no writable placeholder value, rather than a count of components.
    *
-   * "Twenty-five components means twenty-five hand-written emitter cases" is the shape of it from
-   * the emitter's side, and it is the wrong unit. The record already answers the same question one
-   * level down: `code.refusedReason` says why a component has no call site, and every refusal here
-   * names a required parameter whose TYPE has no value a generator can write.
-   *
-   * Six types, not twenty-five components — and the fix is a type-directed mapping, which is what
-   * `RemoteContentEmitter` already does for the modifier half (`modifierCalls` maps the catalog's
-   * whole modifier vocabulary onto `RemoteModifier` generically, and refuses three by name). The
-   * per-component half is `text`, `lottie`, `image` and the container argument builders, and what
-   * they are doing by hand is turning a design's property into a Remote Compose value: a string
-   * into a `RemoteString`, a colour into a `RemoteColor`.
-   *
-   * Two caveats this test does not let anyone skip:
-   * - A refusal here is about a PLACEHOLDER — the snippet generator inventing a value out of
-   *   nothing. An export has the design's real value, so `text: RemoteString` is not the same
-   *   obstacle in both places. `Action` is: nine components require one and a design carries no
-   *   action to map, so those need a policy before they need a mapper.
-   * - None of this says the generated source compiles. That belongs in wear-m3-catalog against
-   *   remote-material3's own classpath (`UI_BUILDER_CATALOG_CONTRACT.md` phase 2, item 11), and
-   *   until it exists an emitter case is a claim rather than a fact.
-   *
-   * Asserted as the exact histogram so that teaching one type shows up as a number moving.
+   * Caveats: a placeholder refusal is not an export refusal (an export has the design's real
+   * value), except `Action`, which designs do not carry. Compilation of generated source is checked
+   * in wear-m3-catalog, not here.
    */
   @Test
   fun `the export blocker is six value types, not twenty-five components`() {
@@ -562,27 +381,9 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * How much of the published shelf can now be EXPORTED, component by component.
-   *
-   * This is the invariant a cutover turns on and the one `RemoteM3VocabularyParityTest` holds the
-   * synthesised palette to: a component you can insert and cannot export is worse than one that is
-   * missing, because the author finds out at the end with the design already built. It did not
-   * cover a published catalog, so the swap escaped it — and when this test was written the answer
-   * was *none of the twenty-five*.
-   *
-   * It is not none any more. `RemoteContentEmitter` falls back to the component record for a
-   * component it has no hand-written case for, mapping each parameter by its declared type, so the
-   * question stopped being "has someone written a `when` branch" and became "can a design fill what
-   * this component requires".
-   *
-   * Asked here the way an author would: for each component the catalog publishes, a widget whose
-   * body is that component, with a value authored for every required parameter the design can
-   * express. What still refuses is pinned with the reason the emitter gave, so teaching the mapper
-   * one more type shortens this list and says so.
-   *
-   * The three the caller has to know about, and none of them is a mapping gap:
-   * - `RemotePageIndicatorState` is a type no design value becomes;
-   * - one callable is not public or internal, so no generated file can call it at all.
+   * How much of the published shelf can be exported, component by component: for each, a widget
+   * whose body is that component with every expressible required parameter authored. What still
+   * refuses is pinned with the emitter's reason.
    */
   @Test
   fun `what the published shelf can export is the reviewed set`() {
@@ -602,14 +403,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
       }
     }
 
-    // The denominator, pinned. Without this line a join that silently dropped four components
-    // would report a shorter refusal list as an improvement. It is also what proves the
-    // composition's join and the one this test used to perform by hand agree.
-    //
-    // Twenty-six, not the twenty-seven this was written with: wear-m3-catalog#425 excludes
-    // `remote-sticker`, the frame every preview is drawn inside, so the shelf no longer offers
-    // it and the exporter is no longer asked about it. Twenty-three of the twenty-six export: the
-    // icon joined them when compose-ui-builder learned to write its glyph from an icon key.
+    // The denominator, pinned, so a join that silently dropped components does not look like an
+    // improvement.
     assertEquals(
       26,
       byId.size,
@@ -671,18 +466,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * Every shelf the components use has to be in the menu order, or the editor invents one.
-   *
-   * `UiBuilderEditorState` appends a group the order does not name after every group it does, and
-   * sorts those alphabetically — so a catalog that states an order and then uses four groups
-   * outside it has published an order the builder will not follow. `CatalogMenuTest` holds the
-   * synthesised catalog to this; the generated pair is not there yet, which is the third blocker.
-   *
-   * Both directions are asserted, because they mean different things. An unordered group is a real
-   * authoring gap and was one: `Selection buttons`, `Edge-hugging buttons`, `Sliders` and
-   * `Steppers` are declared only in `src/snapshot/kotlin`, so the released-lane order never named
-   * them and the snapshot lane silently re-sorted four shelves. Fixed in wear-m3-catalog. An
-   * ORDERED group with no component is something else — see below. Raised in review on #673.
+   * Every shelf the components use must be in the menu order, or the editor appends and sorts it
+   * itself. Both directions are asserted; an ordered group with no component is covered below.
    */
   @Test
   fun `the menu order covers the groups the shelf actually uses`() {
@@ -710,24 +495,10 @@ class PublishedRemoteM3CatalogEquivalenceTest {
       "groups the shelf uses that the order does not name — the editor sorts these alphabetically " +
         "after every ordered group, so the catalog's stated order is not the one a person sees",
     )
-    // The other direction, and it is NOT an authoring gap — it is what one-id-per-symbol costs.
-    //
-    // `RemoteText` is drawn by 29 of this catalog's stickers, across Text, Buttons, Containment
-    // and more. It is one record, so it gets one id and one shelf, and the shelf is the one the
-    // sorted-first catalog id names: `AppCard`, hence Containment. `Text` is left with no
-    // component of its own even though six stickers declare it, and `remote-m3/remote-text` sits
-    // somewhere a person would not look for it.
-    //
-    // That is the trade the symbol-derived id makes deliberately — 49 stickers collapse to 27
-    // components — and the policy's `group` is the sanctioned way for the catalog to place a
-    // component whose stickers span sections. wear-m3-catalog#425 used it for six of them, which
-    // is why `Text`, `Iconography` and `Position indicators` are no longer on this list: the
-    // components that belong on them say so now instead of inheriting `AppCard`'s shelf.
-    // Asserted as the exact current set so that placing one shortens this list and says so.
-    //
-    // The remaining seven are not placements anyone withheld. They hold stickers whose symbols
-    // publish no component of their own, so there is nothing to place — `Widget Container` is the
-    // exception and already has its two builtins, which the menu's component map does not list.
+    // Ordered groups with no component: the cost of one id per symbol (e.g. `RemoteText` is one
+    // record shelved with its sorted-first sticker). The policy's `group` is how a catalog places
+    // such components. Asserted as the exact set; the remaining entries hold stickers that publish
+    // no component of their own.
     assertEquals(
       listOf(
         "Confetti",
@@ -744,9 +515,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * The builder's own vocabulary survives the swap, as it must for m3 — seven of the frozen
-   * catalog's twelve entries are in a donor namespace. The other five are the gap above, and are
-   * asserted there rather than here so the two questions do not blur into one number.
+   * The builder's own vocabulary survives the swap; the frozen entries outside donor namespaces are
+   * asserted in the gap test above.
    */
   @Test
   fun `a published remote-m3 catalog is still served the builder's own vocabulary`() {
@@ -771,10 +541,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   }
 
   /**
-   * What a record component is on a Remote Compose catalog by virtue of the platform, which the
-   * synthesised shelf gave every Remote Material 3 component and a published catalog that stated
-   * nothing used to lose: 185 of `CatalogCutoverShadow`'s differences on remote-m3, against the
-   * catalog as published on 2026-10-09.
+   * The platform traits every record component gets on a Remote Compose catalog, which the
+   * synthesised shelf always gave and a published catalog stating nothing used to lose.
    */
   @Test
   fun `a remote record component carries the emitter's traits, slots, bindings and modifiers`() {
@@ -804,17 +572,11 @@ class PublishedRemoteM3CatalogEquivalenceTest {
 
   private companion object {
     /**
-     * The container differences that are reviewed rather than open, one line per container.
+     * Reviewed container differences, one line per container.
      *
-     * The frozen shelf narrows the content slot to `RemoteAuthorable`
-     * (yschimke/compose-ui-builder #81), a trait the synthesised catalog stamps on every component
-     * a Remote widget can hold. The published catalog cannot say that: traits reach it from the
-     * discovery RECORD, not from the policy, and no record component carries `RemoteAuthorable` —
-     * so a published content slot narrowed to it would accept none of the catalog's own components.
-     * `AnyContent` is the correct published value until the record can carry the trait. What it
-     * gives up: the slot no longer refuses a donated `layout/`, `shape/`, `asset/` or
-     * `remote-compose/` component the frozen shelf does not mark Remote-authorable. Delete a line
-     * here when the published side carries the trait.
+     * The frozen shelf narrows the content slot to `RemoteAuthorable`, but traits reach a published
+     * catalog only from the record, which never carries it, so `AnyContent` is correct until it
+     * can. Delete a line when the published side carries the trait.
      */
     val REVIEWED_CONTAINER_DIFFERENCES =
       listOf("small", "large").map {
@@ -823,21 +585,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
       }
 
     /**
-     * The three published components the widget exporter cannot write, and why each one.
-     *
-     * Twenty-three of the twenty-six do, which is the number this test exists to keep honest — and
-     * it was reported as twenty-four until the emitter started checking whether a recovered
-     * signature is a callable a generated file can reach. `remote-m3/theme-specimen` has a
-     * signature and is not public, so writing the call from its parameters produced source that
-     * imports and invokes something no other file may name. Found in review, and worth the count
-     * moving the wrong way: a number that counts an uncompilable export as a success is what this
-     * gate exists to stop.
-     *
-     * Two more used to be here, and the icon a third: each wanted a required parameter whose TYPE
-     * no design value becomes. compose-ui-builder now writes all three by hand — the icon from a
-     * Material icon key (`Icons.<Style>.<Name>.toRemoteImageVector()`,
-     * yschimke/remote-m3-catalog#12), and the page indicators' `RemotePageIndicatorState` from
-     * `pageCount` and a `selectedPage` that may read Int state — so they export.
+     * The published components the widget exporter cannot write, and why.
+     * `remote-m3/theme-specimen` is not public, so no generated file can call it.
      */
     val EXPORT_REFUSALS =
       mapOf(

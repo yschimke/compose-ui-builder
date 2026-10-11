@@ -9,12 +9,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
- * A published `remote-m3` widget's text in a production PNG export.
- *
- * preview.coo.ee serves wear-m3-catalog's published `remote-m3`, whose text component is
- * `remote-m3/remote-text`; the frozen golden this renderer reads predates it. Every widget exported
- * as a PNG therefore drew each of its labels as a red "Unsupported component" box, and the title
- * cards around them dropped the slot mapping the editor provides.
+ * A published `remote-m3` widget's text in a production PNG export. The published catalog's text
+ * component is `remote-m3/remote-text`, which the renderer's frozen golden predates; it must still
+ * draw (not "Unsupported component"), and title cards must keep the editor's slot mapping.
  */
 @OptIn(ExperimentalTestApi::class)
 class ProductionRemoteTextTest {

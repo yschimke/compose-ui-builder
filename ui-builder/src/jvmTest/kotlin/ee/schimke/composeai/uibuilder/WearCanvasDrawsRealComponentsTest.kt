@@ -22,27 +22,16 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The canvas draws Wear components with Wear Compose, and this asks the drawing rather than the
- * build file.
+ * The canvas draws Wear components with Wear Compose, asserted on the composition, not the build: a
+ * component can link yet never reach the screen.
  *
- * `:ui-builder:compileKotlinWasmJs` succeeding already proves the CMP Wear port *links* for the
- * browser target. That is the fact that overturned the old "the canvas cannot have Wear Compose"
- * rule, and it is not the fact an author cares about: a component can be on the classpath and still
- * never reach the screen, which is exactly the failure mode the previous placeholder approach had.
+ * Assertions only the genuine components produce:
+ * - `SwitchButton` publishes `ToggleableState` semantics (a lookalike `Text` in a `Box` publishes
+ *   none);
+ * - the sub-header labels reach the composition at all.
  *
- * So this composes a real Wear design and asks the composition what is in it. The assertions are
- * chosen to be things only the genuine component produces:
- *
- * - `SwitchButton` publishes `ToggleableState` semantics. A `Text` in a `Box` — what this design's
- *   switch rows used to be — publishes none, so a regression to a lookalike fails here rather than
- *   producing a picture somebody has to notice is wrong.
- * - The sub-header labels reach the composition at all, which the dashed placeholder they replaced
- *   did not do.
- *
- * Run on the JVM rather than Wasm because the port publishes both variants from one source set and
- * this module's Wasm test runner needs a Node toolchain the sandbox cannot always fetch. The
- * question here is whether the renderer routes a Wear id to a Wear component, and that routing is
- * in `commonMain`.
+ * Run on the JVM since the port publishes both variants from one source set and the routing is in
+ * `commonMain` (the Wasm test runner needs a Node toolchain the sandbox may lack).
  */
 @OptIn(ExperimentalTestApi::class)
 class WearCanvasDrawsRealComponentsTest {

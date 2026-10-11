@@ -14,12 +14,9 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
 /**
- * A `remote-widgets` launcher widget design → a `RemoteComposeWidget`.
- *
- * The design is the `counter-widget` template the catalog publishes (yschimke/remote-m3-catalog,
- * `widget-catalog/ui-builder/designs/counter-widget.json`), which reproduces AndroidX's `MyWidget`
- * demo. What is asserted here is the shape — a `RemoteComposeWidget`, creation-compose text, a
- * preview at the design's launcher grid size and nothing from Wear.
+ * A `remote-widgets` launcher widget design → a `RemoteComposeWidget`, using the catalog's
+ * `counter-widget` template (AndroidX's `MyWidget` demo). Asserts the shape: creation-compose text,
+ * a preview at the launcher grid size, nothing from Wear.
  */
 class LauncherWidgetExportTest {
 

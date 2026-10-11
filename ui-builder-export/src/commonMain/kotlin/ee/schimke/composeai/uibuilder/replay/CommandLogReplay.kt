@@ -6,37 +6,23 @@ import ee.schimke.composeai.uibuilder.protocol.CommandOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.RejectedOutcomeV1
 
 /**
- * The one replay in this system: a command log brought back onto the design it forked from.
+ * The one replay in this system: a command log brought back onto the design it forked from. Used
+ * by the browser's Sync (`LocalDesignSyncBack`, one request per command) and the service's branch
+ * merge (`PersistentUiBuilderService`, inside the lock), so the two cannot drift:
  *
- * Two callers, one rule. The browser's **Sync** (`LocalDesignSyncBack`) replays a checkout's log
- * onto the server over the wire, one request per command; the service's **branch merge**
- * (`PersistentUiBuilderService`, `UiBuilderBranchPort`) replays a branch's log onto its parent
- * inside the service lock. What they share is what makes the result explainable, and it lives here
- * so that the two cannot drift:
+ * - The base chain: `base(c₁)` is the fork point and `base(cₖ)` is where `cₖ₋₁` landed — neither
+ *   the target head (which would silently win races) nor the fork point throughout (which would
+ *   miss nodes earlier commands inserted). See `docs/design/UI_BUILDER_DESIGN_PORTABILITY.md`.
+ * - Every command replays as itself, undos and redos included, in log order.
+ * - The first refusal stops the run: later commands were authored on top of it.
+ * - A per-command report, never a silent result.
  *
- * - **The base chain.** `base(c₁)` is the fork point and `base(cₖ)` is the revision `cₖ₋₁` landed
- *   at. Not the target's head — that would make every replayed command newer than the concurrent
- *   edits it races, so it would win silently and the conflict notices would be thrown away. And not
- *   the fork point throughout — that would make the run concurrent with itself, so a move of a node
- *   an earlier command inserted would resolve against a position snapshot where that node does not
- *   exist. `docs/design/UI_BUILDER_DESIGN_PORTABILITY.md` has the long form.
- * - **Every command replays as itself**, undos and redos included, in log order.
- * - **The first refusal stops the run.** A refused command is a decision the reducer will not make
- *   on anybody's behalf (a stale delete, an undo of something since overwritten); every later
- *   command was authored on top of it, so replaying past it would apply edits to a document their
- *   author never saw.
- * - **A per-command report**, never a silent result: what landed where, what it overwrote, where it
- *   stopped and how much is left.
+ * Atomicity differs: Sync commits per command (resumable by idempotent replay); a merge commits all
+ * or nothing. See `docs/design/UI_BUILDER_BRANCHES.md`.
  *
- * What the two callers do *not* share is atomicity, and deliberately: Sync commits each command as
- * it lands, because each one is a separate request and the run is resumable through idempotent
- * replay; a branch merge runs in one critical section, so it commits all of the run or none of it.
- * See `docs/design/UI_BUILDER_BRANCHES.md`.
- *
- * [submit] sends one command at one base and answers what the reducer said. It is `inline` so that
- * a suspending caller (Sync) and a caller holding a lock (the service) can both use it as is.
- * [maximumRevision] is the highest revision the caller can carry as a base; a command that lands
- * past it is reported as landed and the run stops after it with [REVISION_OVERFLOW].
+ * [submit] sends one command at one base; `inline` so suspending and lock-holding callers can both
+ * use it. A command landing past [maximumRevision] is reported and the run stops with
+ * [REVISION_OVERFLOW].
  */
 public inline fun <C> replayCommandLog(
   forkRevision: Long,

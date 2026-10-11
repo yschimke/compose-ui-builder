@@ -33,12 +33,9 @@ internal constructor(
 }
 
 /**
- * Render one resolved entry through a catalog registry and the SDK structural interpreter.
- *
- * This is the reusable recursive entry point for catalog runtimes. Resolution has already happened
- * in [CanvasDocumentHost]; this layer owns node preparation, descendant recursion, registry
- * dispatch and structural nodes. [fallback] exists only while the upstream compatibility table is
- * being retired. A catalog-only runtime supplies a diagnostic there instead of another interpreter.
+ * Render one resolved entry through a catalog registry and the SDK structural interpreter: node
+ * preparation, recursion, dispatch and structural nodes. [fallback] exists only while the
+ * compatibility table is retired; catalog-only runtimes supply a diagnostic.
  */
 @Composable
 fun CanvasDocumentScope.RenderCanvasNode(

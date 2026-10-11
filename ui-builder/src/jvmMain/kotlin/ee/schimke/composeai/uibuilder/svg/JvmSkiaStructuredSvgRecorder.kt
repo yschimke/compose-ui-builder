@@ -152,16 +152,12 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
         convertTextToPaths = false,
         prettyXML = true,
       )
-    // Compose 1.12.0 took the frame clock out of the scene: the recomposer owns it, and what was
-    // one `scene.render(canvas, nanos)` is now the three steps that call made — advance the frame,
-    // settle the layout, draw. The frame time is still the document's own
-    // ([UiBuilderDocument.fixedFrameNanos]), which is what keeps a re-export byte-identical.
+    // The frame clock belongs to the recomposer (Compose 1.12.0), so a render is: advance the
+    // frame, settle layout, draw. The frame time is the document's
+    // [UiBuilderDocument.fixedFrameNanos], keeping re-exports byte-identical.
     //
-    // `Unconfined` rather than the `EmptyCoroutineContext` the scene used to take: the recomposer
-    // requires a `ContinuationInterceptor` and refuses without one. Unconfined is the honest
-    // choice for this recorder — every frame is driven by hand from this thread and nothing here
-    // ever waits, so recomposition runs inline before the measure below rather than on a worker
-    // this export would then have to wait for and shut down.
+    // `Unconfined` because the recomposer requires a `ContinuationInterceptor`, and every frame is
+    // driven by hand on this thread, so recomposition runs inline before measuring.
     val recomposer = FrameRecomposer(Dispatchers.Unconfined)
     val scene =
       CanvasLayersComposeScene(
@@ -328,10 +324,9 @@ private constructor(
           }
           val assetKey = node.stringProperty("assetKey")
           val (widthPx, heightPx) = node.rasterPixelSize(document, layoutBounds[nodeId])
-          // The same resolution the canvas draws by, so the pixels this recorder embeds are the
-          // pixels the design shows: the document's own registry first, then the artwork this
-          // build ships. A key with nothing behind either is never declared as a raster fallback
-          // (`DocumentSvgExportContract`), so reaching the `else` is a caller bug, not a design.
+          // Same resolution as the canvas (document registry, then shipped artwork). Keys with
+          // neither are never declared as raster fallbacks (`DocumentSvgExportContract`), so the
+          // `else` is a caller bug.
           val encoded: ByteArray
           val sourceIdentity: String
           when (val resolved = document.resolveAsset(assetKey)) {

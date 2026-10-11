@@ -10,34 +10,22 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * What a new design starts as — one answer, for both callers who now ask the question.
- *
- * The browser asked it first, inline in its bootstrap: pick a template, pin it to the catalog being
- * served, seed the environment from the Jetcaster fixture. The server asks the same question now
- * that creating a design is a request it answers itself ([POST][.document] from the New design
- * form, or a `PUT` of a design that does not exist yet), and two implementations of "what does a
- * blank Wear widget look like?" would drift the first time a template changed. This is the same
- * module, and the same reasoning, as the export projection next to it: two very different callers
- * needing the same answer about one document.
+ * What a new design starts as — one answer shared by the browser bootstrap and the server's
+ * create routes ([POST][.document], or a `PUT` of a new design), so templates cannot drift.
  */
 object UiBuilderNewDesignSeed {
 
   /**
    * The template a request that names none is asking for: [BLANK_TEMPLATE], which is also what an
-   * owned `m3-catalog` defaults to (the first template its policy lists), so the default does not
-   * change at the cutover. It was the Jetcaster fixture, re-pinned; see [FIXTURE_TEMPLATE].
+   * owned `m3-catalog` defaults to, so the default does not change at the cutover.
    */
   const val DEFAULT_TEMPLATE: String = "blank"
 
   /**
    * The Jetcaster benchmark fixture re-pinned to the served catalog — the fallback [document]
-   * answers for a template it does not recognise.
-   *
-   * No longer offered by [templateIds]. It is the builder's fidelity benchmark rather than a place
-   * to start a design: it does not export (its carousel and state-comparison `selected` have no
-   * Kotlin in the projection), and it uses `m3/snackbar-host`, which the published `m3-catalog`
-   * deliberately does not carry, so on a catalog-served host it failed to create at all. Tests and
-   * the benchmark seed it by this name.
+   * answers for an unrecognised template. Not offered by [templateIds]: it does not export and uses
+   * `m3/snackbar-host`, which the published `m3-catalog` lacks. Tests and the benchmark seed it by
+   * name.
    */
   const val FIXTURE_TEMPLATE: String = "jetcaster"
 
@@ -47,22 +35,16 @@ object UiBuilderNewDesignSeed {
   /** The same shape with wear-m3-catalog's own rows in it, which is what a parity check needs. */
   const val WEAR_LIST_TEMPLATE: String = "wear-list"
 
-  /**
-   * The blank screen with a headline and a line of text in it: the smallest design that already
-   * shows something, for a person who wants to see the builder do anything before they learn it.
-   */
+  /** The blank screen with a headline and a line of text: the smallest design that draws. */
   const val HELLO_TEMPLATE: String = "hello"
 
   /**
-   * An A2UI surface: one `Column` root holding a headline. The column is the root because A2UI
-   * draws a surface from a single component named `root`, and a column is what an agent almost
-   * always sends there.
+   * An A2UI surface: one `Column` root holding a headline (A2UI draws a surface from a single
+   * component named `root`).
    */
   const val A2UI_TEMPLATE: String = "a2ui-column"
 
-  /**
-   * The templates [document] can seed for a catalog, which is what a caller is validated against.
-   */
+  /** The templates [document] can seed for a catalog; callers are validated against this. */
   fun templateIds(catalogSystemId: String): Set<String> =
     when (catalogSystemId) {
       "remote-m3" ->
@@ -83,9 +65,8 @@ object UiBuilderNewDesignSeed {
   const val BLANK_TEMPLATE: String = "blank"
 
   /**
-   * [templateIds] under the catalog-owned cutover. A catalog [ownership] names offers exactly the
-   * templates it publishes, in its own order, or [BLANK_TEMPLATE] when it publishes none; any other
-   * catalog keeps the built-in set, so this is [templateIds] while the flag is off.
+   * [templateIds] under the catalog-owned cutover: an owned catalog offers exactly the templates it
+   * publishes, in order, or [BLANK_TEMPLATE] if none; others keep the built-in set.
    */
   fun templateIds(
     catalogSystemId: String,
@@ -98,14 +79,9 @@ object UiBuilderNewDesignSeed {
         ?: setOf(BLANK_TEMPLATE)
 
   /**
-   * [document] under the catalog-owned cutover: a catalog [ownership] names is seeded from the
-   * template documents it publishes ([published]), never from a Kotlin builder that knows its ids.
-   *
-   * The published document keeps its own environment, because the catalog chose the device its seed
-   * opens on (`frame.seedDevice`) and measured it; the pin is the served catalog's, exactly as
-   * every built-in template is pinned. A catalog that publishes no templates gets the generic
-   * [BLANK_TEMPLATE], and asking an owned catalog for a template it does not publish is refused by
-   * name rather than answered with somebody else's.
+   * [document] under the catalog-owned cutover: an owned catalog is seeded from the template
+   * documents it publishes ([published]), keeping their own environment and re-pinned to the served
+   * catalog. With none, it gets [BLANK_TEMPLATE]; an unpublished template is refused by name.
    */
   fun document(
     designId: String,
@@ -151,9 +127,8 @@ object UiBuilderNewDesignSeed {
   }
 
   /**
-   * [state] added to a published seed's own declarations, under the rule the built-in blank seed
-   * applies, and refused where a requested name is one the template already declares: the person
-   * asked for a variable the design would then silently not have.
+   * [state] added to a published seed's declarations, refused where a requested name collides with
+   * one the template already declares.
    */
   private fun UiBuilderDocument.withDeclaredState(state: List<NewDesignState>): UiBuilderDocument {
     if (state.isEmpty()) return this
@@ -188,11 +163,8 @@ object UiBuilderNewDesignSeed {
   /**
    * The document a design with this id, catalog and template begins life as, at revision zero.
    *
-   * [fixture] is the Jetcaster operations fixture the builder ships beside its Wasm bundle. Every
-   * template reads its environment from that fixture's own `createDesign` rather than restating a
-   * default, and [FIXTURE_TEMPLATE] *is* it, re-pinned. The catalog pin is rewritten from the
-   * catalog actually being served, because a document pinned to a revision this server does not
-   * serve is one the service will refuse.
+   * [fixture] is the Jetcaster operations fixture shipped beside the Wasm bundle; templates take
+   * their environment from it. The catalog pin is rewritten to the catalog actually served.
    */
   fun document(
     designId: String,
@@ -217,9 +189,7 @@ object UiBuilderNewDesignSeed {
           catalogPin = catalogPin,
           environment = environment,
         )
-      // The Wear frame, not the fixture's handset: the scaffold reads its diameter from the
-      // document, so seeding a watch design on a phone would draw the smallest watch while the
-      // Screen inspector said "Pixel".
+      // The Wear frame, so the scaffold's diameter and the Screen inspector agree.
       catalogSystemId == "wear-m3" && templateId == WEAR_LIST_TEMPLATE ->
         wearScreenUiBuilderDocument(
           designId = designId,
@@ -286,9 +256,8 @@ object UiBuilderNewDesignSeed {
         blankUiBuilderDocument(
           designId = designId,
           catalogPin = catalogPin,
-          // A phone, not the fixture's 1280x800 supporting-pane canvas — see
-          // [mobileScreenEnvironment]. [FIXTURE_TEMPLATE] below keeps the fixture's own frame,
-          // which is the design it was built to show.
+          // A phone frame (see [mobileScreenEnvironment]); [FIXTURE_TEMPLATE] keeps the fixture's
+          // own.
           environment = mobileScreenEnvironment(environment),
           state = state,
         )
@@ -305,10 +274,8 @@ private val seedJson = Json {
 }
 
 /**
- * The candidate document as the released v1 service document.
- *
- * A serialize/parse round trip rather than a field-by-field mapping: the two shapes are the same
- * shape, and a mapping written twice is a mapping that can disagree with itself.
+ * The candidate document as the released v1 service document, via a serialize/parse round trip
+ * (the shapes are identical, so a hand mapping could only diverge).
  */
 fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
   seedJson
@@ -316,14 +283,8 @@ fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
     .copy(home = home?.toDesignHomeV1())
 
 /**
- * The released v1 service document as the candidate document, which is [toDesignDocumentV1]
- * backwards.
- *
- * The same serialize/parse round trip, for the same reason and now in the direction the *server*
- * needs: the record-free emitters in [RecordFreeExport] are written against [UiBuilderDocument]
- * because the browser editor authors one, and the export executor holds a `DesignDocumentV1`. A
- * second field-by-field mapping between two shapes that are the same shape is a mapping that can
- * disagree with the first.
+ * [toDesignDocumentV1] backwards: the server's export executor holds a `DesignDocumentV1`, while
+ * the record-free emitters in [RecordFreeExport] take a [UiBuilderDocument].
  */
 fun DesignDocumentV1.toUiBuilderDocument(): UiBuilderDocument =
   seedJson
@@ -343,9 +304,8 @@ fun DesignHomeV1.toUiBuilderDocumentHome(): UiBuilderDocumentHome =
   }
 
 /**
- * One node of the released document as the candidate node — [toUiBuilderDocument] for a node, so a
- * rule written once against [UiBuilderNode] (see `cardContentFill`) can be asked of a wire node
- * without a second copy of it.
+ * One wire node as the candidate node, so a rule written against [UiBuilderNode] (e.g.
+ * `cardContentFill`) can be asked of it.
  */
 fun DesignNodeV1.toUiBuilderNode(): UiBuilderNode =
   seedJson.decodeFromString(seedJson.encodeToString(this))

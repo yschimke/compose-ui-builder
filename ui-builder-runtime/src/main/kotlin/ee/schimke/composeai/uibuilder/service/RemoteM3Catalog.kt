@@ -29,13 +29,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The modifiers a `remote-m3` component may advertise: what `RemoteContentEmitter` can write.
- *
- * A copy, and it has to be one. The emitter lives in `:ui-builder-export` and this module's
- * `CheckUiBuilderRuntimeBoundary` keeps that classpath out on purpose, so the list cannot be
- * imported from the one place it is derived. `RemoteContentModifierParityTest` in `:server` — which
- * has both — fails when this set and `REMOTE_CONTENT_MODIFIERS` disagree, so the copy cannot rot
- * quietly the way the last one did.
+ * The modifiers a `remote-m3` component may advertise: what `RemoteContentEmitter` can write. A
+ * copy because `CheckUiBuilderRuntimeBoundary` keeps the emitter off this classpath;
+ * `RemoteContentModifierParityTest` in `:server` keeps them in sync.
  */
 internal val REMOTE_M3_MODIFIERS =
   setOf(
@@ -70,15 +66,10 @@ internal val REMOTE_M3_MODIFIERS =
   )
 
 /**
- * The modifiers only Remote Compose has, offered on every node a widget body lays out.
- *
- * Neither is in the borrowed Compose vocabulary, so filtering a borrowed list by
- * [REMOTE_M3_MODIFIERS] can never produce them: they are appended instead. `sharedElement` matches
- * an element across the branches of a "Show by state" box and animates its bounds between them;
- * `animateEnterExit` gives a component its own way in and out as its branch switches. `remoteCall`
- * is any other `RemoteModifier` call the released API has, from the generated vocabulary
- * (`RemoteModifierVocabulary`), with its arguments as values. `collapsiblePriority` is a member of
- * the collapsible scopes; the emitter refuses it anywhere else.
+ * The modifiers only Remote Compose has, appended to every widget-body node (filtering a borrowed
+ * list can never produce them): `sharedElement`, `animateEnterExit`, `remoteCall` (any released
+ * `RemoteModifier` call, from `RemoteModifierVocabulary`) and `collapsiblePriority` (collapsible
+ * scopes only).
  */
 internal val REMOTE_ONLY_MODIFIERS: List<String> =
   listOf("animateEnterExit", "collapsiblePriority", "remoteCall", "sharedElement")
@@ -91,28 +82,21 @@ internal fun List<String>.remoteAuthorableModifiers(): List<String> =
   filter { it in REMOTE_M3_MODIFIERS && it !in REMOTE_ONLY_MODIFIERS } + REMOTE_ONLY_MODIFIERS
 
 /**
- * The note a component outside the Glance Wear widget profile carries on the palette.
- *
- * `remote-creation-compose` publishes it and the builder writes it, but `GlanceWearProfiles` admits
- * none of its operations, so a widget using it fails to capture on Android. Offered anyway — the
- * native lane is where that failure shows, and this note is where an author learns of it first.
+ * The note for a component outside the Glance Wear widget profile: the builder writes it, but a
+ * widget using it fails to capture on Android. Offered anyway; the native lane shows the failure.
  */
 private fun outsideWidgetProfile(operation: String): String =
   "Not in the Glance Wear widget profile ($operation): the Native / Live render of a widget " +
     "using it fails while the document is captured."
 
 /**
- * The layouts `remote-creation-compose` publishes that the packaged foundation does not declare.
+ * The layouts `remote-creation-compose` publishes that the packaged foundation does not declare,
+ * each derived from a foundation sibling (same slot and arrangement vocabulary).
  *
- * Each has a foundation sibling it is derived from — same slot, same arrangement vocabulary — and
- * differs in id, name and the call it writes. `layout/flow-row` is not here: the packaged catalog
- * declares it, and `RemoteFlowRow` takes the same arguments.
- *
- * - `layout/fit-box`: `RemoteFitBox`. Its children are alternatives, largest first; it shows the
- *   first one that fits. In the Glance Wear widget profile (`LAYOUT_FIT_BOX`).
- * - `layout/collapsible-column` / `layout/collapsible-row`: `RemoteCollapsibleColumn` and
- *   `RemoteCollapsibleRow`, which HIDE whole children, lowest `collapsiblePriority` first, rather
- *   than squeezing them. Outside the widget profile — see [outsideWidgetProfile].
+ * - `layout/fit-box`: `RemoteFitBox`, which shows the first (largest-first) child that fits. In
+ *   the Glance Wear widget profile (`LAYOUT_FIT_BOX`).
+ * - `layout/collapsible-column` / `layout/collapsible-row`: hide whole children, lowest
+ *   `collapsiblePriority` first. Outside the widget profile — see [outsideWidgetProfile].
  */
 internal fun remoteOnlyLayout(
   componentId: String,
@@ -183,11 +167,8 @@ internal fun remoteOnlyLayout(
 }
 
 /**
- * A container slot narrowed to what `RemoteContentEmitter` can write inside it.
- *
- * The donor slots accept `AnyContent`, which would let a document, a gradient or a nested widget
- * host into a Remote layout — each refused at export. The widget content slots already accept only
- * `RemoteAuthorable`; the Remote-only layouts take the same rule.
+ * A container slot narrowed to `RemoteAuthorable`, so content the emitter cannot write inside a
+ * Remote layout is refused at insertion rather than export.
  */
 private fun SlotCapabilityV1.acceptingRemoteAuthorable(): SlotCapabilityV1 =
   newBuilder().also { it.acceptedTraits = listOf("RemoteAuthorable") }.build()
@@ -197,9 +178,8 @@ internal val REMOTE_ONLY_LAYOUT_IDS: List<String> =
   listOf("layout/fit-box", "layout/collapsible-column", "layout/collapsible-row")
 
 /**
- * `layout/flow-row` narrowed for a widget body: the packaged declaration, with the note that
- * `LAYOUT_FLOW` is outside the Glance Wear widget profile (it is an experimental-profile
- * operation).
+ * `layout/flow-row` for a widget body, noting that `LAYOUT_FLOW` is outside the Glance Wear widget
+ * profile.
  */
 internal fun ComponentCapabilityV1.withWidgetProfileNote(): ComponentCapabilityV1 =
   if (componentId != "layout/flow-row") this
@@ -216,27 +196,18 @@ internal fun ComponentCapabilityV1.withWidgetProfileNote(): ComponentCapabilityV
       .build()
 
 /**
- * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body.
- *
- * One function because two derivations apply it — [remoteM3Catalog] and the `remote-compose`
- * curation in [composeFoundationCatalog] — and `ComposeFoundationFaithfulnessTest` holds them equal
- * field for field. Every clause here moves a refusal from export time to the moment the author
- * acts, which is the only moment they can do anything about it.
+ * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body, so
+ * refusals happen when the author acts rather than at export. Shared by [remoteM3Catalog] and
+ * [composeFoundationCatalog]'s `remote-compose` curation (held equal by
+ * `ComposeFoundationFaithfulnessTest`).
  */
 internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabilityV1 =
   newBuilder()
     .also {
-      // The palette used to offer 28 modifiers on a widget node while the generator wrote three, so
-      // `size`, `background` and `weight` were authorable, drawable, and unexportable
-      // (yschimke/compose-preview-server#508).
+      // Only modifiers the generator can write.
       it.modifierCapabilities =
-        // A brush can only sit in the container's background slot, and `WearWidgetBrush` has no
-        // geometry to hang a modifier on — the generator refuses every one it finds there. So the
-        // gradient offers none, rather than eighteen that each end in a refusal. A draw operation
-        // is a call inside a canvas, not a layout node, and has nothing to hang one on either.
-        // A theme wraps a subtree and lays nothing out: the export writes only its child (or a
-        // `RemoteMaterialTheme` around it), so a modifier on it — the remote-only ones included —
-        // would be accepted and dropped.
+        // No modifiers on a brush (no geometry), a draw operation (not a layout node) or a theme
+        // (lays nothing out); they would only be refused or dropped at export.
         if (
           componentId == "shape/linear-gradient" ||
             componentId == UiRemoteTheme.ID ||
@@ -244,9 +215,7 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         )
           emptyList()
         else modifierCapabilities.remoteAuthorableModifiers()
-      // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
-      // from a mobile component. The reviewed vocabulary does have an emitter branch (or
-      // component-record fallback) and may enter a widget body.
+      // `RemoteAuthorable` is an emitter capability, not inherited from a mobile component.
       it.traits =
         (traits - "RemoteAuthorable").let { traits ->
           // A draw operation enters only a canvas's `ops` slot, which asks for DrawOperation.
@@ -263,15 +232,9 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
     .build()
 
 /**
- * `remote-m3`'s palette shelves: the Lottie element under Content, then each Remote Material 3
- * component under the shelf the published catalog files it on.
- *
- * Folded over the whole status semantics rather than the menu alone, because [withMenuEntry] reads
- * the menu out of the semantics it is given and returns the menu: handed a menu, it finds none and
- * drops every shelf the base catalog already declared.
- *
- * The published-catalog foundation's `remote-compose` curation builds its menu with this too, so a
- * shelf the foundation injects into a published catalog lands where it lands here.
+ * `remote-m3`'s palette shelves: Lottie under Content, then each Remote Material 3 component under
+ * its published shelf. Folded over the whole status semantics because [withMenuEntry] reads the
+ * menu out of them. The foundation's `remote-compose` curation uses this too.
  */
 internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
   RemoteMaterial3.components
@@ -324,20 +287,14 @@ private val REMOTE_MATERIAL_3_SHELVES =
   )
 
 /**
- * `androidx.wear.compose.remote.material3` on the widget palette: every component in
- * [RemoteMaterial3], its properties and slots read off its own signature in the embedded record.
+ * `androidx.wear.compose.remote.material3` on the widget palette: every [RemoteMaterial3]
+ * component, with properties and slots read off its embedded record.
  *
- * - **Properties** are the parameters `RemoteContentEmitter`'s record fallback can write: Remote
- *   and Kotlin scalars and colours. A required one — `checked`, `progress`, `value` — is required
- *   here too, and `StarterContent` seeds it, so a component arrives exporting. The rest (colours
- *   objects, shapes, padding) keep their library defaults.
- * - **Slots** are its `@Composable` parameters under their own names, which is what the record
- *   fallback fills them from. They take what a widget body takes, and none is required: an empty
- *   required slot is written as an empty lambda, which is what an unfilled one means.
- * - **The canvas** draws each with the Wear Material 3 adapter the published catalog names, through
- *   its mapping, so a widget shows a Wear button rather than a placeholder.
- * - **Actions** (`onClick`, `onCheckedChange`) are not properties. Unbound, they are written as
- *   `lambdaAction {}`, which is what an action nobody has wired yet is.
+ * - Properties: parameters the record fallback can write (scalars, colours). Required ones stay
+ *   required and `StarterContent` seeds them; the rest keep library defaults.
+ * - Slots: `@Composable` parameters under their own names, none required (empty is `{}`).
+ * - Canvas: drawn by the Wear Material 3 adapter the published catalog names.
+ * - Actions (`onClick`, …) are not properties; unbound they are `lambdaAction {}`.
  */
 private fun remoteMaterial3Components(
   template: ComponentCapabilityV1,
@@ -401,13 +358,9 @@ private fun remoteMaterial3Components(
   }
 
 /**
- * The properties a published component STATES beyond what its signature derives, transcribed from
- * wear-m3-catalog's `remote-catalog/ui-builder.policy.json`.
- *
- * `RemoteText`'s `style` is a `RemoteTextStyle` and its `textAlign` a `TextAlign`, which the
- * derivation drops, yet `style` is the parameter the component is set through; the published
- * catalog declares it as a role on `RemoteTypography`'s Wear scale and `RemoteContentEmitter`
- * writes it as `RemoteMaterialTheme.typography.<role>`.
+ * Properties a published component states beyond its derived signature, transcribed from
+ * wear-m3-catalog's `remote-catalog/ui-builder.policy.json` (e.g. `RemoteText`'s `style` as a
+ * `RemoteTypography` role).
  */
 private fun statedRemoteProperties(
   componentId: String,
@@ -427,9 +380,7 @@ private fun statedRemoteProperties(
           }
           .build()
       )
-    // `imageVector` is an `ImageVector`, which the derivation above cannot carry, so without this
-    // the palette offered an icon that could only ever draw its default. Named by the same Material
-    // icon key `m3/icon` takes, and taken from that component's own list rather than restated.
+    // `imageVector` cannot be derived, so the icon takes the same Material icon keys as `m3/icon`.
     REMOTE_ICON_COMPONENT_ID ->
       listOf(
         PropertyCapabilityV1.Builder("imageVector", JsonPrimitive("string"))
@@ -539,10 +490,8 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val box = components.getValue("layout/box")
   val supportedWasm = components.getValue("m3/text").wasm
   val blockedSvg = components.getValue("remote-compose/document").svg
-  // A widget body is Remote Compose, not arbitrary Compose UI. Keeping this narrower than
-  // `AnyContent` makes the palette refuse a component at insertion time when the Remote Compose
-  // emitter has no lowering for it. This is the same catalogue discipline Wear M3 uses: foundation
-  // is shared, but a component from a different Material library is not a stand-in for one here.
+  // Narrower than `AnyContent`, so a component the Remote emitter cannot lower is refused at
+  // insertion time.
   val contentSlot =
     box.slots
       .single()
@@ -562,15 +511,8 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         it.acceptedTraits = listOf("RemoteAuthorable")
       }
       .build()
-  // `WearWidgetBrush` is a CHAIN of drawing elements, and `WearWidgetContainer` folds over it,
-  // drawing a round rect per element before the content. A slot is an ordered list of nodes, so the
-  // chain models exactly as one — which is why gradients and images are a slot rather than more
-  // properties: `background` covers the one-element solid-colour case that a string can carry, and
-  // anything the wire cannot say in a string goes in here as a node that already knows how to draw
-  // itself.
-  //
-  // Narrowed to the two traits that ARE brushes. `AnyContent` would let a Text be dropped in as a
-  // "background", which upstream has no way to express.
+  // `WearWidgetBrush` is a chain of drawing elements, modelled as an ordered slot; `background`
+  // covers the solid-colour case. Narrowed to the brush traits.
   val backgroundSlot =
     contentSlot
       .newBuilder()
@@ -618,10 +560,8 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             ?.build()
       }
       .build()
-  // **Experimental.** One widget for both container sizes (`AdaptiveWearWidget`). The body is
-  // three named slots rather than one, because the template decides where each goes: a Small
-  // widget keeps the headline and the action and drops the supporting line. Each takes any number
-  // of Remote Compose nodes, stacked in order.
+  // Experimental: one widget for both sizes (`AdaptiveWearWidget`). Three named slots because the
+  // template decides placement; Small drops the supporting line.
   fun contentSlotNamed(name: String) =
     contentSlot
       .newBuilder()
@@ -645,17 +585,9 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             .build()
       }
       .build()
-  // The reviewed `remote-m3` subset. The last two are brushes, and they are here because the
-  // background slot above declares `DrawLayer` and `ImageContent` and nothing else in this list
-  // carries either — a slot narrowed to traits no component in its own catalog has is a slot no
-  // author can fill from the palette, from a drop, or from a document the validator would accept
-  // (yschimke/compose-preview-server#428).
-  //
-  // `shape/radial-gradient` is deliberately not among them. `RemoteContentEmitter` writes
-  // `horizontalGradient`/`verticalGradient` chains from `shape/linear-gradient` and has an authored
-  // refusal for `asset/image` that names what to add by hand; a radial gradient would fall through
-  // to the generic "is not a widget background brush", which is a worse answer than not offering
-  // it. It joins the list when `WearWidgetBrush` gains the chain element it needs.
+  // The reviewed `remote-m3` subset. The last two are brushes, so the background slot's traits
+  // have something to accept. `shape/radial-gradient` is excluded until `WearWidgetBrush` gains a
+  // radial chain element.
   val authoringIds =
     listOf(
       "layout/box",
@@ -666,12 +598,8 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       *REMOTE_ONLY_LAYOUT_IDS.toTypedArray(),
       "m3/text",
       "remote-compose/document",
-      // The way host content gets inside a widget body. A `@RemoteComposable` body cannot call an
-      // application's composables — that is the rule this catalog exists to keep — so a custom
-      // component is not a hole in it: the document carries an operation naming a renderer, and the
-      // application registers Compose under that name. `remote-compose/inline` is deliberately
-      // absent, because this catalog's whole body is already a document; an inline switch inside it
-      // would be a second answer to a question the container already answered.
+      // Host content enters a widget body as a custom component the app renders by name.
+      // `remote-compose/inline` is absent: the body is already a document.
       REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
       "shape/linear-gradient",
       "asset/image",
@@ -712,9 +640,7 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
         ) +
           authoringIds.map {
-            // Narrowed to what the generator can write; the published-catalog foundation applies
-            // the
-            // same function.
+            // Narrowed to what the generator can write, as the published-catalog foundation does.
             (components[it]
                 ?: remoteOnlyLayout(it, components)
                 ?: remoteDrawComponent(it, components)
@@ -738,30 +664,15 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
 }
 
 /**
- * `remote-m3/lottie` — a Lottie animation, **compiled into the document** rather than played from
- * it.
+ * `remote-m3/lottie` — a Lottie animation compiled into the document rather than played.
  *
- * This is the whole reason it can exist here and nowhere else. Horologist's `remotecompose/lottie`
- * (vendored at `yschimke/rc-players`'s `third_party/horologist-lottie`, whose PROVENANCE.md carries
- * the pinned commit) is not a Lottie player: `LottieAnimation(json = …)` is a `@RemoteComposable`
- * that parses the animation once, at document-build time, and re-emits every layer, shape and
- * keyframe as Remote Compose operations over the document's own animation clock. What ships to the
- * watch is a `.rc` document that draws the animation — no Lottie runtime on the device, no JSON, no
- * fetch.
+ * Horologist's `remotecompose/lottie` (vendored in `yschimke/rc-players`) parses the JSON at
+ * document-build time and re-emits it as Remote Compose operations on the document clock, so no
+ * Lottie runtime ships. Only this catalog exports a Remote Compose document, so it belongs here
+ * alone.
  *
- * So it belongs to the catalog whose export *is* a Remote Compose document, and to no other. A
- * `wear-m3` screen or an `m3-catalog` phone screen exports ordinary Compose, where the answer to
- * "play a Lottie" is `lottie-compose`, a different library with a different API that this element
- * would misdescribe.
- *
- * ## Two sources, one compiled thing
- *
- * `url` is where the animation came from and `json` is what gets compiled. The builder resolves the
- * first into the second once, at authoring time (`UiBuilderEditor`'s Lottie fetch), and keeps both:
- * the URL because "which animation is this?" is a question an author asks of a design six months
- * later, and the JSON because a generated widget cannot reach the network while it is being built.
- * An element carrying only a URL is authored-but-unresolved — the canvas says so and
- * [RemoteContentEmitter] refuses it by name rather than writing source that would not compile.
+ * `url` is the source and `json` what gets compiled; the editor resolves one into the other at
+ * authoring time. URL-only elements are refused by [RemoteContentEmitter].
  */
 private fun lottie(
   borrowed: ComponentCapabilityV1,
@@ -799,14 +710,8 @@ private fun lottie(
     .build()
 
 /**
- * `url`, `json` and `progress` — the animation, where it came from, and whether it runs.
- *
- * `progress` is the one that is not obvious. `LottieAnimation`'s `progress` argument is a
- * `RemoteFloat?`, and leaving it out is what makes the compiled document drive the animation from
- * its own clock: `floor(ANIMATION_TIME * frameRate) % frames`, looping forever. Setting it pins the
- * animation to one frame — 0 is the first, 1 the last — which is what a widget that must not
- * animate (a glanceable state, a still icon) wants. Unset means "run", which is why it has no
- * default rather than defaulting to 0.
+ * `url`, `json` and `progress`. Unset `progress` lets the document clock loop the animation; a
+ * value (0 first frame, 1 last) pins one frame. Hence no default.
  */
 private fun lottieProperties(): List<PropertyCapabilityV1> =
   listOf(

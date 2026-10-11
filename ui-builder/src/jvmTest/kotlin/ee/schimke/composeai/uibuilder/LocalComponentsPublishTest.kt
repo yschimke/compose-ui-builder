@@ -20,12 +20,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Publishing one of a design's components to the project library: what the editor sends, and what
- * it records once the library answers.
- *
- * What goes out is the file a project would commit — one component, its body as the only root — so
- * the server reads it with the reader it already has. What comes back is a digest, recorded as the
- * component's `source`, which turns the design's copy into a reference the drift report can follow.
+ * Publishing a design's component to the project library: what goes out is the file a project would
+ * commit (one component, its body the only root); what comes back is a digest, recorded as the
+ * component's `source` so drift can be followed.
  */
 class LocalComponentsPublishTest {
   private val catalog =

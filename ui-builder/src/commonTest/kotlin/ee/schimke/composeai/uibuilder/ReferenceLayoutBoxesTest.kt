@@ -68,9 +68,8 @@ class ReferenceLayoutBoxesTest {
 
   @Test
   fun `an export whose policy the strict lane refuses still yields geometry`() {
-    // `<image>` without the raster provenance the export gate demands: refused for publication,
-    // and still perfectly readable as a layout. The two questions are answered separately on
-    // purpose; see `StrictSvgParseResult.structure`.
+    // `<image>` without the raster provenance the export gate demands: refused for publication but
+    // still readable as layout; see `StrictSvgParseResult.structure`.
     val boxes =
       extractSvgLayoutBoxes(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">

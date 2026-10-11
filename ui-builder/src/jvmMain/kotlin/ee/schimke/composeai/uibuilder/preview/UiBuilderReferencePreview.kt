@@ -18,17 +18,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The reference overlay, drawn over a real design, with the panel that drives it.
+ * The reference overlay, drawn over a real design, with the panel that drives it: diffs the
+ * overlay, its layout boxes, the markup shapes, a placed piece and the Screen inspector's Reference
+ * section.
  *
- * A new visual surface is wired into the preview workflow so the next change to it is diffed
- * without anyone remembering to — the same reason [UiBuilderEditorChromePreview] exists. What it
- * has to keep honest is a lot: the overlay itself, its layout boxes, the markup shapes, a placed
- * piece, and the Reference section of the Screen inspector, none of which a state test can see.
- *
- * Everything is fixed. The reference is an SVG built here as a string rather than a checked-in
- * picture, so the render depends on no binary fixture and the SVG lane — which is the one with a
- * parser behind it — is the lane being exercised. Nothing reads a clock, the network or a random
- * source.
+ * Fully fixed: the reference is an SVG built here (exercising the SVG parser lane, with no binary
+ * fixture), and nothing reads a clock, the network or randomness.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -43,10 +38,8 @@ fun UiBuilderReferenceOverlayPreview() {
 }
 
 /**
- * The same overlay in difference mode, hiding nothing behind an opacity.
- *
- * A second preview rather than a second mode on the first, because the two are drawn by different
- * paths — one blends, one subtracts — and a regression in either would be invisible in the other.
+ * The same overlay in difference mode; a separate preview since blending and subtracting are
+ * different paths.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -68,15 +61,11 @@ fun UiBuilderReferenceDifferencePreview() {
 }
 
 /**
- * A component captured onto the reference, ready to be built for real.
- *
- * The piece here is a specimen of `m3/text` in the shape the capture path produces, so this render
- * is where a regression in the piece's own drawing or in the panel's promote control would show up
- * — the half a state test cannot see.
+ * A component captured onto the reference (an `m3/text` specimen, as the capture path produces),
+ * with the panel's promote control.
  */
-// Taller than its siblings on purpose: the controls this render exists to diff — the component
-// menu and the promote button — sit below the frame controls in a panel that scrolls, and a
-// 900 dp render would prove only that the panel still has a heading.
+// Taller than its siblings so the component menu and promote button, below the frame controls, are
+// in the render.
 @Preview(widthDp = 1600, heightDp = 1500)
 @Composable
 fun UiBuilderReferenceComponentPiecePreview() {
@@ -127,11 +116,8 @@ internal val referencePreviewDocument: UiBuilderDocument by lazy {
 }
 
 /**
- * A mock, a piece dropped into place, and one mark of every kind that draws differently.
- *
- * Deliberately more than a screenshot would need: this render is the only place the arrow head, the
- * rounded corner, the erase fill and the centred label are checked at all, so all of them are on
- * the canvas at once.
+ * A mock, a placed piece, and one mark of every kind that draws differently (arrow head, rounded
+ * corner, erase fill, centred label); this render is their only check.
  */
 internal val referencePreviewOverlay: RestoredReference by lazy {
   val svg =

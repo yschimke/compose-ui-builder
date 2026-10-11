@@ -19,13 +19,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Undo and redo walk a whole history, not one step of it.
- *
- * Undo used to work exactly once. The second press returned the state unchanged with
- * `UNSAFE_COMPENSATION` — while `canUndo` kept reporting true, so the toolbar button stayed lit and
- * did nothing. The cause: an undo stamped its own revision onto every address it restored, so the
- * next undo compared that stamp against the older command's `committedRevision`, saw a mismatch,
- * and read its own predecessor as a foreign write.
+ * Undo and redo walk a whole history, not one step. Undo restores each address's prior revision
+ * rather than stamping its own, so the next undo doesn't misread its predecessor as a foreign write
+ * (`UNSAFE_COMPENSATION`) while `canUndo` stays true.
  */
 class MultiLevelUndoTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -83,8 +79,8 @@ class MultiLevelUndoTest {
 
   @Test
   fun `switching phone to foldable to tablet leaves one undo per device`() {
-    // The environment lane, and the reason this was worth chasing: the device-preset menu is three
-    // clicks and an undo, and the undo used to strand a phone-width tablet on the canvas.
+    // The environment lane: the device-preset menu is a few clicks plus an undo, which must restore
+    // the frame.
     val phone = UiBuilderDevicePreset("id:pixel_7", "Pixel 7", "Phones", 411, 914, 2.625)
     val foldable =
       UiBuilderDevicePreset("id:pixel_fold", "Pixel Fold", "Foldables", 841, 701, 2.625)

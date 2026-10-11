@@ -62,19 +62,11 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The editor's own chrome — toolbar, layers, canvas and inspector — rendered as a preview.
+ * The editor's own chrome (toolbar, layers, canvas and inspector) rendered as a preview, so changes
+ * to it are diffed like any other surface.
  *
- * [ProductionUiBuilderPreview] draws the *designed document* with `editorOverlay = false`, so the
- * editor around it was in no preview at all. Every change to it therefore shipped with the words
- * "not something a static render shows", which was true and was a hole: the repository asks that a
- * new visual surface be wired into the preview workflow so the next change to it is diffed without
- * anyone remembering to. This is that wiring. Layer names, toolbar controls, the property inspector
- * and the selection overlay are now diffed like every other surface.
- *
- * Everything it draws is fixed: the frozen Jetcaster fixture replayed to a known revision, its own
- * catalog pin, the default local actor and session label, and no collaborators. Nothing here reads
- * a clock, the network or a random source, and the selection is pinned to a node rather than left
- * to whichever root the editor would pick.
+ * Fully deterministic: the frozen Jetcaster fixture at a known revision, its own catalog pin, the
+ * default local actor and session label, no collaborators, and a pinned selection.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -94,11 +86,8 @@ fun UiBuilderEditorChromePreview() {
 }
 
 /**
- * The editor as it opens: both docks closed, the canvas with the whole window.
- *
- * The default this repository now ships, and therefore the one that has to be diffed. Every other
- * chrome preview asks for a panel, so without this one a change that broke the empty state would
- * pass every render.
+ * The editor as it opens: both docks closed, the canvas with the whole window. Covers the default
+ * empty state, which every other chrome preview opens away from.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -114,16 +103,8 @@ fun UiBuilderCanvasForwardPreview() {
 }
 
 /**
- * The same chrome with the Remote Compose palette populated.
- *
- * A second preview rather than sources on the first, because the first is the answer for every
- * catalog that publishes no Remote Compose documents — which is most of them — and this one is the
- * answer for `remote-m3`. Both have to keep working, so both are diffed.
- *
- * The sources are literals rather than a catalog fetch: a preview may not read the network, and
- * what this surface has to show is the panel's grouping, its headings and its Add affordance, none
- * of which depends on the bytes behind a row. The resolver is present because the panel is hidden
- * without one, and never called because nothing here presses Add.
+ * The same chrome with the Remote Compose palette populated (the `remote-m3` case). Sources are
+ * literals since previews can't read the network; the resolver is present only so the panel shows.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -131,35 +112,23 @@ fun UiBuilderRemoteComposePalettePreview() {
   UiBuilderEditor(
     document = editorChromePreviewDocument,
     catalog = editorChromePreviewCatalog,
-    // A container rather than [EDITOR_CHROME_PREVIEW_SELECTION]'s text leaf: a row's Add is enabled
-    // off the same question the insert asks, so a leaf selection would diff a palette whose every
-    // row is greyed and never show the affordance working.
+    // A container rather than a text leaf, so the rows' Add is enabled.
     initialSelectedNodeId = "discover-grid",
     initialComponentsOpen = true,
-    // The production sheet has hundreds of sources below the authoring catalog. Narrow to the
-    // shared capture size so the evidence actually shows those rows instead of only the catalog
-    // above them; search still matches their stable ids even though those ids are no longer drawn.
+    // Narrow the large production sheet so rows below the authoring catalog are visible; search
+    // still matches their ids.
     initialCatalogQuery = "compact",
     remoteComposeSources = REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES,
     resolveRemoteComposeDocument = { error("a preview never adds") },
-    // A preview may not read the network, so these stand in for the serving catalog's PNG route.
-    // The product callback loads the real rendered sticker; this fixture makes the loaded state
-    // deterministic enough for the editor-chrome diff to keep covering its layout.
+    // Stands in for the serving catalog's PNG route, since previews can't read the network.
     resolveRemoteComposeThumbnail = ::remoteComposePaletteThumbnail,
   )
 }
 
 /**
- * The component menu narrowed to a variant name, with everything it matched unfolded.
- *
- * The panel's tree has three row shapes and the other chrome previews only ever draw two of them: a
- * family heading and a component. A **variant** row is a different row — indented under its
- * component, with its own Add and the catalog's default one labelled — and nothing diffed it.
- *
- * The query does two jobs here. It draws the variant rows without anyone pressing a chevron, since
- * a search opens every row it matched; and "filled" is not the display name of anything in this
- * catalog, so the four components under it are here *because of their variants* — which is the
- * other half of the claim, that what a row shows is what the field searches.
+ * The component menu narrowed to a variant name, with everything it matched unfolded, so the
+ * **variant** row shape is diffed. "filled" matches no display name, so the components shown are
+ * there because of their variants.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -176,17 +145,9 @@ fun UiBuilderComponentVariantsPreview() {
 }
 
 /**
- * The palette narrowed to the components the Compose export cannot write.
- *
- * Every row here is one the embedded component record has no call site for, so every one is faded
- * and carries the "no Kotlin" word — with a variant row under the date picker, which dims with its
- * component and carries no word of its own. It exists to diff the marker rather than the panel:
- * [UiBuilderEditorChromePreview] shows the marker beside covered rows, which is where the contrast
- * is, and this is the row shapes the marker has to survive on.
- *
- * "picker" matches the two pickers and nothing else in this catalog, and both take a remembered
- * state no value expresses, so neither is going to become exportable by accident and turn this
- * preview into a picture of nothing.
+ * The palette narrowed to the components the Compose export cannot write, to diff the "no Kotlin"
+ * marker on each row shape (including a variant row). "picker" matches only the two pickers, which
+ * are unlikely to become exportable.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -241,21 +202,14 @@ private fun remoteComposePaletteThumbnail(source: RemoteComposeSource): ImageBit
 }
 
 /**
- * A node deep enough in the tree to exercise the layers panel's indentation and its naming, rather
- * than a root whose row says the same thing either way. It is also on screen in both panels at
- * once: its layer row is above the fold and the text it carries is in the rendered canvas, so a
- * change to either the naming rule or the property inspector shows up here.
+ * A node deep enough in the tree to exercise the layers panel's indentation and naming, visible in
+ * both the layers panel and the rendered canvas.
  */
 internal const val EDITOR_CHROME_PREVIEW_SELECTION = "search-placeholder"
 
 /**
- * The inspector with a layout container selected.
- *
- * A second preview rather than a second selection on the first, because they answer different
- * questions: that one is the editor's shape, this one is what the property panel will actually let
- * a person change about a screen's layout. `discover-grid` is a `layout/lazy-grid`, which declares
- * spacing, an adaptive column rule and a content padding — the three shapes the inspector used to
- * refuse.
+ * The inspector with a layout container selected: `discover-grid` is a `layout/lazy-grid` declaring
+ * spacing, an adaptive column rule and content padding.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -276,12 +230,8 @@ internal val editorChromePreviewDocument: UiBuilderDocument by lazy {
 }
 
 /**
- * The issues panel with something to say.
- *
- * The checked-in fixture is clean, which is the right baseline and a useless render: an empty panel
- * proves nothing about how a problem reads. Two are seeded here instead, one of each kind the gate
- * finds — a node missing a property its component requires, a node no root can reach, and a stale
- * catalog property with its explicit Drop / Map recovery actions.
+ * The issues panel with something to say. Problems are seeded (the fixture is clean): a missing
+ * required property, an unreachable node, and a stale catalog property with Drop / Map recovery.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -357,12 +307,8 @@ fun UiBuilderLargeIssuesTriagePreview() {
 }
 
 /**
- * The new-design dialog, where a screen's state is declared.
- *
- * `CreateDesign` carries a whole document and no released mutation reaches `stateVariables`
- * afterwards, so this is the only moment a design can be given the variables the inspector then
- * binds properties to. `blankUiBuilderDocument` has taken them since #238 and nothing called it
- * with any.
+ * The new-design dialog, where a screen's state is declared. `CreateDesign` is the only point a
+ * design can get `stateVariables`, which the inspector then binds properties to.
  */
 @Preview(widthDp = 900, heightDp = 900)
 @Composable
@@ -438,12 +384,8 @@ fun UiBuilderNewDesignPreview() {
 }
 
 /**
- * A state-bound property, in the inspector that can now see it.
- *
- * `chip-crime.selected` is bound to `stateEquals(selectedCategory, "Crime")` in the fixture. Until
- * this change the panel drew a switch for it — a control the reducer refuses, because the value is
- * the binding — and said nothing about the binding at all. It now says what it is bound to and
- * offers the one edit that works.
+ * A state-bound property in the inspector: `chip-crime.selected` is bound to
+ * `stateEquals(selectedCategory, "Crime")`, and the panel shows the binding and its one valid edit.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -499,11 +441,8 @@ fun UiBuilderNavigationActionPreview() {
 }
 
 /**
- * The workspace with the authoring canvas switched off: the preview pane on its own.
- *
- * The selection overlay is gone, so a tap reaches the component under it and the renderer's state
- * writes actually run. The panes button says what is on screen. Nothing else moves — the panels
- * stay live on purpose, because they are explicit actions, unlike a keystroke aimed at the canvas.
+ * The workspace with the authoring canvas switched off: the preview pane on its own. Taps reach
+ * components and state writes run; the panels stay live.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -519,19 +458,15 @@ fun UiBuilderPreviewModePreview() {
 }
 
 /**
- * The pane this change is for: the design as drawn, beside the design being edited.
- *
- * Costs the host nothing — no compile, no round trip — which is the claim worth having a render of.
- * The row inside it carries the design's own frame plus every device and axis the canvas draws
- * beside itself, at one shared scale.
+ * The preview pane: the design as drawn beside the design being edited, with its frame plus every
+ * device and axis at one shared scale. Costs the host nothing.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
 fun UiBuilderEditorAndPreviewPanesPreview() {
   UiBuilderEditor(
-    // Claiming a tablet and asking the Dark question of it, so the preview pane draws what it is
-    // for: the design's own frame, the device it says it ships on, and an override — each labelled
-    // with the properties being applied rather than with a picture of a handset.
+    // A tablet with the Dark axis, so the pane shows the design's frame, its device and an
+    // override, each labelled.
     document =
       editorChromePreviewDocument.onDevice(PREVIEW_PHONE).claiming(PREVIEW_TABLET).inLightTheme(),
     catalog = editorChromePreviewCatalog,
@@ -543,11 +478,8 @@ fun UiBuilderEditorAndPreviewPanesPreview() {
 }
 
 /**
- * The layers panel filtered, which is the state the panel spends most of its useful life in.
- *
- * `m3/filter-chip` narrows a hundred and eight rows to the fixture's four chips plus the chain that
- * holds them, and the panel offers to select all four at once — which is what makes the multi-node
- * inspector reachable on a screen this size.
+ * The layers panel filtered: `m3/filter-chip` narrows the tree to four chips plus their ancestors,
+ * and the panel offers to select all four (the multi-node inspector).
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -562,11 +494,8 @@ fun UiBuilderLayerFilterPreview() {
 }
 
 /**
- * The Screen inspector's device menu, with the canvas on a phone frame.
- *
- * Pairs with [UiBuilderDevicePresetTabletPreview]: same document, same catalog, same inspector tab,
- * one preset apart. Read side by side they are the evidence that picking a frame moves the canvas —
- * width, height and density together — which is the thing five raw text fields never showed.
+ * The Screen inspector's device menu, with the canvas on a phone frame. Pairs with
+ * [UiBuilderDevicePresetTabletPreview] to show that picking a frame moves the canvas.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -625,13 +554,8 @@ fun UiBuilderSeparatePreviewViewPreview() {
 }
 
 /**
- * Three frames for the two previews above, and nothing else reads them.
- *
- * A preview cannot reach the server, and the server is where the real list comes from — it resolves
- * `DeviceDimensions`, the JVM-only catalog the render lane uses, precisely because `:ui-builder`
- * cannot. So these are fixture values, in the same category as the ones the tests state, and they
- * are deliberately three rather than a curated catalog: a fourth entry here would start to look
- * like the hard-coded device list this feature exists to not have.
+ * Three fixture frames for the two previews above. The real list comes from the server (JVM-only
+ * `DeviceDimensions`); kept to three so it doesn't become a hard-coded device list.
  */
 private val PREVIEW_PHONE =
   UiBuilderDevicePreset("id:pixel_7", "Pixel 7", "Phones", 411, 914, 2.625)
@@ -655,17 +579,9 @@ private fun UiBuilderDocument.onDevice(preset: UiBuilderDevicePreset): UiBuilder
   )
 
 /**
- * The code pane open on a design that exports.
- *
- * The builder's proposition is that a design *is* code, and until this pane the only way to read
- * the code a design produced was to run an export and open the artifact. What it draws is the real
- * `ScreenGenerator` output for the document beside it — same generator, same component record and
- * same allow-list the server's export runs — so this render is also the evidence that the two
- * builders now share one emitter.
- *
- * A small authored document rather than the Jetcaster fixture, because the fixture does not export
- * and this preview is the case where there is Kotlin to show. [UiBuilderCodePaneRefusedPreview] is
- * the other half.
+ * The code pane open on a design that exports, showing the real `ScreenGenerator` output (same
+ * generator, component record and allow-list as the server). A small authored document since the
+ * Jetcaster fixture doesn't export; [UiBuilderCodePaneRefusedPreview] is the other half.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -679,11 +595,8 @@ fun UiBuilderCodePanePreview() {
 }
 
 /**
- * The code pane on a design the export refuses.
- *
- * Pairs with [UiBuilderCodePanePreview]. The reasons appear where the source would, rather than the
- * pane going blank and leaving them behind the Issues tab — a designer looking at the code pane on
- * a design that cannot generate is looking at exactly the question the refusals answer.
+ * The code pane on a design the export refuses: the reasons appear where the source would. Pairs
+ * with [UiBuilderCodePanePreview].
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -697,11 +610,8 @@ fun UiBuilderCodePaneRefusedPreview() {
 }
 
 /**
- * A scaffold, a column, a heading and a rule — every id backed by the component record.
- *
- * Authored here rather than replayed, because the point is a document the generator can express:
- * the fixture reaches for an adaptive grid, an enum value with no Kotlin member and a state read,
- * and refuses on all three.
+ * A scaffold, a column, a heading and a rule, every id backed by the component record, so the
+ * generator can express it.
  */
 private val editorCodePanePreviewDocument: UiBuilderDocument by lazy {
   val blank =
@@ -770,16 +680,9 @@ private fun previewTypedValue(type: String, value: String): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 
 /**
- * The native render pane, beside the canvas that the browser drew.
- *
- * Two renderers at once is the point: the Wasm canvas is immediate and cannot say what a screen
- * looks like on Android, and one pane replacing the other would hide the difference that matters.
- *
- * What it shows here is the **refusal** state, and that is not a placeholder — it is what this
- * fixture actually produces. The reasons are read from the same reducer the problems panel and the
- * code pane read, so this render cannot drift from them. A frame-bearing state is deliberately not
- * previewed: a preview cannot compile Kotlin, and standing a real render in for one the host would
- * have produced would be a picture that claims something untrue.
+ * The native render pane, beside the browser-drawn canvas, in its **refusal** state (what this
+ * fixture produces). Reasons come from the same reducer as the problems panel and code pane. A
+ * frame-bearing state isn't previewed because a preview can't compile Kotlin.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -795,12 +698,8 @@ fun UiBuilderNativeRenderPreview() {
 }
 
 /**
- * The comparison case: all three panes at once.
- *
- * Rendered as its own preview rather than folded into the one above, because they are the shapes
- * this control produces and a diff of either alone would not show the other moving. This is the
- * state a Wasm project reaches for occasionally; [UiBuilderNativeRenderPreview] is the state a
- * project with no browser renderer lives in.
+ * The comparison case: all three panes at once. [UiBuilderNativeRenderPreview] is the native-only
+ * state.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -816,19 +715,12 @@ fun UiBuilderRenderComparisonPreview() {
 }
 
 /**
- * The overlay the native pane draws over a frame: the selected node outlined, in the frame's own
- * pixels, scaled by the one factor that fits the frame into the pane.
+ * The overlay the native pane draws over a frame: the selected node outlined in the frame's pixels,
+ * scaled to fit the pane.
  *
- * ## What the frame under it is, and is not
- *
- * It is a **geometry fixture**, not a render: flat blocks at the boxes the host would have reported
- * for this design, drawn here so the overlay has something to sit on.
- * [UiBuilderNativeRenderPreview] explains why no preview stands a real frame in for one the host
- * would have produced, and that still holds — nothing here claims to be what Compose drew. What
- * this preview is for is the half that is this repository's own code: whether the outline lands on
- * the box the host reported, at the right scale, for the node the editor says is selected. A
- * regression in the transform moves the outline off its block, which is exactly what a diff of this
- * render shows.
+ * The frame under it is a **geometry fixture**, not a render: flat blocks at the boxes the host
+ * would report. What is diffed is the transform: whether the outline lands on the reported box at
+ * the right scale.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -844,23 +736,16 @@ fun UiBuilderNativeOverlayPreview() {
 }
 
 /**
- * The native pane streaming, which is what that pane is now for on a catalog with an Android lane.
- *
- * The caption is the content here: a still says "compiled on the host" and a stream says where it
- * is live and that taps reach it, and the difference between those two sentences is the difference
- * between a picture of a screen and the screen. The frame under it is the same geometry fixture
- * [UiBuilderNativeOverlayPreview] uses and claims no more than that one does — a preview cannot
- * compile Kotlin, let alone hold a daemon open, so nothing here stands a real Android frame in for
- * one Robolectric would have drawn.
+ * The native pane streaming, on a catalog with an Android lane. The caption (live, taps reach it)
+ * is the content; the frame is the same geometry fixture as [UiBuilderNativeOverlayPreview].
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
 fun UiBuilderNativeLivePreview() {
   UiBuilderEditor(
     document = editorChromePreviewDocument,
-    // Declaring the Android lane rather than the chrome fixture's default, because the sentence
-    // this preview exists to show is the one a `remote-m3` or `wear-m3` design gets: *which*
-    // native toolkit is drawing. "live on desktop" would be a true caption about the wrong case.
+    // The Android lane, so the caption names the native toolkit as a `remote-m3`/`wear-m3` design
+    // would see it.
     catalog = androidNativePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialPanes = setOf(EditorPane.Editor, EditorPane.Native),
@@ -871,12 +756,8 @@ fun UiBuilderNativeLivePreview() {
 }
 
 /**
- * The chrome fixture's catalog with an Android native lane declared on it.
- *
- * Patched here rather than shipped as a second fixture: the only thing this preview needs that
- * `m3-catalog` does not say is `previewSurfaces.native.backend`, and a whole second copy of a
- * hundred-component catalog to carry one string would drift from the first one immediately. The
- * shape is the one `UiBuilderPreviewSurfaces.from` reads and `wear-m3` and `remote-m3` both write.
+ * The chrome fixture's catalog with `previewSurfaces.native.backend` set to Android, patched in
+ * rather than duplicating the catalog. Same shape `UiBuilderPreviewSurfaces.from` reads.
  */
 private val androidNativePreviewCatalog: CapabilityCatalog by lazy {
   val source = Json.parseToJsonElement(previewResource("/m3-catalog-capabilities-v1.json"))
@@ -902,12 +783,7 @@ private val androidNativePreviewCatalog: CapabilityCatalog by lazy {
 private val nativeLivePreviewRender =
   UiBuilderNativeRender(live = UiBuilderNativeLive(sessionId = "session", previewId = "generated"))
 
-/**
- * A stream that has already painted, so the preview draws the state worth diffing.
- *
- * Inputs are dropped. A preview has nobody to send them to, and a fixture that pretended otherwise
- * would be the one thing on this page claiming to be connected to something.
- */
+/** A stream that has already painted. Inputs are dropped. */
 private val nativeLivePreviewStream =
   object : UiBuilderNativeStream {
     override val frame =
@@ -931,11 +807,8 @@ private val nativeLivePreviewStream =
   }
 
 /**
- * The geometry fixture behind [UiBuilderNativeOverlayPreview]: boxes for a few of the fixture's own
- * nodes, and a frame with a flat block drawn at each of them.
- *
- * Deliberately blocks rather than anything that resembles a screen. A frame that looked like a
- * render would read as one, and this is a coordinate-space fixture — the numbers are the content.
+ * The geometry fixture behind [UiBuilderNativeOverlayPreview]: boxes for a few fixture nodes and a
+ * frame with a flat block at each. Deliberately not screen-like; the numbers are the content.
  */
 private val nativeOverlayPreviewRender: UiBuilderNativeRender by lazy {
   val bounds =
@@ -990,10 +863,8 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
     nodes =
       document.nodes +
         mapOf(
-          // `m3/text` requires `text`, and a node that lost it is not a rejected write — nothing
-          // wrote to it. It is a document that will not export. `oldFontStyle` models a catalog
-          // rename: its value remains intact and the Issues panel offers recovery rather than
-          // silently throwing it away.
+          // `m3/text` requires `text`, so this node won't export. `oldFontStyle` models a catalog
+          // rename the Issues panel offers to recover.
           placeholder.id to
             placeholder.copy(
               properties =
@@ -1008,10 +879,8 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
                       ))
                 )
             ),
-          // Dropping the child leaves the icon in `nodes` with no parent, which is the shape a
-          // botched delete leaves behind. The slot it moves to names a node that was never there,
-          // which is the other half: the canvas and the layers panel both walk that reference, and
-          // both used to take the editor down on it rather than leave it to the panel to report.
+          // Leaves the icon orphaned in `nodes` and the slot pointing at a missing node, as a
+          // botched delete would; both must be reported, not crash.
           searchInput.id to
             searchInput.copy(
               slots =
@@ -1033,17 +902,9 @@ internal fun previewResource(path: String): String =
     .readText()
 
 /**
- * The History dock, over a session that has done something.
- *
- * A fresh editor has no history, and a panel about the session's own changes has exactly one thing
- * to say about a session with none. So this one opens on [seeded edits][historyPreviewEdits] — a
- * padding, a text, a screen change and an undo over them — and diffs the four things that are only
- * true with a history behind them: that each change is named from the operation that made it, that
- * the before and after of every value it moved are on the row, that the entry undo is aimed at is
- * marked, and that the one the undo took back is marked as redo's.
- *
- * The last edit is the undo deliberately. Both markers are in the panel at once only after one, and
- * a marker that shows in every state is a marker nothing is diffing.
+ * The History dock over a session with [seeded edits][historyPreviewEdits]: each entry named from
+ * its operation, before/after values on the row, the undo target marked, and the undone entry
+ * marked as redo's. Ends with an undo so both markers show.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1060,13 +921,8 @@ fun UiBuilderHistoryDockPreview() {
 }
 
 /**
- * The history strip, under the canvas, over the same session the dock preview reads.
- *
- * The dock says what was done; the strip says what each of it looked like, and the two are one
- * control — so this preview opens both, which is what pressing History actually does. What it
- * exists to diff is the half a list of words cannot show: that every revision has a picture, that
- * the pictures differ from each other, that the newest row is marked as the one on the canvas, and
- * that the row an undo committed is on the strip beside the change it took back.
+ * The history strip under the canvas, over the same session: each revision has its own picture, the
+ * newest is marked as on the canvas, and the undo's row sits beside the change it took back.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1084,16 +940,8 @@ fun UiBuilderHistoryBarPreview() {
 }
 
 /**
- * Two revisions of one design, compared.
- *
- * The editing canvas is not composed at all here, which is the point rather than a side effect: a
- * canvas that took a drop at an old revision would be editing a picture. What replaces it is the
- * two revisions side by side and the list of what moved between them — read off the two documents,
- * so the undo in the seeded history cancels the text edit it took back instead of being counted as
- * a second change.
- *
- * Pinned to revisions 1 and 3 rather than to whatever the seeding happens to end at: a preview that
- * renamed its own subject every time an edit was added to the list ahead of it would diff nothing.
+ * Two revisions of one design, compared side by side with the list of changes between them; the
+ * editing canvas is not composed. Pinned to revisions 1 and 3 so the subject is stable.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1111,12 +959,8 @@ fun UiBuilderRevisionComparePreview() {
 }
 
 /**
- * Three changes and their undo, chosen to put a different *kind* of entry on each row.
- *
- * A modifier chain, a property and the screen itself, each with a different before: a chain that
- * was empty, a value that was something else, and a field that belongs to no node at all, so its
- * row has nothing to select. Fixed, ordered, and applied through the same reducer a person's edits
- * go through, so this is a picture of what the editor does rather than of a list assembled for it.
+ * Three changes and their undo, each a different kind of entry: a modifier chain (was empty), a
+ * property (had a value), and a screen field (no node). Applied through the real reducer.
  */
 private val historyPreviewEdits: List<UiBuilderEditorEvent> =
   listOf(
@@ -1133,10 +977,8 @@ private val historyPreviewEdits: List<UiBuilderEditorEvent> =
   )
 
 /**
- * A design of several top-level items, before it has any: the seed the pair below starts from.
- *
- * Rendered with the Add beside switch already on, so the two pictures differ by exactly the thing
- * under test — two Adds — rather than by which panel is open or which mode the editor is in.
+ * A design of several top-level items, before it has any: the seed the pair below starts from. Add
+ * beside is already on so the pair differs only by two Adds.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1153,12 +995,9 @@ fun UiBuilderBoardBeforePreview() {
 }
 
 /**
- * The same design after two Adds beside: a board of three items, one tree, one root.
- *
- * Three of the change's claims in one picture, which is why the docks are open. The canvas draws a
- * `layout/column` the renderer already knew how to draw — nothing in it is synthetic, and the
- * layers panel lists the board as the ordinary node it is. The insert panel says where the next Add
- * lands. The Frame inspector says what is being looked at without claiming a device for it.
+ * The same design after two Adds beside: a board of three items, one tree, one root. The canvas
+ * draws an ordinary `layout/column`, the layers panel lists it as a node, the insert panel says
+ * where the next Add lands, and the Frame inspector claims no device.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1176,25 +1015,15 @@ fun UiBuilderBoardPreview() {
 }
 
 /**
- * The variant strip, which lives in the preview pane: one document, drawn beside itself.
- *
- * The design claims a tablet — the same `exportDevices` the Compose export writes as
- * `@Preview(device = …)` — and the Dark axis is switched on. The authoring canvas holds **one**
- * frame whatever is switched on: you build the UI once, and the pane beside it is where you watch
- * it adapt. The variants were drawn on the canvas until this change, which made the surface you
- * edit on grow a row of surfaces you cannot edit.
- *
- * The before is [UiBuilderCanvasForwardPreview], which is the same editor with the preview pane
- * shut: one frame, and the whole workspace for it.
+ * The variant strip in the preview pane: one document drawn beside itself. The design claims a
+ * tablet (`exportDevices`) with the Dark axis on; the authoring canvas still holds **one** frame.
+ * The before is [UiBuilderCanvasForwardPreview].
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
 fun UiBuilderVariantStripPreview() {
   UiBuilderEditor(
-    // Light, deliberately: the fixture's own environment is `"theme": "dark"`, so a Dark axis over
-    // it drew a third pane identical in theme to the first two — a picture that proves a pane is
-    // laid out and nothing about the override reaching the colours. A before/after pair whose two
-    // images match is a finding, and so is a variant that matches the design it varies.
+    // Light, because the fixture is already dark and a Dark override over it would prove nothing.
     document =
       editorChromePreviewDocument.onDevice(PREVIEW_PHONE).claiming(PREVIEW_TABLET).inLightTheme(),
     catalog = editorChromePreviewCatalog,
@@ -1206,24 +1035,14 @@ fun UiBuilderVariantStripPreview() {
 }
 
 /**
- * The real `SupportingPaneScaffold`, deciding.
+ * The real `SupportingPaneScaffold`, deciding. The Jetcaster root is
+ * `layout/supporting-pane-scaffold` with `expandedTwoPane`, authored at the **Pixel Fold** and
+ * claiming the Pixel 7; the library computes the size class per frame, so the fold keeps its
+ * supporting pane and the phone does not.
  *
- * The Jetcaster fixture's root is `layout/supporting-pane-scaffold` with `layoutMode` set to
- * `expandedTwoPane`. The design is authored at the **Pixel Fold** and claims the Pixel 7, so the
- * preview pane draws the same document at both — and the pane count is the library's answer rather
- * than this repository's: the size class is computed from each frame's own constraints, so the fold
- * keeps its supporting pane and the phone beside it does not.
- *
- * The fold is the frame chosen on purpose. A tablet would prove less than it looks: the old
- * stand-in's threshold was `744 + 512 + 24` dp, which lands at exactly 1280, so a Pixel Tablet
- * expanded under both rules and the pictures would differ only in partition widths. At 841 dp they
- * disagree outright — the library calls that an expanded window and the stand-in's sum did not
- * reach it — so a design authored for a foldable showed its author one pane and shipped two.
- *
- * The editor pane is **off**, deliberately: two frames need the width here. The canvas is the one
- * surface that does *not* collapse, and at the zoom a third pane would force that is a claim about
- * structure rather than about pixels, so it is pinned in `AdaptiveSupportingPaneTest` instead of
- * rendered.
+ * The fold (841dp) is chosen because it is where the library's expanded threshold differs from a
+ * naive sum of widths. The editor pane is off to give both frames room; the canvas behaviour is
+ * pinned in `AdaptiveSupportingPaneTest` instead.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1238,15 +1057,9 @@ fun UiBuilderAdaptivePaneVariantsPreview() {
 }
 
 /**
- * The wear catalog on a board, with the catalog filtered to the one component it must refuse.
- *
- * `wear-m3/screen-scaffold` is in [RecordFreeExport.ROOT_ONLY_COMPONENT_IDS]: its emitter routes on
- * the root component, so a scaffold that became one item of a board would quietly lose its emitter
- * and its native preview lane. The Add is therefore disabled — and until this change that was the
- * whole of what the panel said about it.
- *
- * The pair is one preview apart in one respect, [refusalPreviewCatalogQuery] aside: the before is
- * rendered against the panel that only disabled the button. Read the scaffold row's second line.
+ * The wear catalog on a board, filtered to the one component it must refuse.
+ * `wear-m3/screen-scaffold` is in [RecordFreeExport.ROOT_ONLY_COMPONENT_IDS] (its emitter routes on
+ * the root), so its Add is disabled; read the scaffold row's second line for the reason.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -1270,12 +1083,8 @@ internal val editorChromePreviewWearCatalog: CapabilityCatalog by lazy {
 }
 
 /**
- * A wear design that is already a board: a root `layout/column` holding two items.
- *
- * Built rather than replayed because no wear fixture is a board, and the scenario needs one — with
- * no board the document-level refusal fires instead, and that one has always been shown on the
- * destination line. A root `layout/column` *is* the board (`UiBuilderDocument.boardRootId`), so
- * this is the case where the only thing left to refuse is the component.
+ * A wear design that is already a board: a root `layout/column` holding two items, so the only
+ * refusal left is the component's (`UiBuilderDocument.boardRootId`).
  */
 private val wearBoardDocument: UiBuilderDocument by lazy {
   val items = mapOf("board-item-1" to "Now playing", "board-item-2" to "Up next")
@@ -1335,12 +1144,7 @@ private val boardPreviewEdits: List<UiBuilderEditorEvent> =
     UiBuilderEditorEvent.InsertComponentBeside("m3/text"),
   )
 
-/**
- * A frame wide and long enough to hold several items, which is what a board is measured in.
- *
- * Not a device, and that is the point of the pair it serves: the items are laid out down the middle
- * of this width at this density, and no preset claims to be it.
- */
+/** A frame wide and long enough to hold several items; deliberately not a device preset. */
 private fun UiBuilderDocument.onCanvasFrame(): UiBuilderDocument =
   copy(
     environment =

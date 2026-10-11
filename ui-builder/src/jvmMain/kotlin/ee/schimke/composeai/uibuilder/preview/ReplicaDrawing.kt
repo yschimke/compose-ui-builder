@@ -32,11 +32,8 @@ internal fun ClockCanvas.path(
   )
 
 /**
- * A curve [width] wide through [points], as a filled ribbon.
- *
- * Every curved line on these watches — a glint along a bevel, a layer of the carbon case — is one
- * of these rather than a stroked path, because a ribbon can taper: [taper] narrows both ends to
- * points, as a reflection fades at its ends.
+ * A curve [width] wide through [points], as a filled ribbon rather than a stroke so it can taper:
+ * [taper] narrows both ends to points, as a glint fades.
  */
 internal fun ClockCanvas.band(
   id: String,

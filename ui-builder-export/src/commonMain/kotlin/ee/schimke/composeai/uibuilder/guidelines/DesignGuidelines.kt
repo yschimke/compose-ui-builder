@@ -37,10 +37,8 @@ data class DesignGuidelineRule(
   val check: String,
   val source: String,
   /**
-   * The surfaces of its platform this rule is about, [SURFACE_SCREEN] or [SURFACE_WIDGET]; empty
-   * for every surface. A widget is not asked about scaffolds and edge buttons, nor a screen about
-   * widget containers: a rule that cannot apply costs tokens and only ever answers
-   * `not_applicable`.
+   * The surfaces this rule is about ([SURFACE_SCREEN], [SURFACE_WIDGET]); empty for every surface.
+   * Inapplicable rules cost tokens and only answer `not_applicable`.
    */
   val surfaces: List<String> = emptyList(),
   /**
@@ -154,11 +152,10 @@ object DesignGuidelinePrompt {
   /**
    * Which surface [document] (the protocol's JSON) is:
    * - [DesignGuidelineRule.SURFACE_WIDGET] when its one root is a Wear widget container, the
-   *   launcher widget root, or any root the catalog marks as a launcher host ([launcherRoots], from
-   *   `CatalogExportRouting.launcherRoots`, so a catalog naming its own root is still a widget);
-   * - [DesignGuidelineRule.SURFACE_CONTENT] for inline content in a Remote Compose catalog — a
-   *   clock or a card drawn on a fixed canvas, neither a screen nor a widget — which is asked only
-   *   the rules written for every surface;
+   *   launcher widget root, or a catalog-marked launcher host ([launcherRoots], from
+   *   `CatalogExportRouting.launcherRoots`);
+   * - [DesignGuidelineRule.SURFACE_CONTENT] for inline content in a Remote Compose catalog, asked
+   *   only rules written for every surface;
    * - [DesignGuidelineRule.SURFACE_SCREEN] otherwise.
    */
   fun surfaceOf(document: JsonObject, launcherRoots: Set<String> = emptySet()): String {

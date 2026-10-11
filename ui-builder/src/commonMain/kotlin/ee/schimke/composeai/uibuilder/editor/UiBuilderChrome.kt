@@ -704,10 +704,8 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
     ) {
       Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(Modifier.alpha(dim)) { thumbnail() }
-        // On the picture's corner rather than in the title row, where it cost a 28dp column out of
-        // a ~116dp tile. Drawn after the thumbnail so it wins the hit test over the tile's grip,
-        // and quiet until it is either set or pointed at: a bookmark on every tile is forty
-        // bookmarks.
+        // On the picture's corner (not a title-row column), drawn after the thumbnail to win the
+        // hit test, and quiet until set or hovered.
         model.onTogglePinned?.let { onToggle ->
           val shown = hovered || model.pinned == true
           Box(Modifier.align(Alignment.TopEnd).alpha(if (shown) 1f else 0.35f)) {
@@ -1247,8 +1245,8 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
 }
 
 /**
- * What assistive technology hears for a toolbar button: its label, and its shortcut in brackets
- * where it has one. An empty pair of brackets read out as "Export ()" said nothing.
+ * What assistive technology hears for a toolbar button: the label plus its shortcut in brackets,
+ * omitting empty brackets.
  */
 internal fun toolbarContentDescription(label: String, shortcut: String): String =
   if (shortcut.isEmpty()) label else "$label ($shortcut)"
@@ -1337,11 +1335,7 @@ private fun MaterialUnexportableBadge(componentName: String) {
   )
 }
 
-/**
- * A tile's Add: a small plus beside the name rather than a text button under it, because the
- * component is what the tile shows and the button is the second way to get it onto the canvas — the
- * first is to pick it up.
- */
+/** A tile's Add: a small plus beside the name, the second way to place it after picking it up. */
 @Composable
 private fun MaterialCatalogAddButton(model: UiBuilderCatalogTileModel) {
   IconButton(

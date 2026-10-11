@@ -10,13 +10,10 @@ import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.twoDigits
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Clock faces on a `RemoteCanvas`: the worked examples of `remote-m3` content that moves.
- *
- * Nothing in them is state. Every moving part is a formula over the host's clock — `time.hour`,
- * `time.minuteOfDay`, `time.secondOfHour`, `time.continuousSecond`, `time.dayOfWeek`,
- * `time.dayOfMonth`, `time.utcOffset` — which the canvas evaluates at the environment's fixed time
- * and the player against its own clock every frame. A hand is a vertical line up to twelve o'clock
- * inside a `draw/group` turned by its formula; repeated marks are one mark in a `draw/repeat`.
+ * Clock faces on a `RemoteCanvas`: worked examples of moving `remote-m3` content. Nothing is state;
+ * every moving part is a formula over the host's clock (`time.*`), evaluated by the canvas at the
+ * fixed time and by the player every frame. Hands are lines in rotated `draw/group`s; repeated
+ * marks use `draw/repeat`.
  */
 enum class RemoteClockTemplates(
   val templateId: String,
@@ -53,9 +50,8 @@ enum class RemoteClockTemplates(
 
   companion object {
     /**
-     * The clocks a new design may start from: all of them where Remote root content exports
-     * (`-PuiBuilderRemoteCompose=true`), and none where it does not — a template whose Code pane
-     * could only refuse is not a starting point.
+     * The clocks a new design may start from: all where Remote root content exports
+     * (`-PuiBuilderRemoteCompose=true`), otherwise none.
      */
     val offered: List<RemoteClockTemplates>
       get() = if (UiBuilderBuildFeatures.remoteCompose) entries else emptyList()

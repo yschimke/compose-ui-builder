@@ -14,18 +14,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * What the generated file has to be true of *as a file*, checked on a design that is larger than
- * either shipped template.
- *
- * The two sample widgets are one text and two texts, which is not enough to exercise the emitter's
- * own budgets: nothing they generate runs long, and neither declares a gradient. This design — a
- * nested column and row on a literal vertical gradient — was built to find out, and found three
- * things the samples could not: an import for the gradient direction the file does not use, a
- * `WearWidgetDocument(...)` line 34 columns over the budget, and a container call pushed two
- * columns over by the ` {` the emitter appends after measuring.
- *
- * Kept as a test rather than a template because it answers a generator question, not a "what does a
- * widget look like" one — the four templates in `remote-m3` are the answer to that.
+ * What the generated file has to be true of *as a file*, on a design larger than either shipped
+ * template (a nested column and row on a literal vertical gradient), so the emitter's import and
+ * line-length budgets are exercised. A test rather than a template: it answers a generator
+ * question.
  */
 class WearWidgetGeneratedSourceQualityTest {
   @Test
@@ -46,9 +38,8 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * A widget's canvas is its `WearWidgetParams`, so a `device` on the preview describes a screen
-   * the widget never occupies — and a renderer honouring it draws the design at phone size rather
-   * than at the 216×124dp frame it was authored in.
+   * A widget's canvas is its `WearWidgetParams`; a preview `device` would draw it at phone size
+   * instead of its authored frame.
    */
   @Test
   fun `the generated preview names no device`() {
@@ -59,13 +50,8 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * One preview per shape, not one per footprint.
-   *
-   * `@PreviewParameter` unrolls a preview per value the provider yields — for the Large squircle a
-   * constrained 182×112dp beside the 216×124dp the design is authored against — and a scaffold does
-   * not need both to show what it looks like. The provider is still where the numbers come from, so
-   * each preview keeps the shipped spec rather than inventing a frame; only the fan-out goes.
-   * Picked by width, so the choice does not rest on the order a provider happens to yield.
+   * One preview per shape, not one per footprint: `@PreviewParameter` would unroll every provider
+   * value. Sizes still come from the shipped provider, picked by width rather than yield order.
    */
   @Test
   fun `each generated preview is one, at the container's own footprint`() {
@@ -84,13 +70,9 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * The rectangular frame is generated beside the squircle, imported and all.
-   *
-   * The squircle is the host default and the frame the builder's canvas draws, so it is what a
-   * designer compares against the design; the rectangular render is the one recommended as the
-   * widget picker editor's image (yschimke/compose-preview-server#587), and a designer who has to
-   * hand-write a second `@Preview` to see it will not see it. Both come from the shipped
-   * size-specific providers, so neither invents a frame.
+   * The rectangular frame is generated beside the squircle (the canvas default), since the
+   * rectangular render is the recommended widget-picker image
+   * (yschimke/compose-preview-server#587). Both come from the shipped size-specific providers.
    */
   @Test
   fun `the file previews the widget in both host container shapes`() {
@@ -114,9 +96,8 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * The generated source, also written out beside the two samples' — that file is the fixture
-   * `:samples:wear-widget` (yschimke/compose-ai-tools) compiles and renders, which is the half of
-   * "the generator works" no test on this side of the repository split can answer.
+   * The generated source is also written beside the two samples', as the fixture
+   * `:samples:wear-widget` (yschimke/compose-ai-tools) compiles and renders.
    */
   private fun generate(document: UiBuilderDocument = activitySummaryDocument()): String {
     val result = WearWidgetCodeExporter.export(document, PACKAGE_NAME)
@@ -136,14 +117,8 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * A `#RRGGBB` colour is emitted opaque, because `Color` reads its argument as ARGB.
-   *
-   * Six digits spliced straight through produced `Color(0x1DB954)` — alpha `0x00`, which compiles
-   * and draws nothing (yschimke/compose-preview-server#516). Every colour in the design above is
-   * eight digits, which is why nothing here caught it; the validator asks authors for `#RRGGBB`, so
-   * the documented spelling was the one that broke.
-   *
-   * Both widths are pinned: padding six, and leaving eight alone rather than double-prefixing it.
+   * A `#RRGGBB` colour is emitted opaque, since `Color` reads ARGB (six digits would be alpha
+   * `0x00`). Both widths pinned: six gets the alpha, eight is left alone.
    */
   @Test
   fun `a six-digit colour is emitted opaque and an eight-digit one is left alone`() {
@@ -152,15 +127,15 @@ class WearWidgetGeneratedSourceQualityTest {
     assertTrue("Color(0xFF1DB954)" in source, source)
     assertTrue("Color(0xFFFFFFFF)" in source, source)
     assertTrue("Color(0x80123456)" in source, source)
-    // The transparent forms the splice used to produce.
+    // The transparent form a six-digit splice would produce.
     assertFalse("Color(0x1DB954)" in source, source)
     assertFalse("Color(0xFFFF80123456)" in source, source)
   }
 
   /**
    * A widget's typefaces go into the document by name: `RemoteMaterialTheme`'s typography with each
-   * named role on `RemoteFontFamily.Named("google:…")`, which the player resolves — no provider in
-   * the generated widget.
+   * named role on `RemoteFontFamily.Named("google:…")`, resolved by the player; no provider in the
+   * generated widget.
    */
   @Test
   fun `a widget's typefaces are written into RemoteMaterialTheme by name`() {
@@ -271,15 +246,9 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * A row's own alignment reaches the generated `RemoteRow`, centre included.
-   *
-   * The canvas has always read `verticalAlignment` off the node and defaults a row to
-   * `CenterVertically`; the emitter read only the children's `alignVertical` modifiers, so a row
-   * generated no alignment and the widget drew top-aligned while the canvas drew it centred —
-   * silently, with no diagnostic (yschimke/compose-preview-server#518).
-   *
-   * The centre is written explicitly because `RemoteRow`'s own default is `Top`: emitting nothing
-   * is what kept the two lanes disagreeing.
+   * A row's own alignment reaches the generated `RemoteRow`, centre included: the canvas defaults
+   * rows to `CenterVertically` while `RemoteRow` defaults to `Top`, so centre must be written
+   * explicitly.
    */
   @Test
   fun `a row carries the alignment the canvas gives it`() {

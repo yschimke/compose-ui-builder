@@ -11,9 +11,8 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
 /**
- * An `m3/surface` theme host's theme — colours, type scale, corner radius and typefaces — exports
- * as a `MaterialTheme` around the surface, the way the canvas draws the design under it, instead of
- * refusing every themed design as arguments `Surface` does not declare.
+ * An `m3/surface` theme host's theme exports as a `MaterialTheme` around the surface, as the canvas
+ * draws it, rather than as arguments `Surface` does not declare.
  */
 class ScreenThemeExportTest {
   private val json = Json { ignoreUnknownKeys = true }

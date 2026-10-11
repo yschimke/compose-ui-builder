@@ -17,11 +17,8 @@ import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.exportMenuEntries
 
 /**
- * The Export menu's rows, drawn flat so they can be diffed.
- *
- * The menu itself is a popup, which a static render does not capture; the chrome previews show the
- * toolbar button and this shows what pressing it lists. Both formats, so every row the menu can
- * carry is on the page: the Figma route first in each group, as [exportMenuEntries] orders it.
+ * The Export menu's rows, drawn flat so they can be diffed (the popup isn't captured by a static
+ * render). Both formats, each group led by the Figma route as [exportMenuEntries] orders it.
  */
 @Preview(widthDp = 420, heightDp = 560)
 @Composable
@@ -39,9 +36,8 @@ fun UiBuilderExportMenuPreview() {
 }
 
 /**
- * A host that offers every format and does nothing: enough for the toolbar to show its Export
- * button, which is what the chrome previews diff. A preview may not touch a clipboard or a network,
- * and none of these rows is ever pressed in one.
+ * A host offering every format and doing nothing, enough for the toolbar's Export button; previews
+ * never touch clipboard or network.
  */
 internal val PREVIEW_EXPORT_HOST: UiBuilderExportHost =
   object : UiBuilderExportHost {

@@ -10,30 +10,20 @@ import kotlinx.serialization.json.put
 
 /**
  * Lowers a design built from an A2UI catalog's palette (`a2ui/<Component>` builtins, as
- * yschimke/a2ui-catalog's `ui-builder.policy.json` publishes them) to the A2UI v0.9 messages an
- * agent would send to draw it: `createSurface`, then `updateDataModel` when the design declares
- * state, then one `updateComponents` carrying every component.
+ * yschimke/a2ui-catalog publishes them) to the A2UI v0.9 messages an agent would send:
+ * `createSurface`, `updateDataModel` when the design declares state, then one `updateComponents`.
+ * [A2uiComposeExporter] renders the same [lower] as Kotlin.
  *
- * What varies between two A2UI designs is the payload — the client already holds the catalog — so
- * this is the export, the way [RemoteDocumentJsonExporter] is for Remote Compose. The Kotlin an
- * Android app writes to send the same payload to its own processor is [A2uiComposeExporter], which
- * renders this object's [lower] rather than lowering the design a second time.
+ * The lowering is literal:
+ * * `componentId` minus `a2ui/` is the A2UI `component`;
+ * * single-child slots (`child`, `trigger`, `content`) become an id, others an id list, except
+ *   `Tabs`' `tabs`, which becomes `{title, child}` entries;
+ * * literal property wrappers become bare values, and `{"type":"state","variable":"x"}` becomes
+ *   `{"path":"/x"}` against the data model built from `stateVariables`;
+ * * the single root is renamed `root`, and references follow.
  *
- * The lowering is deliberately literal, because the protocol already is the builder's shape:
- * * a node's `componentId` minus the `a2ui/` prefix is the A2UI `component`;
- * * its slots are A2UI child references — a single-child slot (`child`, `trigger`, `content`)
- *   becomes an id, any other slot (`children`) an id list, except `Tabs`' `tabs` slot, which
- *   becomes the `{title, child}` entries the protocol nests its bodies in;
- * * a property wrapper (`{"type":"string","value":…}` and the other literal kinds) becomes its bare
- *   value, and a `{"type":"state","variable":"x"}` reference becomes the data binding
- *   `{"path":"/x"}`, reading the `stateVariables` initial values this export writes into the
- *   surface's data model;
- * * the design's single root is renamed `root`, the id A2UI draws a surface from, and every
- *   reference to it follows.
- *
- * What has no A2UI counterpart is REFUSED with a reason rather than dropped: a node outside the
- * `a2ui/` palette, a Compose modifier (A2UI lays out through its components, and `weight` is a
- * property), an event binding (a Button's `action` is a property), and more than one root.
+ * Anything without an A2UI counterpart is refused with a reason: non-`a2ui/` nodes, Compose
+ * modifiers, event bindings, and more than one root.
  */
 object A2uiDocumentExporter {
   const val PROTOCOL_VERSION: String = "v0.9"
@@ -51,9 +41,8 @@ object A2uiDocumentExporter {
   private val LITERAL_WRAPPERS = setOf("string", "int", "float", "bool", "enum")
 
   /**
-   * A2UI's `Tabs` holds its bodies inside an array of `{title, child}` objects rather than as a
-   * child list, so the builder models it as a `tabs` slot (every body a placed, reachable node)
-   * plus a builder-only `titles` list, and this zips the two back into the protocol's shape.
+   * A2UI's `Tabs` nests bodies in `{title, child}` objects; the builder models a `tabs` slot plus a
+   * builder-only `titles` list, zipped back here.
    */
   private const val TABS = "Tabs"
   private const val TABS_SLOT = "tabs"
@@ -80,13 +69,9 @@ object A2uiDocumentExporter {
   }
 
   /**
-   * The design as A2UI's own shapes — the `updateComponents` component list and the data model a
-   * surface is created with — before either is framed as a message.
-   *
-   * Public because two renderings share it: [export] writes it as the JSON Lines an agent streams,
-   * and [A2uiComposeExporter] writes the same lowering as the Kotlin an Android app sends to its
-   * own message processor. One lowering, so the payload in the Kotlin and the payload in the JSON
-   * cannot disagree about a design, and a refusal is the same refusal in both.
+   * The design as A2UI's own shapes (components and data model), before framing as messages. Shared
+   * by [export] (JSON Lines) and [A2uiComposeExporter] (Kotlin), so both payloads and refusals
+   * agree.
    */
   sealed interface Lowered {
     /**
@@ -208,9 +193,8 @@ object A2uiDocumentExporter {
   }
 
   /**
-   * The root first, then every node reachable through slots, each once, in slot order. A reference
-   * to a node the document does not contain is refused: emitting it would hand the client a
-   * component graph with a dangling id, which it cannot draw.
+   * The root first, then every node reachable through slots, each once, in slot order. A dangling
+   * reference is refused.
    */
   private fun reachable(
     document: UiBuilderDocument,

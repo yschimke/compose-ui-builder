@@ -8,17 +8,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The URL grammar, tested apart from the browser.
- *
- * Every input here is somebody else's link — pasted out of a chat, hand-edited, produced by a tool
- * that knows one key and not the others — so what is asserted is mostly what the parser *survives*
- * rather than what it recognises. The round trip is the other half: a link this code builds has to
- * be a link this code reads back, or "Copy link" is a button that produces addresses nobody can
- * follow.
- *
- * In `commonTest` rather than `wasmJsTest` because none of it goes through a browser intrinsic —
- * the percent-encoding is written in `commonMain` precisely so the JVM the test runs on and the
- * Wasm the editor ships as agree on every byte.
+ * The URL grammar, tested apart from the browser. Inputs are other people's links, so this mostly
+ * asserts what the parser survives; the round trip checks every built link reads back. In
+ * `commonTest` since the percent-encoding lives in `commonMain`, so JVM and Wasm agree byte for
+ * byte.
  */
 class DesignUrlSelectorsTest {
   @Test
@@ -181,9 +174,7 @@ class DesignUrlSelectorsTest {
 
   @Test
   fun `a design the path form cannot name is refused rather than mis-linked`() {
-    // The service stores any id that is not blank, but the editor will not start on a design named
-    // in the path unless the id is path-safe. A link builder that encoded such an id would produce
-    // an address its recipient could not open.
+    // The editor only routes path-safe ids, so links for other ids would not open.
     assertTrue(isDesignUrlPathSafe("jetcaster-discover"))
     assertFalse(isDesignUrlPathSafe("hero design"))
     assertFalse(isDesignUrlPathSafe("-leading-dash"))

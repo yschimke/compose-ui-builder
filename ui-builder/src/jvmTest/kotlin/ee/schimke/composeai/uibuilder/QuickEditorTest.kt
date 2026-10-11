@@ -48,12 +48,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The selection's quick editor: the small card of a node's values that used to open, beside the
- * node and over the design, every time something was selected.
- *
- * It is now there when asked for — `E`, or Quick edit on the selection menu — opens in the empty
- * workspace beside the design, moves by its title row, and goes away on `Esc`, its close control, a
- * press anywhere else on the canvas, or the selection moving on.
+ * The selection's quick editor: a small card of a node's values, opened on request (`E`, or Quick
+ * edit on the selection menu) in the workspace beside the design, moved by its title row, and
+ * closed by `Esc`, its close control, a press elsewhere on the canvas, or the selection changing.
  */
 @OptIn(ExperimentalTestApi::class)
 class QuickEditorTest {

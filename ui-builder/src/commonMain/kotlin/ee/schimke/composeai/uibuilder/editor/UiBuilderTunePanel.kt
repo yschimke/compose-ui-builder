@@ -37,11 +37,9 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 private val TUNE_PANEL_WIDTH = 300.dp
 
 /**
- * The design's tunables as sliders, floated over the canvas so a drag and its effect are on screen
- * together whichever dock is open. Collapses to one chip.
- *
- * Every slider move is [UiBuilderEditorEvent.SetTunedValue], which never touches the document;
- * Apply is the one edit, and Reset puts every slider back on its default.
+ * The design's tunables as sliders floated over the canvas, collapsible to one chip. Slider moves
+ * are [UiBuilderEditorEvent.SetTunedValue] (no document change); Apply is the one edit, Reset
+ * returns sliders to defaults.
  */
 @Composable
 internal fun TunePanel(

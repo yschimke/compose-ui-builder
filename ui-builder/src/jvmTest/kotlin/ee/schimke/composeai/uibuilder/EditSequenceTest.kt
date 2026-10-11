@@ -17,31 +17,18 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Validity survives editing, not just inserting.
+ * Validity survives editing, not just inserting. A seeded random walk of move, delete, duplicate,
+ * wrap, unwrap, copy, cut, paste, property writes, undo and redo, since ordinary steps can combine
+ * into an invalid state.
  *
- * [GeneratedDocumentTest] builds documents by adding to them, which is one path through the editor
- * and the tidiest one. This one runs the rest: move, delete, duplicate, wrap, unwrap, copy, cut,
- * paste, property writes, undo and redo, in whatever order a seeded random walk puts them, against
- * whatever the selection happens to be.
+ * Two invariants after every event:
+ * 1. **The document only changes through an accepted command** (a refused operation must leave
+ * nothing behind).
+ * 2. **Every document the editor passes through is valid**, against the catalog and the export
+ * graph rules.
  *
- * That matters because a document can reach an invalid state by a route where every single step
- * looked reasonable. The lazy grid in a scaffold's top bar was almost certainly built that way —
- * nobody chose it, a sequence of ordinary operations arrived there. A test that only ever inserts
- * cannot find that class of bug at all.
- *
- * Two invariants, checked after every single event:
- *
- * 1. **The document only changes through an accepted command.** If the document differs from the
- *    one before the event, the outcome must be [CommandOutcome.Accepted]. A refused operation that
- *    left something behind is the failure this catches — half of a wrap, a node moved but not
- *    removed from where it was.
- * 2. **Every document the editor passes through is valid.** Not just the last one: each
- *    intermediate state is checked against the catalog and the export graph rules, because that is
- *    what a collaborator's screen, an autosave and an export all see.
- *
- * Events are fired **without** consulting the `can…` guards on purpose. Those guards decide what
- * the toolbar offers; the reducer is what has to hold when something is asked for anyway, which is
- * the case a stale panel, a keyboard shortcut or a racing collaborator produces.
+ * Events ignore the `can…` guards on purpose: those govern what the toolbar offers, but the reducer
+ * must hold when asked anyway (stale panels, shortcuts, racing collaborators).
  */
 class EditSequenceTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -90,11 +77,8 @@ class EditSequenceTest {
   }
 
   /**
-   * Undo puts the document back exactly, whatever the accepted command was.
-   *
-   * Byte-for-byte on the nodes rather than "looks similar": an undo that restores a node in a
-   * different slot, or drops a property it did not set, is a corruption that the next redo
-   * compounds. The revision moves on, which is correct — undo is a new operation, not a rewind.
+   * Undo puts the document's nodes back exactly, whatever the accepted command was. The revision
+   * moves on: undo is a new operation.
    */
   @Test
   fun `undo restores the document an accepted command changed`() {

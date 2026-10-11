@@ -11,12 +11,10 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * Everything a guidelines model is asked about one design revision, before a model is chosen: the
- * exact text it reads, the pictures it sees, the rules it answers and where each part came from.
- *
- * It is a value people and agents can read, not only something sent: the editor shows it under
- * **Prompt**, compose-preview-server returns the same shape from `ui_builder_guidelines_prompt` and
- * `GET …/designs/{id}/guidelines/prompt`, and an agent can hand it to its own model instead of
- * spending anybody's OpenRouter key. [DesignGuidelinePrompt.body] turns it into the request.
+ * text, pictures, rules and their sources. Readable by people and agents: the editor shows it under
+ * Prompt, compose-preview-server returns it from `ui_builder_guidelines_prompt` and
+ * `GET …/designs/{id}/guidelines/prompt`, and an agent can use its own model.
+ * [DesignGuidelinePrompt.body] turns it into the request.
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
@@ -387,11 +385,10 @@ fun DesignGuidelinePrompt.provenance(
 }
 
 /**
- * A design's latest guidelines result as its host keeps it: the verdicts and what they answered,
- * not the findings, so every reader derives findings from the rules the same way. Written by the
- * editor after a run on a person's key, by `ui_builder_check_design`, and by an agent that judged
- * the prompt with its own model (`ui_builder_record_guidelines`). The host fills [ranBy] and
- * [recordedAtEpochMillis] from the credential, never from the body.
+ * A design's latest guidelines result as its host keeps it: verdicts and what they answered (not
+ * findings, which readers derive). Written by the editor, `ui_builder_check_design`, or an agent
+ * via `ui_builder_record_guidelines`. The host fills [ranBy] and [recordedAtEpochMillis] from the
+ * credential, never the body.
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

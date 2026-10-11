@@ -11,11 +11,8 @@ import kotlin.test.assertTrue
 
 /**
  * What the `remote-m3` widget containers offer an author, checked against
- * `androidx.glance.wear.composable.WearWidgetContainer`.
- *
- * The container's whole authored surface is four parameters and a background brush chain. A
- * property or slot missing here is a widget an author cannot draw, and nothing else in the build
- * would notice: the catalog is synthesised in this module and the renderer reads it by name.
+ * `androidx.glance.wear.composable.WearWidgetContainer` (four parameters and a background brush
+ * chain).
  */
 class WearWidgetContainerCatalogTest {
   private val catalog =
@@ -68,14 +65,10 @@ class WearWidgetContainerCatalogTest {
   }
 
   /**
-   * A slot narrowed to two traits is only a slot if the catalog has components carrying them.
-   *
-   * It did not: the reviewed `remote-m3` subset was six layout and text components, none of them a
-   * brush, so the background could not be filled from the palette, from a drop, or from any
-   * authored document the validator would accept, while `RemoteContentEmitter` was already writing
-   * it (yschimke/compose-preview-server#428). `shape/linear-gradient` is the one the emitter turns
-   * into a `WearWidgetBrush` chain; `asset/image` becomes `WearWidgetBrush.image` naming the bitmap
-   * by the design's asset key, which the widget supplies under that name in `provideWidgetData`.
+   * The background slot's two traits must be carried by catalog components: `shape/linear-gradient`
+   * (a `WearWidgetBrush` chain) and `asset/image` (`WearWidgetBrush.image`, supplied by asset key
+   * in
+   * `provideWidgetData`).
    */
   @Test
   fun `the brushes the background slot names are in the catalog`() {

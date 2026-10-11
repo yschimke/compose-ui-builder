@@ -18,18 +18,9 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A catalog that stops declaring a property degrades its designs instead of killing them.
- *
- * Thirty-six designs on `preview.coo.ee` were refused outright after the catalog source flip, and
- * twenty-six of those for nothing worse than `property containerColor is not declared by
- * m3/surface`. The value was never lost — it is still in the stored document — but `unusableReason`
- * treated the verdict as fatal, so every request naming the design was refused and the design was
- * gone.
- *
- * What must hold, and each has a case here: the design opens, it stays EDITABLE (opening a design
- * that refuses every edit is a worse place to be than plainly unusable), the stored value survives,
- * a newly written undeclared property is still refused, and an unknown component is still fatal
- * because there is nothing to draw.
+ * A catalog that stops declaring a property degrades its designs instead of killing them: the
+ * design opens and stays editable, the stored value survives, a newly written undeclared property
+ * is still refused, and an unknown component is still fatal.
  */
 class UndeclaredPropertyToleranceTest {
 

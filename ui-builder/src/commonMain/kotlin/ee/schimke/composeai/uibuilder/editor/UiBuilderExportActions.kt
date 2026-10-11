@@ -3,37 +3,17 @@ package ee.schimke.composeai.uibuilder.editor
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 
 /**
- * Getting a design *out* of the builder, in the words the catalog viewer already uses.
+ * Getting a design out of the builder, with the catalog viewer's verbs, gated by what the pinned
+ * catalog can render.
  *
- * ## Why this exists
- *
- * The server has exported a design as PNG and as Figma-compatible SVG since the export lane landed,
- * and the editor offered neither: the only way to hold the picture was a protocol request or an MCP
- * call, and the only thing the editor itself did with the PNG export was attach it back as a
- * reference. A designer who wanted the screen in Figma had nothing to press.
- *
- * The catalog viewer's preview pages answer the same question with one row — **Copy link**, **Copy
- * PNG** / **Copy SVG**, **Download** — and a person who has used one should not have to learn a
- * second vocabulary in the other. So the builder's Export menu carries the same three verbs per
- * format, gated by what the pinned catalog says it can render.
- *
- * ## What each verb means
- *
- * - **Copy SVG** puts the SVG markup on the clipboard as text. That is the Figma route: Figma
- *   pastes SVG markup as editable layers, which is what the structured export is for.
- * - **Copy PNG** puts the picture on the clipboard as an image, for Figma, Slack, a document.
- * - **Copy link** copies a URL that renders the design *as it stands*. The address is live: the
- *   server draws the current committed revision on every request, so a link pasted into a pull
- *   request or a README keeps up with the design rather than freezing the moment it was copied.
+ * - **Copy SVG** puts SVG markup on the clipboard: the Figma route, pasted as editable layers.
+ * - **Copy PNG** puts the picture on the clipboard as an image.
+ * - **Copy link** copies a live URL that renders the current committed revision on every request.
  * - **Download** saves the file through the browser.
  *
- * ## What is host-owned
- *
- * Every one of these reaches something `commonMain` cannot: the clipboard, the network, the
- * browser's download path, the page's own origin. [UiBuilderExportHost] is the seam. The editor
- * decides what to offer and in which order; the host does it and answers with a sentence the
- * toolbar shows. Null in every preview and test, where the menu then offers nothing rather than an
- * action that cannot work — the same rule the reference importer follows.
+ * [UiBuilderExportHost] is the seam to the clipboard, network, downloads and origin: the editor
+ * decides what to offer, the host does it and answers with a sentence. Null in previews and tests,
+ * where the menu is absent.
  */
 enum class EditorExportFormat(
   /** How the menu names it. */
@@ -47,21 +27,15 @@ enum class EditorExportFormat(
   Rc("Remote document (.rc)", "rc"),
 
   /**
-   * An A2UI design's messages — `createSurface`, `updateDataModel`, `updateComponents` — as the
-   * JSON Lines an agent streams. The same `json` route as [Json]: the host's executor answers it
-   * for the catalog the design is pinned to, and an A2UI catalog is never a Remote Compose one.
+   * An A2UI design's messages (`createSurface`, `updateDataModel`, `updateComponents`) as streamed
+   * JSON Lines, via the same `json` route as [Json].
    */
   A2uiJson("A2UI JSON", "json"),
 }
 
 /** What the host does with a design's picture; see [EditorExportFormat]. */
 interface UiBuilderExportHost {
-  /**
-   * The formats the pinned catalog can render, in the order the menu lists them.
-   *
-   * Empty hides the menu: a catalog whose renderer cannot draw a design has nothing to export, and
-   * an Export button that always refuses is worse than none.
-   */
+  /** The formats the pinned catalog can render, in menu order. Empty hides the menu. */
   val formats: List<EditorExportFormat>
 
   /** A local document has no shareable server export URL. */
@@ -78,18 +52,15 @@ interface UiBuilderExportHost {
   suspend fun download(format: EditorExportFormat): String
 
   /**
-   * Whether this host can hand a rendered file to the platform's share sheet.
-   *
-   * True only where that is the natural way out of a page — a phone or tablet browser whose
-   * `navigator.canShare` accepts files. A desktop keeps exactly the menu it had.
+   * Whether this host can hand a file to the platform share sheet (mobile browsers whose
+   * `navigator.canShare` accepts files).
    */
   val supportsShare: Boolean
     get() = false
 
   /**
-   * Hands the rendered design to the share sheet; returns a sentence for the toolbar. A host that
-   * cannot share — or a share the platform refuses — saves the file instead, which is where a
-   * person reaching for Share wanted it to end up anyway.
+   * Hands the rendered design to the share sheet and returns a toolbar sentence. Falls back to
+   * saving the file.
    */
   suspend fun share(format: EditorExportFormat): String = download(format)
 }
@@ -142,13 +113,8 @@ sealed interface EditorExportMenuEntry {
 }
 
 /**
- * The Export menu, verb by verb.
- *
- * Grouped by what the row does rather than by format — every Copy, then every Copy link, then every
- * Download — because a person opening this menu knows which *action* they want (paste into Figma,
- * share a link, keep a file) before they know which format; a menu grouped by format would make
- * them read every row to find the verb. Within a group the catalog's order stands, and the catalog
- * lists SVG first where it has it, because the Figma route is the one this menu exists for.
+ * The Export menu, grouped by verb (every Copy, then Copy link, then Download) since people pick
+ * the action before the format. Catalog order within a group, SVG first where available.
  */
 fun exportMenuEntries(
   formats: List<EditorExportFormat>,
@@ -179,11 +145,8 @@ suspend fun UiBuilderExportHost.perform(entry: EditorExportMenuEntry): String =
   }
 
 /**
- * The formats a catalog's export capabilities amount to, SVG first.
- *
- * Kept as two booleans rather than the wire type, because `ExportCapabilitiesV1` is published from
- * compose-preview-contracts and `commonMain` has no reason to depend on it for two flags. SVG leads
- * for the reason [exportMenuEntries] gives.
+ * The formats a catalog's export capabilities amount to, SVG first. Two booleans rather than
+ * `ExportCapabilitiesV1` to avoid a contracts dependency.
  */
 fun exportFormatsFor(
   svg: Boolean,
@@ -201,13 +164,8 @@ fun exportFormatsFor(
 }
 
 /**
- * This host, for a caller the server will not export for: the same menu, whose every row answers
- * with [reason] instead of trying.
- *
- * Kept visible rather than dropped, because a person who can see a design and finds no Export menu
- * is left guessing whether the design, the catalog or the builder is the problem. The server draws
- * every export, and it refuses callers without write access (a GitHub guest reads, and that is
- * all), so a row that tried would fail anyway — only later, and less clearly.
+ * This host for a caller the server will not export for (no write access): the same menu, every row
+ * answering with [reason], so the reader is not left guessing why there is no Export.
  */
 fun UiBuilderExportHost.refusing(reason: String): UiBuilderExportHost {
   val delegate = this

@@ -45,21 +45,12 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
- * A launcher widget on a patch of home screen, with a handle at its corner that resizes it the way
- * a launcher's does.
+ * A launcher widget on a patch of home screen, with a corner handle that resizes it as a launcher
+ * does, showing every size on the way.
  *
- * The fixed panes beside it answer "what does it look like at 3x2"; this one answers "what happens
- * as somebody drags its handle", which is a question about every size on the way and the step from
- * one to the next.
- *
- * ## Live, in grid units
- *
- * While the handle is held the frame follows it continuously, and the design is laid out at the
- * nearest whole cell count — re-laid out the moment the frame crosses into the next one, because a
- * launcher never hands a widget a size between two counts, so neither does this pane. On release
- * the frame springs onto that count. What moves continuously is only the frame's clip: the design
- * is composed once per cell count, at its reference dp, since each pane draws in a scene of its own
- * that is rebuilt whenever its size changes (see [ConstrainedFramePane]).
+ * While held, the frame's clip follows continuously but the design is laid out at the nearest whole
+ * cell count (a launcher never hands in-between sizes), re-laid out on each crossing; on release
+ * the frame springs onto that count. Each count recomposes the scene (see [ConstrainedFramePane]).
  */
 @Composable
 internal fun LauncherWidgetResizablePane(
@@ -183,8 +174,8 @@ internal fun LauncherWidgetResizablePane(
 }
 
 /**
- * Where a drag of the resize handle that has moved [columnsMoved] and [rowsMoved] cells from [from]
- * lands: the nearest whole cell count, held on the patch.
+ * Where a resize drag of [columnsMoved] × [rowsMoved] cells from [from] lands: the nearest whole
+ * cell count, held on the patch.
  */
 internal fun launcherSizeAfterDrag(
   from: LauncherWidgetGrid.Size,

@@ -26,16 +26,10 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The values `wear-m3` lets a design re-skin: its design tokens, read by the editor's Theme panel
- * (`DesignTokens.from` in `:ui-builder`, which this module cannot name — hence the literal keys).
- *
- * Every default is **null**, because every property here already says "unset keeps Wear's own": a
- * token that is not set draws the design system's value, and setting one writes it into the
- * properties it binds. Theme tokens land on the screen's `ScreenScaffold`, which is where a Wear
- * design's `MaterialTheme` colour scheme hangs; component tokens land on every node of the
- * components they name. The colours are the roles a screen re-skins most — the rest of the scheme
- * stays a property of the scaffold for whoever needs it — and the numbers are the three the
- * catalog's components share: list spacing, row spacing and icon size.
+ * The values `wear-m3` lets a design re-skin, read by the editor's Theme panel (`DesignTokens.from`
+ * in `:ui-builder`, unreachable here — hence literal keys). Every default is null, meaning "keep
+ * Wear's own". Theme tokens land on `ScreenScaffold`; component tokens on every node of the
+ * components they name.
  */
 internal fun wearDesignTokens(): JsonObject {
   val scaffold = "wear-m3/screen-scaffold"
@@ -151,18 +145,9 @@ internal fun wearDesignTokens(): JsonObject {
 
 /**
  * How the builder's insert panel shelves `wear-m3`, and which property carries a component's
- * variants.
- *
- * Wear's own families rather than Material's: a watch app is a **screen** holding a **list**, so
- * those lead, and `Text inputs` — a whole shelf on the phone catalog — does not exist here at all.
- * `wear-m3/edge-button`'s `size` is a variant rather than a dimension: an edge button comes in four
- * sizes the way a card comes in four kinds, and picking one is choosing which button, not nudging a
- * number.
- *
- * Deliberately absent: `transformation` on the lazy column and `segmented` on the slider are
- * behaviours a design turns on, not kinds of component; `iconKey` is forty-six icons; and
- * `wear-m3/text.style` is fifteen type scales, which is a property of a text rather than a kind of
- * Text. The same three calls the M3 declaration makes, for the same reasons.
+ * variants. Wear's own families lead (screen, list); `wear-m3/edge-button`'s `size` is a variant.
+ * Absent as variants: lazy column `transformation`, slider `segmented`, `iconKey` and text
+ * `style`, which are properties rather than kinds of component.
  */
 internal fun wearComponentMenu(): JsonObject {
   val shelves =
@@ -233,17 +218,9 @@ internal fun wearComponentMenu(): JsonObject {
 }
 
 /**
- * The Wear screen host's authored parameters.
- *
- * `androidx.wear.compose.material3.ScreenScaffold` is NOT the widget container's kind of stand-in.
- * The widget frame is drawn by the launcher, so `WearWidgetCodeExporter` erases it;
- * `ScreenScaffold` is a composable the author calls, so this scaffold is *emitted* rather than
- * erased. What it fakes is only the drawing: the browser has no Wear Compose to draw with, so the
- * canvas approximates the frame and the generated Kotlin names the real one.
- *
- * The screen's diameter is deliberately absent. It is the document's own frame — the Screen
- * inspector's Wear OS device presets already carry 192/227/240dp at the right density — and a fifth
- * property would be a second answer to a question the environment already answers.
+ * The Wear screen host's authored parameters. Unlike the widget container, `ScreenScaffold` is
+ * emitted (the author calls it); only its drawing is approximated on the canvas. The screen
+ * diameter is absent because it is the document's own frame.
  */
 private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
   listOf(
@@ -274,11 +251,8 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
       }
       .build(),
   ) +
-    // The screen's theme, one Wear colour role per property. The canvas draws the whole screen
-    // under Wear's scheme with these roles replaced and the generated screen wraps itself in the
-    // same `MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(…))`, so every component
-    // inside follows — including the ones with no colour of their own
-    // (yschimke/wear-m3-catalog#682).
+    // One Wear colour role per property; the canvas and the generated
+    // `MaterialTheme(colorScheme = …copy(…))` both apply them to the whole screen.
     WearScreenTheme.ROLES.map { role ->
       wearString(
         WearScreenTheme.property(role),
@@ -300,13 +274,8 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
       allowed = ThemeTextStyle.WEAR_ROLES,
     )
 
-// ── The property vocabulary
-//
-// Small builders rather than one component's list copied onto another's. A Wear `Text` and a
-// Material 3 `Text` both take a `style` whose values are the same fifteen role names, and that
-// sameness is a fact about Compose's type scale rather than about either component — so the
-// *vocabulary* is shared and every component states its own properties from it. What is not shared
-// is the component: nothing here derives a Wear component from a Material 3 one.
+// Shared property vocabulary: Wear and Material 3 components state their own properties from
+// these builders; no Wear component is derived from a Material 3 one.
 
 /** A free string, or a closed set when [allowed] is given. */
 private fun wearString(
@@ -331,11 +300,7 @@ private fun wearNumber(name: String, notes: String? = null): PropertyCapabilityV
 
 /** A number a state variable can drive, which arrives as a wrapper object. */
 /**
- * The action a click runs.
- *
- * An object or null rather than a string, which is the shape the mobile catalog declares for the
- * same property: it is a binding, not a name, and declaring it as a string here would make one
- * property mean two things across the two catalogs.
+ * The action a click runs: an object or null (a binding), as the mobile catalog declares it.
  */
 private fun wearClickAction(): PropertyCapabilityV1 =
   PropertyCapabilityV1.Builder(
@@ -373,12 +338,7 @@ private fun wearBindableBoolean(name: String, notes: String? = null): PropertyCa
     .also { notes?.let { note -> it.notes = note } }
     .build()
 
-/**
- * A colour, in either of the two shapes the colour token vocabulary allows.
- *
- * The note is the catalog's rather than a component's: it is the same string wherever a colour is
- * authorable, and it is the one an author reads to find out how to write one.
- */
+/** A colour, in either of the two shapes the colour token vocabulary allows. */
 private fun wearColor(name: String = "color"): PropertyCapabilityV1 =
   wearString(
     name,
@@ -444,12 +404,8 @@ private fun manySlot(
     .build()
 
 /**
- * The modifiers the canvas applies to a node that draws no surface of its own: text, a button, a
- * list.
- *
- * `Modifier` extensions rather than arguments of any composable, which is why they are a vocabulary
- * the canvas owns rather than a component's surface — and why `fillMaxSize` is not among them,
- * these being nodes that size themselves.
+ * The modifiers the canvas applies to a node that draws no surface of its own (text, a button, a
+ * list). No `fillMaxSize`: these nodes size themselves.
  */
 private val WEAR_MODIFIERS =
   listOf(
@@ -474,9 +430,8 @@ private val WEAR_MODIFIERS =
   )
 
 /**
- * What a button that can sit in a `ButtonGroup` takes: its share of the group, and the few
- * modifiers that size or tag it. `weight` is `ButtonGroupScope.weight` there, and refused anywhere
- * without a row, a column or a group to share.
+ * What a button that can sit in a `ButtonGroup` takes: `weight` (`ButtonGroupScope.weight`) and
+ * the few modifiers that size or tag it.
  */
 private val WEAR_BUTTON_GROUP_CHILD_MODIFIERS =
   listOf("weight", "size", "width", "padding", "testTag")
@@ -547,10 +502,8 @@ private val WEAR_TYPE_ROLES =
   )
 
 /**
- * The label a header draws, and its truncation.
- *
- * Upstream's `ListHeader` and `ListSubHeader` take a content lambda rather than a string, so these
- * are the `Text` inside them — one vocabulary for both, which is why it is a function.
+ * The label a header draws, and its truncation: the `Text` inside upstream's content lambda,
+ * shared by `ListHeader` and `ListSubHeader`.
  */
 private fun wearLabelProperties(): List<PropertyCapabilityV1> =
   listOf(
@@ -581,31 +534,12 @@ private fun wearTransformingLazyColumnProperties(): List<PropertyCapabilityV1> =
   )
 
 /**
- * The Wear Material 3 components this catalog offers that have **no Material 3 counterpart at
- * all**.
+ * The Wear Material 3 components with no Material 3 counterpart at all (labelled full-width
+ * rows, segmented slider, pickers).
  *
- * ## Why these exist
- *
- * `wear-m3/checkbox-button` was refused once. The rule it was refused under is worth quoting rather
- * than paraphrasing: *do not fabricate a component in the Wasm canvas to stand in for a library the
- * canvas cannot link*. That rule closed
- * [#395](https://github.com/yschimke/compose-preview-server/pull/395), which built
- * `CheckboxButton`, `SwitchButton` and `RadioButton` as hand-assembled Material 3 shapes at sizes
- * read off a screenshot — an impression of upstream with nothing in the build to check it against,
- * wrong silently in the one surface an author trusts.
- *
- * They are drawn by the real thing now, so the rule is kept rather than bent: nothing here is a
- * lookalike, and nothing here is a placeholder. `ee.schimke.wearcmp:*` is Wear Compose compiled for
- * Compose Multiplatform, which is what lets the canvas call the same `CheckboxButton`, `Slider` and
- * `DatePicker` the generated screen names. See `wearM3Catalog` for the three the canvas still draws
- * for itself, and why each is about the shape of the page rather than about the library.
- *
- * ## Why the name says "only"
- *
- * These are Wear's own: a labelled full-width row, a segmented slider, a three-column picker. They
- * have no Material 3 counterpart at all, which is why they are declared here rather than beside the
- * three that do — and the three that do are declared just the same way, because a shared name is
- * not a shared component.
+ * Nothing here is a lookalike: `ee.schimke.wearcmp:*` is Wear Compose compiled for Compose
+ * Multiplatform, so the canvas calls the same composables the generated screen names. See
+ * `wearM3Catalog` for the three the canvas still draws itself.
  */
 private fun wearOnlyComponents(
   canvasSupported: WasmCapabilityV1,
@@ -613,12 +547,8 @@ private fun wearOnlyComponents(
   iconKeys: List<JsonElement>,
 ): List<ComponentCapabilityV1> {
   /**
-   * The note every component in this group carries, with its own composable named.
-   *
-   * [drawnBy] is the one thing that differs between them, and it is a parameter because the
-   * catalog's claim has to match the renderer's branch: an entry that says "Wear Compose itself"
-   * about a component the canvas draws some other way is the same failure as a `supported` status
-   * with no branch behind it, one layer up and harder to see.
+   * The note every component in this group carries. [drawnBy] must match the renderer's actual
+   * branch.
    */
   fun note(
     composable: String,
@@ -660,11 +590,8 @@ private fun wearOnlyComponents(
         it.traits = traits
         it.slots = slots
         it.properties = properties
-        // No modifier vocabulary by default, and that is a statement rather than an omission: a
-        // Wear control is laid out by the list and the scaffold around it — a `CheckboxButton` is
-        // a full-width row whose height upstream fixes. The exceptions pass one: an icon button in
-        // a `ButtonGroup` is sized by its `weight`, which is how Jetcaster makes play the wider of
-        // two, and `WearScreenCodeExporter` writes a node's authored chain.
+        // No modifier vocabulary by default: Wear controls are laid out by the list and scaffold.
+        // The exceptions pass one (e.g. an icon button's `weight` in a `ButtonGroup`).
         it.modifierCapabilities = modifierCapabilities
         it.code = null
         it.svg =
@@ -772,12 +699,8 @@ private fun wearOnlyComponents(
           // `contentColor` reaches it through.
           wearColor(),
         ),
-      // The one component in this group the canvas does NOT draw with Wear Compose, and the
-      // difference is stated rather than left to be discovered. `BuilderIcon` is the canvas's own
-      // icon drawer, because an icon is a tinted vector at a size on both platforms — Wear
-      // publishes no shape of its own here — and `BuilderIcon` is what owns this build's key table,
-      // its tint resolution and the structured-path export the SVG lane needs. Drawing it twice
-      // would be two answers to one question.
+      // The one component here not drawn with Wear Compose: `BuilderIcon` owns this build's icon
+      // key table, tint resolution and structured-path SVG export.
       drawnBy =
         "the canvas's own icon drawer, not Wear's `Icon` — an icon is a tinted vector on both " +
           "platforms, and that drawer owns this build's key table, tint resolution and " +
@@ -800,9 +723,9 @@ private fun wearOnlyComponents(
               "`IconButton`. A variant selects the composable rather than tinting one, the way " +
               "`m3/button`'s style does.",
           ),
-          // Recolours the variant's own palette rather than replacing the variant: upstream
-          // passes `IconButtonDefaults.filledIconButtonColors(containerColor = …)` to a
-          // `FilledIconButton`, so the variant still decides the shape and the disabled colours.
+          // Recolours the variant's palette
+          // (`IconButtonDefaults.filledIconButtonColors(containerColor = …)`), so the variant still
+          // decides shape and disabled colours.
           wearColor("containerColor"),
           wearColor("contentColor"),
         ),
@@ -832,10 +755,8 @@ private fun wearOnlyComponents(
       composable = "ListSubHeader",
       role = "Leaf",
       traits = listItem,
-      // The same three the header declares, and for the same reason: upstream takes a content
-      // lambda, so the label and its truncation are the `Text` inside it. Offering only `text` here
-      // made the canvas's and the exporter's reads unreachable — the service refuses a property the
-      // catalog does not declare.
+      // The same label properties as the header: upstream takes a content lambda, and undeclared
+      // properties are refused by the service.
       properties = wearLabelProperties(),
       extra =
         "The second level of list heading, under `wear-m3/list-header`: smaller, start-aligned, " +
@@ -1077,53 +998,23 @@ private fun wearOnlyComponents(
 /**
  * `wear-m3`: the Wear Compose Material 3 screen, as an authoring surface.
  *
- * ## The components are Wear's own, through the port
+ * Components are drawn by `ee.schimke.wearcmp:*` (Wear Compose compiled for Compose
+ * Multiplatform); the generated screen and native render use the real AAR. The canvas still draws
+ * three things itself, each noted in its `wasm` note: the screen scaffold (no viewport), the
+ * unrolled list (long captures disable the transformation), and `wear-m3/text` (the mobile type
+ * scale).
  *
- * `androidx.wear.compose:compose-material3` is an Android AAR and the builder's canvas is Compose
- * Multiplatform for Wasm, which cannot link an AAR — but the canvas never had to link *that*
- * artifact. `ee.schimke.wearcmp:*` is the same library's source compiled for Compose Multiplatform
- * with `jvm` and `wasmJs` variants, which are exactly this module's targets, so every component
- * below is drawn by Wear Compose rather than by an impression of it. The generated screen and the
- * native render use the real AAR; the canvas is the lane that trades a port for a browser.
- *
- * Three things the canvas still draws for itself, each for a reason of its own rather than a
- * missing dependency, and each saying so in its `wasm` note: the screen scaffold (the extent has no
- * viewport), the unrolled list (a `ScrollMode.LONG` capture turns the row transformation off), and
- * `wear-m3/text` (the canvas's theme still carries the mobile type scale).
- *
- * ## The two components that are this catalog's whole point
- *
- * `wear-m3/screen-scaffold` and `wear-m3/transforming-lazy-column`. A Wear screen is a
- * `ScreenScaffold` wrapping a `TransformingLazyColumn` in something over ninety per cent of the
- * Wear Material 3 surface area.
- *
- * The canvas draws the scaffold as a **stadium** — the screen's width, the content's height, round
- * caps — which is the Wear long-screenshot convention rather than a device. That is a deliberate
- * choice about what an author is building: the whole scrolling extent at once, not a 192dp keyhole
- * onto it. What it costs is stated in the wasm notes and again in
- * `docs/design/UI_BUILDER_WEAR_SCREEN.md`: straight sides overstate the width a row actually gets
- * near the curve, and the row transformation is not drawn at the extent — the frame pane beside it
- * is where the real lazy layout and its transformation are.
- *
- * ## What used to be here
- *
- * The Wear content ids, and a note on every one of them reading "drawn as its mobile counterpart"
- * or "the canvas draws a named placeholder". Both were true while `wear-m3` was a re-creation of
- * the library out of Material 3 shapes, and both stopped being true when the port landed — which is
- * exactly the kind of claim that outlives its reason, because nothing fails when prose goes stale.
+ * The scaffold is drawn as a stadium — the long-screenshot convention, showing the whole extent.
+ * Straight sides overstate row width near the curve; the frame pane shows the real layout. See
+ * `docs/design/UI_BUILDER_WEAR_SCREEN.md`.
  */
 internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
   val box = components.getValue("layout/box")
-  // Foundation's lazy column, read for its MODIFIER vocabulary alone — see the Wear list's
-  // declaration. `layout/lazy-column` is `androidx.compose.foundation`, which both platforms
-  // share, so this is the one entry here a Wear component legitimately reads anything from.
+  // Foundation's lazy column, read only for its modifier vocabulary (shared by both platforms).
   val lazyColumn = components.getValue("layout/lazy-column")
-  // The shared capability blocks, read off the packaged catalog once because they are statements
-  // about a LANE rather than about a component: `canvasSupported` is what the canvas says about a
-  // component it draws, `noStructuredSvg` what the SVG lane says about one with no call site to
-  // walk, and `recordedTextSvg` what the same-runtime recorder says about text. None of the three
-  // is a claim about Material 3, which is why none of them is a component being copied.
+  // Shared capability blocks: statements about a lane (canvas, SVG, text recorder), not about a
+  // Material 3 component.
   val canvasSupported =
     components
       .getValue("m3/text")
@@ -1136,9 +1027,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       .build()
   val noStructuredSvg = components.getValue("remote-compose/document").svg
   val recordedTextSvg = components.getValue("m3/text").svg
-  // What the SVG lane says about a node it can record structurally. The recorder walks the composed
-  // scene, so this is a statement about the recorder rather than about any component — which is why
-  // the same block answers for a Wear card and a Material 3 one.
+  // The SVG lane's block for a structurally recordable node; it describes the recorder, not the
+  // component.
   val recordedSceneSvg = components.getValue("m3/card").svg
   val boxSlot = box.slots.single()
 
@@ -1157,9 +1047,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             .build()
       }
       .build()
-  // `ScreenScaffold(edgeButton = …)` takes one composable, and upstream's own samples put an
-  // `EdgeButton` in it and nothing else. Narrowed to `Action` so a Text cannot be dropped into a
-  // slot whose whole job is to hug the bottom curve with a button in it.
+  // Narrowed to `Action`: the slot exists for an `EdgeButton` hugging the bottom curve.
   val edgeButtonSlot =
     contentSlot
       .newBuilder()
@@ -1169,11 +1057,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         it.acceptedTraits = listOf("Action")
       }
       .build()
-  // Wear's dialogs are a screen *state*, not a place in the layout: each takes a `visible` flag and
-  // draws over the whole display when it is set, and upstream's own samples put them beside the
-  // scaffold in the same `AppScaffold`. A slot in `content` would have made them list rows, which
-  // is a full-screen dialog inside a scrolling item. Unbounded, because a screen can have more than
-  // one dialog it shows at different moments — only one is ever `visible`.
+  // Dialogs are a screen state drawn over everything (each has a `visible` flag), so they sit
+  // beside the scaffold, not in `content`. Unbounded: only one is visible at a time.
   val overlaySlot =
     contentSlot
       .newBuilder()
@@ -1207,10 +1092,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           canvasSupported
             .newBuilder()
             .also {
-              // The drawing that frames this screen root, named rather than left to the renderer to
-              // recognise by id. `frame/round-screen` is an adapter this build ships; a catalog
-              // whose screen root is called something else names the same adapter and gets the same
-              // frame.
+              // Names the frame adapter rather than letting the renderer recognise the root by id.
               it.canvas = "frame/round-screen"
               it.notes =
                 "Drawn as a Wear long-screenshot stadium at the document frame's width, with the " +
@@ -1234,15 +1116,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       }
       .build()
 
-  // Wear's `ListHeader`, and it exists because the round trip found it: it is a 48dp item at every
-  // screen size — measured — and the template used to fake that with a padded `m3/text`. The canvas
-  // matched; the *generated screen* did not, because a padded `Text` is not a `ListHeader` and the
-  // generator has no business emitting one as the other. Fifteen dp of header is the difference
-  // between "the two pictures agree" and "the two pictures agree except at the top".
-  //
-  // Declared rather than filtered out of `m3/text`, and the label's properties are the header's own
-  // vocabulary: upstream takes a content lambda, so `maxLines` and `overflow` are the `Text` inside
-  // it.
+  // Wear's `ListHeader` (48dp at every size), so the generated screen matches the canvas rather
+  // than faking it with a padded `m3/text`. Label properties are the inner `Text`'s.
   val listHeader =
     ComponentCapabilityV1.Builder(
         "wear-m3/list-header",
@@ -1267,10 +1142,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       }
       .build()
 
-  // Wear's own lazy list, from `androidx.wear.compose.foundation.lazy`. It shares the *shape* of a
-  // lazy column with foundation's — ordered, vertical, scrollable, repeated — and none of its
-  // implementation, which is why the traits are stated here rather than inherited from
-  // `layout/lazy-column`: what the two have in common is Compose's vocabulary, not a component.
+  // Wear's own lazy list; it shares only the shape of foundation's, so traits are stated here.
   val transformingLazyColumn =
     ComponentCapabilityV1.Builder(
         "wear-m3/transforming-lazy-column",
@@ -1300,10 +1172,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             "WearListContent",
           )
         it.slots = listOf(manySlot("items", listOf("AnyContent"), listOf("Container", "Leaf")))
-        // The modifier vocabulary, and the one thing here that IS taken from another entry: these
-        // are `Modifier` extensions — `size`, `padding`, `alpha`, `weight` — which every container
-        // accepts, so they are the canvas's vocabulary rather than this component's arguments. The
-        // entry they are read from is foundation's, which is what both platforms share.
+        // `Modifier` extensions every container accepts, taken from foundation's shared entry.
         it.modifierCapabilities = lazyColumn.modifierCapabilities
         it.properties = wearTransformingLazyColumnProperties()
         it.wasm =
@@ -1336,23 +1205,11 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       .build()
 
   /**
-   * Wear's three content components that have a Material 3 namesake: `Text`, `TitleCard` and
-   * `Button`.
+   * Wear's three content components with a Material 3 namesake: `Text`, `TitleCard` and `Button`.
    *
-   * ## Why they are declared here rather than derived from the mobile ones
-   *
-   * They share a NAME with a Material 3 component and nothing else. `wear-m3` and `m3` describe two
-   * different libraries — different theme systems, different type scales, different sizes, and
-   * **you do not use them together** — so a Wear card is not a recoloured Material 3 card, and
-   * saying so by copying one and renaming it was a claim this catalog had no business making. What
-   * the two do share is Compose's own vocabulary: a `style` is one of the same fifteen role names,
-   * a `color` is written the same way, and `Modifier` extensions are `Modifier` extensions. That
-   * vocabulary lives in the helpers above and every component states its own surface from it.
-   *
-   * The differences are the point, and they show up as differences: Wear publishes ONE card shape
-   * where Material 3 publishes three, so there is no `shape` here to move; Wear's `Button` has no
-   * `selected` and no `containerColor`; and `TitleCard`, `AppCard`, `OutlinedCard` and `Card` are
-   * four composables rather than four styles of one, which is why `variant` selects a composable.
+   * Declared here, not derived from the mobile ones: they share a name and Compose's vocabulary,
+   * not a component (one card shape vs three, no `selected` on `Button`, and `TitleCard`/`AppCard`/
+   * `OutlinedCard`/`Card` are four composables, so `variant` selects a composable).
    */
   fun wearComponent(
     componentId: String,
@@ -1452,10 +1309,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         text.newBuilder().also { it.svg = recordedTextSvg }.build()
       }
 
-  // flexpress's `VariableFontText`, not a Wear Material 3 component: text drawn from a variable
-  // font's outlines with its axes free to move. Its properties are `VariableFontText`'s, the same
-  // ones m3-catalog's `m3/variable-font-text` lists; the canvas draws a stand-in, since flexpress
-  // runs on the JVM alone.
+  // flexpress's `VariableFontText`, not a Wear Material 3 component; the canvas draws a stand-in
+  // since flexpress is JVM-only.
   val wearVariableFontText =
     wearComponent(
         componentId = VariableFontText.WEAR_ID,
@@ -1528,9 +1383,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
               "The item's identity, written as the generated lazy list's `key`. An identity " +
                 "rather than a look: two rows sharing one are one row to a lazy layout.",
           ),
-          // `CardDefaults.cardColors`, which is how a card is tinted: a `background` modifier
-          // paints behind the card's own container rather than recolouring it. `OutlinedCard`
-          // draws no container, so a `containerColor` there is refused at export.
+          // `CardDefaults.cardColors` tints the card itself; `OutlinedCard` has no container, so a
+          // `containerColor` there is refused at export.
           wearColor("containerColor"),
           wearColor("contentColor"),
           wearClickAction(),
@@ -1574,35 +1428,16 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         components.getValue("m3/icon").properties.single { it.name == "iconKey" }.allowedValues,
     )
 
-  // Foundation only. Every one of these is `androidx.compose.foundation` or `androidx.compose.ui`,
-  // the same declaration on both platforms, so sharing it says nothing about which Material library
-  // a Wear screen is built from — which is exactly what sharing a Material component would claim.
+  // Foundation only: `Box`, `Column`, `Row` and `Image` are the same declarations on both
+  // platforms, taken from the base catalog. Wear publishes its own `Icon`, hence `wear-m3/icon`.
   //
-  // `m3/icon` left with the Material ones and has no Wear id yet: the icon key resolves to a vector
-  // through a table this export module cannot reach, so `wear-m3/icon` would be a palette entry
-  // that
-  // refuses on export — which is what `m3/icon` already was here.
-  // Four, and all four are genuinely shared: `Box`, `Column`, `Row` and `Image` are
-  // `androidx.compose.foundation` / `androidx.compose.ui`, the same declarations on both platforms,
-  // taken from the base catalog here rather than restated — which is what keeps one source for
-  // them. Wear publishes no `Image` of its own; it does publish `Icon`, which is why `wear-m3/icon`
-  // is a Wear component of its own.
-  //
-  // The three Remote Compose seams — `remote-compose/document`, `-inline` and `-custom` — were here
-  // too, and were offered without being usable: the whole-screen Wear generator has no case for any
-  // of them, so a design that placed one was refused at export. An entry that cannot be exported is
-  // worse than a missing one, because it is only discovered at the end. Withdrawn rather than
-  // fixed, because what a Remote Compose seam means inside a Wear SCREEN is a real question — they
-  // are widget vocabulary and this generator writes plain Compose — and is tracked to come back
-  // once it has an answer.
+  // The Remote Compose seams are withdrawn: the Wear screen generator cannot export them, and what
+  // they mean inside a Wear screen is still an open question.
   val foundationIds = listOf("layout/box", "layout/column", "layout/row", "asset/image")
   val sharedFoundation =
     foundationIds.map(components::getValue).map { component ->
-      // The note every shared foundation component carries, and it says the opposite of what the
-      // Material components' notes used to say. A Material component was a stand-in — "drawn as
-      // the Material 3 component of the same name" — because the two libraries publish different
-      // ones and the catalog had picked the wrong library. A foundation component is the same
-      // declaration on both platforms, so there is nothing to stand in for.
+      // Foundation components are the same declaration on both platforms, so nothing is stood in
+      // for.
       component
         .newBuilder()
         .also {
@@ -1614,35 +1449,18 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   return base
     .newBuilder()
     .also {
-      // The one thing this catalog has to say about itself that is not a component.
-      //
-      // The Wasm canvas is where a `wear-m3` design is *authored* — you select a node on it, drag
-      // it, watch the layout — and it is not where the design is *looked at*. The components on it
-      // are Wear Compose's own, drawn through a Compose Multiplatform build of the library, but the
-      // screen frame is a stand-in (the extent has no viewport) and the font is the port's. Saying
-      // that here rather than leaving each surface to work it out is what stops the editor
-      // offering a Preview mode whose claim is false and the server picking a daemon by guessing
-      // from a catalog id.
-      //
-      // `statusSemantics` rather than a field of its own because `CatalogCapabilityV1` is published
-      // from compose-preview-contracts and cannot grow one from here; this map is the catalog's own
-      // open vocabulary and already carries `adapterStatus` and `svgStatus`. Read back by
-      // `UiBuilderPreviewSurfaces.from`.
+      // The canvas is where a `wear-m3` design is authored, not looked at: components are Wear
+      // Compose's own, but the frame is a stand-in and the font is the port's. Stated here so the
+      // editor and server do not guess. In `statusSemantics` because `CatalogCapabilityV1` cannot
+      // grow a field from here; read by `UiBuilderPreviewSurfaces.from`.
       it.statusSemantics =
         JsonObject(
           base.statusSemantics +
-            // A round watch screen against Wear Compose: grouped apart from the phone screens in
-            // the
-            // chooser, and offered no mobile pack — Wear Material 3 and Material 3 are not used
-            // together, which is the rule this whole catalog is written around.
+            // Grouped apart from phone screens and offered no mobile pack: Wear Material 3 and
+            // Material 3 are not used together.
             (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("wear")) +
-            // The frame, which used to exist only as branches in the renderer: `wear-m3`'s screen
-            // root was special-cased by id, and the measured content padding was a constant there
-            // while the catalog's own `ui-builder.policy.json` declared it — the same three pairs,
-            // written by a test in that repository and by hand here. The catalog states it now and
-            // the renderer reads it, which is what makes the frame a catalog fact rather than a
-            // Wear fact. `wear-m3-differences.json` recorded the gap in three `frame.*` exemptions;
-            // they are gone, because both sides state this block.
+            // The frame is a catalog fact the renderer reads, matching the catalog's own
+            // `ui-builder.policy.json`.
             ("frame" to
               buildJsonObject {
                 put("adapter", JsonPrimitive("frame/round-screen"))
@@ -1650,10 +1468,9 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                 putJsonObject("geometry") {
                   put(
                     "contentPadding",
-                    // `ScreenScaffoldContentPaddingTest` in wear-m3-catalog composes the real
-                    // `ScreenScaffold` at each round size and asserts its own policy file equals
-                    // the
-                    // measurement; these are that measurement.
+                    // Measured by `ScreenScaffoldContentPaddingTest` in wear-m3-catalog against the
+                    // real
+                    // `ScreenScaffold`.
                     JsonArray(
                       listOf(
                           Triple(192, 10, 20),
@@ -1695,10 +1512,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                 putJsonObject("native") {
                   put("fidelity", JsonPrimitive("authoritative"))
                   put("backend", JsonPrimitive("android"))
-                  // The catalog's own sentence, and stated here rather than left to the reader to
-                  // infer from `backend`: this is the lane that renders the design's own generated
-                  // Kotlin against the real `androidx.wear.compose` AAR under Robolectric, which is
-                  // the same lane that produces wear-m3-catalog's published stickers.
+                  // This lane renders the generated Kotlin against the real `androidx.wear.compose`
+                  // AAR under Robolectric, as wear-m3-catalog's published stickers are.
                   put(
                     "reason",
                     JsonPrimitive(
@@ -1709,21 +1524,10 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                   )
                 }
               }) +
-            // The other thing a catalog says about itself that is not a component: how the
-            // builder's
-            // insert panel shelves it. Until a catalog could declare this, the shelves were a table
-            // in `:ui-builder` keyed by m3-catalog's ids, so `wear-m3` fell back to
-            // Scaffolds/Containers/Composables — a statement about what each component may *hold*
-            // rather than about what any of them is for. Same mechanism, and the same reason, as
-            // `previewSurfaces` above; read back by `ComponentMenu.from`.
-            //
-            // It REPLACES the base catalog's declaration rather than merging with it: that one is
-            // keyed by `m3/…` ids this catalog does not have, so a merge would leave every Wear
-            // component unshelved while carrying entries for thirty-nine components that are gone.
-            // The key as a literal, like `previewSurfaces` above: `ComponentMenu` lives in
-            // `:ui-builder`, which this module must never depend on —
-            // `checkUiBuilderRuntimeBoundary`
-            // enforces the arrow, and the editor is above the runtime, not beside it.
+            // How the insert panel shelves this catalog; read by `ComponentMenu.from`. Replaces the
+            // base catalog's menu rather than merging (its `m3/…` ids are gone). A literal key
+            // because
+            // `:ui-builder` is above this module (`checkUiBuilderRuntimeBoundary`).
             ("componentMenu" to wearComponentMenu()) +
             // What a design may re-skin, and where each value lands; see [wearDesignTokens].
             ("designTokens" to wearDesignTokens())

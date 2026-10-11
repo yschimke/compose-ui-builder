@@ -117,26 +117,13 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
   }
 
   /**
-   * A property whose wrapper type is not a wrapper type at all.
+   * A property whose wrapper type is not a known wrapper type.
    *
-   * **A document-wide rule, unlike the two write-time ones below, and it is the one place that
-   * distinction flips.** Those exist because a design committed before a spelling rule must stay
-   * editable: the value is legal, the canvas draws it, and only its spelling is now discouraged. An
-   * invented wrapper is not that. The vocabulary is closed, `CollaborationReducer` has always
-   * refused an unknown one at its own boundary, and the server's own wire types are a sealed
-   * hierarchy — so **no design that ever committed can hold one**, and a rule here cannot break a
-   * design that got in legitimately. It can only catch one that never went through a writer.
-   *
-   * Which is exactly the gap. `{"type":"fixedGrid","columns":7}` was hand-authored into an
-   * operations fixture, and `UiBuilderReducer.replay` — the path a committed fixture, a
-   * `design-sync` import and `DesignFixturesTest` all take — keeps a property value without asking
-   * the reducer's question. So it passed replay, this validator, the Compose export, the renderer
-   * and a green `DesignFixturesTest`, then met the server's deserializer and came back as a
-   * kotlinx-serialization registration message naming a sealed base class: a sentence about the
-   * wire format rather than about the design (#901).
-   *
-   * The catalog cannot catch it either — `layout/lazy-grid.columns` is declared `object` and stops
-   * there, which is precisely the shape an invented wrapper claims to be.
+   * **Document-wide, unlike the write-time rules below.** The vocabulary is closed and every writer
+   * refuses unknown wrappers, so no legitimately committed design can hold one; this catches
+   * documents that bypassed the writers (e.g. a hand-authored fixture through
+   * `UiBuilderReducer.replay`), which otherwise fail only at the server's deserializer with a
+   * wire-format message (see #901).
    */
   private fun unsupportedWrapperIssues(
     node: UiBuilderNode,
@@ -175,25 +162,12 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
   /**
    * Whether one property **write** spells its wrapper the way the catalog's declaration asks for.
    *
-   * A question [validate] deliberately does not ask. The catalog declares `m3/text.style` as
-   * `jsonType: "string"` with an `allowedValues` list, and both
-   * `{"type":"enum","value":"bodyLarge"}` and `{"type":"string","value":"bodyLarge"}` carry the
-   * same string inside — so both were accepted, both committed, and both rendered, because the
-   * renderer reads either through `string(name)`. They then diverged completely downstream: the
-   * Compose export resolves the first through the catalog's enum table and refused the second with
-   * `` `Text`.`style` is androidx.compose.ui.text.TextStyle, which Text is not `` — two unrelated
-   * refusals for one authored intent, neither of them mentioning the wrapper (issue #339).
+   * A property with `allowedValues` (e.g. `m3/text.style`) must be written as `enum`, not `string`;
+   * both render, but the Compose export only resolves the enum form (see #339). `jsonType` is the
+   * carried scalar, not the wrapper's name.
    *
-   * `enum` is the canonical spelling, because that is what a property with `allowedValues` means:
-   * the value is one of an enumeration the catalog names, not free text that happens to match.
-   * `jsonType` describes the JSON scalar the wrapper carries — a string — and is not the wrapper's
-   * own name; every checked-in fixture and the inspector's own editor control already agree.
-   *
-   * Asked **only on a write**, and that is the load-bearing part. Designs committed before this
-   * rule existed hold the other spelling, they render correctly, and they must keep being editable:
-   * a document-wide rule would reject an unrelated node move on a design whose `style` was written
-   * a year ago. So the rule bites where a spelling is chosen and nowhere else, and the export reads
-   * the legacy spelling through the enum table instead of refusing it.
+   * Asked **only on a write**: older designs holding the other spelling must stay editable, and the
+   * export reads the legacy spelling through the enum table.
    */
   fun writeWrapperIssue(
     node: UiBuilderNode,
@@ -221,18 +195,13 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
   }
 
   /**
-   * The value-kind half of the write rule: does this value have a type the canvas can draw?
+   * The value-kind half of the write rule: does this value have a type the canvas can draw? The
+   * rule [PropertyValueKinds] states and the server's catalog executor mirrors (e.g. a colour
+   * property needs a colour wrapper; an unknown token or unresolved `asset/image` key would crash
+   * the renderer, see #484).
    *
-   * The wrapper question above is about *spelling* an enumeration; this one is about *meaning*, and
-   * it is the rule [PropertyValueKinds] states and the server's catalog executor mirrors. A colour
-   * property given a `string` wrapper committed, rendered, and was refused one export later with ``
-   * `Text`.`color` is androidx.compose.ui.graphics.Color, which Text is not `` — a message about
-   * `Text` on a document the author never wrote `Text` into (#476). A colour whose token the canvas
-   * did not know, or an `asset/image` whose key nothing resolved, did worse: the reducer accepted
-   * the node and the renderer threw, taking every render of the design with it (#484).
-   *
-   * Asked on a write only, like the wrapper rule and for the same reason: a design committed before
-   * the rule keeps being editable, and the canvas draws a placeholder for what it holds.
+   * Write-only, like the wrapper rule: older designs stay editable and the canvas draws a
+   * placeholder.
    */
   private fun writeValueIssue(
     node: UiBuilderNode,
@@ -281,17 +250,13 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
   }
 
   /**
-   * [writeWrapperIssue] for every property of a node that arrives whole, for an insert.
-   *
-   * An insert is a write of each of its properties at once, and an `asset/image` arrives with its
-   * `assetKey` already set — which is exactly how #484's node got in. The document-wide pass that
-   * follows an insert deliberately asks none of the write-time questions, so they are asked here.
+   * [writeWrapperIssue] for every property of a node that arrives whole, for an insert; the
+   * document-wide pass after an insert asks none of the write-time questions.
    */
   /**
-   * Whether [property] may be unset on [node]: refused for a required one, in the words the
-   * document-wide pass would use a moment later, so the author hears it at the operation rather
-   * than as a refusal of the whole batch. An undeclared property is let go — taking it off makes
-   * the document more valid, not less.
+   * Whether [property] may be unset on [node]: refused for a required one, in the document-wide
+   * pass's words, so the author hears it at the operation. Undeclared properties may always be
+   * removed.
    */
   fun removeIssue(node: UiBuilderNode, property: String): CapabilityValidationIssue? {
     val declared =
@@ -319,13 +284,10 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     issues: MutableList<CapabilityValidationIssue>,
     bindings: UiBuilderArgumentBindings,
   ) {
-    // A placement is a document construct rather than a catalog component: no catalog declares
-    // `design/component-instance`, so it has no capability of its own. What it does have is the
-    // capability of the body it places — that is what decides which modifiers it may carry, and
-    // (through [placedCapability], read by `validateSlotChild`) which slots will accept it. A
-    // placement of a body no component defines is the export's refusal to make, not this one's:
-    // `CapabilityComposeCodeExporter` names the unknown key, the binding no emitter can write and
-    // the missing argument.
+    // A placement (`design/component-instance`) has no catalog capability of its own; it takes its
+    // body's, which decides its modifiers and (via [placedCapability] in `validateSlotChild`) which
+    // slots accept it. Unknown components, unwritable bindings and missing arguments are
+    // `CapabilityComposeCodeExporter`'s to refuse.
     val capability =
       if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
         val placed = document.placedCapability(node, catalog) ?: return
@@ -481,14 +443,9 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     node.slots.forEach { (name, children) ->
       val slot = capability.slot(name)
       if (slot == null) {
-        // An entry with no children says nothing is in that slot, which is exactly what leaving the
-        // key out says — so it is not a finding, and a catalog that drops a slot does not
-        // invalidate
-        // every stored document that never used it. The editor writes an entry for every slot the
-        // catalog declares at the moment of the insert, so those keys outlive the declaration: when
-        // `m3/button.leadingIcon` was withdrawn, every button ever inserted was still carrying an
-        // empty one. A child in an undeclared slot is still refused below, because that child would
-        // be silently dropped.
+        // An empty slot entry means the same as no key, so it is not a finding (inserts write an
+        // entry for every slot declared at the time, and those keys outlive withdrawn slots). A
+        // child in an undeclared slot is still refused below, since it would be silently dropped.
         if (children.isNotEmpty()) {
           issues +=
             issue(
@@ -583,17 +540,9 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
 /**
  * The value a property wrapper carries, or the wrapper itself when the wrapper *is* the value.
  *
- * A binding is the second case. `{"type": "state", "variable": …}` has no `value` key at all and so
- * already came back whole; `{"type": "stateEquals", "variable": …, "value": …}` does have one — the
- * operand it compares the variable against — and unwrapping to that read the binding as though the
- * operand were the authored value. A chip whose `selected` compared against `"droidCon"` therefore
- * validated as a **string**, and the same chip comparing against `null` (the "all" chip, which is
- * selected when nothing is) validated as nothing at all and was reported `INVALID_PROPERTY_TYPE` on
- * a document that is correct.
- *
- * So a binding wrapper is handed back whole and matches the `object` a bindable property declares,
- * which is what `m3/slider.value` and `m3/text-field.value` already declared and what every flag a
- * state variable can drive now declares too.
+ * Bindings are returned whole: `stateEquals` has a `value` key (its operand), and unwrapping it
+ * would validate the operand as the property value. A whole binding matches the `object` a bindable
+ * property declares.
  */
 private fun JsonElement.unwrapPropertyValue(): JsonElement =
   when {
@@ -611,12 +560,9 @@ private val STATE_BINDING_WRAPPERS = setOf("state", "stateEquals", "expr", "syst
 private const val DESIGN_COMPONENT_INSTANCE_COMPONENT_ID = "design/component-instance"
 
 /**
- * What a placement draws, as a capability: the component's body root.
- *
- * A placement occupies exactly the space its body root does, so a slot that would refuse the body
- * refuses the placement, and a modifier the body root cannot carry the placement cannot either.
- * Null when the design defines no such component, which the export reports by name — reporting it
- * twice, in two vocabularies, is how two validators come to disagree.
+ * What a placement draws, as a capability: the component's body root, so slot and modifier rules
+ * apply as to the body. Null when the design defines no such component; the export reports that by
+ * name.
  */
 private fun UiBuilderDocument.placedCapability(
   node: UiBuilderNode,
@@ -630,17 +576,9 @@ private fun UiBuilderDocument.placedCapability(
 
 /**
  * The line count a `minLines` / `maxLines` property states outright, or null when it does not state
- * one.
- *
- * Null covers the case that matters: a property **bound to state** is an object with no `value` key
- * (`{"type":"state","variable":…}`), so [unwrapPropertyValue] hands the object straight back. Read
- * with `.jsonPrimitive` that threw, and it threw out of the validator — which is called on every
- * write, and on every keystroke in the inspector through `canBindToState`, whose whole job is to
- * probe a property with exactly such a binding. Any text node was enough to take the editor down.
- *
- * Skipping the min-vs-max comparison is the right answer rather than a way around the crash: a
- * bound line count has no value at author time to compare. Whether the binding is *allowed* on the
- * property at all is a separate question, and one [acceptsType] already answers.
+ * one (e.g. it is bound to state). Must not throw: the validator runs on every write and on
+ * `canBindToState` probes. A bound count has nothing to compare; [acceptsType] decides whether the
+ * binding is allowed.
  */
 private fun JsonElement?.lineCountOrNull(): Long? =
   (this?.unwrapPropertyValue() as? JsonPrimitive)?.longOrNull

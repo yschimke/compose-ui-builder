@@ -18,24 +18,13 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.serializer
 
 /**
- * The shape table `ui-builder-equivalence.sh` validates against, written out of the REAL decoders.
+ * The shape table `ui-builder-equivalence.sh` validates against, generated from the real decoders
+ * (the gate runs without a JVM, and a hand-maintained mirror drifted from the published
+ * artifacts). Committed for the node job to read; fails when the dependency's shape changes, naming
+ * the field. The server generates the `record` half itself.
  *
- * The gate is bash and inline node in a CI job with no JVM, so it cannot call the decoder it is
- * mirroring — and a mirror maintained by hand drifts. It did: a table transcribed by reading the
- * data classes in a sibling checkout missed six fields the PUBLISHED artifact carries
- * (`TargetParameter.noArgFactory`, `.scopeDslReceiver`, `.lambdaReturnTypeFqn`;
- * `BuilderPolicy.conflicting`, `.ambiguousWith`, `.malformed`), and a record setting one of them to
- * the wrong type was certified. The checkout was older than the dependency `:server` resolves, and
- * nothing said so.
- *
- * So the table is generated here, where the descriptors are the ones `PublishedUiBuilderCatalog`
- * will actually decode with, and committed for the node job to read. It moved here from
- * compose-preview-server with the composer: the `componentPolicy` decoder is internal to this
- * module, so only this repository can describe it. The server still generates the `record` half
- * from its own `ComponentRecordSource` decoder and carries this table's `componentPolicy` half.
- * This test fails the moment the dependency's shape changes, naming the field — which is the drift
- * check the hand-written version never had. Regenerate with `UPDATE_DECODER_SHAPES=1 ./gradlew
- * :ui-builder-runtime:test --tests '*DecoderShapeFixtureTest*'`.
+ * Regenerate with `UPDATE_DECODER_SHAPES=1 ./gradlew :ui-builder-runtime:test --tests
+ * '*DecoderShapeFixtureTest*'`.
  */
 class DecoderShapeFixtureTest {
 
@@ -90,10 +79,8 @@ class DecoderShapeFixtureTest {
     )
 
   /**
-   * One descriptor as the gate's `{kind, optional, nullable, members, values}` table.
-   *
-   * `seen` breaks reference cycles: a self-referential type would otherwise recurse forever, and a
-   * table that cannot be written is better than one written wrong.
+   * One descriptor as the gate's `{kind, optional, nullable, members, values}` table. `seen` breaks
+   * reference cycles.
    */
   private fun describe(descriptor: SerialDescriptor, seen: MutableSet<String>): JsonObject {
     val members = mutableMapOf<String, JsonObject>()
@@ -142,11 +129,8 @@ class DecoderShapeFixtureTest {
               "kind" to JsonPrimitive("objectList"),
               "members" to describe(item, seen).getValue("members"),
             )
-          // A `List<JsonElement>` — `allowedValues` is one. Its elements are whatever the property
-          // is: strings for an enum, numbers for a range. Calling it `objectList` because it is
-          // neither a string list nor a list of a known class made the gate demand an object per
-          // entry and refuse every catalog that declares enum values — 104 findings against the
-          // very first policy written to this contract, none of them real.
+          // A `List<JsonElement>` (e.g. `allowedValues`): elements may be strings or numbers, so it
+          // is not an `objectList`.
           else -> mapOf("kind" to JsonPrimitive("anyList"))
         }
       }
@@ -155,11 +139,9 @@ class DecoderShapeFixtureTest {
         mapOf("kind" to JsonPrimitive("object")) +
           (described["members"]?.let { mapOf("members" to it) } ?: emptyMap())
       }
-      // kotlinx decodes a map only from a JSON object, and each VALUE through the value type's
-      // own serializer: `canvasMapping.properties` is a `Map<String, String>`, so `{"size": 7}`
-      // fails to decode. The value's shape goes in `values` for the gate to check per entry. A
-      // `JsonElement` value is the exception, free-form by design, so a map of those constrains
-      // only the container: accepting a scalar there certifies a record the server refuses.
+      // kotlinx decodes a map only from an object, and each value via its own serializer, so the
+      // value shape goes in `values`. `JsonElement` values are free-form, constraining only the
+      // container.
       StructureKind.MAP -> {
         val value = descriptor.getElementDescriptor(1)
         val spec = kindOf(value, seen)

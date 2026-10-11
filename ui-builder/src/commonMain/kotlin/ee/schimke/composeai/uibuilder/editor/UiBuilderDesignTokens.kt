@@ -35,10 +35,9 @@ data class EditorDesignTokenRow(
 )
 
 /**
- * The properties [this] token writes in [document]: its theme bindings on the design's top-level
- * nodes — the theme host, as [themeHost] reads it, one level under a board — and its component
- * bindings on every node of that component. Only where the catalog declares the property, and never
- * one a state binding or a component argument holds: that value is not the token's to replace.
+ * The properties [this] token writes in [document]: theme bindings on top-level nodes (the theme
+ * host per [themeHost], one level under a board) and component bindings on every node of that
+ * component. Only catalog-declared properties not held by a state binding or component argument.
  */
 internal fun DesignToken.targets(
   document: UiBuilderDocument,
@@ -116,10 +115,8 @@ internal fun DesignToken.parse(value: String): Result<JsonPrimitive> = runCatchi
 }
 
 /**
- * The writes that set [this] token to [value] in [document] — or, for a null [value], that reset
- * it: to the catalog's [DesignToken.default] where it has one, and otherwise by unsetting every
- * bound property so the design system's own value is drawn again. A required property is the one
- * that cannot be unset, so a reset leaves it holding what it holds.
+ * The writes setting [this] token to [value] in [document], or for null resetting it: to
+ * [DesignToken.default] if any, else unsetting bound properties (required ones keep their value).
  */
 internal fun DesignToken.writes(
   document: UiBuilderDocument,
@@ -160,9 +157,8 @@ private fun DesignToken.encode(
   }
 
 /**
- * A tunable over [this] number token: the token's range, its current value as the default, and
- * every property it binds as a target. The midpoint of the range stands in for a token that is
- * unset and has no default, since "the design system's own value" is not a number to start from.
+ * A tunable over [this] number token: its range, its current value as default (the range midpoint
+ * when unset with no default), and its bound properties as targets.
  */
 internal fun DesignToken.tunable(
   document: UiBuilderDocument,
@@ -188,9 +184,8 @@ internal fun DesignToken.tunable(
 }
 
 /**
- * [tunables] with each token tunable's targets re-read from [document], so a list added after the
- * slider was made is tuned with the rest — a token is a statement about every node of a component,
- * not about the ones there were when somebody pressed Tune.
+ * [tunables] with token tunables' targets re-read from [document], so nodes added later are tuned
+ * too.
  */
 internal fun List<DesignTunable>.withTokenTargets(
   document: UiBuilderDocument,

@@ -10,12 +10,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Every shortcut hint the editor draws is spelled in characters its own fonts carry.
- *
- * A glyph none of them has — `⌘` was the one — makes the Wasm build fetch a Noto symbols font from
- * `fonts.gstatic.com`, which an MCP App host's CSP refuses, so the hint drew as a box. The command
- * modifier is therefore written as letters ([COMMAND_MODIFIER]); this pins that nobody puts a
- * symbol back.
+ * Every shortcut hint is spelled in characters the editor's own fonts carry: a missing glyph (like
+ * `⌘`) makes Wasm fetch a Noto font from `fonts.gstatic.com`, which MCP App hosts' CSP refuses.
+ * Hence [COMMAND_MODIFIER] is letters.
  */
 class ShortcutHintGlyphTest {
 

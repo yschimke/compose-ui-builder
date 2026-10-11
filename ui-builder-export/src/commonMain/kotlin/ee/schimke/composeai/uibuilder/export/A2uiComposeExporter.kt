@@ -8,31 +8,14 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 
 /**
- * The Kotlin an Android app writes to draw an A2UI design with AndroidX's A2UI libraries.
+ * The Kotlin an Android app writes to draw an A2UI design with AndroidX's A2UI libraries: a
+ * `@Composable` building `material3-a2ui`'s basic catalog, feeding the design's messages to an
+ * `A2uiMessageProcessor` and drawing the surface with `A2uiSurface` — the smallest program before
+ * an app adds a transport. [A2uiDocumentExporter] writes what an agent sends.
  *
- * An A2UI design has two outputs and this is the second. [A2uiDocumentExporter] writes what an
- * AGENT sends — `createSurface`, `updateDataModel`, `updateComponents` as JSON Lines. This writes
- * what an APP does with the same payload when it has no agent yet: a `@Composable` that builds
- * `material3-a2ui`'s basic catalog, hands it to an `A2uiMessageProcessor`, sends that processor the
- * design's own messages and draws the first surface it creates with `A2uiSurface`. It is the
- * smallest program that shows the design on a device, and the place an app swaps the hard-coded
- * messages for a transport.
- *
- * ## One lowering
- *
- * The payload comes from [A2uiDocumentExporter.lower], the lowering the JSON export uses, rendered
- * here as Kotlin literals instead of JSON: a string is a quoted, escaped string, a number and a
- * boolean are themselves, an object is `mapOf(…)`, an array `listOf(…)` and JSON null `null`. So a
- * design refuses here for exactly the reasons it refuses there, and a payload that differs between
- * the two files is not a thing that can happen.
- *
- * ## What is left to the app
- *
- * `Image`, `Video` and `AudioPlayer` take a renderer from the app, because loading media is the
- * app's business rather than the catalog's; they are written as lambdas with a `TODO` comment, as
- * AndroidX's own surface sample does, and draw nothing until one is supplied. `urlOpener` is the
- * same. The catalog id is read off the catalog the app built (`catalog.id`) rather than written as
- * a literal, so the surface is always created against the catalog that will draw it.
+ * The payload is [A2uiDocumentExporter.lower] rendered as Kotlin literals, so both exports refuse
+ * and carry the same thing. `Image`, `Video`, `AudioPlayer` and `urlOpener` are left to the app as
+ * `TODO` lambdas, and the catalog id is read from the built catalog (`catalog.id`).
  */
 object A2uiComposeExporter {
 
@@ -44,10 +27,9 @@ object A2uiComposeExporter {
   }
 
   /**
-   * @param packageName the package the file declares, or null for a snippet without one — which is
-   *   what the editor's Code pane wants and what an exported file must not be.
-   * @param surfaceId the surface the messages create and fill; the design's id by default, the id
-   *   [A2uiDocumentExporter.export] uses too.
+   * @param packageName the package the file declares, or null for the Code pane's snippet.
+   * @param surfaceId the surface the messages create and fill; the design's id by default, as in
+   *   [A2uiDocumentExporter.export].
    */
   fun export(
     document: UiBuilderDocument,
@@ -167,12 +149,9 @@ object A2uiComposeExporter {
   }
 
   /**
-   * [value] as a Kotlin expression whose runtime value is what `kotlinx.serialization` would have
-   * decoded the JSON to: `Map<String, Any?>`, `List<Any?>`, `String`, a number, a `Boolean` or
-   * `null`.
-   *
-   * Written on one line when it fits, otherwise one entry per line at [indent] — a component with a
-   * long nested `action` is read far more easily broken out than as one 200-column line.
+   * [value] as a Kotlin expression with the runtime value `kotlinx.serialization` would decode
+   * (`Map<String, Any?>`, `List<Any?>`, `String`, number, `Boolean`, `null`). One line when it
+   * fits, otherwise one entry per line at [indent].
    */
   internal fun literal(value: JsonElement, indent: Int = 0): String {
     val inline = inlineLiteral(value)
@@ -213,11 +192,8 @@ object A2uiComposeExporter {
     }
 
   /**
-   * A JSON number as a Kotlin literal of the same value.
-   *
-   * An integer that fits an `Int` is written bare, a wider one takes an `L` so the literal still
-   * compiles, and anything with a fraction or exponent is a `Double` — which a JSON exponent
-   * without a point (`1e3`) already is in Kotlin.
+   * A JSON number as a Kotlin literal of the same value: `Int` bare, wider integers with `L`,
+   * anything with a fraction or exponent as a `Double`.
    */
   private fun kotlinNumber(content: String): String =
     when {

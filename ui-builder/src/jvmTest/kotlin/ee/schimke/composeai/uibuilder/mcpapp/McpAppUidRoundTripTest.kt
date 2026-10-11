@@ -7,11 +7,9 @@ import kotlin.test.assertFalse
 import kotlinx.serialization.json.Json
 
 /**
- * The editor opens a checked-in `.uid` and, untouched, gives back the same design.
- *
- * The fixture is the one the export golden (`state-actions.kt.txt`) is generated from, so it is a
- * design with state, bindings and events rather than a single node — the fields a lossy decode
- * would drop first.
+ * The editor opens a checked-in `.uid` and, untouched, gives back the same design. The fixture
+ * (source of the `state-actions.kt.txt` golden) has state, bindings and events: the fields a lossy
+ * decode would drop first.
  */
 class McpAppUidRoundTripTest {
   private val fixture: String =

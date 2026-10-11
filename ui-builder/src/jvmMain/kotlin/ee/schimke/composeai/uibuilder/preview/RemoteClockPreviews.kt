@@ -31,10 +31,9 @@ fun DigitalClockPreview() = ClockSurface(RemoteClockTemplates.Digital.document(I
 fun RacingChronographReplicaPreview() = ClockSurface(racingChronographReplica(ID, PIN, CLOCK_TIME))
 
 /**
- * A replica of a classic resin LCD digital watch, for looking at only.
- *
- * Deliberately not a template: it copies another company's product design, so it lives beside the
- * previews, which never ship, rather than in the New design chooser. It carries no maker's name.
+ * A replica of a classic resin LCD digital watch, for looking at only: it copies another company's
+ * product design, so it lives in previews (which never ship), not the New design chooser, and
+ * carries no maker's name.
  */
 @Preview(widthDp = 220, heightDp = 220)
 @Composable

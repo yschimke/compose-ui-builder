@@ -7,13 +7,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * One starting point a catalog publishes: a design document on its delivery branch, named by its
- * policy's `templates` list.
- *
- * [id] is the document's file name without `.json`, which is what the chooser and a `POST` name.
- * [title] is the document's own title. The policy's `templates` entries are bare paths today, so a
- * catalog cannot yet state the label, supporting text or default the Kotlin chooser carries; the
- * title is the one honest label the document already holds (`UI_BUILDER_SEED_TEMPLATES.md`, the
- * object-shaped entries step).
+ * policy's `templates` list. [id] is the file name without `.json`; [title] is the document's own
+ * title, the only label available until policy entries can state one
+ * (`UI_BUILDER_SEED_TEMPLATES.md`).
  */
 public data class CatalogSeedTemplate(
   public val id: String,
@@ -22,12 +18,9 @@ public data class CatalogSeedTemplate(
 )
 
 /**
- * The seed templates [catalogSystemId] publishes, in its policy's order, for a catalog that
- * [CatalogOwnership] says owns its seeds.
- *
- * Read by [UiBuilderNewDesignSeed] in place of its Kotlin builders. Composing them is a host's job
- * (a server fetches the documents beside `ui-builder.json`; a test reads captured copies), which is
- * why this takes a reader function rather than a location.
+ * The seed templates [catalogSystemId] publishes, in policy order, for a catalog that
+ * [CatalogOwnership] says owns its seeds; read by [UiBuilderNewDesignSeed]. Takes a reader function
+ * because fetching is the host's job.
  */
 public class CatalogSeedTemplates(
   public val catalogSystemId: String,
@@ -52,9 +45,8 @@ public class CatalogSeedTemplates(
     public data class Read(public val templates: CatalogSeedTemplates) : Result
 
     /**
-     * A declared template could not be used. The whole set is refused rather than served without
-     * it: a catalog whose chooser silently lost a card is harder to notice than one whose host says
-     * which document it could not read.
+     * A declared template could not be used, so the whole set is refused rather than silently
+     * served short.
      */
     public data class Unusable(public val reason: String) : Result
   }
@@ -66,11 +58,9 @@ public class CatalogSeedTemplates(
     }
 
     /**
-     * The templates [paths] name (a policy's `statusSemantics.templates`), read with [read].
-     *
-     * A document must be pinned to [catalogSystemId]: a template authored against another catalog
-     * is a different catalog's design, and seeding it would hand a new design components this
-     * catalog cannot validate.
+     * The templates [paths] name (a policy's `statusSemantics.templates`), read with [read]. Each
+     * must be pinned to [catalogSystemId], or it would seed components this catalog cannot
+     * validate.
      */
     public fun read(
       catalogSystemId: String,
@@ -110,9 +100,8 @@ public class CatalogSeedTemplates(
 }
 
 /**
- * This template's document as design [designId], pinned exactly as a Kotlin-built template would
- * be: [catalogPin] is the served catalog's pin, and a template frozen against `candidate` must not
- * carry that forward into a design the service then refuses.
+ * This template as design [designId], pinned to the served catalog's [catalogPin] (a template
+ * frozen against `candidate` must not carry that forward).
  */
 internal fun CatalogSeedTemplate.seed(designId: String, catalogPin: JsonObject): UiBuilderDocument =
   document.copy(id = designId, revision = 0, catalogPin = catalogPin)

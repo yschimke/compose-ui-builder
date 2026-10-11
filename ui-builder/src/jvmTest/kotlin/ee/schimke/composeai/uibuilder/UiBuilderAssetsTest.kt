@@ -28,12 +28,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * `asset/image` resolves against the document's registry first, and never fails a frame.
- *
- * The second half is yschimke/compose-preview-server#484: one accepted node with a key the renderer
- * did not know used to throw out of composition and take the whole design down, in the editor and
- * behind every export. Every lane now goes through [resolveAsset], and a key nothing resolves is a
- * drawn placeholder.
+ * `asset/image` resolves against the document's registry first, and never fails a frame: every lane
+ * goes through [resolveAsset], and an unresolved key is a drawn placeholder (see
+ * yschimke/compose-preview-server#484).
  */
 class UiBuilderAssetsTest {
 

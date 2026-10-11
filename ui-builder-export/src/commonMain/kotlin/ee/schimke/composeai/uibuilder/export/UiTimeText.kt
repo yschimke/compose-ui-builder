@@ -1,16 +1,10 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * `RemoteTimeText`: the time, curved along the top of its bounds, with optional text either side —
- * the Wear time text a tile or widget shows at twelve o'clock.
- *
- * Not in the embedded `remote-m3` record, which is generated from the catalog's sheets and has no
- * row for it, so it is declared here, once, the way [UiDrawing] declares the drawing vocabulary:
- * the runtime builds its palette entry from [PROPERTIES], the canvas stand-in and the Remote
- * emitter read the same names.
- *
- * The time itself is the player's — `RemoteTimeDefaults.defaultTimeString()`, live on the device —
- * so it is not a property. The canvas shows the design's fixed preview time in its place.
+ * `RemoteTimeText`: the time curved along the top of its bounds, with optional text either side.
+ * Declared here (the embedded `remote-m3` record has no row for it), like [UiDrawing]: the runtime,
+ * canvas and Remote emitter read [PROPERTIES]. The time itself is the player's, so it is not a
+ * property; the canvas shows the fixed preview time.
  */
 object UiTimeText {
   const val ID: String = "remote-m3/remote-time-text"

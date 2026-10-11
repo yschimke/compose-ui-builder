@@ -9,12 +9,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A catalog's own design guidance: the rules a design built from it is checked against and the
- * pictures the model is shown, published by the catalog beside its `ui-builder.policy.json` as
- * `ui-builder.guidelines.json`.
- *
- * compose-ui-builder knows how to ask a rule and how to draw a frame; it does not know which rules
- * or frames any catalog wants. A catalog that publishes no file has no guidelines check.
+ * A catalog's own design guidance (`ui-builder.guidelines.json`, beside its policy): the rules a
+ * design is checked against and the pictures the model is shown. No file means no guidelines
+ * check.
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

@@ -9,12 +9,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 
 /**
- * Comparing a design with its reference, for any host.
- *
- * The editor calls this with a photograph of its own canvas; the serve host calls it with the
- * design's PNG export or native render to answer an agent. Both pass pixels as [ReferenceRaster]s
- * and layout as [ReferenceLayer]s in frame dp, so the two answer the same question the same way —
- * an agent told "move right 12 dp" and a person shown it on the canvas are reading one result.
+ * Comparing a design with its reference, for any host (the editor's canvas or the serve host's
+ * render), so a person and an agent read the same result.
  */
 
 /** How the base picture sits over the frame: the overlay settings, in frame dp. */
@@ -26,12 +22,9 @@ data class ReferencePlacementSpec(
 )
 
 /**
- * Everything one comparison needs.
- *
- * [design] is the design drawn across the frame's width at any density — its height follows from
- * its aspect. [reference] is the picture at its own size; [placement] puts it on the frame.
- * [boxMarks] are boxes an operator drew over the reference, and [layoutBoxes] an SVG's own frames
- * as fractions of the placed picture, both optional evidence for [compareLayer].
+ * Everything one comparison needs: [design] drawn across the frame width, [reference] at its own
+ * size placed by [placement], and optional evidence for [compareLayer] ([boxMarks] drawn by an
+ * operator, [layoutBoxes] from an SVG).
  */
 class ReferenceComparisonInput(
   val design: ReferenceRaster,
@@ -65,9 +58,8 @@ data class ReferenceDiffSummary(
 data class ReferenceDiffRegionDp(val rect: ReferenceBox, val mismatch: Float, val nodeId: String?)
 
 /**
- * Grid pixels to a dp for a frame this size: two where the frame is phone-sized, so a 14 sp label
- * has enough rows of ink to be measured, one for a tablet, so the grid stays under a million
- * pixels.
+ * Grid pixels per dp: two for phone-sized frames (enough ink rows to measure a 14 sp label), one
+ * for tablets (keeping the grid under a million pixels).
  */
 fun referenceSamplesPerDp(frameWidthDp: Float, frameHeightDp: Float): Float =
   if (frameWidthDp * frameHeightDp <= 250_000f) 2f else 1f
@@ -154,11 +146,8 @@ fun compareDifferences(input: ReferenceComparisonInput): ReferenceComparison {
 }
 
 /**
- * How the layer [nodeId] has to change to agree with the reference, from the best evidence the
- * input carries — see [matchLayer] — and the edit that would do it.
- *
- * [node] supplies the type size for a text layer; without it a text match still moves the layer but
- * proposes no font size.
+ * How the layer [nodeId] has to change to agree with the reference (see [matchLayer]), and the edit
+ * that would do it. Without [node], a text match moves but proposes no font size.
  */
 fun compareLayer(
   input: ReferenceComparisonInput,
@@ -238,12 +227,9 @@ fun ReferenceDiffReport.inDp(
 data class ReferenceFontSize(val sp: Float, val source: String)
 
 /**
- * The type size a text node draws at, and where that number came from.
- *
- * Its own `fontSizeSp` when it sets one. Otherwise the Material 3 type scale for its `style`, or
- * `bodyLarge` — what an unstyled Material `Text` reads from `LocalTextStyle` — which is right for
- * the baseline theme and is said out loud so a design with its own type scale can see why a
- * suggestion is off.
+ * The type size a text node draws at, and its source: its own `fontSizeSp`, else the Material 3
+ * scale for its `style`, else `bodyLarge` — stated so a custom type scale can see why a suggestion
+ * is off.
  */
 fun UiBuilderNode.referenceFontSize(): ReferenceFontSize? {
   properties[REFERENCE_FONT_SIZE_PROPERTY]
@@ -258,8 +244,8 @@ fun UiBuilderNode.referenceFontSize(): ReferenceFontSize? {
 }
 
 /**
- * [bounds] less this node's own padding — every `padding` in its chain, which is what a renderer
- * applies outside the content — so a text node's content box is where its glyphs are laid out.
+ * [bounds] less this node's own padding (every `padding` in its chain), i.e. where a text node's
+ * glyphs are laid out.
  */
 fun UiBuilderNode.contentBounds(bounds: ReferenceBox): ReferenceBox {
   var start = 0f

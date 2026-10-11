@@ -22,26 +22,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The canvas gives the design the frame its environment names, whatever density the host is at.
+ * The canvas gives the design the frame its environment names, whatever density the host is at. A
+ * design at 2.0 in a 1.0 host must get its full dp frame, not one shrunk by the density ratio (see
+ * #521).
  *
- * The widget is measured in the **squircle**, stated here rather than left to the editor's default:
- * a host frame is a view and not a document property (`WearWidgetHostShape`), so which one is on is
- * the host's choice — and a test about density must not change its numbers when somebody changes
- * which frame a new design opens in, which is exactly what happened when the default moved to the
- * unconstrained rectangular host (#55) and these three measured 232dp instead of 216.
- *
- * The workspace is measured at the host's density and the design at its own, and the editor's
- * canvas is the one place the two meet: it sizes the frame, and the renderer inside reads that size
- * back as dp. While the canvas used the host's density for it, a design whose environment named a
- * different one was handed a frame off by the ratio — in the browser, where the host is at 1.0, a
- * 240dp watch at 2.0 became 120dp of room. A 216dp Wear widget does not fit in 120dp, so it was
- * clamped to the frame across while staying its authored height down the unbounded extent, and drew
- * as the square with the text column crushed out of it that #521 reports.
- *
- * Measured through [PinnedDesignCanvas] rather than through a copy of its modifier chain: the
- * question is what the editor's canvas hands the design, and a replica answers it about the
- * replica. The width is the assertion that matters — it is the axis the frame bounds, where the
- * height is free to grow into the extent.
+ * The widget is measured in the **squircle**, stated explicitly since the host frame is a view
+ * choice (`WearWidgetHostShape`), not a document property. Measured through [PinnedDesignCanvas]
+ * itself; width is the bounded axis that matters.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class CanvasFrameDensityTest {
@@ -73,11 +60,8 @@ class CanvasFrameDensityTest {
   }
 
   /**
-   * The Large widget's own box, in the design's dp, as the canvas draws it on a 240dp frame.
-   *
-   * Read off the inspection snapshot the canvas already publishes — the same boxes the selection
-   * outline and the drop hit-test use — and divided back out of root pixels by the scale the frame
-   * is drawn at, which is what makes the answer a number the document can be compared against.
+   * The Large widget's own box, in the design's dp, as the canvas draws it on a 240dp frame, read
+   * from the inspection snapshot and divided back out of root pixels by the frame's scale.
    */
   private fun measureWidget(hostDensity: Float, designDensity: Double): Pair<Float, Float> {
     val document =
@@ -120,9 +104,8 @@ class CanvasFrameDensityTest {
       checkNotNull(snapshot?.nodes?.firstOrNull { it.bounds != null }?.bounds) {
         "the canvas measured no node"
       }
-    // Root pixels, which carry the zoom and the host's density and not the design's: the frame is
-    // laid out in the design's pixels and drawn back down by exactly that density again. Pinned at
-    // 1:1 above, so the host's density is all there is left to divide out.
+    // Root pixels carry zoom and host density; zoom is pinned at 1:1, so dividing by the host
+    // density leaves design dp.
     return bounds.width / hostDensity to bounds.height / hostDensity
   }
 

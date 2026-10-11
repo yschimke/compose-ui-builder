@@ -7,18 +7,10 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Why a root `m3/surface`'s `containerColor` is not the frame's ground, when it is not.
  *
- * The frame's ground — the pixels no node paints — comes from `environment.theme`, in every
- * renderer: the canvas draws it in the theme's `background`, and a native render composites on the
- * preview's own backdrop. A root surface paints its `containerColor` across the area it is measured
- * to, and nothing more. So a root that fills the frame *is* the ground, and a root that does not —
- * a surface with no size modifier wraps its content, exactly as `Surface` does — paints a patch
- * behind its content and leaves the rest to the theme.
- *
- * That second case is the one an author reads as "the property does nothing"
- * (compose-preview-server #485): the root is the node they reach first, its `containerColor` is
- * declared in the catalog like any other, the reducer commits it, and the picture keeps the theme's
- * ground. There is no error to search for, which is why this names it: on the export's diagnostics,
- * where an agent looks, and in the editor's problems panel, where a person does.
+ * The frame's ground comes from `environment.theme` in every renderer; a root surface only paints
+ * the area it is measured to. A root without a filling size modifier therefore paints a patch, and
+ * an author reads the property as doing nothing. This names that on the export's diagnostics and in
+ * the editor's problems panel.
  */
 object RootSurfaceGround {
   const val CODE: String = "ROOT_SURFACE_DOES_NOT_FILL_FRAME"
@@ -51,9 +43,7 @@ object RootSurfaceGround {
       .isNotEmpty()
 
   /**
-   * Whether the modifiers ask for the whole frame. Explicit dp sizes are deliberately not counted:
-   * a root sized to a number covers the frame only by coincidence, and the notice is still true of
-   * it.
+   * Whether the modifiers ask for the whole frame; explicit dp sizes do not count.
    */
   private fun UiBuilderNode.fillsFrame(): Boolean {
     val types = modifiers.mapNotNull {

@@ -13,11 +13,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The ghost a drag carries is the thing itself, not a picture of a picture.
- *
- * The thumbnail's document answers "what is this" at 44 dp inside a fixed frame; the ghost's
- * answers "what will land", which means the component at its own size in the design's own theme, a
- * moved subtree as it is, and an honest null for the components that cannot stand alone.
+ * The ghost a drag carries is what will land: the component at its own size in the design's theme,
+ * a moved subtree as is, and null for components that can't stand alone.
  */
 class DragGhostDocumentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -54,10 +51,8 @@ class DragGhostDocumentTest {
 
   @Test
   fun `every component the palette offers carries a ghost`() {
-    // The same list `CatalogThumbnailTest` keeps empty: a component that stops producing a ghost
-    // loses its preview in the air and nothing else complains, so this is the thing that
-    // complains. The canvas still has a fallback for a null — a named chip — but it is a guard,
-    // not a live case.
+    // Kept empty like `CatalogThumbnailTest`'s list: a component losing its ghost would otherwise
+    // go unnoticed (the canvas's named-chip fallback for null is only a guard).
     val ghostless =
       catalog.components
         .map { it.componentId }
@@ -68,7 +63,7 @@ class DragGhostDocumentTest {
 
   /**
    * A catalog framed by its own container (A2UI's `a2ui/Column`) must not carry that container in
-   * the air: the canvas draws it as a dashed placeholder, and the drop never places it.
+   * the air.
    */
   @Test
   fun `an A2UI ghost is rooted at the component, not the column it was validated in`() {

@@ -60,13 +60,13 @@ fun parseVendoredFontManifest(text: String): VendoredFontManifest =
  * [loaded] is snapshot state, so readers recompose when a family arrives. Nothing, not even the
  * manifest, loads until the first [request] or [loadFamilies].
  *
- * A family that fails to load is left out rather than retried, so a missing file cannot become a
- * request loop. Names outside the manifest go to [readRemoteFont] when the host has a font service
- * (e.g. any Google Fonts family).
+ * A family that fails to load is not retried, so a missing file cannot become a request loop.
+ * Names outside the manifest go to [readRemoteFont] when the host has a font service.
  *
- * @param readManifest the manifest's text; failures leave the registry with no families. @param
- *   readFont a manifest file's bytes, by the name the manifest gives it. @param readRemoteFont a
- *   family's file at one weight, by family name; null for a host with no such service.
+ * @param readManifest the manifest's text; failures leave the registry with no families.
+ * @param readFont a manifest file's bytes, by the name the manifest gives it.
+ * @param readRemoteFont a family's file at one weight, by family name; null for a host with no
+ *   such service.
  */
 class UiBuilderFontRegistry(
   private val scope: CoroutineScope,
@@ -123,9 +123,8 @@ class UiBuilderFontRegistry(
 
   /**
    * [name]'s family at the axis coordinates [axes] sets, or the plain family when [axes] is empty;
-   * null until [name] has loaded. One `FontFamily` per name and setting, so a recomposition hands
-   * the text stack the same instance and it does not lay the text out again. See
-   * [variableFontFamily].
+   * null until [name] has loaded. Cached per name and setting so recomposition reuses the instance
+   * and avoids relayout. See [variableFontFamily].
    */
   override fun hasAxis(name: String, tag: String): Boolean =
     files[name].orEmpty().any { tag in it.axisTags }
@@ -217,11 +216,8 @@ class UiBuilderFontFile(val identity: String, val data: ByteArray, val weight: I
 }
 
 /**
- * A family's files at the axis coordinates [axes] sets, for any host that has the bytes.
- *
- * A coordinate is passed to the face as given — the font clamps it to its own range, and drops an
- * axis it does not have — and `wght`, when [axes] leaves it out, stays at each file's own weight,
- * which is what the plain family draws.
+ * A family's files at the axis coordinates [axes] sets. Coordinates are passed as given (the font
+ * clamps or ignores them); an omitted `wght` stays at each file's own weight.
  */
 fun variableFontFamily(files: List<UiBuilderFontFile>, axes: List<FontSettings.Axis>): FontFamily =
   FontFamily(
@@ -277,11 +273,9 @@ fun canonicalFamilyName(name: String): String? =
   remoteFamilyName(name).lowercase().takeIf { it.isNotEmpty() }
 
 /**
- * A font from bytes, which only the platform text stack knows how to build.
- *
- * Null [variationSettings] still sets `wght` to [weight]: the platform's overload without settings
- * draws a variable file at its default instance whatever weight it is declared at, so a family that
- * lists one variable file at several weights would draw every one of them alike.
+ * A font from bytes, which only the platform text stack knows how to build. Null
+ * [variationSettings] still sets `wght` to [weight], since the settings-free overload draws a
+ * variable file at its default instance.
  */
 internal expect fun platformFont(
   identity: String,
@@ -311,32 +305,16 @@ fun ProvideUiBuilderFonts(registry: UiBuilderFontRegistry?, content: @Composable
 /**
  * Families the host has already loaded, keyed by the family name a document's `typeface` names.
  *
- * **The renderer resolves, it does not fetch.** A document carries a family NAME
- * (`DesignEnvironmentV1.typeface`), and how that name becomes glyphs differs per host: the browser
- * renderer vendors eight families in `assets/rc-fonts` and can download anything else from Google
- * Fonts; a JVM test host has neither. Loading is asynchronous and platform-specific, and this
- * module is `commonMain` with no I/O in it, so the host does the loading and provides the result
- * here.
- *
- * That split is also what keeps the network question where it can be answered. A vendored family
- * resolves with no request at all, so the common cases — Roboto Flex and Google Sans Flex among
- * them — never touch the network; only a family nobody vendored needs one, and the host is the only
- * layer that knows whether the document's `networkAccess` permits it.
- *
- * Empty by default, which is exactly today's behaviour: nothing resolves, and every document
- * renders in the platform default face.
+ * The renderer resolves, it does not fetch: loading is asynchronous and host-specific (and only
+ * the host knows whether the document's `networkAccess` permits a download), while this module is
+ * I/O-free `commonMain`. Empty by default, so everything renders in the platform face.
  */
 val LocalUiBuilderFontFamilies = staticCompositionLocalOf<Map<String, FontFamily>> { emptyMap() }
 
 /**
- * The family each type-scale role is drawn in under a theme host, by role name, for the groups
- * whose family has loaded.
- *
- * [families] is what the host names, by group ([ThemeTypefaces.families]). Each family is asked of
- * the page's font registry here, where it is read, and the result is snapshot state: the canvas
- * draws in the platform face until a family arrives and recomposes in it when it does. A family
- * that never loads — no network, not a Google Fonts family — stays on the platform face, which is
- * what the design looked like before it named one.
+ * The family each type-scale role is drawn in under a theme host, by role name, for groups whose
+ * family has loaded. [families] comes from [ThemeTypefaces.families]; results are snapshot state,
+ * so the canvas recomposes when a family arrives and stays on the platform face if it never does.
  */
 @Composable
 fun rememberThemeRoleFamilies(

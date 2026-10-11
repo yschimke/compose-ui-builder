@@ -4,18 +4,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * The suggestion routes' payloads, as the editor reads them.
+ * The suggestion routes' payloads as the editor reads them (compose-preview-server, via
+ * `UiBuilderBranchPort`; see `docs/design/UI_BUILDER_BRANCHES.md` → Suggestions):
  *
- * The routes are the host's (compose-preview-server, over `UiBuilderBranchPort`; see
- * `docs/design/UI_BUILDER_BRANCHES.md` → Suggestions → What the server wires):
  * - `GET /api/ui-builder/v1/designs/{id}/suggestions` → [DesignSuggestionListWire]
- * - `POST /api/ui-builder/v1/designs/{id}/suggestions/{suggestionId}/accept`, body
- *   [DesignSuggestionAcceptWire] → [DesignSuggestionMergeWire] (a refused merge is a report with
- *   `merged: false`, not an error)
- * - `POST /api/ui-builder/v1/designs/{id}/suggestions/{suggestionId}/reject` → the suggestion.
+ * - `POST …/suggestions/{suggestionId}/accept`, body [DesignSuggestionAcceptWire] →
+ *   [DesignSuggestionMergeWire] (a refused merge is `merged: false`, not an error)
+ * - `POST …/suggestions/{suggestionId}/reject` → the suggestion.
  *
- * Kept in common code rather than beside the browser's `fetch` so the decoding and the words a
- * merge report turns into are tested on the JVM. Tolerant on the way in, as the comment payload is.
+ * In common code so decoding and merge-report wording are JVM-tested. Tolerant on the way in.
  */
 object DesignSuggestionCodec {
   private val json = Json {

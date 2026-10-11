@@ -9,21 +9,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The frame a catalog declares for its screens — the contract's `frame` block, as data.
- *
- * ## Why this is here rather than in the renderer
- *
- * A catalog knows what its screens look like: which drawing frames them, how much room the content
- * gets inside that drawing, what a new design opens on. This build knows how to *draw* a round
- * screen; it does not know that a watch's content is inset 10dp at 192. Those numbers were measured
- * in the catalog's own repository by a test that composes the real `ScreenScaffold`, and they were
- * then transcribed into the renderer as constants — so the same fact lived twice, in a file a test
- * writes and in a file a person edits, held equal by nobody.
- *
- * The catalog publishes them under `statusSemantics.frame`; this is the reader, and the renderer
- * consumes it through [LocalUiBuilderFrameGeometry] the way it consumes `canvas` adapters through
- * `LocalUiBuilderCanvasAdapters`. A catalog that declares nothing gets [None], which draws the
- * frame the document names with no insets rather than inventing one.
+ * The frame a catalog declares for its screens: the contract's `frame` block
+ * (`statusSemantics.frame`), as data. The catalog measures its insets with the real
+ * `ScreenScaffold`; the renderer reads them through [LocalUiBuilderFrameGeometry] rather than
+ * hard-coding them. A catalog that declares nothing gets [None]: the document's frame with no
+ * insets.
  *
  * @param adapter the canvas drawing that frames this catalog's screen root, e.g.
  *   `frame/round-screen`. Empty when the catalog declares none.
@@ -37,17 +27,15 @@ data class UiBuilderFrameGeometry(
   val seedDevice: String? = null,
   val contentPadding: List<ContentPadding> = emptyList(),
   /**
-   * The discrete frame sizes the catalog's designs are authored at — `geometry.sizesDp` — in the
-   * order the catalog lists them. A launcher widget catalog names its launcher grid sizes here
-   * (`3x2`, `2x1`); a Wear widget catalog its host containers. Empty for a catalog sized by device,
-   * which is every screen catalog.
+   * The discrete frame sizes the catalog's designs are authored at (`geometry.sizesDp`), in catalog
+   * order: launcher grid sizes (`3x2`, `2x1`) or Wear widget host containers. Empty for
+   * device-sized screen catalogs.
    */
   val sizes: List<FrameSize> = emptyList(),
 ) {
   /**
-   * The [sizes] as frame-picker entries at [density], under [CATALOG_SIZES_GROUP]. A catalog size
-   * changes the width and height and keeps the design's density: a grid cell is a dp rectangle, not
-   * a device.
+   * The [sizes] as frame-picker entries at [density], under [CATALOG_SIZES_GROUP]. Width and height
+   * change; density stays (a grid cell isn't a device).
    */
   fun sizePresets(density: Double): List<UiBuilderDevicePreset> = sizes.map {
     UiBuilderDevicePreset(
@@ -83,13 +71,8 @@ data class UiBuilderFrameGeometry(
     }
 
   /**
-   * The diameter a design is drawn at, given the frame its document names.
-   *
-   * A width inside the declared range is itself, which is what makes a `wearos_xl_round` pane draw
-   * a 240dp watch rather than a scaled 192dp one. Outside it — a phone frame, or a catalog that
-   * declares nothing — the smallest declared diameter is the answer, because a design opened on a
-   * phone is a design nobody has picked a watch for yet and a 411dp watch is worse than the
-   * smallest real one.
+   * The diameter a design is drawn at, given the frame its document names: its width if within the
+   * declared range, otherwise (a phone frame, or nothing declared) the smallest declared diameter.
    */
   fun diameterFor(widthDp: Int?): Int =
     when {
@@ -121,12 +104,8 @@ data class UiBuilderFrameGeometry(
     const val CATALOG_SIZE_ID_PREFIX: String = "size:"
 
     /**
-     * The `frame` block of a served catalog's `statusSemantics`, or [None].
-     *
-     * Tolerant on purpose: this reads a document another repository publishes, and a field it has
-     * not grown yet, or has renamed, must not take the canvas down. A frame this build cannot read
-     * is a frame it does not draw, which is visible and fixable, where an exception is a blank
-     * editor.
+     * The `frame` block of a served catalog's `statusSemantics`, or [None]. Tolerant: an unreadable
+     * frame isn't drawn, rather than blanking the editor.
      */
     fun from(statusSemantics: JsonObject): UiBuilderFrameGeometry {
       val frame = statusSemantics["frame"] as? JsonObject ?: return None

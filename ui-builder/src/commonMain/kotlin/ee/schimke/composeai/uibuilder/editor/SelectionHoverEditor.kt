@@ -56,14 +56,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * The selection's values, beside the selection.
- *
- * Deliberately the smallest thing that can be an editor: the properties this node actually carries
- * and the numbers inside its modifiers, each one row, each committed where it is typed. No adding,
- * no removing, no binding and no wrapping — those change what the node *is*, they belong in the
- * panel that has room to say so, and a card floating over the design is the wrong place to be
- * offered them. What is left is the thing people do most while looking at a design: change a number
- * and watch it move.
+ * The selection's values beside it: the properties this node carries and its modifiers' numbers,
+ * one row each, committed as typed. No adding, removing, binding or wrapping; those belong in the
+ * panel.
  */
 @Composable
 internal fun SelectionHoverEditor(
@@ -73,10 +68,7 @@ internal fun SelectionHoverEditor(
   /** How the node is sized, for the Hug / Fill chips — or null where it cannot be resized. */
   sizing: EditorNodeSizing? = null,
   onResize: (EditorSizing?, EditorSizing?) -> Unit = { _, _ -> },
-  /**
-   * `property:<name>` or `modifier:<type>.<field>`, for the control a just-run action should land
-   * in.
-   */
+  /** `property:<name>` or `modifier:<type>.<field>`: the control a just-run action should focus. */
   focusTarget: String?,
   onFocusHandled: () -> Unit,
   onCommitProperty: (String, String) -> Unit,
@@ -84,10 +76,7 @@ internal fun SelectionHoverEditor(
   onTextInputFocusChanged: (Boolean) -> Unit,
   /** Closes the card; the selection and the Properties panel are untouched. */
   onDismiss: (() -> Unit)? = null,
-  /**
-   * The grip that moves the card, applied to its title row. The canvas owns where the card is, so
-   * it supplies the gesture; the card only says which part of it is the handle.
-   */
+  /** The grip that moves the card, applied to its title row; the canvas supplies the gesture. */
   dragHandle: Modifier = Modifier,
 ) {
   Surface(
@@ -194,9 +183,8 @@ internal fun SelectionHoverEditor(
 }
 
 /**
- * One axis of the selection's size as two chips — Hug and Fill — with a fixed size shown as a
- * third, selected, when that is what the node has. The fixed chip is a readout, not a button: the
- * number it would need comes from the handle or from the width field under it.
+ * One axis of the selection's size as Hug and Fill chips, plus a selected readout chip for a fixed
+ * size (set by the handle or the width field).
  */
 @Composable
 private fun HoverSizingRow(axis: EditorAxisSizing, onChoose: (EditorSizing) -> Unit) {
@@ -348,12 +336,7 @@ internal fun HoverEditorRow(
   }
 }
 
-/**
- * A one-line field that commits what was typed when the caret leaves it, or on Enter.
- *
- * No Apply button, which the panel has room for and this does not: the rule here is that leaving
- * the field is the commit, and Enter is the way to say so without moving the pointer.
- */
+/** A one-line field that commits on focus loss or Enter. */
 @Composable
 private fun HoverTextControl(
   label: String,
@@ -364,10 +347,8 @@ private fun HoverTextControl(
   onCommit: (String) -> Unit,
 ) {
   var draft by remember(value) { mutableStateOf(value) }
-  // What this field has already sent. Enter commits, and so does losing focus — including the
-  // focus loss that *disposal* is, when the commit's own document change rebuilds this card.
-  // Without remembering it, one press of Enter wrote the same value twice: two revisions, two
-  // undo steps and two rounds to every collaborator for one edit.
+  // What this field already sent, so Enter followed by the focus loss of disposal does not commit
+  // twice.
   var sent by remember(value) { mutableStateOf(value) }
   val requester = remember { FocusRequester() }
   // A modifier the menu just added lands the caret in its first number, so "add padding" is one

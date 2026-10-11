@@ -13,13 +13,10 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The record components a Material 3 screen's variable font texts resolve through.
- *
- * Each text calls a declaration flexpress generates at export into the screen's own package, so no
- * catalog records it; one component per [VariableFontText.Request] says what the generator may
- * write there, the way [ScreenTheme]'s `MaterialTheme` record does for the theme. Its parameters
- * are the declaration's: each animated axis a `() -> Float`, then `fontSize`, `modifier` and
- * `color`.
+ * The record components a Material 3 screen's variable font texts resolve through: one per
+ * [VariableFontText.Request], since flexpress generates the declaration into the screen's package
+ * (as [ScreenTheme] does for `MaterialTheme`). Parameters: each animated axis as `() -> Float`,
+ * then `fontSize`, `modifier` and `color`.
  */
 internal object VariableFontTextRecord {
   /** The text's size when the design sets none. */

@@ -1,27 +1,19 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * A launcher widget's adaptive layout — `remote-widgets`' `AdaptiveLayout` — up to three layouts,
- * each authored at a launcher grid size, of which the widget shows the one that fits it best
- * (remote-m3-catalog's `AdaptiveLayout`).
- *
- * The widget makes that choice itself, during playback, through a `RemoteStateLayout`; the export
- * writes a plain call to the catalog's composable and nothing here takes part. This is the same
- * choice made for the editing canvas, so the slot drawn for a frame is the slot the widget shows at
- * that size — and the resizable launcher pane switches layout as it is dragged. It must stay
- * exactly the catalog's rule, which is Glance's `SizeMode.Responsive` pick:
- * - a slot is a breakpoint only when the design filled it — an omitted argument keeps the catalog's
- *   no-layout default — and a layout with none filled draws nothing;
+ * A launcher widget's adaptive layout (`remote-widgets`' `AdaptiveLayout`): up to three layouts at
+ * launcher grid sizes, of which the widget shows the best fit via a `RemoteStateLayout`. The export
+ * just calls the catalog's composable; this repeats the choice for the editing canvas, and must
+ * match Glance's `SizeMode.Responsive` pick exactly:
+ * - a slot is a breakpoint only when the design filled it; with none filled nothing draws;
  * - two slots at one size are one breakpoint, the earlier slot's;
  * - of the breakpoints that fit the frame, the closest (squared distance between the corners) wins,
  *   ties to the smaller; when none fits, the smallest.
  */
 object LauncherAdaptiveLayout {
   /**
-   * The canvas adapter a catalog names for its adaptive layout. An adapter rather than the
-   * component's id, so the builder learns no catalog's id: a catalog with a layout of this shape
-   * claims the adapter in its policy (`"canvas": "launcher/adaptive-layout"`), as `remote-widgets`
-   * does for `AdaptiveLayout`, and a builder without it draws a placeholder.
+   * The canvas adapter a catalog names for its adaptive layout, so the builder learns no catalog id
+   * (`"canvas": "launcher/adaptive-layout"`); without it, a placeholder draws.
    */
   const val CANVAS_ADAPTER: String = "launcher/adaptive-layout"
 

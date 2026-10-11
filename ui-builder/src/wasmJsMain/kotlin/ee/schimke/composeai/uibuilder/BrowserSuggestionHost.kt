@@ -15,13 +15,10 @@ import kotlinx.serialization.json.Json
 
 /**
  * The browser half of suggestion mode: list what is proposed for this design, fetch each proposal's
- * document to draw, and accept or reject one.
- *
- * A suggestion is a branch of the design (`docs/design/UI_BUILDER_BRANCHES.md` → Suggestions), so
- * its document is opened through the ordinary protocol request by the suggestion's own id — the
- * branch inherits the design's access, and no new document route is needed. Listing and deciding go
- * through the host's suggestion routes ([DesignSuggestionCodec] lists them); a host without them
- * answers the list with something that is not one, and the editor then draws no section at all.
+ * document, and accept or reject one. A suggestion is a branch
+ * (`docs/design/UI_BUILDER_BRANCHES.md` → Suggestions), so its document opens through the ordinary
+ * protocol request by its id, inheriting the design's access. Listing and deciding use the host's
+ * suggestion routes ([DesignSuggestionCodec]); a host without them yields no section.
  */
 internal class BrowserSuggestionHost(
   private val designId: String,

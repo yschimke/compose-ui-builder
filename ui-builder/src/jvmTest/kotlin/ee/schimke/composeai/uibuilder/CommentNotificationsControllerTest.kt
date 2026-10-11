@@ -24,12 +24,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * "Notify me about replies" against a scripted browser and server.
- *
- * The rules under test are compose-preview-server's (`serve-web/src/push/settings.ts`), so each
- * case names the one it pins: when the switch is not offered at all, what re-posting an existing
- * subscription on load decides, that turning it on keeps the person's other kinds, and that the
- * permission prompt is the click's and never the load's.
+ * "Notify me about replies" against a scripted browser and server, pinning compose-preview-server's
+ * rules (`serve-web/src/push/settings.ts`): when the switch is hidden, what re-posting an existing
+ * subscription on load decides, that turning on keeps other kinds, and that only a click prompts
+ * for permission.
  */
 class CommentNotificationsControllerTest {
   @Test

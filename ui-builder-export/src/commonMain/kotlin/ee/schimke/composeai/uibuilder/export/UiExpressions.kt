@@ -19,24 +19,17 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
 /**
- * Computed property values: `{"type":"expr","op":…,"args":[…]}` and `{"type":"system","value":…}`.
+ * Computed property values: `{"type":"expr","op":…,"args":[…]}` and `{"type":"system","value":…}`
+ * — values the player evaluates (clocks, progress-driven gauges, counters).
  *
- * A property used to be a literal, a state read or a loop binding, so nothing an author built could
- * change while the document played: a clock, a gauge driven by progress or a label that counts
- * needed a value the *player* evaluates. An expression is that value, written as a tree rather than
- * a string so every writer — the inspector's formula field, MCP, a hand-edited fixture — produces
- * the same validated shape, and so an error can name the operand it is about.
+ * A typed tree rather than a string, so every writer produces one validated shape and errors name
+ * their operand. Operands are ordinary property wrappers plus `system` (host values like the clock)
+ * and nested `expr`s; [check] infers each [UiValueKind] and refuses what does not type.
  *
- * Operands are ordinary property wrappers — `float`, `int`, `bool`, `string`, `color`, `state`,
- * `binding` — plus `system` for a value the host supplies (the clock) and nested `expr`s. The tree
- * is typed: [check] infers each operation's [UiValueKind] from its operands' and refuses what does
- * not type, so an export never discovers that `"a" * 2` means nothing.
- *
- * Three readers agree on the meaning here, and only here:
+ * Three readers share this meaning:
  * - the canvas, through [evaluate], at the preview state and the environment's fixed time;
- * - the Remote Kotlin writer, which lowers each node to the `RemoteFloat`/`RemoteInt`/
- *   `RemoteBoolean`/`RemoteString` operator the player evaluates ([RemoteExpressionWriter]);
- * - the inspector, which shows and accepts [format]/[parseFormula]'s text.
+ * - the Remote Kotlin writer, lowering to Remote operators ([RemoteExpressionWriter]);
+ * - the inspector, via [format]/[parseFormula].
  */
 object UiExpressions {
   const val EXPR: String = "expr"
@@ -198,12 +191,9 @@ object UiExpressions {
         )
 
       /**
-       * The kind of a state variable an expression may read, or null when it may not.
-       *
-       * The player holds a state variable as a typed value with a starting value, so a nullable
-       * declaration, or one whose initial value is absent, null or not of its declared kind, is not
-       * an operand: the Remote writer refuses it, and accepting it here would hand the author a
-       * formula every export then refuses.
+       * The kind of a state variable an expression may read, or null. Nullable declarations, or
+       * ones whose initial value is absent, null or mistyped, are not operands: the Remote writer
+       * refuses them.
        */
       fun stateKind(declaration: JsonObject?): UiValueKind? {
         declaration ?: return null
@@ -232,13 +222,9 @@ object UiExpressions {
   }
 
   /**
-   * Whether the published wire contract linked into this build can carry a computed value.
-   *
-   * `UiValueV1` in compose-preview-contracts has carried `expr` and `system` since 3.20.0
-   * (compose-preview-contracts#141); before that a design holding one could not be written as a
-   * `.uid` file or committed through a server. The inspector offers computed values only when this
-   * is true, so an author is never handed a value their save then refuses. Asked of the serializer
-   * itself rather than of a version number.
+   * Whether the linked wire contract can carry a computed value (`UiValueV1` has `expr`/`system`
+   * since compose-preview-contracts 3.20.0). The inspector offers computed values only when true.
+   * Asked of the serializer rather than a version number.
    */
   val wireSupported: Boolean by lazy {
     runCatching {
@@ -573,9 +559,7 @@ object UiExpressions {
         val match = fixedTime?.let(ISO_INSTANT::matchEntire) ?: return DEFAULT
         val (year, month, day, hour, minute, second) = match.destructured
         val fraction = match.groupValues[7]
-        // The service checks only that a fixed time is not blank, so a value that matches the
-        // shape but names no instant — month 13, hour 25 — draws at the default rather than
-        // taking the canvas down.
+        // A well-shaped but invalid instant (month 13) draws at the default rather than crashing.
         if (
           month.toInt() !in 1..12 ||
             day.toInt() !in 1..31 ||

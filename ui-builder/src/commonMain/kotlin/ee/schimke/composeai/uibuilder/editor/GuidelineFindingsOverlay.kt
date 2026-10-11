@@ -28,12 +28,9 @@ import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 
 /**
- * The guidelines findings over the design: an outline on each node a finding names and a badge on
- * its corner. The findings are the panel's — this person's latest run, else the design's recorded
- * one — and the overlay follows the "Show findings on the canvas" switch there.
- *
- * Composables rather than a canvas pass, because a badge is clicked (it selects the node) and read
- * out (it names the rule and what is wrong).
+ * Guideline findings over the design: an outline and corner badge per named node, from the panel's
+ * latest run (else the recorded one), following its "Show findings on the canvas" switch.
+ * Composables so badges are clickable (select the node) and readable.
  */
 @Composable
 internal fun GuidelineFindingsOverlay(

@@ -4,33 +4,13 @@ import ee.schimke.composeai.discovery.ComponentRecord
 
 /**
  * Generates the Kotlin a Wear widget design becomes: a `GlanceWearWidget`, its Remote Compose
- * content, and a `@Preview` per host container shape that draws it through the real host tooling —
- * the squircle the design is authored against, and the rectangular frame the widget picker editor
- * shows.
+ * content, and a `@Preview` per host container shape.
  *
- * ## Why this is not the Compose exporter
- *
- * [CapabilityComposeCodeExporter] writes Jetpack Compose Material 3 against a discovered component
- * record. A Wear widget is neither: it runs Remote Compose on a watch, its composables come from
- * `androidx.compose.remote.creation.compose` and `androidx.wear.compose.remote.material3`, and it
- * is delivered as a `WearWidgetDocument` rather than called from a screen. `remote-m3` therefore
- * has no component record and advertises no Compose export — correctly — and a widget design used
- * to generate nothing at all.
- *
- * ## The scaffold does not appear in the output
- *
- * `remote-m3/widget-container-*` is this builder's stand-in for
- * `androidx.glance.wear.composable.WearWidgetContainer`, and on-device that container belongs to
- * the host: the launcher draws it around widget content from `WearWidgetParams`. So the generated
- * code names it nowhere. Its background becomes the `WearWidgetBrush` handed to
- * `WearWidgetDocument`, its size picks the preview-params providers, and its padding and radius are
- * asserted against the shipped spec rather than emitted — a widget cannot choose them.
- *
- * ## Refusals are by name
- *
- * The same discipline as the Compose exporter: a node this emitter cannot write is refused and said
- * out loud, never approximated. A design that generates plausible Kotlin which draws something else
- * is worse than one that generates nothing.
+ * Not [CapabilityComposeCodeExporter]: a widget runs Remote Compose and is delivered as a
+ * `WearWidgetDocument`, so `remote-m3` has no component record. The `remote-m3/widget-container-*`
+ * scaffold stands in for the host's `WearWidgetContainer` and is not emitted: its background
+ * becomes the `WearWidgetBrush` and its size picks the preview providers. Unwritable nodes are
+ * refused by name, never approximated.
  */
 object WearWidgetCodeExporter {
 
@@ -49,10 +29,8 @@ object WearWidgetCodeExporter {
   }
 
   /**
-   * @param packageName the package the emitted file declares, or null for the pane's snippet. A
-   *   snippet is written to be pasted into a file that already has one; an export is the file, so
-   *   the two differ by exactly this line. It goes after `@file:Suppress`, which Kotlin requires
-   *   before the package declaration.
+   * @param packageName the package the emitted file declares, or null for the pane's snippet; the
+   *   two differ by exactly this line, written after `@file:Suppress`.
    */
   fun export(
     document: UiBuilderDocument,
@@ -66,14 +44,9 @@ object WearWidgetCodeExporter {
     }
 
   /**
-   * The same widget as a **project fragment**: readable source, and its pictures as files.
-   *
-   * The design, and why it is a second entry point rather than a size threshold on [export], is
-   * `docs/design/UI_BUILDER_EXPORT_BUNDLE.md` (yschimke/compose-preview-server#528). Both lanes
-   * walk the same document through the same emitter and refuse the same designs for the same
-   * reasons; they differ over one question — where a picture's bytes go — and over the two things
-   * that follow from it: the source opens files instead of decoding literals, and a content
-   * picture's parameter can default to the design's own artwork instead of to a blank bitmap.
+   * The same widget as a project fragment: readable source, with pictures shipped as files. Same
+   * walk and refusals as [export]; only where picture bytes go differs. See
+   * `docs/design/UI_BUILDER_EXPORT_BUNDLE.md`.
    */
   fun exportBundle(
     document: UiBuilderDocument,
@@ -115,13 +88,8 @@ object WearWidgetCodeExporter {
   }
 
   /**
-   * The one walk both lanes take.
-   *
-   * [bundled] decides the lane: null inlines a picture's bytes into the source, and a registry
-   * ships them beside it. Everything between — the scaffold checks, the depth probe, the body, the
-   * refusals — is the same code answering the same questions, which is the point of writing it
-   * once: two emitters would be two answers to "does this design export?", and this generator
-   * exists because that question already had two answers once.
+   * The one walk both lanes take; [bundled] decides the lane (null inlines picture bytes, a
+   * registry ships them beside the source).
    */
   private fun generate(
     document: UiBuilderDocument,
@@ -132,9 +100,8 @@ object WearWidgetCodeExporter {
   ): Outcome {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
-    // An adaptive widget is written once per container size, from the fixed-container design it
-    // resolves to at each (`AdaptiveWearWidget.resolve`), so every body below is one this generator
-    // already knows how to write. Large first: it is the size whose slots are all present.
+    // An adaptive widget is written once per container size from the design it resolves to there
+    // (`AdaptiveWearWidget.resolve`). Large first: all its slots are present.
     val adaptive = root.componentId == AdaptiveWearWidget.COMPONENT_ID
     val sizes =
       if (adaptive) listOf(WearWidgetScaffoldSize.Large, WearWidgetScaffoldSize.Small)
@@ -153,12 +120,9 @@ object WearWidgetCodeExporter {
     // are supported, so a legacy override on the container is ignored here as it is on the canvas.
 
     val resolved = sizes.map { AdaptiveWearWidget.resolve(document, it) }
-    // How deep the body sits, which the emitter needs *before* it writes a line: it wraps a call at
-    // its own column budget, and a theme wrapper moves every line of the body one level right. The
-    // wrapper is only wanted once a colour or type token has been written, though, which is
-    // something an emitter learns by emitting — so a throwaway pass asks the question and its
-    // refusals are dropped, the real emitter below being the one that reports them. One wrapper
-    // covers every size's branch, so any size wanting it is enough.
+    // The emitter needs the body's depth before writing (a theme wrapper indents it), but only
+    // learns whether a theme is needed by emitting. So a throwaway pass asks; its refusals are
+    // dropped.
     val usesTheme = resolved.any { sized ->
       val sizedRoot = sized.nodes.getValue(rootId)
       val contentIds = sizedRoot.slots["content"].orEmpty()
@@ -245,10 +209,7 @@ object WearWidgetCodeExporter {
           parameterList(parameters).ifEmpty { null },
         )
       appendLine("fun ${name}Content(${signature.joinToString()}) {")
-      // The design's state, before anything that writes it. A `valueChange` action names a REMOTE
-      // mutable, so the variables an action touched have to be declared here — and only those,
-      // because a widget that declares a variable nothing reads is an operation the player
-      // carries for nothing.
+      // Declare only the state variables an action writes; a `valueChange` names a Remote mutable.
       emitters.flatMap { it.stateLocals() }.distinct().forEach { appendLine("$INDENT$it") }
       val body =
         if (!adaptive) variants.single().body
@@ -281,10 +242,7 @@ object WearWidgetCodeExporter {
       appendLine("$INDENT${INDENT}context: Context,")
       appendLine("$INDENT${INDENT}params: WearWidgetParams,")
       appendLine("$INDENT): WearWidgetData {")
-      // The bundle lane's pictures are opened here and nowhere else: `provideWidgetData` is where
-      // the `Context` is, and a constructor default — which is where the inlining lane puts a
-      // picture — has none. That is also what lets a parameter default to the design's own
-      // artwork rather than to a blank bitmap.
+      // Bundled pictures are opened here, where the `Context` is; constructor defaults have none.
       bundledLocals(bundled != null, emitter.bundledBackgrounds, parameters).forEach {
         appendLine("$INDENT$INDENT$it")
       }
@@ -299,14 +257,8 @@ object WearWidgetCodeExporter {
       appendLine("$INDENT$INDENT}")
       appendLine("$INDENT}")
       appendLine("}")
-      // One preview per host shape, and one entry per shape rather than the provider's fan-out.
-      // `@PreviewParameter` unrolls a preview per footprint the container ships — for the Large
-      // squircle that is a constrained 182×112dp beside the 216×124dp the design is authored
-      // against — and a scaffold does not need both to show what it looks like. The largest is
-      // picked by width rather than by position, so the choice does not rest on the order a
-      // provider happens to yield.
-      //
-      // An adaptive widget previews at both sizes, since the point of it is what each one shows.
+      // One preview per host shape, at the provider's widest footprint (chosen by width, not
+      // order). An adaptive widget previews at both sizes.
       previews.forEach { (size, shape) ->
         val label = if (adaptive) "${shape.label} ${size.name}" else shape.label
         appendLine()
@@ -318,9 +270,7 @@ object WearWidgetCodeExporter {
         appendLine("$INDENT$INDENT${shape.paramsProviderFor(size)}().values.maxBy { it.widthDp },")
         appendLine("$INDENT)")
       }
-      // The inlined pictures sit below the preview for the same reason the declarations do:
-      // a base64 PNG is thousands of columns, and a reader who has to scroll past it to reach
-      // the widget has been handed a worse file than one who can stop reading at the preview.
+      // Inlined pictures go below the preview so readers can stop before the base64.
       inlineBitmapDeclarations(emitters.flatMap { it.inlineBitmaps }.distinct()).forEach {
         appendLine()
         appendLine(it)
@@ -331,9 +281,7 @@ object WearWidgetCodeExporter {
         appendLine()
         appendLine(it)
       }
-      // Last in the file, and deliberately: a Lottie animation is a few thousand columns of
-      // minified JSON, and a reader who has to scroll past it to reach the widget has been
-      // handed a worse file than one who can stop reading at the preview.
+      // Lottie JSON goes last, for the same reason.
       emitters
         .flatMap { it.declarations }
         .distinct()
@@ -345,9 +293,8 @@ object WearWidgetCodeExporter {
     return Outcome.Generated(
       name = name,
       source = source,
-      // `assets/` here and not in the path the source opens: `AssetManager` is already rooted at
-      // the source set's `assets/` directory, so the widget asks for `uibuilder/...` while the
-      // archive has to say where that directory goes.
+      // `AssetManager` is rooted at `assets/`, so the source opens `uibuilder/...` while the
+      // archive path includes `assets/`.
       files =
         (emitter.bundledBackgrounds + parameters.mapNotNull { it.bundled }).map {
           WidgetBundleFile(
@@ -361,13 +308,9 @@ object WearWidgetCodeExporter {
   }
 
   /**
-   * The locals a bundled picture becomes, in the order the reader meets them.
-   *
-   * A background is unconditional — the design draws that picture and no application supplies it. A
-   * content picture is the application's, so its local keeps the parameter and falls back: to the
-   * design's own artwork where the archive carries it, and to the blank bitmap the inlining lane
-   * uses where it does not. Every parameter gets a line, not only the ones the archive can answer:
-   * in this lane they are all nullable, and the content function takes bitmaps that are not.
+   * The locals bundled pictures become. Backgrounds are unconditional; content pictures keep the
+   * (nullable) parameter and fall back to the shipped artwork, else the inlining lane's blank
+   * bitmap.
    */
   private fun bundledLocals(
     bundled: Boolean,
@@ -445,18 +388,10 @@ object WearWidgetCodeExporter {
     }
 
   /**
-   * The widget class, which takes the body's pictures and defaults each to a blank bitmap.
-   *
-   * The parameters are the honest half: a widget's picture is application data, and the design
-   * carries an asset key rather than bytes source could name. The **default** is what makes the
-   * generated `@Preview` below still compile — it constructs this class with no arguments.
-   *
-   * What that default can be is the difference between the lanes. Inlining has nowhere to put a
-   * second picture, so it is a 1×1 transparent bitmap: a placeholder that looked like a picture
-   * would be a preview showing something the design does not have, and the hole is the honest
-   * preview. A bundle carries the artwork, so the parameter is nullable and `null` means "what the
-   * design was drawn with" — resolved in `provideWidgetData`, where the `Context` is, because a
-   * constructor default cannot open a file (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`).
+   * The widget class, taking the body's pictures as parameters (they are app data), defaulted so
+   * the generated `@Preview` can construct it with no arguments: a 1×1 transparent bitmap when
+   * inlining, or nullable `null` meaning "the shipped artwork" in a bundle, resolved in
+   * `provideWidgetData` where the `Context` is.
    */
   private fun widgetClassHeader(
     name: String,
@@ -481,22 +416,15 @@ object WearWidgetCodeExporter {
   }
 
   /**
-   * `return WearWidgetDocument(background = <brush>) {`, wrapped when it would run long.
-   *
-   * The brush chain is the one part of this file whose length the design controls — two literal
-   * gradient stops already spend 84 columns — so the single line the samples show is emitted only
-   * when it fits the [MAX_LINE] budget the rest of the generator keeps. Past that the brush is
-   * hoisted into a local, which is the shape `background.locals` already puts above it.
+   * `return WearWidgetDocument(background = <brush>) {`, on one line when it fits [MAX_LINE];
+   * otherwise the brush is hoisted into a local.
    */
   private fun documentReturn(background: RemoteContentEmitter.Background): List<String> {
     val expression = background.expression
     val body = "$INDENT${INDENT}return WearWidgetDocument(background = "
     val single = "$body$expression) {"
     if (single.length <= MAX_LINE) return listOf(single)
-    // Hoisted, and then broken between the chain's calls when the hoist is itself too long. An
-    // image element carries no length of its own — the bytes live in a val below — but a widget
-    // that layers a picture under two literal gradients still spends well past the budget on one
-    // line, and a generated file nobody can read across is a worse answer than a wrapped one.
+    // If the hoisted brush is still too long, break it between the chain's calls.
     val hoisted = "$INDENT$INDENT$INDENT$expression"
     val chain =
       if (hoisted.length <= MAX_LINE || background.elements.size < 2) listOf(hoisted)
@@ -521,27 +449,12 @@ object WearWidgetCodeExporter {
 }
 
 /**
- * The shapes a generated widget file previews itself in, in the order it writes them.
+ * The shapes a generated widget file previews itself in, in order: the default squircle first
+ * (what the canvas opens on), then the rectangular frame the widget picker editor shows.
  *
- * The squircle is the host's default and the frame the builder's canvas opens on, so it stays first
- * and it is what a reader compares against the design. The rectangular one is not a second opinion
- * about the same frame — its spec is genuinely different, see [hostSpec] — and it is the render the
- * widget picker editor is meant to show, which is the whole reason a designer needs it without
- * leaving the generated file.
- *
- * Every shape [WearWidgetHostShape] knows, rather than a list maintained here: the editor draws its
- * canvas from the same enum, so a shape that can be previewed in the editor is a shape the exported
- * file previews too, and neither can quietly grow a case the other lacks.
- *
- * Each provider is size-specific rather than the samples' `…AllWidgetPreviewParams`, because a
- * design is authored at one container size: previewing a Small design at both sizes would show a
- * Large frame nobody drew. Each still yields the screen diameters it ships, which is the axis the
- * design does not fix.
- *
- * The widget itself is unchanged between them. A `GlanceWearWidget` describes content; the frame
- * around it is the host's, handed in as `WearWidgetParams` — so drawing the same widget in a second
- * container is a second `@Preview` and nothing else: the design holds no padding or radius of its
- * own, only the predefined host shapes do.
+ * Every [WearWidgetHostShape], so editor and export cannot drift. Providers are size-specific,
+ * since a design is authored at one container size. The widget is unchanged between shapes; the
+ * frame comes from `WearWidgetParams`.
  */
 internal val WearWidgetScaffoldSize.previewShapes: List<WearWidgetHostShape>
   get() = WearWidgetHostShape.entries

@@ -13,9 +13,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Finding a node in a hundred-row tree by scrolling is the tax on every other thing the layers
- * panel can do, and it fell hardest on the multi-node inspector: restyling every text on a screen
- * meant spotting each of them by eye.
+ * Filtering the layers panel, so nodes in a large tree (e.g. every text, for the multi-node
+ * inspector) can be found without scrolling.
  */
 class EditorLayerFilterTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -36,9 +35,8 @@ class EditorLayerFilterTest {
 
   @Test
   fun `a match keeps exactly its own ancestors as context`() {
-    // Ancestors now come from parent pointers rather than a backward scan over every preceding
-    // row, so this is the property that had to survive the rewrite: the rows kept for a single
-    // match are that row plus its chain to the root, and nothing else.
+    // A single match keeps exactly that row plus its chain to the root (ancestors come from parent
+    // pointers).
     val rows = filtered("chip-crime-label")
     val all = reducer.treeRows(document)
     assertEquals(
@@ -175,9 +173,8 @@ class EditorLayerFilterTest {
 
   @Test
   fun `an authoritative update does not clear the filter`() {
-    // `authoritativeGeneration` advances for every snapshot and verified delta — including the
-    // confirmation of the user's own saved edit — and reconciliation rebuilt the editor without
-    // carrying this. Typing a filter and then saving cleared what you were looking at.
+    // `authoritativeGeneration` advances on every snapshot and verified delta (including one's own
+    // saved edit); the filter must survive the rebuild.
     val searching =
       reducer.reduce(
         reducer.initial(document, selectedNodeId = "root-surface"),

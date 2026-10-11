@@ -89,20 +89,14 @@ import kotlinx.serialization.json.longOrNull
 
 /**
  * The Kotlin parameter a catalog slot fills, where the two are spelled differently
- * (`layout/column`'s `children` is `Column(content = …)`).
- *
- * Authored here rather than by renaming the record's parameter, which would make the record lie
- * about the signature it attests. Unlisted slots pass through unchanged.
+ * (`layout/column`'s `children` is `Column(content = …)`). Unlisted slots pass through.
  */
 private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
   mapOf(
     "layout/box" to mapOf("children" to "content"),
     "layout/column" to mapOf("children" to "content"),
     "layout/row" to mapOf("children" to "content"),
-    // A flow row's slot is `content` like every other layout primitive's. Named here because
-    // without it the generator is handed the catalog's `children` against `FlowRow`'s signature
-    // and refuses with "`FlowRow` has no slot `children`" — a true statement about a component
-    // that is perfectly writable.
+    // `FlowRow`'s slot is `content`, like every other layout primitive's.
     "layout/flow-row" to mapOf("children" to "content"),
     // The lazy family names its slot `items`, which reads as a list of children and is a
     // `content` lambda on every one of the three Compose signatures.
@@ -130,15 +124,10 @@ private fun parameterForSlot(componentId: String, slot: String): String =
 /**
  * Projects a saved [DesignDocumentV1] onto the [ScreenDocument] `ScreenGenerator` consumes.
  *
- * The generator only emits call sites the component record proves, so this projection must express
- * each piece of content or refuse it by name — never guess. Refused today, each under its own
- * reason: computed state beyond reads and scalar declarations, events beyond assignments,
- * conditional nodes, assets, insets, accessibility semantics, and enum values no table names.
- *
- * Design tokens resolve through a table of Material 3's own accessors below; this is the layer that
- * knows the catalog is Material 3. Enum values are mapped by authored tables ([ENUM_MEMBERS],
- * [ICON_MEMBERS]) because wire values are lower-camel and many are not members of the parameter's
- * type; [VARIANT_PROPERTIES] carries the reasons for the rest.
+ * The generator only emits call sites the component record proves, so this projection must
+ * express each piece of content or refuse it by name — never guess. Design tokens resolve
+ * through Material 3 accessor tables; enum values through authored tables ([ENUM_MEMBERS],
+ * [ICON_MEMBERS], [VARIANT_PROPERTIES]).
  */
 object ScreenDocumentProjection {
 
@@ -153,22 +142,15 @@ object ScreenDocumentProjection {
     data class Projected(
       val document: ScreenDocument,
       /**
-       * Every `asset/image` whose picture the source stands in for with a placeholder painter.
-       *
-       * Not a refusal, and not silent either: the generated call is the right `Image(...)` with the
-       * design's own description, scale and modifiers, and the one argument this projection cannot
-       * write — a `Painter` for bytes that live in the design's asset store, not in Kotlin — is a
-       * theme-coloured `ColorPainter`. The caller says so beside the source, naming the key and the
-       * digest, so the person bundling the picture knows exactly which line to replace.
+       * Every `asset/image` written with a theme-coloured `ColorPainter` placeholder, since the
+       * bytes live in the asset store. The caller names each key and digest beside the source.
        */
       val assetPlaceholders: List<AssetPlaceholder> = emptyList(),
       /** Whether the root is wrapped in the design's theme; see [ScreenTheme]. */
       val themed: Boolean = false,
       /**
-       * Every typeface family written as a desktop `SystemFont` lookup, in the order the theme
-       * names them — empty unless the projection was asked for [TypefaceTarget.DESKTOP] and the
-       * theme names one. Not a refusal: the caller reports each with [SystemFontLookups], because a
-       * desktop render draws the family only where it is installed.
+       * Typeface families written as desktop `SystemFont` lookups (only for
+       * [TypefaceTarget.DESKTOP]); the caller reports them via [SystemFontLookups].
        */
       val systemFontFamilies: List<String> = emptyList(),
       /**
@@ -178,12 +160,9 @@ object ScreenDocumentProjection {
       val variableFontTexts: List<VariableFontText.Request> = emptyList(),
     ) : Outcome {
       /**
-       * [record] with what this projection's own calls resolve through: the `MaterialTheme` a
-       * themed root is wrapped in, which no catalog records.
-       *
-       * Added only to a themed screen. The generator reserves the name of every component the
-       * record holds, so a record carrying `MaterialTheme` refuses any screen that reads
-       * `MaterialTheme.typography` — which an unthemed screen does for every text style.
+       * [record] plus `MaterialTheme`, which a themed root's wrapper calls and no catalog records.
+       * Only added to a themed screen: a record carrying `MaterialTheme` makes the generator refuse
+       * reads of `MaterialTheme.typography`.
        */
       fun resolvable(record: ComponentRecordFile): ComponentRecordFile =
         VariableFontTextRecord.with(
@@ -200,19 +179,13 @@ object ScreenDocumentProjection {
     document: DesignDocumentV1,
     screenName: String = screenNameFor(document),
     /**
-     * Whether every node carries `Modifier.testTag("<nodeId>")`.
-     *
-     * Off for an export, because a test tag is not something a designer asked for and the artifact
-     * is source somebody keeps. On for the **native preview** lane, where it is the only thing that
-     * ties a rendered rectangle back to the node that drew it: the server's semantics observation
-     * already reports each authored tag with its bounds in render pixels, so tagging here is what
-     * lets a streamed Android or desktop frame carry selectable regions instead of being a picture.
+     * Whether every node carries `Modifier.testTag("<nodeId>")`. Off for exports; on for the native
+     * preview lane, where the tag ties rendered bounds back to design nodes.
      */
     tagNodes: Boolean = false,
     /**
-     * Which font API a theme's typefaces are written with: [TypefaceTarget.ANDROID]'s `GoogleFont`
-     * by default, or [TypefaceTarget.DESKTOP]'s `SystemFont` for a file compiled against a Compose
-     * Multiplatform Desktop classpath, which has no `GoogleFont`. See [TypefaceTarget].
+     * Which font API theme typefaces use: `GoogleFont` ([TypefaceTarget.ANDROID], default) or
+     * `SystemFont` ([TypefaceTarget.DESKTOP]). See [TypefaceTarget].
      */
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
   ): Outcome =
@@ -250,30 +223,21 @@ object ScreenDocumentProjection {
     callbackArguments: Map<String, Map<String, ScreenValue>> = emptyMap(),
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
   ): Outcome {
-    // No component record parameter. It was here only so an enum value could be qualified with
-    // its parameter's recorded type, and `enum` refuses instead — see its KDoc. A parameter kept
-    // "in case" is how a reader starts believing this projection type-checks against the record,
-    // which it does not: `ScreenGenerator` does that, once, with the record it is handed.
+    // No component record parameter: type-checking against the record is `ScreenGenerator`'s job.
     val pass = Pass(document, tagNodes, rootBindings, nodeOverrides, callbackArguments, typefaces)
     val roots = document.roots
     if (roots.size != 1) {
-      // One root is not a limitation of the generator; it is what a `@Composable fun Screen()`
-      // body is. Two roots need a container around them, and choosing `Column` over `Box` is a
-      // layout decision the document did not make and this projection must not invent.
-      //
-      // Every root is still visited before returning. Refusing on the count alone hid whatever
-      // else was wrong inside those roots until after someone had wrapped them and exported
-      // again — one export per problem, which is the thing `Outcome.Refused` exists to avoid.
+      // A single root is what a `@Composable fun Screen()` body is; wrapping several would be a
+      // layout decision the document did not make. Every root is still visited so all refusals are
+      // reported at once.
       val counted =
         "the document has ${roots.size} roots; a generated screen body needs exactly one, so " +
           "wrap them in a layout component in the builder"
       roots.forEach { pass.node(it) }
       return Outcome.Refused((listOf(counted) + pass.reasons).distinct())
     }
-    // The theme host the canvas draws the design under: the first surface among the top-level
-    // nodes — the root, or the items of the board an Add beside wrapped it in (`topLevelNodes` in
-    // `UiBuilderBoard`). One level, as there. The theme still wraps the whole root, because the
-    // canvas draws every item of the board under it.
+    // The theme host is the first surface among the top-level nodes (see `topLevelNodes` in
+    // `UiBuilderBoard`), one level deep. The theme still wraps the whole root.
     val rootNode = document.nodes[roots.single()]
     val topLevel =
       if (rootNode?.componentId == BOARD_CATALOG_ID)
@@ -284,9 +248,8 @@ object ScreenDocumentProjection {
         .firstOrNull { it.componentId == SURFACE_CATALOG_ID }
         ?.let { ScreenTheme.of(it, dark = document.environment.theme == ThemeV1.DARK) }
     if (theme != null && document.environment.theme == ThemeV1.SYSTEM) {
-      // The canvas picks the baseline scheme with `isSystemInDarkTheme()`, and the generated screen
-      // has no way to make that choice: a value here is a call, never a branch. Writing either one
-      // would change every role the theme leaves unset whenever the viewer's mode is the other.
+      // The canvas picks the baseline scheme with `isSystemInDarkTheme()`; a generated value can
+      // only be a call, never a branch, so writing either would be wrong in the other mode.
       pass.reasons +=
         "the design sets a theme on its surface and its environment theme is `system`, which " +
           "the export cannot follow at runtime; set the environment theme to light or dark"
@@ -300,9 +263,8 @@ object ScreenDocumentProjection {
       pass.finish(ScreenDocument(screenName, it, pass.state.values.toList()))
     }
     if (pass.reasons.isNotEmpty()) return Outcome.Refused(pass.reasons.distinct())
-    // Components are not behind this flag: a placement exports as a call to a private composable
-    // of the same file, which is ordinary Compose with no runtime of its own — the reusable part
-    // of a design that local components exist to give somebody.
+    // Components are not behind this flag: a placement exports as a private composable in the same
+    // file.
     if (!UiBuilderBuildFeatures.remoteCompose) {
       document.nodes.values
         .filter {
@@ -337,13 +299,8 @@ object ScreenDocumentProjection {
   )
 
   /**
-   * A Kotlin function name for the design.
-   *
-   * Derived from the title rather than the id because a title is what a human named the screen and
-   * an id is a uuid. Non-identifier runs become word boundaries, so `Schedule operations` is
-   * `ScheduleOperations`; a title with nothing usable in it falls back to a fixed name rather than
-   * to the id, since an id is no more likely to be an identifier. The generator checks the result
-   * either way — this only has to produce a plausible candidate.
+   * A Kotlin function name derived from the title (`Schedule operations` → `ScheduleOperations`),
+   * with a fixed fallback. The generator validates the result.
    */
   fun screenNameFor(document: DesignDocumentV1): String {
     val words =
@@ -444,9 +401,8 @@ object ScreenDocumentProjection {
           if (event == "click" && node.componentId in MODIFIER_CLICK_COMPONENTS) {
             return@mapNotNull null
           }
-          // The generator checks the recovered parameter's type. Unknown events and callbacks with
-          // parameters stay explicit refusals; a composable content slot can never become a
-          // handler.
+          // The generator checks the parameter's type. Unknown events and callbacks with parameters
+          // are refused; a content slot can never become a handler.
           val parameter = "on" + event.replaceFirstChar { it.uppercaseChar() }
           val projected = actions.mapNotNull { action -> action(action, node.id, event) }
           parameter to projected
@@ -502,9 +458,8 @@ object ScreenDocumentProjection {
       }
       return when (action) {
         is ToggleActionV1 -> target(action.variable)?.let(ScreenAction::Toggle)
-        // The shared generator writes a handler's `Set` only from a literal: `count.plus(1)` is
-        // refused there as "an expression that names an API", since a callback is not a
-        // composable scope. Counting needs its own shared action lowering first.
+        // The generator writes a handler's `Set` only from a literal, so `count.plus(1)` is refused
+        // until there is a shared action lowering for it.
         is IncrementActionV1 ->
           refuse(
             "$where increments `${action.variable}`, which needs a shared increment lowering in " +
@@ -526,12 +481,9 @@ object ScreenDocumentProjection {
     private val visiting = mutableSetOf<String>()
 
     /**
-     * `preferredWidth` links a pane scaffold hands to the node in each pane, keyed by that node.
-     *
-     * The width is authored on the scaffold (`mainPanePreferredWidthDp`) and applied by the pane's
-     * content (`Modifier.preferredWidth` is `PaneScaffoldScope`'s, parent data the scaffold's
-     * measure policy reads), so it crosses from one node to the other here — set when the
-     * scaffold's slots are visited, spent when the child's own modifier chain is built.
+     * `preferredWidth` links a pane scaffold hands to the node in each pane. Authored on the
+     * scaffold, applied by the pane content's `PaneScaffoldScope` modifier: set when the slots are
+     * visited, spent when the child's chain is built.
      */
     private val paneWidths = mutableMapOf<String, ChainLink>()
 
@@ -657,12 +609,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * What a component's parameter is called: the key its body reads, when that is a plain Kotlin
-     * name nothing else in the function claims — so `InboxEmail(sender = …, subject = …)` reads as
-     * somebody would have written it. Anything else (a keyword, `modifier`, a name the generated
-     * `argumentN`/`captureN` series could also produce, one already taken) keeps the opaque
-     * positional name, which cannot collide. A loop's row fields are read by key and never named
-     * here.
+     * A component parameter's name: the key its body reads when that is a plain, unclaimed Kotlin
+     * name; otherwise an opaque positional name that cannot collide.
      */
     private fun parameterName(scope: BindingScope, key: String): String {
       val positional = "argument${scope.fields.size}"
@@ -925,12 +873,8 @@ object ScreenDocumentProjection {
         }
 
     /**
-     * @param scope the receiver of the slot this node sits in, or null at the root.
-     *
-     * Threaded down rather than looked up, because a node has no parent pointer and the answer is
-     * about placement rather than about the node. It is what `weight` and `matchParentSize` need:
-     * both are declared on a slot's receiver, so whether either compiles is decided here and
-     * nowhere else.
+     * @param scope the receiver of the slot this node sits in, or null at the root. Threaded down
+     * because `weight` and `matchParentSize` legality depends on placement.
      */
     fun node(id: String, scope: String? = null): ScreenNode? {
       nodeOverrides[id]?.let {
@@ -941,9 +885,7 @@ object ScreenDocumentProjection {
         reasons += "the document references node `$id`, which it does not define"
         return null
       }
-      // A slot cycle is expressible in a map of ids and is not expressible in Kotlin. Left
-      // unchecked it is an infinite recursion here rather than a refusal, and the document arrives
-      // over the wire.
+      // A slot cycle cannot be expressed in Kotlin and would recurse forever; refuse it.
       if (!visiting.add(id)) {
         reasons += "node `$id` contains itself through its slots"
         return null
@@ -956,10 +898,8 @@ object ScreenDocumentProjection {
         if (SHOW_BY_STATE in node.properties) return selectionNode(node, scope)
         val variant = variantOf(node)
         return ScreenNode(
-          // A variant names a **component**, so it is spent here rather than emitted as an
-          // argument: `m3/card` with `variant = elevated` is `ElevatedCard`, which is a different
-          // callable with its own record. The catalog says as much itself — its `code.imports`
-          // lists all three — and this is the projection acting on it.
+          // A variant names a different component (`m3/card` + `elevated` is `ElevatedCard`), so it
+          // is spent here rather than emitted as an argument.
           componentId = variant?.canonicalId ?: node.componentId,
           arguments = arguments(node, scope, variant) + callbackArguments(node),
           handlers = handlers(node),
@@ -999,11 +939,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A variable font text: a call to the declaration flexpress generates for its font, text and
-     * held axes (see [VariableFontTextRecord]), passing each animated axis as a `() -> Float` and
-     * the size, colour and modifiers the design sets. An axis bound to state is animated and one
-     * with a number is held; a computed one is the Remote catalog's, and text has to be literal,
-     * because the outline is worked out from it ahead of time.
+     * A variable font text: a call to the flexpress-generated declaration for its font, text and
+     * held axes (see [VariableFontTextRecord]). State-bound axes animate as `() -> Float`; numeric
+     * ones are held. Text must be literal because the outline is computed ahead of time.
      */
     private fun variableFontTextNode(node: DesignNodeV1, scope: String?): ScreenNode? {
       val where = "node `${node.id}`"
@@ -1122,9 +1060,8 @@ object ScreenDocumentProjection {
         node.slots["children"].orEmpty().associateWith { child ->
           listOfNotNull(node(child, BOX_SCOPE))
         }
-      // This additive model shape is decoded strictly so the released dependency floor remains
-      // buildable. A local staged generator understands it; an older generator must refuse it,
-      // never silently drop selection and emit all branches. No Kotlin source is interpolated.
+      // Decoded strictly: an older generator must refuse this shape rather than drop selection and
+      // emit all branches. No Kotlin source is interpolated.
       val encoded =
         JsonObject(
           json.encodeToJsonElement(ScreenNode("", slots = branches)).jsonObject +
@@ -1153,9 +1090,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A card's content inside the `layout/box` the canvas and capability exporter put it in, so
-     * children get `BoxScope` alignment rather than `Card`'s `ColumnScope`. Sized by
-     * [cardContentFill] like the other lanes (#483).
+     * A card's content inside a `layout/box`, as the canvas draws it, so children get `BoxScope`
+     * alignment rather than `ColumnScope`. Sized by [cardContentFill].
      */
     private fun cardContentBox(card: DesignNodeV1, children: List<String>): ScreenNode {
       val fill = card.toUiBuilderNode().cardContentFill()
@@ -1205,10 +1141,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * Whether this property asks for something about the node's placement in its parent that no
-     * argument can carry, refusing by name if so. `span = full` needs a per-child `item(span = {
-     * GridItemSpan(maxLineSpan) })`, which a per-slot [SlotItem] cannot express; dropping it would
-     * silently export a single cell.
+     * Refuses by name a property about placement in the parent that no argument can carry, e.g.
+     * `span = full`, which needs a per-child `item(span = …)` a [SlotItem] cannot express.
      */
     private fun unplaceable(property: String, node: DesignNodeV1): Boolean {
       if (property != SPAN) return false
@@ -1221,30 +1155,21 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The receiver a slot's children are composed under.
-     *
-     * The variant answers when there is one, because it is the component actually being emitted;
-     * [SLOT_SCOPES] answers otherwise. Reading the table in both cases would give a `fab`'s content
-     * the `RowScope` that `m3/button`'s other three values have.
+     * The receiver a slot's children are composed under: the variant's when there is one (a `fab`
+     * has none), else [SLOT_SCOPES].
      */
     private fun slotScope(componentId: String, variant: ComponentVariant?, slot: String): String? =
       when {
-        // A DSL slot's children are not composed under the slot's own receiver — they sit inside
-        // the wrapper, whose receiver (`LazyItemScope`) nothing in the record attests. So they get
-        // none, and a `weight` inside a lazy list refuses by name exactly as one at the root does.
+        // DSL slot children sit inside the wrapper (`LazyItemScope`), which the record does not
+        // attest, so they get no receiver.
         SLOT_ITEMS[componentId]?.containsKey(slot) == true -> null
         variant != null -> variant.slotScopes[slot]
         else -> SLOT_SCOPES[componentId]?.get(slot)
       }
 
     /**
-     * The component a node's variant property selects, or null when it selects nothing.
-     *
-     * Null covers two different cases and both are right. A component with no variant property has
-     * no entry, and one whose variant is simply unset falls back to the record the catalog id
-     * already resolves to — `m3/card` is `Card`, which is what `filled` means anyway. A variant the
-     * table does not know refuses, because guessing which of three components a designer meant is
-     * the failure this whole file exists to avoid.
+     * The component a node's variant property selects, or null when it has none or it is unset
+     * (the catalog id's own record). An unknown variant refuses rather than guessing.
      */
     private fun variantOf(node: DesignNodeV1): ComponentVariant? {
       DIRECT_COMPONENTS[node.componentId]?.let {
@@ -1284,14 +1209,11 @@ object ScreenDocumentProjection {
     ): Map<String, ScreenValue> {
       unexpressible(node)
       val arguments = mutableMapOf<String, ScreenValue>()
-      // Properties that are not arguments at all — `m3/icon`'s `sizeDp` is `Modifier.size(24.dp)`,
-      // which `Icon` has no parameter for. Collected here rather than emitted where they are read,
-      // so a node with an authored modifier list and a modifier-shaped property produces one chain
-      // in a fixed order instead of two arguments the generator would reject the second of.
+      // Properties that become modifiers (`m3/icon`'s `sizeDp` → `Modifier.size`), collected so the
+      // node produces one chain in a fixed order.
       val fromProperties = mutableListOf<ChainLink>()
-      // Properties that are read together rather than one at a time, spent here before the loop
-      // below reaches them: an arrangement and the spacing it composes with, the two colour roles
-      // one `colors` bundle carries, a colour dot's whole modifier chain.
+      // Properties read together (arrangement + spacing, colour pairs, colour-dot chains) are spent
+      // before the loop below.
       val spent = composite(node, arguments, fromProperties)
       for ((property, value) in node.properties) {
         if (property in spent) continue
@@ -1408,9 +1330,8 @@ object ScreenDocumentProjection {
                 stateArgument(argument, node, property)?.let { argument.parameter to it }
               }
               .toMap()
-          // The same all-or-nothing rule the colour bundles keep, for the same reason: a state
-          // built from two of a component's three settings is a component configured differently
-          // from the one on the canvas, and it compiles.
+          // All-or-nothing: a state built from some of the settings would compile but differ from
+          // the canvas.
           if (named.size == present.size) {
             // The canvas's defaults for what the design left unset, in the table's own order, so
             // the call reads the way the factory declares it.
@@ -1550,9 +1471,8 @@ object ScreenDocumentProjection {
       val fill =
         when (val value = node.properties[DOT_COLOR]) {
           null -> refuse("$where sets no `$DOT_COLOR`, and a colour dot is nothing but its colour")
-          // The canvas reads this property as a literal string, so the text spelling is the one
-          // real documents hold; the wrappers are accepted because the reducer canonicalises to
-          // them.
+          // The canvas reads a literal string; the wrappers are accepted because the reducer
+          // canonicalises to them.
           is StringValueV1 -> color(value.value, "$where.`$DOT_COLOR`")
           else -> colour(value, "$where.`$DOT_COLOR`")
         }
@@ -1572,11 +1492,8 @@ object ScreenDocumentProjection {
 
     /**
      * `SupportingPaneScaffold`'s computed `directive` and `value` arguments, written as the window
-     * computation an app (and the canvas) performs.
-     *
-     * `layoutMode` is spent: every mode but `singlePane` means "what the directive decides", and
-     * `singlePane` / pane spacing become a `directive.copy(…)`. A hidden pane is refused; preferred
-     * pane widths go on the pane content via [paneWidthLink].
+     * computation the canvas performs. `singlePane` and pane spacing become `directive.copy(…)`;
+     * hidden panes are refused; preferred widths go via [paneWidthLink].
      */
     private fun supportingPanes(
       node: DesignNodeV1,
@@ -1757,12 +1674,9 @@ object ScreenDocumentProjection {
                 typeFqn = "kotlin.Int",
               )
             ),
-          // Both named, although adaptive-layout 1.2 defaults them: 1.3 drops those defaults and
-          // offers two overloads, one taking a `currentDestination` and one a `destinationHistory`,
-          // so a call that leaves them out does not compile against a catalog built on 1.3 — which
-          // is what m3-catalog's native lane compiles the export against. An explicit destination
-          // names the overload both versions have; a String content key also lets Kotlin infer
-          // the destination item's generic parameter.
+          // Both named: adaptive-layout 1.3 removes the defaults and splits the overload, and the
+          // native lane compiles against 1.3. An explicit destination picks the overload both
+          // versions share and lets Kotlin infer the item type.
           named =
             mapOf(
               "adaptStrategies" to
@@ -1957,12 +1871,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * `BoxScope.align(…)` for the `alignment` **property**, or null having said where the node is.
-     *
-     * The catalog declares `alignment` on `m3/text` and `layout/column` as "how a parent Box aligns
-     * this" node, and the canvas reads it off any child of a box. It is the authored `align`
-     * modifier under another spelling, so it takes the same route: a scoped link, legal only inside
-     * a `layout/box` slot, refused by name anywhere else rather than dropped.
+     * `BoxScope.align(…)` for the `alignment` property, or null having said where the node is.
+     * The same route as the authored `align` modifier: legal only inside a `layout/box` slot.
      */
     private fun boxAlignmentLink(
       value: UiValueV1,
@@ -2010,13 +1920,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * One end of a slider's range, which exports only when it is the end Material already has.
-     *
-     * `Slider` takes `valueRange: ClosedFloatingPointRange<Float>`, written `0f..100f`, and a range
-     * expression is not one of this vocabulary's shapes — `rangeTo` is a member of `Float` in the
-     * standard library, outside the packages a generated screen may name. So a bound equal to the
-     * default is spent, because omitting it leaves the parameter at exactly that value, and any
-     * other bound refuses by name rather than exporting a 0-to-100 slider as a 0-to-1 one.
+     * One end of a slider's range. `valueRange` needs a range expression this vocabulary cannot
+     * write, so only the default bound is accepted (spent); any other refuses by name.
      */
     private fun sliderBound(value: UiValueV1, node: DesignNodeV1, property: String) {
       val where = "node `${node.id}`.`$property`"
@@ -2056,10 +1961,7 @@ object ScreenDocumentProjection {
       return weightLink(number, fill = null, where = where, scope = scope)
     }
 
-    /**
-     * The same link for `weight` authored as a modifier, so both spellings share one narrowing
-     * rule. `fill` exists only on the modifier form.
-     */
+    /** `weight` authored as a modifier, sharing the narrowing rule. `fill` exists only here. */
     private fun weightLink(
       number: Double?,
       fill: Boolean?,
@@ -2093,10 +1995,7 @@ object ScreenDocumentProjection {
       )
     }
 
-    /**
-     * One chain link for a property whose Compose spelling is a modifier, or null having said why
-     * not.
-     */
+    /** One chain link for a property spelled as a modifier in Compose, or null with a reason. */
     private fun modifierLink(
       callableFqn: String,
       value: UiValueV1,
@@ -2152,9 +2051,7 @@ object ScreenDocumentProjection {
       scope: String?,
       leading: List<ChainLink> = emptyList(),
     ): ScreenValue? {
-      // Every modifier is visited even after one fails. A non-local `return` out of the map stopped
-      // at the first, which quietly broke this projection's one promise: `Outcome.Refused` carries
-      // *every* unexpressible thing so a document can be fixed in one pass, not one per export.
+      // Visit every modifier even after a failure so `Outcome.Refused` lists every problem at once.
       val links = node.modifiers.map { link(it, node.id, scope) }
       if (links.any { it == null }) return null
       // Last in the chain, so a tagged preview and its untagged export differ by exactly one
@@ -2164,19 +2061,16 @@ object ScreenDocumentProjection {
         else listOf(ChainLink(TEST_TAG, positional = listOf(ScreenValue.Text(node.id))))
       return ScreenValue.Chain(
         receiver = ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
-        // The authored chain first, then the links a property implied, then the tag. A designer's
-        // own order is the one thing here that carries intent, so nothing is interleaved with it.
-        // Only a parent's padding precedes it — [scaffoldPaddings] — because that is the canvas's
-        // order: the scaffold pads its content, and the content's own modifiers apply inside.
+        // Authored chain first, then property-implied links, then the tag; only a parent scaffold's
+        // padding precedes it, matching the canvas's order.
         links = leading + links.filterNotNull() + fromProperties + tag,
         typeFqn = MODIFIER,
       )
     }
 
     /**
-     * The chain link one authored modifier becomes, or null having said why. Every
-     * `DesignModifierV1` subtype is answered; the `else` branch only catches a newer protocol,
-     * keeping that a named refusal instead of a dropped modifier.
+     * The chain link one authored modifier becomes, or null with a reason. The `else` branch only
+     * catches a newer protocol, as a named refusal.
      */
     private fun link(modifier: DesignModifierV1, nodeId: String, scope: String?): ChainLink? {
       return when (modifier) {
@@ -2184,10 +2078,9 @@ object ScreenDocumentProjection {
         FillMaxHeightModifierV1 -> ChainLink("$LAYOUT.fillMaxHeight")
         FillMaxSizeModifierV1 -> ChainLink("$LAYOUT.fillMaxSize")
         is PaddingModifierV1 -> {
-          // No usable axis emits `Modifier.padding()`, which is ambiguous between Compose's two
-          // fully-defaulted overloads and compiles as neither. Catalog validation checks that the
-          // modifier *type* is allowed and not that its axes are numbers, and the renderer reads a
-          // bad number as zero, so such a document reaches here rather than being stopped earlier.
+          // No usable axis would emit `Modifier.padding()`, which is ambiguous between two
+          // overloads. Validation does not check the axes are numbers, so such a document can reach
+          // here.
           val insets =
             insets(modifier.startDp, modifier.topDp, modifier.endDp, modifier.bottomDp)
               ?: run {
@@ -2197,10 +2090,8 @@ object ScreenDocumentProjection {
           ChainLink("$LAYOUT.padding", positional = insets.first, named = insets.second)
         }
         is SizeModifierV1 -> {
-          // `size` has two overloads and neither accepts one named axis: `size(size: Dp)` names
-          // its parameter `size`, and `size(width: Dp, height: Dp)` requires both. So a modifier
-          // carrying one axis has to become `width(…)` or `height(…)`, which the renderer treats
-          // the same way and the compiler accepts.
+          // Neither `size` overload takes one named axis, so a single axis becomes
+          // `width`/`height`.
           val width = dp(modifier.widthDp)
           val height = dp(modifier.heightDp)
           when {
@@ -2240,10 +2131,8 @@ object ScreenDocumentProjection {
         is AspectRatioModifierV1 ->
           floatLink("$LAYOUT.aspectRatio", modifier.ratio, nodeId, "aspectRatio")
         is WrapContentSizeModifierV1 ->
-          // Positional, because the parameter is named `align` while every other alignment in this
-          // file is called `alignment` — a name worth not restating from memory. An unset
-          // alignment writes no argument at all rather than an invented `Center`, which is what
-          // Compose's own default already is.
+          // Positional: the parameter is `align`, not `alignment`. Unset writes nothing (Compose's
+          // default is already `Center`).
           ChainLink(
             "$LAYOUT.wrapContentSize",
             positional = modifier.alignment?.let { listOf(alignment(it)) } ?: emptyList(),
@@ -2251,10 +2140,7 @@ object ScreenDocumentProjection {
         is AlphaModifierV1 -> floatLink("$DRAW.alpha", modifier.alpha, nodeId, "alpha")
         is RotateModifierV1 -> floatLink("$DRAW.rotate", modifier.degrees, nodeId, "rotate")
         is ScaleModifierV1 -> {
-          // Both axes or neither. `scale(scaleX, scaleY)` is the two-axis overload and there is a
-          // one-argument `scale(scale: Float)` that means both at once — naming one axis of the
-          // pair would silently scale the other by its default of 1, which the document did not
-          // say.
+          // Both axes or neither: one axis would silently scale the other by its default of 1.
           val x = float(modifier.scaleX, nodeId, "scaleX")
           val y = float(modifier.scaleY, nodeId, "scaleY")
           if (x == null || y == null) null
@@ -2265,9 +2151,7 @@ object ScreenDocumentProjection {
         is TestTagModifierV1 ->
           ChainLink(TEST_TAG, positional = listOf(ScreenValue.Text(modifier.tag)))
         is ClipModifierV1 ->
-          // A theme shape first, then the two constants. `medium` and `large` are what real
-          // documents clip to and they are `MaterialTheme.shapes` roles, not constants — refusing
-          // them lost a clip the previous exporter rendered correctly.
+          // Theme shape roles (`medium`, `large`) first, then the two constants.
           shapeOf(modifier.shape)?.let { ChainLink("$DRAW.clip", positional = listOf(it)) }
             ?: refuseShape(nodeId, "clips to", modifier.shape)
         is BackgroundModifierV1 -> {
@@ -2331,20 +2215,16 @@ object ScreenDocumentProjection {
             "node `$nodeId`'s `weight` modifier",
             scope,
           )
-        // The three `align`s and `matchParentSize` are the same fact four times: each is declared
-        // on a slot's receiver, so which one compiles is decided by where the node sits and by
-        // nothing about the node itself. A `Column` child aligns horizontally, a `Row` child
-        // vertically, and only a `Box` child names a two-axis `Alignment`.
+        // The `align`s and `matchParentSize` are declared on a slot's receiver, so legality depends
+        // on where the node sits: Column children align horizontally, Row vertically, Box on two
+        // axes.
         is AlignModifierV1 ->
           alignLink(nodeId, scope, BOX_SCOPE, "box", alignment(modifier.alignment))
         is AlignHorizontalModifierV1 ->
           alignLink(nodeId, scope, COLUMN_SCOPE, "column", horizontal(modifier.alignment))
         is AlignVerticalModifierV1 ->
           alignLink(nodeId, scope, ROW_SCOPE, "row", vertical(modifier.alignment))
-        // `matchParentSize` is declared on `BoxScope`, so it compiles inside a `Box` slot and
-        // nowhere else. This projection now knows which slot a node was placed in, so the answer
-        // is a lookup rather than the refusal it used to be — and outside a `Box` it is still a
-        // refusal, because emitting it there is an unresolved reference.
+        // `matchParentSize` is `BoxScope`-only; outside a `Box` slot it is refused.
         MatchParentSizeModifierV1 ->
           if (scope == BOX_SCOPE)
             ChainLink("$BOX_SCOPE.matchParentSize", receiverScopeFqn = BOX_SCOPE)
@@ -2410,12 +2290,8 @@ object ScreenDocumentProjection {
       float(value, nodeId, name)?.let { ChainLink(callableFqn, positional = listOf(it)) }
 
     /**
-     * A `Float` for a JSON number, or null having said why there isn't one.
-     *
-     * The narrowing rule `Dp` gets, for the same reason and with the same answer. `alpha`,
-     * `rotate`, `scale`, `zIndex` and `aspectRatio` all take a `Float`, and a `Double` that does
-     * not survive the narrowing would be emitted as `Infinity` or collapse to zero — a number the
-     * design never contained, returned as a success.
+     * A `Float` for a JSON number, or null having said why. A `Double` that overflows or underflows
+     * on narrowing is refused rather than emitted as `Infinity` or zero.
      */
     private fun float(value: JsonElement?, nodeId: String, name: String): ScreenValue? {
       val number = (value as? JsonPrimitive)?.doubleOrNull
@@ -2457,9 +2333,9 @@ object ScreenDocumentProjection {
             ScreenValue.Construct(
               callableFqn = ROUNDED_CORNER_SHAPE_FQN,
               positional = listOf(corner),
-              // `Shape`, not `RoundedCornerShape`: the generator compares this claim against the
-              // parameter's own `typeFqn` as a string, exactly as the property-side
-              // `ROUNDED_CORNER_SHAPE` target kind does one screen over.
+              // `Shape`, not `RoundedCornerShape`: the generator compares this against the
+              // parameter's
+              // `typeFqn` as a string.
               typeFqn = SHAPE,
             )
           }
@@ -2476,9 +2352,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * `.verticalScroll(rememberScrollState())`, with the state remembered inline at the call —
-     * legal because the generated body is composable
-     * ([#481](https://github.com/yschimke/compose-preview-server/issues/481)).
+     * `.verticalScroll(rememberScrollState())`, remembered inline — legal because the generated
+     * body is composable.
      */
     private fun scrolls(callableFqn: String): ChainLink =
       ChainLink(
@@ -2487,12 +2362,9 @@ object ScreenDocumentProjection {
       )
 
     /**
-     * A `<Scope>.align(…)`, or null having said where the node actually is.
-     *
-     * `align` is three different members with three different parameter types, one per scope, and a
-     * document names which by the modifier it authored. Emitting the wrong one is not a wrong
-     * picture but an unresolved reference, so the scope is checked here as well as by the generator
-     * against the record — see [ChainLink.receiverScopeFqn].
+     * A `<Scope>.align(…)`, or null having said where the node is. Each scope's `align` is a
+     * different member, so the wrong one is an unresolved reference; see
+     * [ChainLink.receiverScopeFqn].
      */
     private fun alignLink(
       nodeId: String,
@@ -2528,11 +2400,9 @@ object ScreenDocumentProjection {
       else ScreenValue.Fractional(number)
     }
 
-    /** A `Dp` for a JSON number, or null when the field was absent or not a number. */
     /**
-     * Four insets as hand-written `padding` / `PaddingValues` arguments: `(all)`, `(horizontal,
-     * vertical)`, or the non-zero sides by name. Non-numeric sides count as zero, as the renderer
-     * reads them.
+     * Four insets as `padding` / `PaddingValues` arguments: `(all)`, `(horizontal, vertical)`, or
+     * the non-zero sides by name. Non-numeric sides count as zero, as the renderer reads them.
      */
     private fun insets(
       start: JsonElement?,
@@ -2570,10 +2440,7 @@ object ScreenDocumentProjection {
     private fun dp(number: Double): ScreenValue? =
       unitReceiver(number)?.let { receiver ->
         ScreenValue.Chain(
-          // `16.dp` rather than `Dp(16f)`: the extension is what a human writes, and it reads the
-          // same in the generated file as in the file it was copied from. The receiver is a whole
-          // number when it is one, because `.dp` is declared on `Int` and on `Float` alike and an
-          // `Int` receiver keeps `16.dp` from rendering as `16.0.dp`.
+          // `16.dp` as a human writes it; a whole-number receiver avoids `16.0.dp`.
           receiver = receiver,
           links = listOf(ChainLink("androidx.compose.ui.unit.dp", property = true)),
           typeFqn = DP,
@@ -2581,13 +2448,8 @@ object ScreenDocumentProjection {
       }
 
     /**
-     * One property whose Compose parameter is not merely spelled differently but *shaped*
-     * differently.
-     *
-     * A catalog authors what a designer sets — a corner radius in dp, a gap between children — and
-     * Compose takes what the API declares: a `Shape`, an `Arrangement.Vertical`. The number in the
-     * document is an ingredient of the argument rather than the argument, so a rename alone would
-     * hand `Surface` a `Float` where it wants a `Shape`.
+     * One property whose Compose parameter is shaped differently, not just named differently: the
+     * document's number (a radius, a gap) is an ingredient of a `Shape` or `Arrangement`.
      */
     private fun retarget(
       target: ParameterTarget,
@@ -2599,9 +2461,7 @@ object ScreenDocumentProjection {
       val where = "node `${node.id}`.`$property`"
       if (target.kind == TargetKind.RENAME) return value(value, node, property)
       if (target.kind == TargetKind.INT) {
-        // The wire's numbers are floats unless a writer said `int`, and a palette insert or an
-        // older document says `0.0` for an index. A whole float is that index; a fractional one is
-        // not an index at all.
+        // Wire numbers may be floats (`0.0`); a whole float is an index, a fractional one is not.
         return when (value) {
           is IntegerValueV1 -> ScreenValue.Whole(value.value)
           is DecimalValueV1 ->
@@ -2612,13 +2472,9 @@ object ScreenDocumentProjection {
         }
       }
       if (target.kind == TargetKind.ASSET_PAINTER) {
-        // The one argument no `ScreenValue` can carry: the picture is bytes in the design's asset
-        // store, and the host convention for a bundled resource — `R.drawable` here, `Res.drawable`
-        // there — names a symbol nothing on the generator's classpath declares. What compiles on
-        // every host and draws *something* in the picture's frame is a `ColorPainter` in the
-        // theme's surface-variant, the same ground the canvas paints under an unresolved key. The
-        // substitution is recorded on the outcome rather than hidden in it, so the export can say
-        // beside the source which line to replace and with which bytes.
+        // The picture's bytes are in the asset store and no resource symbol is on the classpath, so
+        // draw a surface-variant `ColorPainter` (as the canvas does for an unresolved key) and
+        // record the substitution on the outcome.
         val assetKey =
           when (value) {
             is AssetKeyValueV1 -> value.value
@@ -2641,13 +2497,8 @@ object ScreenDocumentProjection {
         )
       }
       if (target.kind == TargetKind.CARD_COLORS) {
-        // `CardDefaults.cardColors` is `@Composable`, which is why this is expressible at all: the
-        // generated screen body is one, so the call site is legal exactly where the argument goes.
-        //
-        // The factory follows the variant. All three return a `CardColors`, so `cardColors` would
-        // compile on an `ElevatedCard` — and would quietly give it the *filled* card's content and
-        // disabled colours for every role the designer did not set. A wrong colour that compiles is
-        // the failure mode this projection is built to refuse, so the defaults match the component.
+        // The colours factory follows the variant: all return `CardColors`, so the wrong one
+        // compiles but gives the wrong defaults for unset roles.
         val color = value(value, node, property) ?: return null
         return ScreenValue.Construct(
           callableFqn = "$CARD_DEFAULTS.${variant?.defaults ?: "card"}Colors",
@@ -2656,13 +2507,8 @@ object ScreenDocumentProjection {
         )
       }
       if (target.kind == TargetKind.BUTTON_COLORS) {
-        // The card's argument one component family over, and it needs the same care for the same
-        // reason: all four `ButtonDefaults` factories return a `ButtonColors`, so `buttonColors`
-        // would compile on a `TextButton` and hand it the *filled* button's content and disabled
-        // colours for every role the designer did not set.
-        //
-        // `fab` never reaches here — `FloatingActionButton` takes a bare `Color` and says so
-        // through `ComponentVariant.propertyTargets`, which is the axis #393 added.
+        // Same as cards: all `ButtonDefaults` factories return `ButtonColors`. `fab` never reaches
+        // here; it takes a bare `Color` via `ComponentVariant.propertyTargets`.
         val color = value(value, node, property) ?: return null
         return ScreenValue.Construct(
           callableFqn = "$BUTTON_DEFAULTS.${variant?.defaults ?: "button"}Colors",
@@ -2691,9 +2537,7 @@ object ScreenDocumentProjection {
             }
           }
         val narrowed = fraction.toFloat()
-        // The same narrowing every other number here gets. A value past `Float` becomes `Infinity`
-        // and one below it collapses to zero, and a progress bar drawn from either is not the one
-        // anybody designed.
+        // The same `Float` narrowing as everywhere else; overflow or underflow is refused.
         if (!narrowed.isFinite() || (narrowed == 0f && fraction != 0.0)) {
           return refuse("$where is $fraction, which does not survive `Float`")
         }
@@ -2703,9 +2547,7 @@ object ScreenDocumentProjection {
       if (target.kind == TargetKind.SHAPE_TOKEN) {
         if (value is BindingValueV1)
           return binding(value, SHAPE, where) { retarget(target, it, node, property, variant) }
-        // Only the text spelling needs help. A `shapeToken` wrapper already resolves through the
-        // same table in `value`, and the checked-in fixtures use it — narrowing this to strings
-        // refused a document that exported before, which is the one thing a widening must not do.
+        // Only the text spelling needs help; `shapeToken` already resolves via `value`.
         val name = (value as? StringValueV1)?.value ?: return value(value, node, property)
         return token(name, SHAPE_TOKENS, SHAPE, "shape", where)
       }
@@ -2728,9 +2570,8 @@ object ScreenDocumentProjection {
           ScreenValue.Construct(
             callableFqn = ROUNDED_CORNER_SHAPE_FQN,
             positional = listOf(dp),
-            // The parameter's own type, not the expression's. `RoundedCornerShape` is a `Shape`,
-            // and the generator compares this claim to `TargetParameter.typeFqn` as a string — the
-            // same reason `clip` claims `Shape` for a theme role rather than the role's own class.
+            // The parameter's type, not the expression's: the generator compares `typeFqn` as a
+            // string.
             typeFqn = SHAPE,
           )
         TargetKind.SPACED_BY_VERTICAL,
@@ -2756,20 +2597,14 @@ object ScreenDocumentProjection {
     private fun value(value: UiValueV1, node: DesignNodeV1, property: String): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
       return when (value) {
-        // A `string` wrapper on a property whose values are an enumeration is read through the same
-        // table the `enum` wrapper is. The reducer now rejects that spelling on a write (#339), so
-        // nothing new arrives this way — but documents committed before it did already render, and
-        // refusing them here with "`Text`.`style` is a TextStyle, which Text is not" names the
-        // wrong problem in a message that cannot be acted on from the builder.
+        // A `string` wrapper on an enum property is read via the enum table so older documents
+        // still export; the reducer now rejects this spelling on write.
         is StringValueV1 ->
           when {
             enumerated(node.componentId, property) ->
               enum(value.value, node.componentId, property, where)
-            // The modifier's sentence for the property's mistake. Left to the generator, a
-            // `string` on `m3/text.color` was refused as "`Text`.`color` is Color, which Text is
-            // not" — a message about a type the author never wrote, with no hint that the wrapper
-            // was the problem (#476). The reducers refuse the spelling at commit now; a document
-            // that already holds it gets the same words here.
+            // Give the modifier's message for this mistake rather than the generator's confusing
+            // type error. The reducers refuse the spelling at commit now.
             PropertyValueKinds.isColour(property) -> colour(value, where)
             else -> ScreenValue.Text(value.value)
           }
@@ -2780,9 +2615,7 @@ object ScreenDocumentProjection {
         is ColorTokenValueV1 -> colourToken(value.value, where)
         is TypographyTokenValueV1 ->
           token(value.value, TYPOGRAPHY_TOKENS, TEXT_STYLE, "typography", where)
-        // Through `shapeOf` rather than the table alone, so a corner radius written as a number
-        // reads the same on a property as it does in a `clip` modifier. `token` still writes the
-        // refusal for a name that is neither.
+        // Via `shapeOf` so a numeric corner radius reads the same as in a `clip` modifier.
         is ShapeTokenValueV1 ->
           shapeOf(value.value) ?: token(value.value, SHAPE_TOKENS, SHAPE, "shape", where)
         is DimensionValueV1 -> dimension(value, where)
@@ -2810,10 +2643,8 @@ object ScreenDocumentProjection {
         is InsetsValueV1 ->
           refuse("$where is window insets, which are read through a composable call, not a value")
         is NullValueV1 ->
-          // Not a refusal of principle: `null` is a perfectly good argument. But the generator
-          // checks a claimed type against the parameter's, and `null`'s type is whatever the
-          // parameter is — there is nothing to claim. A nullable parameter left unset takes its
-          // default, which is what the document meant.
+          // `null` has no type to claim against the parameter; leaving it unset applies the
+          // default.
           refuse("$where is null; leave the property unset instead so the default applies")
         is ListValueV1 -> refuse("$where is a list, which no component parameter accepts directly")
         is ObjectValueV1 -> refuse("$where is an object, which has no Kotlin literal")
@@ -2827,10 +2658,8 @@ object ScreenDocumentProjection {
           refuse("$where is a resource reference, which needs an Android resource context")
         is AssetKeyValueV1 -> refuse("$where is an asset key, which needs an artwork adapter")
         is AdaptiveGridValueV1 -> {
-          // `LazyVerticalGrid(columns = …)` takes exactly this as a value, so the refusal this
-          // replaces was true only while no grid had a record to be an argument of. A cell width
-          // that is absent or does not survive `Dp` still refuses, through the same `JsonElement`
-          // narrowing every other dimension in this file goes through.
+          // `LazyVerticalGrid(columns = …)` takes this as a value; absent or non-`Dp` widths
+          // refuse.
           val minimum =
             dp(value.minimumCellWidthDp)
               ?: return refuse(
@@ -2840,8 +2669,7 @@ object ScreenDocumentProjection {
           ScreenValue.Construct(
             callableFqn = "androidx.compose.foundation.lazy.grid.GridCells.Adaptive",
             positional = listOf(minimum),
-            // The parameter's own type, not the expression's: `GridCells.Adaptive` is a
-            // `GridCells`, and the generator compares this claim to `TargetParameter.typeFqn` as a
+            // The parameter's type, not the expression's: the generator compares `typeFqn` as a
             // string.
             typeFqn = "androidx.compose.foundation.lazy.grid.GridCells",
           )
@@ -2859,14 +2687,8 @@ object ScreenDocumentProjection {
 
     private fun color(value: String, where: String): ScreenValue? {
       val digits = value.removePrefix("#")
-      // The prefix is required, not optional. `UiBuilderRenderer.color` reads a literal only when
-      // the string starts with `#` and sends everything else to a token table whose `else` branch
-      // raises, so `6750A4` renders as an error while it exported here as a perfectly good
-      // `Color(0xFF6750A4)`. An artifact that disagrees with what the design renders is what this
-      // executor exists to stop producing, even when the Kotlin compiles.
-      //
-      // Only hex digits get this message, though. Suggesting `#rebeccapurple` to someone who wrote
-      // a CSS colour name would be worse than the shape refusal below, which is what that is.
+      // The `#` is required: `UiBuilderRenderer.color` treats anything else as a token and fails,
+      // so exporting `6750A4` would disagree with the canvas. Only hex digits get this hint.
       if (
         !value.startsWith("#") && digits.length in setOf(6, 8) && digits.toLongOrNull(16) != null
       ) {
@@ -2877,9 +2699,7 @@ object ScreenDocumentProjection {
       }
       val argb =
         when (if (value.startsWith("#")) digits.length else -1) {
-          // `RRGGBB` is opaque by convention everywhere this format appears, so the alpha is
-          // supplied rather than left at zero — which would render every six-digit colour
-          // invisible.
+          // `RRGGBB` is opaque by convention; a zero alpha would make it invisible.
           6 -> digits.toLongOrNull(16)?.let { 0xFF000000L or it }
           8 -> digits.toLongOrNull(16)
           else -> null
@@ -2913,11 +2733,8 @@ object ScreenDocumentProjection {
     /**
      * A qualified path as a value: `MaterialTheme.colorScheme.primary`, `Alignment.Center`.
      *
-     * Theme roles are the exception once the root is themed. A screen that calls `MaterialTheme(…)`
-     * cannot also read `MaterialTheme.colorScheme` — the generator refuses an import whose name the
-     * file already spends on a call — so inside a themed root a role is read off the theme
-     * function's own parameter instead: `colorScheme.primary`, the same value the `MaterialTheme`
-     * around it provides. See [themed].
+     * Inside a themed root, theme roles read the theme function's parameter (`colorScheme.primary`)
+     * because the file cannot both call `MaterialTheme(…)` and import it. See [themed].
      */
     private fun pathValue(path: List<String>, typeFqn: String): ScreenValue? {
       if (!themeParameters || path.first() != THEME) {
@@ -3164,14 +2981,9 @@ object ScreenDocumentProjection {
       )
 
     /**
-     * `FontFamily(SystemFont("Lobster", FontWeight.Normal), …)`: the same three weights as
-     * [googleFontFamily], each looked up by family name in the desktop font manager — Compose
-     * Multiplatform's `ui-text` on Skiko, which has no `GoogleFont`. An uninstalled family falls
-     * back to the default face rather than failing, and the family is recorded so the caller can
-     * say so ([SystemFontLookups]).
-     *
-     * `SystemFont` is `@ExperimentalTextApi`, an error-level opt-in, so each construct carries the
-     * marker and the generator writes the `@OptIn` on the function that builds it.
+     * `FontFamily(SystemFont("Lobster", FontWeight.Normal), …)`: the desktop counterpart of
+     * [googleFontFamily]. Uninstalled families fall back to the default face and are recorded
+     * ([SystemFontLookups]). `SystemFont` needs an `@OptIn` the generator writes.
      */
     private fun systemFontFamily(family: String): ScreenValue {
       val name = ThemeTypefaces.familyName(family)
@@ -3357,26 +3169,16 @@ object ScreenDocumentProjection {
   private const val MODIFIER = "androidx.compose.ui.Modifier"
 
   /**
-   * The two packages the authored modifiers come from, named once.
-   *
-   * Layout modifiers (`padding`, `size`, `offset`, `aspectRatio`, `wrapContentSize`) are
-   * `foundation.layout` extensions; the draw ones (`clip`, `alpha`, `rotate`, `scale`, `shadow`)
-   * are `ui.draw`. Which package a modifier lives in is not guessable from its name — `zIndex` is
-   * in neither and `background` and `border` are in `foundation` itself — so the three that sit
-   * outside these two are spelled in full at their branch.
+   * The two packages most authored modifiers come from: `foundation.layout` and `ui.draw`.
+   * Modifiers outside both (`zIndex`, `background`, `border`) are spelled in full.
    */
   private const val LAYOUT = "androidx.compose.foundation.layout"
 
   private const val DRAW = "androidx.compose.ui.draw"
 
   /**
-   * The tag a native preview's nodes carry.
-   *
-   * `androidx.compose.ui.platform.testTag` and not a semantics block: the server's existing
-   * annotation lane reports authored test tags with their bounds in render pixels, so this is the
-   * one modifier that makes a streamed frame addressable by design node id without a new data
-   * product. It is inside the generator's `androidx.compose` allow-list, so no widening is needed
-   * to emit it.
+   * The tag a native preview's nodes carry: the server reports authored test tags with render
+   * bounds, which makes a streamed frame addressable by node id.
    */
   private const val TEST_TAG = "androidx.compose.ui.platform.testTag"
   private const val COLOR = "androidx.compose.ui.graphics.Color"
@@ -3417,12 +3219,8 @@ object ScreenDocumentProjection {
     linkedMapOf("colorScheme" to COLOR_SCHEME, "typography" to TYPOGRAPHY, "shapes" to SHAPES)
 
   /**
-   * Material 3's colour roles, as the accessor path that reads each one.
-   *
-   * A table, not a transformation, and that is the point: `MaterialTheme.colorScheme` really does
-   * have a `primary` and really does not have a `transparent`, so the two resolve to different
-   * roots. A rule like "camel-case the token onto `colorScheme`" would emit an unresolved reference
-   * for the second and there would be nothing here saying why.
+   * Material 3's colour roles, as the accessor path that reads each one. A table rather than a
+   * rule, because roles like `transparent` are not `colorScheme` members.
    */
   private val COLOR_TOKENS: Map<String, List<String>> =
     listOf(
@@ -3508,12 +3306,7 @@ object ScreenDocumentProjection {
       listOf(THEME, "shapes", it)
     }
 
-  /**
-   * The two shapes a `clip` modifier can name that are **not** theme roles.
-   *
-   * Theme roles come from [SHAPE_TOKENS], which `clip` consults first — `medium` and `large` are
-   * what real documents clip to, and they are `MaterialTheme.shapes` accessors.
-   */
+  /** The two shapes `clip` can name that are not theme roles ([SHAPE_TOKENS] comes first). */
   private val SHAPE_CONSTANTS: Map<String, String> =
     mapOf(
       "circle" to "androidx.compose.foundation.shape.CircleShape",
@@ -3531,11 +3324,8 @@ object ScreenDocumentProjection {
   private const val COLOR_PAINTER = "androidx.compose.ui.graphics.painter.ColorPainter"
 
   /**
-   * A `$`, not a `.`, and this is the whole reason the constant exists rather than being spelled
-   * inline. `TargetParameter.typeFqn` is read off `@kotlin.Metadata`, so a nested classifier
-   * arrives JVM-spelled — `androidx.compose.ui.Alignment$Vertical` — and the generator compares the
-   * claimed type to it as a **string**. `Alignment.Vertical` is the same type and a different
-   * string, so it refuses with a mismatch that reads like a real type error.
+   * JVM-spelled (`$`) because `TargetParameter.typeFqn` comes from `@kotlin.Metadata` and the
+   * generator compares types as strings.
    */
   private const val ALIGNMENT_VERTICAL = "androidx.compose.ui.Alignment\$Vertical"
 
@@ -3546,13 +3336,8 @@ object ScreenDocumentProjection {
     "androidx.compose.foundation.layout.Arrangement\$Horizontal"
 
   /**
-   * The `Alignment` member a protocol alignment names, per axis.
-   *
-   * Exhaustive `when`s rather than maps, deliberately: an alignment added to `ui-builder-protocol`
-   * then fails this module's compile rather than becoming a modifier that silently refuses. These
-   * are the same members [ENUM_MEMBERS] maps `layout/box`'s `contentAlignment` onto — restated
-   * because that table is keyed by the catalog's own value spellings (`topStart`) and these are
-   * keyed by the protocol enum, and neither can be derived from the other.
+   * The `Alignment` member a protocol alignment names, per axis. Exhaustive `when`s so a new
+   * protocol alignment fails compilation instead of silently refusing.
    */
   private fun alignment(value: AlignmentV1): ScreenValue =
     ScreenValue.Reference(
@@ -3685,11 +3470,7 @@ object ScreenDocumentProjection {
           "iconKey" to ParameterTarget("imageVector", TargetKind.RENAME),
           "color" to ParameterTarget("tint", TargetKind.RENAME),
         ),
-      // The builder has always called this `selectedIndex` — the frozen catalog names it that,
-      // the inspector edits it under that name, and `CapabilityComposeCodeExporter` has written
-      // `selectedTabIndex = …` from it since it was added. This lane had no such rename, so a
-      // published `m3/primary-tab-row` refused with "`PrimaryTabRow` has no parameter
-      // `selectedIndex`" — the property is right and the two exporters disagreed about it.
+      // The builder calls this `selectedIndex`; `PrimaryTabRow` names it `selectedTabIndex`.
       "m3/primary-tab-row" to
         mapOf("selectedIndex" to ParameterTarget("selectedTabIndex", TargetKind.INT)),
       "m3/primary-scrollable-tab-row" to
@@ -3728,10 +3509,8 @@ object ScreenDocumentProjection {
           "verticalSpacingDp" to
             ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL)
         ),
-      // The lazy three spell spacing the way their non-lazy counterparts do, and reach the same
-      // `Arrangement.spacedBy` this table already builds for `layout/row` and `layout/column`.
-      // `contentPadding` and `reverseLayout` are parameters under their own names and need no
-      // entry.
+      // Lazy layouts spell spacing like their non-lazy counterparts. `contentPadding` and
+      // `reverseLayout` need no entry.
       "layout/lazy-column" to
         mapOf(
           "verticalSpacingDp" to
@@ -3758,13 +3537,9 @@ object ScreenDocumentProjection {
     EnumMembers(typeFqn, pairs.toMap().mapValues { (_, member) -> listOf(root, member) })
 
   /**
-   * The nine two-axis alignments a catalog spells, as the `Alignment` members they name.
-   *
-   * Named once and read by three callers: `layout/box`'s `contentAlignment`, the `alignment`
-   * property a box's children carry (see [BOX_ALIGNED]), and `asset/image`'s own `alignment` — in
-   * this lane through [BOX_ALIGNMENT_MEMBERS], and in the Wear screen lane, which writes the same
-   * foundation component from the same catalog and would otherwise hold a second copy of this
-   * vocabulary to disagree with.
+   * The nine two-axis alignments a catalog spells, as `Alignment` members. Shared by
+   * `contentAlignment`, box-child `alignment` ([BOX_ALIGNED]), `asset/image`, and the Wear screen
+   * lane.
    */
   val ALIGNMENT_MEMBERS: Map<String, String> =
     mapOf(
@@ -3787,11 +3562,7 @@ object ScreenDocumentProjection {
     members(ALIGNMENT, ALIGNMENT, *ALIGNMENT_MEMBERS.toList().toTypedArray())
 
   /**
-   * The six ways a row distributes its children, and the six a column does.
-   *
-   * Named once for the reason [ALIGNMENT_MEMBERS] is: `layout/flow-row` reads BOTH of them — a flow
-   * row arranges like a row along a line and like a column down the lines — and a third spelling of
-   * the same twelve members is a third chance for them to disagree.
+   * The six row and six column arrangements, named once: `layout/flow-row` reads both.
    */
   private val ROW_ARRANGEMENT_MEMBERS =
     members(
@@ -3819,8 +3590,7 @@ object ScreenDocumentProjection {
 
   /**
    * Which Kotlin member each catalog enum value names, per component and property (`semiBold` →
-   * `FontWeight.SemiBold`). `m3/text`.`style` reuses [TYPOGRAPHY_TOKENS] so the token and enum
-   * spellings (#339) cannot disagree.
+   * `FontWeight.SemiBold`). `m3/text`.`style` reuses [TYPOGRAPHY_TOKENS].
    */
   private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
     mapOf(
@@ -3871,12 +3641,7 @@ object ScreenDocumentProjection {
               "lineThrough" to "LineThrough",
             ),
         ),
-      // The arrangements sat beside the alignments in the catalog and nowhere in this table, so a
-      // `spaceBetween` top bar or a `spaceEvenly` navigation row refused as "nothing maps this
-      // catalog property's values" while the `verticalAlignment: center` on the same node went
-      // through ([#475](https://github.com/yschimke/compose-preview-server/issues/475)). Six
-      // members of the `Arrangement` object each; when a spacing is set on the same node the two
-      // are read together instead — see `arranged`.
+      // Arrangements; when spacing is also set they are read together — see `arranged`.
       "layout/row" to
         mapOf(
           "horizontalArrangement" to ROW_ARRANGEMENT_MEMBERS,
@@ -3912,11 +3677,9 @@ object ScreenDocumentProjection {
   /**
    * The arrangement property each layout pairs with a spacing, and how the two compose.
    *
-   * @property aligned the arrangements that take a gap — as the `Alignment` member
-   *   `Arrangement.spacedBy(space, alignment)` wants for each, which is a **different** member from
-   *   the one the arrangement alone names: `center` is `Arrangement.Center` on its own and
-   *   `Alignment.CenterHorizontally` beside a gap. The three `space*` values are absent because no
-   *   form of them takes a gap.
+   * @property aligned arrangements that take a gap, mapped to the `Alignment` member
+   *   `Arrangement.spacedBy(space, alignment)` wants (`center` → `Alignment.CenterHorizontally`).
+   *   `space*` values take no gap.
    */
   private class ArrangementAxis(
     val property: String,
@@ -3948,10 +3711,7 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * The axes each container arranges on, by component.
-   *
-   * A list rather than one axis because `layout/flow-row` has two of them and they are the same two
-   * a row and a column already have — along a line it is a row, down the lines it is a column.
+   * The axes each container arranges on. A list because `layout/flow-row` has both.
    */
   private val ARRANGEMENTS: Map<String, List<ArrangementAxis>> =
     mapOf(
@@ -3986,12 +3746,12 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Colour roles that fill one `…Colors` bundle between them, so they are read together rather than
-   * overwriting each other.
+   * Colour roles that fill one `…Colors` bundle, read together rather than overwriting each
+   * other.
    *
-   * @property roles the catalog properties, which are also the factory's parameter names unless
-   *   [factoryNames] says otherwise. @property factoryNames the factory parameter a role fills,
-   *   where the two are spelled apart.
+   * @property roles the catalog properties, also the factory's parameter names unless
+   *   [factoryNames] says otherwise.
+   * @property factoryNames the factory parameter a role fills, where spelled differently.
    */
   private class ColorBundle(
     val parameter: String,
@@ -4042,12 +3802,11 @@ object ScreenDocumentProjection {
   )
 
   /**
-   * One factory parameter, and what the canvas does to the property before passing it, so the
-   * export draws what the author saw.
+   * One factory parameter, and what the canvas does to the property before passing it.
    *
    * @property range the bounds the canvas clamps to, or null where the value is not a number.
-   *     @property whenAbsent the value the canvas uses for an unset optional property; without it
-   *       Material's default applies (for `is24Hour`, the device locale).
+   * @property whenAbsent the value the canvas uses for an unset optional property; without it
+   *   Material's default applies (for `is24Hour`, the device locale).
    */
   private class StateArgument(
     val parameter: String,
@@ -4068,17 +3827,14 @@ object ScreenDocumentProjection {
               "minute" to StateArgument("initialMinute", range = 0..59),
               "is24Hour" to StateArgument("is24Hour", whenAbsent = ScreenValue.Bool(true)),
             ),
-          // None: discovery records `TimePicker(state = rememberTimePickerState())` with an empty
-          // `requiredOptIns`, so both halves of that call are stable API and claiming an opt-in
-          // here would write an `@OptIn` the file does not need.
+          // None: the record lists no `requiredOptIns` for this call.
           optIns = emptyList(),
         )
     )
 
   /**
-   * The components whose `alignment` property is "how a parent Box aligns this" node — the
-   * catalog's words on `layout/column`, and `m3/text` declares the same nine values. A modifier in
-   * a property's clothing, routed through `alignLink` like the authored one.
+   * Components whose `alignment` property means "how a parent Box aligns this" node, routed
+   * through `alignLink` like the authored modifier.
    */
   private val BOX_ALIGNED: Set<String> = setOf("m3/text", "layout/column")
 
@@ -4160,28 +3916,20 @@ object ScreenDocumentProjection {
    * One component a variant property selects.
    *
    * @property canonicalId the record to emit; there is no catalog id for e.g. `ElevatedCard`.
-   *     @property defaults the `CardDefaults` prefix whose factories match this component. Carried
-   *       per variant because all three return the same type, so the wrong one would compile with
-   *       another component's colours.
+   * @property defaults the `CardDefaults` prefix whose factories match this component; the wrong
+   *   one would compile with another component's colours.
    */
   private class ComponentVariant(
     val canonicalId: String,
     val defaults: String,
     /**
-     * The receiver each slot of **this** component composes its children under.
-     *
-     * Carried per variant rather than read from [SLOT_SCOPES], because the variant can change the
-     * answer: `m3/button` is a `RowScope` content slot for three of its four values and none at all
-     * for `fab`, since `FloatingActionButton` takes a plain `@Composable () -> Unit`. Keyed by the
-     * catalog's slot name, and a slot with no entry has no receiver — which is what makes a
-     * `weight` inside a floating action button refuse where one inside a `TextButton` does not.
+     * The receiver each slot of this component composes children under, keyed by catalog slot name.
+     * Per variant because it can differ (`fab` content has no receiver); no entry means none.
      */
     val slotScopes: Map<String, String> = emptyMap(),
     /**
      * The [ParameterTarget] this component takes for a property where it differs from the catalog
-     * id's table — e.g. `FloatingActionButton` takes `containerColor: Color` directly rather than a
-     * `ButtonColors` bundle
-     * ([#393](https://github.com/yschimke/compose-preview-server/issues/393)).
+     * id's table — e.g. `FloatingActionButton` takes `containerColor: Color` directly.
      */
     val propertyTargets: Map<String, ParameterTarget> = emptyMap(),
   )
@@ -4197,10 +3945,7 @@ object ScreenDocumentProjection {
       "m3/icon-button" to "variant",
       "m3/text-field" to "variant",
       "m3/progress-indicator" to "variant",
-      // The catalog's own note names the precedent: `TimePicker` and `TimeInput` are "two
-      // composables over one state, spelled as one component the way `m3/progress-indicator`
-      // spells linear and circular". Identical parameter lists, so the only decision is which
-      // one to call.
+      // `TimePicker` and `TimeInput` share a state and parameter list; the variant picks which.
       "m3/time-picker" to "mode",
     )
 
@@ -4254,10 +3999,8 @@ object ScreenDocumentProjection {
           "dial" to ComponentVariant(TIME_PICKER_ID, "timePicker"),
           "input" to ComponentVariant(TIME_INPUT_ID, "timePicker"),
         ),
-      // The two indicators. Each name is TWO Compose overloads — a determinate one taking
-      // `progress: () -> Float` and an indeterminate one whose parameters all default — and the
-      // argument list picks between them, so both live under one record and one entry here. Which
-      // one a design gets is decided by whether it sets `progress`; see `determinacy`.
+      // Each indicator name is two overloads (determinate with `progress`, indeterminate); see
+      // `determinacy`.
       "m3/progress-indicator" to
         mapOf(
           "linear" to ComponentVariant(LINEAR_INDICATOR_ID, "linearProgressIndicator"),
@@ -4281,15 +4024,8 @@ object ScreenDocumentProjection {
       "m3/outlined-text-field" to ComponentVariant(OUTLINED_TEXT_FIELD_ID, "outlinedTextField"),
     )
 
-  // The variant table names CALLABLES, not catalog components: a `style` of `elevated` on
-  // `m3/card` means the design calls `ElevatedCard` instead of `Card`. They were written as
-  // canonical ids — `m3-catalog/<fqn>` — and a canonical id carries the MODULE it was discovered
-  // from. m3-catalog's shipped record was discovered from a module called `m3-catalog`; its own
-  // repository discovers from `:catalog`, so every one of these missed on the catalog's own
-  // record and three components refused with "no component `m3-catalog/…` in this catalog".
-  //
-  // Named by the callable alone, which is the part that is actually true of both. The record is
-  // aliased with the same form by [callableAliases] so the generator can resolve it.
+  // Variants name callables without the module prefix, which differs between the shipped record
+  // and the catalog's own repository. [callableAliases] aliases the record the same way.
   private const val CARD_ID = "androidx.compose.material3.CardKt.Card"
   private const val ELEVATED_CARD_ID = "androidx.compose.material3.CardKt.ElevatedCard"
   private const val OUTLINED_CARD_ID = "androidx.compose.material3.CardKt.OutlinedCard"
@@ -4309,10 +4045,7 @@ object ScreenDocumentProjection {
   private const val TIME_INPUT_ID = "androidx.compose.material3.TimePickerKt.TimeInput"
   private const val TEXT_FIELD_ID = "androidx.compose.material3.TextFieldKt.TextField"
   // `OutlinedTextFieldKt`, not `TextFieldKt`: Material declares the outlined field in its own
-  // file. The alias `callableAliases()` adds is the record's canonical id minus the module, so an
-  // id naming the wrong file resolves to nothing and the variant refuses — which is what this one
-  // did, on every authored outlined field, until the parity test below started authoring every
-  // variant rather than the first.
+  // file.
   private const val OUTLINED_TEXT_FIELD_ID =
     "androidx.compose.material3.OutlinedTextFieldKt.OutlinedTextField"
   private const val LINEAR_INDICATOR_ID =
@@ -4321,11 +4054,8 @@ object ScreenDocumentProjection {
     "androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator"
 
   /**
-   * Properties that are builder bookkeeping rather than design values, spent rather than refused.
-   *
-   * `scrollStateKey` is required on lazy containers, so refusing would make them unexportable;
-   * dropping is safe because the old exporter only used these for a `key("…")` wrapper that changes
-   * no pixel. `span` is deliberately not here — see `unplaceable`.
+   * Builder bookkeeping properties, spent rather than refused. `scrollStateKey` is required on
+   * lazy containers and changes no pixel. `span` is not here — see `unplaceable`.
    */
   private val IDENTITY_PROPERTIES: Set<String> = setOf("scrollStateKey", "stableKey")
 
@@ -4338,9 +4068,7 @@ object ScreenDocumentProjection {
   private const val INDETERMINATE = "indeterminate"
   private const val WEIGHT = "weight"
   private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
-  // `FlowRowScope` extends `RowScope`, so a weighted child inside a flow row is legal for the
-  // same reason it is inside a row — but the generator checks the scope it was told, not its
-  // supertypes, so the real one has to be named.
+  // The generator checks the stated scope, not supertypes, so `FlowRowScope` is named explicitly.
   private const val FLOW_ROW_SCOPE = "androidx.compose.foundation.layout.FlowRowScope"
   /** The card whose content is a box (see `cardContentBox`), and the box it becomes. */
   private const val CARD_CATALOG_ID = "m3/card"
@@ -4356,12 +4084,9 @@ object ScreenDocumentProjection {
   private const val BOX_SCOPE = "androidx.compose.foundation.layout.BoxScope"
 
   /**
-   * The receiver member each of a DSL slot's children is wrapped in (`LazyColumn`'s children are
-   * declared with `item { … }`, #394). `ScreenGenerator` checks the scope against the record's
-   * `TargetParameter.scopeDslReceiver`.
-   *
-   * No per-child `key`: a [SlotItem] wraps the whole slot, which costs only reorder identity in a
-   * static screen. Public so `M3CatalogSlotScopeTest` can check it against the shipped record.
+   * The receiver member each of a DSL slot's children is wrapped in (`LazyColumn` children use
+   * `item { … }`), checked against `TargetParameter.scopeDslReceiver`. A [SlotItem] wraps the
+   * whole slot, so there is no per-child `key`. Public for `M3CatalogSlotScopeTest`.
    */
   val SLOT_ITEMS: Map<String, Map<String, SlotItem>> =
     mapOf(
@@ -4384,17 +4109,14 @@ object ScreenDocumentProjection {
       "layout/row" to mapOf("children" to ROW_SCOPE),
       "layout/flow-row" to mapOf("children" to FLOW_ROW_SCOPE),
       "layout/box" to mapOf("children" to BOX_SCOPE),
-      // A colour dot is `Box` by alias (see `colourDot`), so the record attests `Box`'s
-      // `content` slot for it too. Keyed by the parameter name because the catalog gives the dot
-      // no slot at all — nothing ever fills this, and the claim exists so the drift check that
-      // compares this table with the record stays exact.
+      // A colour dot is `Box` by alias, so the record attests `Box`'s `content` slot. Nothing fills
+      // it; the entry keeps the drift check exact.
       COLOUR_DOT to mapOf("content" to BOX_SCOPE),
       // The same claim for the same reason: a linear gradient is `Box` by alias too (see
       // `linearGradient`), and the catalog gives it no slot either.
       LINEAR_GRADIENT to mapOf("content" to BOX_SCOPE),
-      // `Card`'s own slot, which the record attests as a `ColumnScope` — and what sits in it is
-      // the one `layout/box` `cardContentBox` emits, never a design's node. A card's children are
-      // composed inside that box, under `BoxScope`, which is why this row is not what they get.
+      // The record attests `ColumnScope`, but a card's children go inside `cardContentBox`'s box
+      // under `BoxScope`.
       "m3/card" to mapOf("content" to COLUMN_SCOPE),
       "m3/button" to mapOf("content" to ROW_SCOPE),
       "m3/horizontal-floating-toolbar" to mapOf("content" to ROW_SCOPE),
@@ -4422,12 +4144,8 @@ object ScreenDocumentProjection {
   private const val IMAGE_VECTOR = "androidx.compose.ui.graphics.vector.ImageVector"
 
   /**
-   * The catalog property whose values are icon keys rather than members of a type, on ANY
-   * component: the builder's icon picker writes `iconKey` wherever a component draws an icon, and
-   * the keys are one vocabulary ([ICON_MEMBERS]). Keyed by property, not by component, because a
-   * table naming `m3/icon` left every other catalog's icon — `glimmer/icon`, whose keys are the
-   * same `filled/info` — refused as "`ImageVector` has no literal", with no way for the catalog to
-   * say otherwise.
+   * The property whose values are icon keys ([ICON_MEMBERS]) on any component, keyed by property
+   * rather than component so every catalog's icon (e.g. `glimmer/icon`) resolves.
    */
   private const val ICON_KEY = "iconKey"
 
@@ -4446,10 +4164,7 @@ object ScreenDocumentProjection {
   val ICON_MEMBERS: Map<String, String> = GeneratedMaterialIconMembers
 
   /**
-   * Properties whose values name no member of anything, each with its own refusal reason
-   * ([compose-preview-server#394](https://github.com/yschimke/compose-preview-server/issues/394)).
-   * Ids that [COMPONENT_VARIANTS] or `supportingPanes` can express have left this table.
-   *
+   * Properties whose values name no member of anything, each with its own refusal reason.
    * Each value completes "…`$entry`, which …".
    */
   private val VARIANT_PROPERTIES: Map<Pair<String, String>, String> =

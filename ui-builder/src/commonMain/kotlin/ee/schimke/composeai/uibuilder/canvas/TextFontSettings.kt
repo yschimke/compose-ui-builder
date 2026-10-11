@@ -29,13 +29,10 @@ internal class ResolvedFontSettings(
 )
 
 /**
- * [style] with [node]'s [FontSettings] applied: its features as the style's `fontFeatureSettings`,
- * and its axes as an instance of the family the text is set in.
- *
- * The axes need the font file, so they apply only where the family is one the host loaded — any
- * theme typeface, the document's, and Wear's Roboto Flex. A text in the platform's own face draws
- * its features and not its axes, which is what the inspector says about it. A setting the face
- * lacks is dropped by the text stack, as CSS drops it.
+ * [style] with [node]'s [FontSettings] applied: features as `fontFeatureSettings`, and axes as an
+ * instance of the family the text is set in. Axes need the font file, so they apply only to
+ * host-loaded families (theme typefaces, the document's, Wear's Roboto Flex); in the platform face
+ * only features apply. Unsupported settings are dropped, as CSS does.
  */
 @Composable
 internal fun resolveFontSettings(
@@ -83,9 +80,8 @@ private fun UiBuilderNode.textProperty(name: String): String? =
   string(name).takeIf { it.isNotBlank() }
 
 /**
- * This synthesis policy with weight synthesis turned off and style synthesis left as it was: an
- * italic `fontStyle` on a face with no italic still slants where the style allowed it, and stays
- * upright where the style had turned that off. Unset is Compose's default, both.
+ * This synthesis policy with weight synthesis off and style synthesis unchanged (unset is Compose's
+ * default, both).
  */
 internal fun FontSynthesis?.withoutWeight(): FontSynthesis =
   if (this == null || this == FontSynthesis.All || this == FontSynthesis.Style) FontSynthesis.Style

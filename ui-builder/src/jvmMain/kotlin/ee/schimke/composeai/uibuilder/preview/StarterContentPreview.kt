@@ -13,16 +13,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * What the palette actually puts on the canvas, for six containers in a row.
- *
- * The document is not authored: every child under the row is produced by the same `InsertComponent`
- * the palette dispatches, through the same reducer, against the same catalog. So this preview is a
- * picture of the product's behaviour rather than of a fixture somebody kept in step with it — seed
- * a component badly and this render changes, which is the point of diffing it.
- *
- * Rendered before and after [StarterContent] landed, it is the before/after evidence for it: the
- * before frame is six containers holding a placeholder or nothing at all, and the after frame is
- * six containers holding what a person would have drawn.
+ * What the palette actually puts on the canvas, for six containers in a row: every child is
+ * produced by the palette's own `InsertComponent` through the real reducer and catalog, so a bad
+ * seed changes this render. Before/after evidence for [StarterContent].
  */
 @Preview(widthDp = 1280, heightDp = 260)
 @Composable
@@ -44,8 +37,7 @@ private val PREVIEWED_COMPONENT_IDS =
 internal val starterContentPreviewDocument: UiBuilderDocument by lazy {
   val reducer =
     UiBuilderEditorReducer(editorChromePreviewCatalog, actorId = "preview", clientId = "preview")
-  // One cell per component, so each insert is measured against the same box and a container that
-  // fills what it is given — a card, a list — cannot swallow the row.
+  // One cell per component, so a filling container (a card, a list) can't swallow the row.
   PREVIEWED_COMPONENT_IDS.foldIndexed(starterContentPreviewBase) { index, document, componentId ->
     val cellId = starterPreviewCellId(index)
     val state = reducer.initial(document, selectedNodeId = cellId)

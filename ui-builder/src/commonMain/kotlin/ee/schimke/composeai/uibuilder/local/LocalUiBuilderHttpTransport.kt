@@ -10,16 +10,9 @@ import ee.schimke.composeai.uibuilder.protocol.HttpResponseEnvelopeV1
 
 /**
  * The transport that never leaves the page: encode, dispatch to [LocalUiBuilderService], decode.
- *
- * It exists so the swap between a design that lives on the server and one that lives in this
- * browser is *one constructor argument* in the editor's bootstrap. Everything downstream — the
- * request-id correlation, the strict envelope codec, the drain loop that serializes edits and the
- * rules that decide which snapshot may be displayed — is the code the live session already runs,
- * and is not asked which mode it is in.
- *
- * The round trip through JSON is deliberate rather than an oversight. Skipping it would mean the
- * local mode exercised a different codec path from the live one, and the first shape either side
- * got wrong would be a bug only one of the two modes could find.
+ * Swapping server and browser storage is one constructor argument; everything downstream (request
+ * correlation, envelope codec, drain loop, snapshot rules) is the live session's code. The JSON
+ * round trip is deliberate so both modes exercise the same codec path.
  */
 class LocalUiBuilderHttpTransport(private val service: LocalUiBuilderService) :
   UiBuilderHttpTransport {
@@ -27,9 +20,8 @@ class LocalUiBuilderHttpTransport(private val service: LocalUiBuilderService) :
     val envelope = protocolJson.decodeFromString(HttpRequestEnvelopeV1.serializer(), request.body)
     val response = service.execute(envelope.request)
     return UiBuilderHttpResponse(
-      // The client reads the body, and reports the status only when the body will not parse. A
-      // service error is still a well-formed answer, so it is the 400 the server would send rather
-      // than a transport failure.
+      // A service error is a well-formed answer, so it gets the server's 400 rather than a
+      // transport failure.
       statusCode = if (response is ErrorResponseV1) 400 else 200,
       body =
         protocolJson.encodeToString(

@@ -17,9 +17,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The rules a page follows for a caller who may read a server's designs but not write them (#342):
- * where an edit goes, which refusals keep the edit, how browser designs are listed, and how one is
- * published once the server will take it.
+ * The rules for a caller who may read a server's designs but not write them (see #342): where an
+ * edit goes, which refusals keep the edit, how browser designs are listed, and how one is
+ * published.
  */
 class LocalDesignBrowserCopiesTest {
   @Test
