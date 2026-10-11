@@ -1,5 +1,38 @@
 # Changelog
 
+## [3.106.0](https://github.com/yschimke/compose-ui-builder/compare/v3.105.0...v3.106.0) (2026-10-11)
+
+
+### Features
+
+* **editor:** copy the selected layer as Compose code ([#693](https://github.com/yschimke/compose-ui-builder/issues/693)) ([c06fabf](https://github.com/yschimke/compose-ui-builder/commit/c06fabf5120e9e21d28253339ddec78562b3667b))
+* **editor:** Ctrl/Cmd+Alt+G wraps the selection in a Column, Row or Box ([#689](https://github.com/yschimke/compose-ui-builder/issues/689)) ([9951745](https://github.com/yschimke/compose-ui-builder/commit/995174580c104a52d4c36f493f0d78bd4efb2f6c))
+* **editor:** group the shortcuts panel into sections ([#698](https://github.com/yschimke/compose-ui-builder/issues/698)) ([1e0f14d](https://github.com/yschimke/compose-ui-builder/commit/1e0f14df47b9e96f983d733d25ab52ac6f35aac6))
+* **editor:** measure spacing between nodes with Alt + hover ([#691](https://github.com/yschimke/compose-ui-builder/issues/691)) ([0dac3eb](https://github.com/yschimke/compose-ui-builder/commit/0dac3eba8ded9364eb655ab5833b8fcf0dffab8b))
+* **editor:** zoom and help keyboard shortcuts ([#674](https://github.com/yschimke/compose-ui-builder/issues/674)) ([f28865b](https://github.com/yschimke/compose-ui-builder/commit/f28865b9a987bff0aff445a030d3fe76590a054b))
+* **export:** lower components through their catalog's published export projection ([#696](https://github.com/yschimke/compose-ui-builder/issues/696)) ([94d9e6b](https://github.com/yschimke/compose-ui-builder/commit/94d9e6bee850c4639349030edc88a8ab48a45132))
+* **host:** the offline hosts read catalogs from where they publish, not from copies packaged into the builder ([#670](https://github.com/yschimke/compose-ui-builder/issues/670)) ([ca62afb](https://github.com/yschimke/compose-ui-builder/commit/ca62afb30a01fecbd345dec0342288d3404e2294))
+* **runtime:** keep deleted designs in a 24-hour trash ([#687](https://github.com/yschimke/compose-ui-builder/issues/687)) ([e334f7b](https://github.com/yschimke/compose-ui-builder/commit/e334f7b40b83a0e4cfd3ef1823768619638872c3))
+* **ui-builder:** add a "Recently used" shelf to the component palette ([#675](https://github.com/yschimke/compose-ui-builder/issues/675)) ([db5fe76](https://github.com/yschimke/compose-ui-builder/commit/db5fe762cbfa476fb71c706417aa28b390869f39))
+* **ui-builder:** collapse card and icon-button variants onto a style property ([#703](https://github.com/yschimke/compose-ui-builder/issues/703)) ([52561eb](https://github.com/yschimke/compose-ui-builder/commit/52561eb2d02655c1c22f2256200521db84ec43eb))
+* **ui-builder:** offer recently used colours in the inspector's colour control ([#690](https://github.com/yschimke/compose-ui-builder/issues/690)) ([c74c6d4](https://github.com/yschimke/compose-ui-builder/commit/c74c6d4238edb23cfc274f50e2e30ded907e9b60))
+* **ui-builder:** quick insert a component with `/` ([#688](https://github.com/yschimke/compose-ui-builder/issues/688)) ([8fc9802](https://github.com/yschimke/compose-ui-builder/commit/8fc9802c09b851bd6a4c89483016837a64845f9d))
+* **ui-builder:** show WCAG contrast for text and icon colours in the inspector ([#677](https://github.com/yschimke/compose-ui-builder/issues/677)) ([7f3cef4](https://github.com/yschimke/compose-ui-builder/commit/7f3cef4cdfda2afa8030cf57c90873b32e2b07c1))
+
+
+### Bug Fixes
+
+* address review findings missed on the recent catalog and preview PRs ([#673](https://github.com/yschimke/compose-ui-builder/issues/673)) ([f4ae883](https://github.com/yschimke/compose-ui-builder/commit/f4ae8836283381b87d1b23e17e882876a3768bc0))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.27.0 ([#683](https://github.com/yschimke/compose-ui-builder/issues/683)) ([46bc544](https://github.com/yschimke/compose-ui-builder/commit/46bc544c7ddb3416489bacc3001123fff22b7953))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.29.0 ([#694](https://github.com/yschimke/compose-ui-builder/issues/694)) ([da8edc7](https://github.com/yschimke/compose-ui-builder/commit/da8edc7c2f9841fab983d3c6cfedadddcc49986a))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.7.1 ([#710](https://github.com/yschimke/compose-ui-builder/issues/710)) ([d52ab35](https://github.com/yschimke/compose-ui-builder/commit/d52ab357807a67f7dd75ac77a431c9be0548469f))
+* **editor:** keep trailing toolbar actions reachable at intermediate widths ([#695](https://github.com/yschimke/compose-ui-builder/issues/695)) ([93a0946](https://github.com/yschimke/compose-ui-builder/commit/93a09469fdf1dcffe27d38efec68e278c7fb118b))
+* **export:** select card and icon-button components by style as well as variant ([#705](https://github.com/yschimke/compose-ui-builder/issues/705)) ([d6509ce](https://github.com/yschimke/compose-ui-builder/commit/d6509ce8fb788acb8fa0300ac6da3a1ba4ea0b0a))
+* **runtime:** let a delegate delete the designs it created ([#685](https://github.com/yschimke/compose-ui-builder/issues/685)) ([9161414](https://github.com/yschimke/compose-ui-builder/commit/9161414ac776bab814d8fdab5f17147fe4f52f9a))
+* **runtime:** let catalog recovery pass component placements ([#702](https://github.com/yschimke/compose-ui-builder/issues/702)) ([a2aeb68](https://github.com/yschimke/compose-ui-builder/commit/a2aeb68e97fbf71ef0742a08f30230f9583525c1))
+* **ui-builder:** give the Pinned palette shelf an id apart from its label ([#684](https://github.com/yschimke/compose-ui-builder/issues/684)) ([4b3d2f4](https://github.com/yschimke/compose-ui-builder/commit/4b3d2f4d22d9531b696ac0c13511575d0cd319d8))
+* **web:** keep export's per-kind node builders out of Pass.node ([#709](https://github.com/yschimke/compose-ui-builder/issues/709)) ([e3e74e8](https://github.com/yschimke/compose-ui-builder/commit/e3e74e8baa3638c71c4e77ea8fcaf7a573bb4554))
+
 ## [3.105.0](https://github.com/yschimke/compose-ui-builder/compare/v3.104.0...v3.105.0) (2026-10-11)
 
 
