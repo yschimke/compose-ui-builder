@@ -253,6 +253,12 @@ internal const val RECENT_SHELF = "Recently used"
  */
 internal const val RECENT_SHELF_ID = "\u0000editor/recently-used"
 
+/** The heading of the reader's pinned components. */
+internal const val PINNED_SHELF = "Pinned"
+
+/** That shelf's identity, apart from its label for the same reason as [RECENT_SHELF_ID]. */
+internal const val PINNED_SHELF_ID = "\u0000editor/pinned"
+
 /**
  * [componentId] moved to the front of a most-recently-used list, each id at most once, trimmed to
  * [limit]. Inserting the same Text five times is one entry, not five — the shelf answers "what was
