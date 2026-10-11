@@ -1,12 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.input.key.Key
+import ee.schimke.composeai.uibuilder.editor.CanvasZoomCommand
 import ee.schimke.composeai.uibuilder.editor.EDITOR_GESTURES
 import ee.schimke.composeai.uibuilder.editor.EDITOR_SHORTCUTS
 import ee.schimke.composeai.uibuilder.editor.EditorChord
 import ee.schimke.composeai.uibuilder.editor.EditorMoveDirection
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorSelectionMove
+import ee.schimke.composeai.uibuilder.editor.EditorViewCommand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.editorShortcutFor
 import kotlin.test.Test
@@ -146,6 +148,95 @@ class EditorShortcutTableTest {
     assertEquals(
       UiBuilderEditorEvent.DeleteSelected,
       resolve(EditorChord(Key.Backspace, command = false, shift = false))?.event,
+    )
+  }
+
+  @Test
+  fun `the zoom chords every canvas tool uses reach the canvas zoom`() {
+    fun zoom(key: Key, shift: Boolean = false) =
+      resolve(EditorChord(key, command = true, shift = shift))?.view
+    val zoomIn = EditorViewCommand.Zoom(CanvasZoomCommand.In)
+    assertEquals(zoomIn, zoom(Key.Equals))
+    // Ctrl/Cmd++ is a shifted `=` on most layouts, and a keypad + is a plus with no shift at all.
+    assertEquals(zoomIn, zoom(Key.Equals, shift = true))
+    assertEquals(zoomIn, zoom(Key.NumPadAdd))
+    assertEquals(EditorViewCommand.Zoom(CanvasZoomCommand.Out), zoom(Key.Minus))
+    assertEquals(EditorViewCommand.Zoom(CanvasZoomCommand.Out), zoom(Key.NumPadSubtract))
+    assertEquals(EditorViewCommand.Zoom(CanvasZoomCommand.Fit), zoom(Key.Zero))
+    assertEquals(EditorViewCommand.Zoom(CanvasZoomCommand.ActualSize), zoom(Key.One))
+  }
+
+  @Test
+  fun `a bare digit or minus is typing, not a zoom`() {
+    // Without the command modifier these are characters, and leaving them unclaimed is also what
+    // leaves them to a focused control that wants them.
+    listOf(Key.Equals, Key.Minus, Key.Zero, Key.One).forEach { key ->
+      assertNull(resolve(EditorChord(key, command = false, shift = false)), "$key")
+    }
+  }
+
+  @Test
+  fun `question mark opens the shortcuts and a plain slash does not`() {
+    assertEquals(
+      EditorViewCommand.ShowShortcuts,
+      resolve(EditorChord(Key.Slash, command = false, shift = true))?.view,
+    )
+    assertNull(resolve(EditorChord(Key.Slash, command = false, shift = false)))
+  }
+
+  @Test
+  fun `a closed canvas leaves the browser its own zoom but still offers help`() {
+    // With nothing to zoom, the chord is not ours: unclaimed, it reaches the page zoom it always
+    // did.
+    listOf(Key.Equals, Key.Minus, Key.Zero, Key.One).forEach { key ->
+      assertNull(
+        editorShortcutFor(EditorChord(key, command = true, shift = false), editing = false),
+        "$key should be the browser's with the authoring canvas closed",
+      )
+    }
+    assertEquals(
+      EditorViewCommand.ShowShortcuts,
+      editorShortcutFor(EditorChord(Key.Slash, command = false, shift = true), editing = false)
+        ?.view,
+    )
+  }
+
+  @Test
+  fun `every shortcut does exactly one thing`() {
+    assertTrue(EDITOR_SHORTCUTS.all { (it.event == null) != (it.view == null) })
+  }
+
+  @Test
+  fun `zoom is not taken while something has replaced the canvas`() {
+    // The editor pane is open but the canvas is not drawn — a revision or suggestion under review,
+    // or a compact layout's preview tab. The browser keeps its page zoom; the rest stay live.
+    listOf(Key.Equals, Key.Minus, Key.Zero, Key.One).forEach { key ->
+      assertNull(
+        editorShortcutFor(
+          EditorChord(key, command = true, shift = false),
+          editing = true,
+          canvasShown = false,
+        ),
+        "$key should be the browser's with no canvas on screen",
+      )
+    }
+    assertEquals(
+      UiBuilderEditorEvent.Undo,
+      editorShortcutFor(
+          EditorChord(Key.Z, command = true, shift = false),
+          editing = true,
+          canvasShown = false,
+        )
+        ?.event,
+    )
+    assertEquals(
+      EditorViewCommand.Zoom(CanvasZoomCommand.In),
+      editorShortcutFor(
+          EditorChord(Key.Equals, command = true, shift = false),
+          editing = true,
+          canvasShown = true,
+        )
+        ?.view,
     )
   }
 }

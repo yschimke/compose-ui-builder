@@ -45,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -244,6 +245,10 @@ internal fun PinnedDesignCanvas(
   zoom: Float?,
   onZoomChanged: (Float?) -> Unit,
   /**
+   * The scale the design was just drawn at ([zoom], or the fit), for the zoom chords to step from.
+   */
+  onScaleDrawn: (Float) -> Unit = {},
+  /**
    * Whether the frame companion is drawn beside the extent when content outgrows the frame. Off
    * while the preview or native pane is open (they already draw the frame) and for Wear or m3
    * designs.
@@ -379,6 +384,7 @@ internal fun PinnedDesignCanvas(
         )
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
+    SideEffect { onScaleDrawn(scale) }
     // Undo the density ratio the frame was sized up by. Equals [scale] when the densities agree.
     val drawScale = scale / densityRatio
     // In dp, as the metrics callback reports.
@@ -1743,6 +1749,29 @@ internal const val MAX_CANVAS_ZOOM = 4f
 internal fun canvasZoomStep(from: Float, zoomIn: Boolean): Float =
   if (zoomIn) CANVAS_ZOOM_STOPS.firstOrNull { it > from + 0.001f } ?: MAX_CANVAS_ZOOM
   else CANVAS_ZOOM_STOPS.lastOrNull { it < from - 0.001f } ?: MIN_CANVAS_ZOOM
+
+/** A zoom the keyboard asks for, in the words of the zoom bar's own controls. */
+internal enum class CanvasZoomCommand {
+  In,
+  Out,
+  Fit,
+  ActualSize,
+}
+
+/**
+ * The pinned zoom after [command], or null to frame the design — what `canvasZoom` becomes.
+ *
+ * [drawn] is the scale the canvas is drawn at now, fitted or pinned, for the reason
+ * [canvasZoomStep] gives: Ctrl/Cmd+= on a design framed at 62% lands on 75%, the same stop the zoom
+ * bar's + would, rather than on a step from some scale nobody can see.
+ */
+internal fun canvasZoomAfter(command: CanvasZoomCommand, drawn: Float): Float? =
+  when (command) {
+    CanvasZoomCommand.In -> canvasZoomStep(drawn, zoomIn = true)
+    CanvasZoomCommand.Out -> canvasZoomStep(drawn, zoomIn = false)
+    CanvasZoomCommand.Fit -> null
+    CanvasZoomCommand.ActualSize -> 1f
+  }
 
 /** How the design is scaled, said out loud: `Fit · 62%`, or `125%` once somebody has pinned one. */
 internal fun canvasZoomLabel(scale: Float, fitting: Boolean): String {

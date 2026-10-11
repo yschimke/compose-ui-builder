@@ -33,6 +33,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -709,6 +711,17 @@ fun UiBuilderEditor(
   // The pinned scale, or null while framed. Local, not in [UiBuilderEditorState]: zoom is a fact
   // about this window, not the design.
   var canvasZoom by remember(document.id) { mutableStateOf(initialCanvasZoom) }
+  // What the canvas last drew at, fitted or pinned, which only it can work out. Read by the zoom
+  // chords and nothing in composition, so the canvas reporting it every frame recomposes nothing.
+  var canvasDrawnScale by remember(document.id) { mutableFloatStateOf(initialCanvasZoom ?: 1f) }
+  // The shortcuts dialog the `?` key opens. The toolbars keep their own for their menu entry; this
+  // one exists because a key has no toolbar to belong to, and the focused layout has none at all.
+  var showShortcutsDialog by remember { mutableStateOf(false) }
+  // How many design canvases are composed right now — in practice none or one. Counted from the
+  // canvas's own composition rather than inferred from the panes, because the open editor pane does
+  // not mean the canvas is drawn: a revision or suggestion review replaces it, and the compact
+  // layout has tabs. The zoom chords are only the editor's while there is a canvas to zoom.
+  var canvasesShown by remember { mutableIntStateOf(0) }
   // Which control the hover editor should put the caret in, set by an action that just created the
   // value being edited and cleared the moment it lands.
   var hoverFocusTarget by remember(document.id) { mutableStateOf<String?>(null) }
@@ -1590,6 +1603,10 @@ fun UiBuilderEditor(
           )
       }
   val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+    DisposableEffect(Unit) {
+      canvasesShown++
+      onDispose { canvasesShown-- }
+    }
     CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
       PinnedDesignCanvas(
         document = drawnDocument,
@@ -1774,6 +1791,7 @@ fun UiBuilderEditor(
           focusEditor()
           canvasZoom = it
         },
+        onScaleDrawn = { canvasDrawnScale = it },
         canvasView = state.canvasView,
         onCanvasViewChanged = { view ->
           focusEditor()
@@ -2386,6 +2404,14 @@ fun UiBuilderEditor(
     )
 
     EditorTheme(theme) {
+      if (showShortcutsDialog) {
+        EditorShortcutsDialog(
+          onDismiss = {
+            showShortcutsDialog = false
+            focusEditor()
+          }
+        )
+      }
       BoxWithConstraints(Modifier.fillMaxSize()) {
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
@@ -2420,7 +2446,15 @@ fun UiBuilderEditor(
                 event,
                 enabled = !textInputFocused,
                 editing = state.editing,
+                canvasShown = canvasesShown > 0,
                 dispatch = ::dispatch,
+                onViewCommand = { command ->
+                  when (command) {
+                    is EditorViewCommand.Zoom ->
+                      canvasZoom = canvasZoomAfter(command.zoom, canvasZoom ?: canvasDrawnScale)
+                    EditorViewCommand.ShowShortcuts -> showShortcutsDialog = true
+                  }
+                },
               )
             }
         ) {

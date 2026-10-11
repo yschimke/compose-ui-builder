@@ -1778,12 +1778,14 @@ internal fun ComponentPacksPanel(
 }
 
 @Composable
-private fun EditorShortcutsDialog(onDismiss: () -> Unit) {
+internal fun EditorShortcutsDialog(onDismiss: () -> Unit) {
   TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Keyboard and pointer") },
-    text = { EditorShortcutsPanel() },
+    // Scrolls, because the table outgrew a short window once the zoom chords and `?` joined it,
+    // and a dialog clipped at the bottom hides exactly the rows nobody has read yet.
+    text = { EditorShortcutsPanel(Modifier.verticalScroll(rememberScrollState())) },
     confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
   )
 }
@@ -1844,7 +1846,9 @@ internal fun editorShortcut(
   event: KeyEvent,
   enabled: Boolean,
   editing: Boolean,
+  canvasShown: Boolean,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  onViewCommand: (EditorViewCommand) -> Unit,
 ): Boolean {
   if (!enabled || event.type != KeyEventType.KeyDown) return false
   val chord =
@@ -1853,8 +1857,13 @@ internal fun editorShortcut(
       command = event.isCtrlPressed || event.isMetaPressed,
       shift = event.isShiftPressed,
     )
-  val match = editorShortcutFor(chord, editing) ?: return false
-  dispatch(match.event)
+  val match = editorShortcutFor(chord, editing, canvasShown) ?: return false
+  match.event?.let(dispatch)
+  match.view?.let(onViewCommand)
+  // Returning true is also what keeps the browser out of it: the Wasm host prevents the default of
+  // a key event Compose reports as consumed, so Ctrl/Cmd+= zooms the design rather than the page —
+  // and only while this table claims it. With the canvas closed or a field focused nothing matches,
+  // and the browser's own page zoom answers as it always did.
   return true
 }
 
@@ -1863,9 +1872,25 @@ internal fun editorShortcut(
  * With the canvas switched off ([editing] false), only pane-opening chords are live, so nothing
  * edits invisibly.
  */
-internal fun editorShortcutFor(chord: EditorChord, editing: Boolean = true): EditorShortcut? =
+internal fun editorShortcutFor(
+  chord: EditorChord,
+  editing: Boolean = true,
+  canvasShown: Boolean = editing,
+): EditorShortcut? =
   EDITOR_SHORTCUTS.firstOrNull { it.matches(chord) }
-    ?.takeIf { editing || it.event is UiBuilderEditorEvent.TogglePane }
+    ?.takeIf {
+      when {
+        // The zoom chords need the canvas itself on screen, which the open editor pane does not
+        // promise: an old revision or a suggestion under review replaces the canvas, and the
+        // compact layout may be showing a preview tab. Taken then, they would rescale a canvas
+        // nobody can see from a stale drawn scale, and keep the browser's page zoom from answering.
+        it.view is EditorViewCommand.Zoom -> canvasShown
+        else ->
+          editing ||
+            it.event is UiBuilderEditorEvent.TogglePane ||
+            it.view == EditorViewCommand.ShowShortcuts
+      }
+    }
 
 /** The part of a key press a shortcut is allowed to look at. */
 internal data class EditorChord(val key: Key, val command: Boolean, val shift: Boolean)
@@ -1877,13 +1902,30 @@ internal data class EditorChord(val key: Key, val command: Boolean, val shift: B
 internal data class EditorShortcut(
   val chord: String,
   val description: String,
-  val event: UiBuilderEditorEvent,
+  val event: UiBuilderEditorEvent? = null,
   val keys: Set<Key>,
   val command: Boolean,
   val shift: Boolean? = null,
+  /** What the chord does to the editor's window instead, for a chord that is not an [event]. */
+  val view: EditorViewCommand? = null,
 ) {
+  init {
+    require((event == null) != (view == null)) { "$chord must do exactly one thing" }
+  }
+
   fun matches(pressed: EditorChord): Boolean =
     pressed.command == command && (shift == null || shift == pressed.shift) && pressed.key in keys
+}
+
+/**
+ * What a chord does to the person's view rather than to the design. Not a [UiBuilderEditorEvent]:
+ * the zoom is not editor state and the shortcuts dialog is a window, so neither has a reducer.
+ */
+internal sealed interface EditorViewCommand {
+  data class Zoom(val zoom: CanvasZoomCommand) : EditorViewCommand
+
+  /** Opens the panel these rows are drawn in. */
+  data object ShowShortcuts : EditorViewCommand
 }
 
 /**
@@ -2022,6 +2064,50 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       event = UiBuilderEditorEvent.Paste,
       keys = setOf(Key.V),
       command = true,
+    ),
+    // The zoom chords every canvas tool and every browser already uses, so a hand that reaches
+    // for them out of habit zooms the design and not the page around it. `=` rather than only
+    // `+`, because `+` is the shifted `=` on most layouts and nobody holds shift to zoom in.
+    EditorShortcut(
+      chord = "$COMMAND_MODIFIER+= / +",
+      description = "Zoom in",
+      view = EditorViewCommand.Zoom(CanvasZoomCommand.In),
+      keys = setOf(Key.Equals, Key.Plus, Key.NumPadAdd),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "$COMMAND_MODIFIER+-",
+      description = "Zoom out",
+      view = EditorViewCommand.Zoom(CanvasZoomCommand.Out),
+      keys = setOf(Key.Minus, Key.NumPadSubtract),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "$COMMAND_MODIFIER+0",
+      description = "Zoom to fit the design in the window",
+      view = EditorViewCommand.Zoom(CanvasZoomCommand.Fit),
+      keys = setOf(Key.Zero, Key.NumPad0),
+      command = true,
+      shift = false,
+    ),
+    EditorShortcut(
+      chord = "$COMMAND_MODIFIER+1",
+      description = "Zoom to actual size (100%)",
+      view = EditorViewCommand.Zoom(CanvasZoomCommand.ActualSize),
+      keys = setOf(Key.One, Key.NumPad1),
+      command = true,
+      shift = false,
+    ),
+    // Shift+/ is `?` on the layouts this is spelled for. Bare, like E, because the table is only
+    // consulted while no text field has the caret — and it is live with the canvas closed too,
+    // since a list of what the keys do is most wanted by someone who has just lost the canvas.
+    EditorShortcut(
+      chord = "?",
+      description = "Show these shortcuts",
+      view = EditorViewCommand.ShowShortcuts,
+      keys = setOf(Key.Slash),
+      command = false,
+      shift = true,
     ),
     EditorShortcut(
       chord = "Delete / Backspace",
