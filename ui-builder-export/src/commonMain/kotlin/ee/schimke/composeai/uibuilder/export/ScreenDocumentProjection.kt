@@ -222,6 +222,32 @@ object ScreenDocumentProjection {
     )
 
   /**
+   * [project], with what a catalog's structure says about the records around a projected node:
+   * which DSL parameters wrap each child in an item member, and the scope that member's body
+   * composes under. An overload to keep the published JVM descriptors above.
+   */
+  fun project(
+    document: DesignDocumentV1,
+    exportProjections: Map<String, ExportProjection>,
+    screenName: String = screenNameFor(document),
+    tagNodes: Boolean = false,
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    slotReceivers: Map<String, Map<String, String>> = emptyMap(),
+    structure: ProjectedStructure,
+  ): Outcome =
+    projectInternal(
+      document,
+      screenName,
+      tagNodes,
+      false,
+      emptyMap(),
+      typefaces = typefaces,
+      exportProjections = exportProjections,
+      slotReceivers = slotReceivers,
+      structure = structure,
+    )
+
+  /**
    * Opt-in projection for build generation, with declared input reads and checked component calls.
    */
   fun projectProduction(
@@ -254,6 +280,7 @@ object ScreenDocumentProjection {
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
     exportProjections: Map<String, ExportProjection> = emptyMap(),
     slotReceivers: Map<String, Map<String, String>> = emptyMap(),
+    structure: ProjectedStructure = ProjectedStructure(),
   ): Outcome {
     // No component record parameter: type-checking against the record is `ScreenGenerator`'s job.
     val pass =
@@ -266,6 +293,7 @@ object ScreenDocumentProjection {
         typefaces,
         exportProjections,
         slotReceivers,
+        structure,
       )
     val roots = document.roots
     if (roots.size != 1) {
@@ -369,8 +397,15 @@ object ScreenDocumentProjection {
     val typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
     val exportProjections: Map<String, ExportProjection> = emptyMap(),
     val slotReceivers: Map<String, Map<String, String>> = emptyMap(),
+    val structure: ProjectedStructure = ProjectedStructure(),
   ) {
     val reasons = mutableListOf<String>()
+
+    /**
+     * The nodes about to be visited as the direct child of the `list-item` role: each wrapped in a
+     * projection's item member, so its target's `list-item` context applies. One level deep.
+     */
+    private val listItems = mutableSetOf<String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
     /** The families written as `SystemFont` lookups; see [Outcome.Projected.systemFontFamilies]. */
     val systemFontFamilies = linkedSetOf<String>()
@@ -1035,8 +1070,10 @@ object ScreenDocumentProjection {
           refuse("$where.`$it` chooses the component, so it is a literal rather than a bound value")
           refused = true
         }
+      // Only the direct child of an item wrapper is in the role, and only once.
+      val role = if (listItems.remove(node.id)) LIST_ITEM_ROLE else null
       val lowered =
-        when (val outcome = projection.lower(literal)) {
+        when (val outcome = projection.lower(literal, role)) {
           is ExportProjection.Lowered.Refused -> {
             outcome.reasons.forEach { reasons += "$where: $it" }
             return null
@@ -1058,19 +1095,22 @@ object ScreenDocumentProjection {
         value(value, node, property)?.let { arguments[parameter] = it } ?: run { refused = true }
       }
       val leading = listOfNotNull(scaffoldPaddings.remove(node.id))
+      // The role's links append after the node's own chain, never in place of it.
+      val implied = fromProperties + lowered.modifier
       if (
         node.modifiers.isNotEmpty() ||
           leading.isNotEmpty() ||
-          fromProperties.isNotEmpty() ||
+          implied.isNotEmpty() ||
           (tagNodes && !synthesized)
       ) {
-        modifiers(node, fromProperties, scope, leading)?.let { arguments["modifier"] = it }
+        modifiers(node, implied, scope, leading)?.let { arguments["modifier"] = it }
           ?: run { refused = true }
       }
       callbackArguments(node).forEach { (parameter, callback) ->
         arguments[renamedEvent(parameter, lowered.events)] = callback
       }
       val slots = linkedMapOf<String, List<ScreenNode>>()
+      val slotItems = linkedMapOf<String, SlotItem>()
       for ((slot, children) in node.slots) {
         // The projection's patterns decide which child is which parameter (an optional leading
         // icon, then one or two lines), and the parameters they write pick the overload; a slot
@@ -1091,7 +1131,26 @@ object ScreenDocumentProjection {
           }
           is ExportProjection.SlotAssignment.Assigned ->
             for ((parameter, assignedChildren) in assigned.parameters) {
-              val childScope = slotReceivers[lowered.record]?.get(parameter)
+              val member = lowered.items[parameter]
+              val childScope =
+                if (member == null) slotReceivers[lowered.record]?.get(parameter)
+                else {
+                  val receiver = structure.dslReceivers[lowered.record]?.get(parameter)
+                  if (receiver == null) {
+                    refuse(
+                      "$where.`$slot`: `$parameter` wraps its children in `$member`, but " +
+                        "its record declares no DSL receiver for it"
+                    )
+                    refused = true
+                    continue
+                  }
+                  slotItems[parameter] =
+                    SlotItem.Builder(member, receiver)
+                      .also { it.bodyScopeFqn = structure.itemScope }
+                      .build()
+                  listItems += assignedChildren
+                  structure.itemScope
+                }
               slots[parameter] =
                 slots[parameter].orEmpty() +
                   assignedChildren.mapNotNull { child -> node(child, childScope) }
@@ -1115,6 +1174,7 @@ object ScreenDocumentProjection {
         handlers =
           handlers(node).mapKeys { (parameter, _) -> renamedEvent(parameter, lowered.events) },
         slots = slots,
+        slotItems = slotItems,
       )
     }
 
@@ -3411,6 +3471,9 @@ object ScreenDocumentProjection {
   private const val MODIFIER = "androidx.compose.ui.Modifier"
 
   private const val LAYOUT_COLUMN = "layout/column"
+
+  /** The structural role a projection's item member opens; its context applies to the child. */
+  private const val LIST_ITEM_ROLE = "list-item"
 
   /**
    * The two packages most authored modifiers come from: `foundation.layout` and `ui.draw`.
