@@ -830,8 +830,22 @@ fun UiBuilderEditor(
           )
       )
     }
+  // The undo offer after a delete, cut or unwrap. One at a time: the job is the offer, so
+  // cancelling it takes the snackbar down with it, and a newer destructive edit replaces the
+  // pending one rather than queueing behind it the way SnackbarHostState would.
+  //
+  // Both are per design. The coroutine scope that runs the offer is not, so opening another design
+  // in the same editor cancels the old offer explicitly: left up, it would name a node in a design
+  // that is no longer on screen, and its action would undo through the old design's state.
+  val undoSnackbarHost = remember(document.id) { SnackbarHostState() }
+  var undoSnackbarJob by remember(document.id) { mutableStateOf<Job?>(null) }
+  DisposableEffect(document.id) { onDispose { undoSnackbarJob?.cancel() } }
   LaunchedEffect(document.revision, authoritativeGeneration) {
     if (state.document != document) {
+      // A rebuilt state carries none of the commands that built it, so there is nothing left for
+      // the offer's action to undo: a collaborator's edit, a reconnect or an authoritative answer
+      // takes it down like any other change to the document.
+      undoSnackbarJob?.cancel()
       state = reducer.reconciled(state, document, initialSelectedNodeId)
     }
   }
@@ -1097,13 +1111,6 @@ fun UiBuilderEditor(
           ?: "Release to add beside the design"
       else -> "No compatible slot"
     }
-  // The undo offer after a delete, cut or unwrap. One at a time: the job is the offer, so
-  // cancelling
-  // it takes the snackbar down with it, and a newer destructive edit replaces the pending one
-  // rather
-  // than queueing behind it the way SnackbarHostState would.
-  val undoSnackbarHost = remember { SnackbarHostState() }
-  var undoSnackbarJob by remember(document.id) { mutableStateOf<Job?>(null) }
   /**
    * Put up, replace or take down the undo offer for an edit that just landed; [undo] is what its
    * action does.

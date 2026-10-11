@@ -1,8 +1,13 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onAllNodesWithText
@@ -108,7 +113,59 @@ class UndoSnackbarUiTest {
       onNodeWithText("Deleted Text").assertDoesNotExist()
     }
 
-  private fun androidx.compose.ui.test.ComposeUiTest.capture(name: String) {
+  @Test
+  fun `an authoritative document takes the offer down`() =
+    runDesktopComposeUiTest(width = 1280, height = 800) {
+      var generation by mutableStateOf(0)
+      deleteThenAssertOffer {
+        UiBuilderEditor(
+          document = document,
+          catalog = catalog,
+          initialCanvasZoom = 1f,
+          authoritativeGeneration = generation,
+          onStateChanged = it,
+        )
+      }
+      // The host answers with its own document — here the one before the delete, as a reconnect
+      // that never saw it would. The rebuilt state has no delete to undo, so nothing may offer one.
+      generation += 1
+      waitForIdle()
+      onNodeWithText("Deleted Text").assertDoesNotExist()
+    }
+
+  @Test
+  fun `opening another design takes the offer down`() =
+    runDesktopComposeUiTest(width = 1280, height = 800) {
+      var shown by mutableStateOf(document)
+      deleteThenAssertOffer {
+        UiBuilderEditor(
+          document = shown,
+          catalog = catalog,
+          initialCanvasZoom = 1f,
+          onStateChanged = it,
+        )
+      }
+      shown = document.copy(id = "${document.id}-other")
+      waitForIdle()
+      onNodeWithText("Deleted Text").assertDoesNotExist()
+    }
+
+  /** Mounts [editor], deletes the title from the canvas and checks the offer is up. */
+  private fun ComposeUiTest.deleteThenAssertOffer(
+    editor: @Composable ((UiBuilderEditorState) -> Unit) -> Unit
+  ) {
+    var state: UiBuilderEditorState? = null
+    setContent { MaterialTheme { editor { state = it } } }
+    waitForIdle()
+    onAllNodesWithText(title).onFirst().performClick()
+    waitForIdle()
+    onRoot().performKeyInput { pressKey(Key.Delete) }
+    waitForIdle()
+    assertFalse(deleted in state!!.document.nodes)
+    onNodeWithText("Deleted Text").assertExists()
+  }
+
+  private fun ComposeUiTest.capture(name: String) {
     val bitmap = onRoot().captureToImage().asSkiaBitmap()
     File(System.getProperty("uiBuilderProjectDir"), "build/undo-snackbar-evidence/$name.png")
       .apply {
