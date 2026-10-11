@@ -998,6 +998,8 @@ object ScreenDocumentProjection {
       node: DesignNodeV1,
       projection: ExportProjection,
       scope: String?,
+      /** A child the projection made from a property (`synthesize`): no design node to tag. */
+      synthesized: Boolean = false,
     ): ScreenNode? {
       val where = "node `${node.id}`"
       // Predicates, accessibility, asset and token bindings: the same refusals the table path
@@ -1060,7 +1062,7 @@ object ScreenDocumentProjection {
         node.modifiers.isNotEmpty() ||
           leading.isNotEmpty() ||
           fromProperties.isNotEmpty() ||
-          tagNodes
+          (tagNodes && !synthesized)
       ) {
         modifiers(node, fromProperties, scope, leading)?.let { arguments["modifier"] = it }
           ?: run { refused = true }
@@ -1068,19 +1070,102 @@ object ScreenDocumentProjection {
       callbackArguments(node).forEach { (parameter, callback) ->
         arguments[renamedEvent(parameter, lowered.events)] = callback
       }
+      val slots = linkedMapOf<String, List<ScreenNode>>()
+      for ((slot, children) in node.slots) {
+        // The projection's patterns decide which child is which parameter (an optional leading
+        // icon, then one or two lines), and the parameters they write pick the overload; a slot
+        // with no patterns is the plain rename.
+        when (
+          val assigned =
+            projection.assignSlot(
+              lowered.record,
+              slot,
+              children,
+              componentId = { document.nodes[it]?.componentId.orEmpty() },
+              plainColumn = ::plainColumn,
+            )
+        ) {
+          is ExportProjection.SlotAssignment.Refused -> {
+            refuse("$where.`$slot`: ${assigned.reason}")
+            refused = true
+          }
+          is ExportProjection.SlotAssignment.Assigned ->
+            for ((parameter, assignedChildren) in assigned.parameters) {
+              val childScope = slotReceivers[lowered.record]?.get(parameter)
+              slots[parameter] =
+                slots[parameter].orEmpty() +
+                  assignedChildren.mapNotNull { child -> node(child, childScope) }
+            }
+        }
+      }
+      for ((parameter, synthesis) in lowered.synthesized) {
+        if (synthesis.properties.isEmpty()) continue
+        if (parameter in slots) {
+          refuse("$where writes `$parameter` both from its children and from its properties")
+          refused = true
+          continue
+        }
+        synthesizedNode(node, parameter, synthesis, slotReceivers[lowered.record]?.get(parameter))
+          ?.let { slots[parameter] = listOf(it) } ?: run { refused = true }
+      }
       if (refused) return null
       return ScreenNode(
         componentId = lowered.record,
         arguments = arguments,
         handlers =
           handlers(node).mapKeys { (parameter, _) -> renamedEvent(parameter, lowered.events) },
-        slots =
-          node.slots.entries.associate { (slot, children) ->
-            val parameter = lowered.slots[slot] ?: slot
-            val childScope = slotReceivers[lowered.record]?.get(parameter)
-            parameter to children.mapNotNull { child -> node(child, childScope) }
-          },
+        slots = slots,
       )
+    }
+
+    /**
+     * The child a projection writes [parameter] with from [parent]'s properties: a node of another
+     * catalog component, exported through that component's own projection, so `ListHeader`'s header
+     * is the catalog's `Text` with its style rules rather than a string that drifts from it.
+     */
+    private fun synthesizedNode(
+      parent: DesignNodeV1,
+      parameter: String,
+      synthesis: ExportProjection.Lowered.Synthesized,
+      scope: String?,
+    ): ScreenNode? {
+      val where = "node `${parent.id}`.`$parameter`"
+      val projection =
+        exportProjections[synthesis.component]
+          ?: return refuse(
+            "$where is written as a `${synthesis.component}`, which publishes no export projection"
+          )
+      val properties =
+        synthesis.properties.mapValues { (property, raw) ->
+          runCatching { Json.decodeFromJsonElement(UiValueV1.serializer(), raw) }.getOrNull()
+            ?: return refuse("$where: `$property` is not a saved value")
+        }
+      return projectedNode(
+        DesignNodeV1("${parent.id}/$parameter", synthesis.component, properties = properties),
+        projection,
+        scope,
+        synthesized = true,
+      )
+    }
+
+    /**
+     * The children of [id] when it is a column a slot pattern may read as lines, else null: a
+     * `layout/column` with no modifiers and its default arrangement and alignment, which the
+     * recognised slots replace, so the column itself is not written. Wear's hand-written emitter
+     * applies the same test (`WearContentEmitter.textLines`).
+     */
+    private fun plainColumn(id: String): List<String>? {
+      val column = document.nodes[id] ?: return null
+      if (column.componentId != LAYOUT_COLUMN || column.modifiers.isNotEmpty()) return null
+      fun word(property: String) =
+        when (val value = column.properties[property]) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else -> null
+        }
+      if (word("verticalArrangement") in ARRANGED_COLUMN) return null
+      if (word("horizontalAlignment") in setOf("center", "end")) return null
+      return column.slots["children"]?.takeIf { it.isNotEmpty() }
     }
 
     /**
@@ -3321,6 +3406,12 @@ object ScreenDocumentProjection {
   }
 
   private const val MODIFIER = "androidx.compose.ui.Modifier"
+
+  private const val LAYOUT_COLUMN = "layout/column"
+
+  /** The `verticalArrangement` words that move a column's children off the top. */
+  private val ARRANGED_COLUMN =
+    setOf("center", "bottom", "spaceBetween", "spaceAround", "spaceEvenly")
 
   /**
    * The two packages most authored modifiers come from: `foundation.layout` and `ui.draw`.
