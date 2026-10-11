@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
@@ -1856,6 +1857,7 @@ internal fun editorShortcut(
       key = event.key,
       command = event.isCtrlPressed || event.isMetaPressed,
       shift = event.isShiftPressed,
+      alt = event.isAltPressed,
     )
   val match = editorShortcutFor(chord, editing, canvasShown) ?: return false
   match.event?.let(dispatch)
@@ -1893,11 +1895,17 @@ internal fun editorShortcutFor(
     }
 
 /** The part of a key press a shortcut is allowed to look at. */
-internal data class EditorChord(val key: Key, val command: Boolean, val shift: Boolean)
+internal data class EditorChord(
+  val key: Key,
+  val command: Boolean,
+  val shift: Boolean,
+  val alt: Boolean = false,
+)
 
 /**
  * One chord the editor answers to. [shift] null means "does not care": `Ctrl/⌘+Z` reaches undo only
- * because redo claims the shifted spelling first.
+ * because redo claims the shifted spelling first. [alt] null is the same for Alt/Option, and is
+ * every chord's default so the table answered alike before Alt meant anything to it.
  */
 internal data class EditorShortcut(
   val chord: String,
@@ -1906,6 +1914,7 @@ internal data class EditorShortcut(
   val keys: Set<Key>,
   val command: Boolean,
   val shift: Boolean? = null,
+  val alt: Boolean? = null,
   /** What the chord does to the editor's window instead, for a chord that is not an [event]. */
   val view: EditorViewCommand? = null,
 ) {
@@ -1914,7 +1923,10 @@ internal data class EditorShortcut(
   }
 
   fun matches(pressed: EditorChord): Boolean =
-    pressed.command == command && (shift == null || shift == pressed.shift) && pressed.key in keys
+    pressed.command == command &&
+      (shift == null || shift == pressed.shift) &&
+      (alt == null || alt == pressed.alt) &&
+      pressed.key in keys
 }
 
 /**
@@ -1926,6 +1938,13 @@ internal sealed interface EditorViewCommand {
 
   /** Opens the panel these rows are drawn in. */
   data object ShowShortcuts : EditorViewCommand
+
+  /**
+   * Opens the Column / Row / Box chooser for the selection. A view command rather than a
+   * [UiBuilderEditorEvent.WrapSelection] because the chord has not yet said which container: the
+   * chooser dispatches that one event, so the wrap stays a single undo step.
+   */
+  data object ChooseWrap : EditorViewCommand
 }
 
 /**
@@ -1993,6 +2012,17 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       event = UiBuilderEditorEvent.HideQuickEditor,
       keys = setOf(Key.Escape),
       command = false,
+    ),
+    // The chord Figma and Sketch use to wrap a selection in a frame. Alt because Ctrl/Cmd+G alone
+    // is the browser's find-next. Opens a chooser rather than wrapping outright: which of the three
+    // containers is the whole question, and a second key answers it.
+    EditorShortcut(
+      chord = "$COMMAND_MODIFIER+Alt+G",
+      description = "Wrap the selection in a Column, Row or Box",
+      view = EditorViewCommand.ChooseWrap,
+      keys = setOf(Key.G),
+      command = true,
+      alt = true,
     ),
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+D",
