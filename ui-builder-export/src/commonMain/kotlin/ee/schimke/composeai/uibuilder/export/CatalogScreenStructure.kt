@@ -14,6 +14,12 @@ import kotlinx.serialization.json.contentOrNull
  * [frame], a design rooted on it exports as the frame around its `content` child
  * ([ScreenRootFrame]).
  *
+ * [stringResources] is the catalog's Compose Multiplatform resource accessor
+ * (`code.stringResources`, for example `ee.schimke.m3catalog.generated.resources.Res`). With it a
+ * `resource` value on a text parameter exports as `stringResource(Res.string.<key>)`, so a design's
+ * copy can be the catalog's translated strings rather than literals. Without it a `resource` value
+ * is refused, as before.
+ *
  * Validated when the catalog is published; read here as it was published, with anything unreadable
  * left out, as [CatalogExportProjections] does.
  */
@@ -23,7 +29,17 @@ data class CatalogScreenStructure(
   val locals: Map<String, String> = emptyMap(),
   val scopes: Map<String, String> = emptyMap(),
   val rootComponent: String? = null,
+  val stringResources: String? = null,
 ) {
+  /** The published four-field constructor, kept for binaries compiled against it. */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  constructor(
+    frame: String? = null,
+    imports: List<String> = emptyList(),
+    locals: Map<String, String> = emptyMap(),
+    scopes: Map<String, String> = emptyMap(),
+  ) : this(frame, imports, locals, scopes, null, null)
+
   /** The scope a projection's item member composes its child under, if the catalog attests it. */
   val itemScope: String?
     get() = scopes[LIST_ITEM]
@@ -60,6 +76,8 @@ data class CatalogScreenStructure(
         locals = strings("locals"),
         scopes = strings("scopes"),
         rootComponent = rootComponent,
+        stringResources =
+          (code["stringResources"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull,
       )
     }
   }
@@ -73,4 +91,13 @@ data class CatalogScreenStructure(
 data class ProjectedStructure(
   val dslReceivers: Map<String, Map<String, String>> = emptyMap(),
   val itemScope: String? = null,
-)
+  /** [CatalogScreenStructure.stringResources], for lowering `resource` values. */
+  val stringResources: String? = null,
+) {
+  /** The published two-field constructor, kept for binaries compiled against it. */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  constructor(
+    dslReceivers: Map<String, Map<String, String>> = emptyMap(),
+    itemScope: String? = null,
+  ) : this(dslReceivers, itemScope, null)
+}

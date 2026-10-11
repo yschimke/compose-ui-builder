@@ -125,7 +125,11 @@ object ScreenExportGate {
           typefaces = typefaces,
           slotReceivers = slotReceivers(exportProjections, record),
           structure =
-            ProjectedStructure(dslReceivers(exportProjections, record), structure?.itemScope),
+            ProjectedStructure(
+              dslReceivers(exportProjections, record),
+              structure?.itemScope,
+              structure?.stringResources,
+            ),
         )
     ) {
       // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
@@ -139,7 +143,9 @@ object ScreenExportGate {
               projected.document,
               projected.resolvable(resolvable),
               PACKAGE_NAME,
-              EXPRESSION_PACKAGES + projectedOwners(exportProjections, record),
+              EXPRESSION_PACKAGES +
+                projectedOwners(exportProjections, record) +
+                stringResourcePackages(structure),
               locals = structure?.locals.orEmpty(),
               frame = structure?.frame?.let { ScreenGenerator.Frame(it, structure.imports) },
             )
@@ -177,6 +183,19 @@ object ScreenExportGate {
       .filter { owner -> owner.substringBeforeLast('.', "") in packages }
       .toSet()
   }
+
+  /**
+   * What a `stringResource(Res.string.key)` names, widened only when the catalog declares its
+   * resource accessor: the resources runtime and the package its generated `Res` lives in.
+   */
+  internal fun stringResourcePackages(structure: CatalogScreenStructure?): Set<String> {
+    val res = structure?.stringResources ?: return emptySet()
+    val owner = res.substringBeforeLast('.', "")
+    return setOf(COMPOSE_RESOURCES_PACKAGE) + listOf(owner).filter { it.isNotEmpty() }
+  }
+
+  /** Where `stringResource` and `StringResource` are declared. */
+  internal const val COMPOSE_RESOURCES_PACKAGE: String = "org.jetbrains.compose.resources"
 
   /** Every object callable [projection]'s list and object codecs write, at any depth. */
   private fun objectCallables(projection: ExportProjection): Set<String> = buildSet {
