@@ -7,6 +7,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeChangeV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeIssueSeverityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeIssueV1
+import ee.schimke.composeai.uibuilder.protocol.DESIGN_COMPONENT_INSTANCE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
@@ -125,6 +126,10 @@ internal fun planCatalogUpgrade(
   val issues = mutableListOf<CatalogUpgradeIssueV1>()
   val nodes =
     document.nodes.mapValues { (nodeId, node) ->
+      // A placement is a document construct, not a catalog component: it draws a body this design
+      // declares, whose own nodes are upgraded here like any other. Nothing about it moves with the
+      // catalog, so it passes through as the validator treats it.
+      if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) return@mapValues node
       val rule = rules[node.componentId]
       val componentId =
         rule?.variants?.let { variant ->
