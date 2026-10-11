@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import kotlin.test.Test
 
@@ -24,6 +25,18 @@ class OutlinedTextFieldCanvasTest {
       onNodeWithText("Email").assertExists()
     }
 
+  /** The `TextFieldState` field keeps what is typed into it, as its generated call does. */
+  @Test
+  fun `typing into the published outlined text field keeps the text`() =
+    runDesktopComposeUiTest(width = 400, height = 200) {
+      setContent { ProductionUiBuilderSurface(decodeProductionRendererDocument(DOCUMENT)) }
+      onNode(hasSetTextAction()).performTextInput("ada")
+      onNodeWithText("ada", substring = true).assertExists()
+      // The published record's prefix and suffix slots, which Material shows once there is text.
+      onNodeWithText("mailto:").assertExists()
+      onNodeWithText("@example.com").assertExists()
+    }
+
   private companion object {
     val DOCUMENT =
       """
@@ -37,7 +50,14 @@ class OutlinedTextFieldCanvasTest {
        "nodes":{
         "email":{"id":"email","componentId":"m3/outlined-text-field",
           "properties":{"singleLine":{"type":"bool","value":true}},
-          "modifiers":[],"slots":{"label":["email-label"]},"eventBindings":{}},
+          "modifiers":[],"slots":{"label":["email-label"],"prefix":["email-prefix"],
+            "suffix":["email-suffix"]},"eventBindings":{}},
+        "email-prefix":{"id":"email-prefix","componentId":"m3/text",
+          "properties":{"text":{"type":"string","value":"mailto:"}},
+          "modifiers":[],"slots":{},"eventBindings":{}},
+        "email-suffix":{"id":"email-suffix","componentId":"m3/text",
+          "properties":{"text":{"type":"string","value":"@example.com"}},
+          "modifiers":[],"slots":{},"eventBindings":{}},
         "email-label":{"id":"email-label","componentId":"m3/text",
           "properties":{"text":{"type":"string","value":"Email"}},
           "modifiers":[],"slots":{},"eventBindings":{}}}}

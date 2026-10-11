@@ -101,7 +101,9 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -1719,11 +1721,17 @@ private fun RenderNode(
         )
       // The m3-catalog publishes the outlined field as its own component; older documents spell it
       // as `m3/text-field` with `variant: outlined`. Both draw the same field.
-      "m3/text-field", "m3/outlined-text-field" -> {
+      "m3/text-field",
+      "m3/outlined-text-field" -> {
         // The variable the field writes (not a local `remember`), so typing in the canvas changes
         // the design; same seam as `m3/search-input-field`.
         val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
-        val value = variable?.let(state::get) ?: node.string("value")
+        // The published outlined field is `TextFieldState`-based: it has no `value` to bind, and
+        // its generated call holds its own `rememberTextFieldState()`. Typing into it on the canvas
+        // keeps the text the same way rather than resetting it.
+        val ownState = variable == null && node.componentId == "m3/outlined-text-field"
+        var typed by remember(node.id) { mutableStateOf(node.string("value")) }
+        val value = variable?.let(state::get) ?: if (ownState) typed else node.string("value")
         val label: (@Composable () -> Unit)? =
           slot("label").takeIf(List<String>::isNotEmpty)?.let { ids ->
             { ids.forEach { child(it, Modifier) } }
@@ -1744,8 +1752,16 @@ private fun RenderNode(
           slot("trailingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
             { ids.forEach { child(it, Modifier) } }
           }
+        val prefix: (@Composable () -> Unit)? =
+          slot("prefix").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
+        val suffix: (@Composable () -> Unit)? =
+          slot("suffix").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
         val onValueChange: (String) -> Unit = { next ->
-          if (variable != null) host.setState(variable, next)
+          if (variable != null) host.setState(variable, next) else if (ownState) typed = next
         }
         if (node.componentId == "m3/outlined-text-field" || node.string("variant") == "outlined") {
           OutlinedTextField(
@@ -1759,6 +1775,8 @@ private fun RenderNode(
             supportingText = supporting,
             leadingIcon = leading,
             trailingIcon = trailing,
+            prefix = prefix,
+            suffix = suffix,
             isError = node.bool("isError"),
             singleLine = node.bool("singleLine", true),
           )
@@ -1774,6 +1792,8 @@ private fun RenderNode(
             supportingText = supporting,
             leadingIcon = leading,
             trailingIcon = trailing,
+            prefix = prefix,
+            suffix = suffix,
             isError = node.bool("isError"),
             singleLine = node.bool("singleLine", true),
           )
