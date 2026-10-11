@@ -3,15 +3,12 @@ package ee.schimke.composeai.uibuilder.export
 import kotlinx.serialization.json.*
 
 /**
- * Whether a state reference produces a value admitted by a catalog property. Null means the value
- * is not a state reference and the ordinary literal validation applies.
+ * Whether a state reference produces a value admitted by a catalog property; null means it is not a
+ * state reference and literal validation applies.
  *
- * Catalogs that explicitly admit objects retain their existing binding vocabulary. Scalar-only
- * properties may also read matching scalar state, but cannot read nullable state unless they admit
- * null. An allowed-values property cannot take unconstrained dynamic state: its JSON scalar alone
- * does not describe the enum, token or call-site choice the catalog requires.
- *
- * Shared by the browser validator and persistent service so an editor binding can cross MCP/HTTP.
+ * Properties admitting objects keep their binding vocabulary. Scalar-only properties may read
+ * matching scalar state, nullable only if they admit null. Allowed-values properties cannot take
+ * unconstrained state. Shared by the browser validator and the persistent service.
  */
 fun stateBindingMatchesCatalog(
   value: JsonElement,
@@ -76,12 +73,9 @@ fun stateBindingMatchesCatalog(
 }
 
 /**
- * Whether a computed value (`expr`/`system`) may fill a property of [jsonType].
- *
- * The same question [stateBindingMatchesCatalog] answers for a state read, asked of the type the
- * expression produces: a number into a number, a Boolean into a flag, anything printable into text,
- * a colour only into a colour. An expression that does not type against the declared state is not a
- * match at all — the canvas could not evaluate it.
+ * Whether a computed value (`expr`/`system`) may fill a property of [jsonType]: number into number,
+ * Boolean into flag, anything printable into text, colour only into colour. An expression that does
+ * not type against declared state never matches.
  */
 private fun computedMatchesCatalog(
   value: JsonObject,
@@ -107,11 +101,8 @@ private fun computedMatchesCatalog(
       is JsonPrimitive -> setOf(jsonType.content)
       else -> emptySet()
     }
-  // `object` is how a catalog admits a binding wrapper beside a scalar — `["number", "object"]` —
-  // so
-  // it says nothing about which kind the property holds. The scalar types beside it do, and a
-  // property that is only `object` (a structural value such as `showByState`) holds none a formula
-  // can produce.
+  // `object` only admits a binding wrapper; the scalar types beside it say what the property holds,
+  // and an object-only property holds nothing a formula can produce.
   if (allowedValues.isNotEmpty() || PropertyValueKinds.isAssetKey(propertyName)) return false
   val kind = checked.expr.kind
   if (PropertyValueKinds.isColour(propertyName)) return kind == UiValueKind.COLOR

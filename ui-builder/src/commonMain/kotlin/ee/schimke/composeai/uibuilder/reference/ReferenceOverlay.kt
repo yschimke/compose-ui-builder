@@ -42,16 +42,11 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * The reference stack, drawn over the design frame in the mode the operator chose.
+ * The reference stack, drawn over the design frame in the mode the operator chose, above everything
+ * the document draws.
  *
- * Sits inside the pinned canvas, above the rendered document: a reference is compared against the
- * picture *as it is*, so it goes over the top of everything the document draws.
- *
- * It takes pointer input **only while a tool is in hand** ([ReferenceTool.None] is the default and
- * takes none), so selection, dragging from the catalog and the preview lane's taps all still reach
- * the canvas underneath. That is what makes an overlay something you work under rather than
- * something you keep switching off — and it is why the tool is an explicit mode rather than
- * something inferred from what the pointer happens to be over.
+ * Takes pointer input **only while a tool is in hand** ([ReferenceTool.None] is the default), so
+ * selection, catalog drags and preview taps still reach the canvas underneath.
  */
 @Composable
 internal fun ReferenceOverlayCanvas(
@@ -68,17 +63,15 @@ internal fun ReferenceOverlayCanvas(
   val settings = reference.settings
   val density = LocalDensity.current
   val textMeasurer = rememberTextMeasurer()
-  // Keyed on the identity the host minted rather than on the bytes: this decode is the expensive
-  // part (a base64 pass plus an image decode, or a full SVG rasterisation) and it must happen once
-  // per import, not once per recomposition.
+  // Keyed on the host-minted identity, not the bytes, so the expensive decode happens once per
+  // import.
   val bitmap = remember(reference.image?.id) { reference.image?.let(::decodeReferenceImage) }
   val pieceBitmaps =
     remember(reference.pieces.map { it.image.id }) {
       reference.pieces.associate { it.id to decodeReferenceImage(it.image) }
     }
-  // The stroke in progress, in frame fractions. Local because it is not state anybody else has an
-  // opinion about until the pointer lifts, and routing every pointer sample through the reducer
-  // would put one document-shaped state update per input event on the wire.
+  // The stroke in progress, in frame fractions; local so pointer samples don't each update the
+  // reducer.
   var drafting by remember(reference.tool) { mutableStateOf<List<Float>>(emptyList()) }
 
   Canvas(
@@ -122,11 +115,8 @@ internal fun ReferenceOverlayCanvas(
 }
 
 /**
- * The whole stack, in one place, because two callers draw it: the live overlay and the flattener.
- *
- * A flatten that drew the stack its own way would eventually disagree with the overlay, and the
- * operator would discover the disagreement by flattening — which is the one moment the picture has
- * to be exactly what they were looking at.
+ * The whole stack, in one place, shared by the live overlay and the flattener so a flatten matches
+ * what was on screen.
  */
 internal fun DrawScope.drawReferenceStack(
   reference: ReferenceOverlayState,
@@ -184,9 +174,7 @@ internal fun DrawScope.drawReferenceStack(
   if (settings.alwaysShowBoxes && settings.mode != ReferenceDiffMode.Boxes) {
     drawLayoutBoxes(reference.layoutBoxes, target)
   }
-  // Pieces and marks sit over whatever the base mode drew, and are never blended: a component
-  // dropped into place and a circle round a mistake are things the operator put there, and both
-  // stop meaning anything the moment they are subtracted from the picture underneath.
+  // Pieces and marks draw over the base mode and are never blended.
   reference.pieces.forEach { piece ->
     val bounds = piece.frameRect(size)
     pieceBitmaps[piece.id]?.let { drawReference(it, bounds, alpha = piece.opacity) }
@@ -248,9 +236,8 @@ private fun Modifier.referenceToolInput(
             onDraft(points.toList())
           },
           onDragEnd = {
-            // The id and the colour are the reducer's to assign: it is the one place that knows
-            // what is already on the canvas, and a stroke identified by a hash of its own points
-            // would collide with the identical stroke drawn twice.
+            // The reducer assigns ids and colours; it knows what's on the canvas, and point hashes
+            // would collide for identical strokes.
             val drawn = points.toList()
             if (drawn.size >= 4) onMarkDrawn(kind, drawn) else onDraft(emptyList())
             points = mutableListOf()
@@ -313,10 +300,8 @@ private fun DrawScope.drawReference(
 }
 
 /**
- * The SVG's own rectangles, stroked over the frame.
- *
- * Two colours by depth rather than one, because the outermost box is nearly always the artboard
- * itself and drawing it like a content box makes every screen look like it has a stray border.
+ * The SVG's own rectangles, stroked over the frame, in two colours by depth since the outermost is
+ * usually the artboard.
  */
 private fun DrawScope.drawLayoutBoxes(boxes: List<ReferenceLayoutBox>, target: Rect) {
   boxes.forEach { box ->
@@ -404,12 +389,8 @@ internal fun DrawScope.drawMark(
 }
 
 /**
- * A label inside [bounds], centred, or the bounds alone when this caller has no measurer.
- *
- * The measurer is a parameter rather than something this function makes, because building one needs
- * a font resolver that only exists inside a composition — and the flattener, which is not in one,
- * is handed the editor's. A null measurer draws the box and drops the words rather than failing:
- * the annotation is still visible, which is better than an empty canvas.
+ * A label inside [bounds], centred, or the bounds alone when there's no measurer. The measurer is
+ * passed in since it needs a composition's font resolver (the flattener gets the editor's).
  */
 private fun DrawScope.drawMarkupText(
   text: String?,
@@ -456,12 +437,9 @@ private val BOX_CONTENT = Color(0xCC40C4FF)
 private val PIECE_SELECTION = Color(0xFF40C4FF)
 
 /**
- * Decodes an import once, at a size that suits the frames the editor draws at.
- *
- * The raster path ignores [RASTER_TARGET_PX] — the bytes decode at their natural size and the draw
- * scales them. The vector path cannot: an SVG has no natural pixel size, so it is rasterised once
- * at a fixed generous square and then scaled like any other bitmap. Re-rasterising per frame size
- * would be sharper and would also mean an SVG re-parsed on every canvas resize.
+ * Decodes an import once. Raster decodes at natural size and scales when drawn; SVG has no natural
+ * size, so it is rasterised once at a fixed generous square ([RASTER_TARGET_PX]) rather than per
+ * frame size.
  */
 internal fun decodeReferenceImage(image: ReferenceImage): ImageBitmap? {
   val bytes =
@@ -476,13 +454,8 @@ internal fun decodeReferenceImage(image: ReferenceImage): ImageBitmap? {
 private const val RASTER_TARGET_PX = 2048
 
 /**
- * Bytes to pixels, per platform.
- *
- * Both targets of this module are Skia targets and the two implementations are the same few lines,
- * which is a duplication with a reason: an intermediate `skikoMain` source set would have to
- * resolve `org.jetbrains.skia` through the metadata compilation, and that is a build-shape change
- * this feature does not need. Keep the two in step; there is nothing platform-specific in either
- * beyond the import.
+ * Bytes to pixels, per platform. Both targets are Skia and the implementations are identical; a
+ * shared `skikoMain` source set would be a build-shape change. Keep them in step.
  */
 internal expect fun decodeReferenceBitmap(
   bytes: ByteArray,

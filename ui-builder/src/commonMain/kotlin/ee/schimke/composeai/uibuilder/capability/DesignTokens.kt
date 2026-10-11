@@ -33,15 +33,11 @@ data class DesignTokenBinding(
 
 /**
  * A design-system value with a name: a theme colour, the spacing of a list, the size of an icon.
+ * Declared by the catalog. [default] is usually null, meaning the design system's own value.
  *
- * Declared by the catalog, not by the design, because it is a fact about the design system — which
- * values it lets a design re-skin, and where each one lands. [default] is **nullable**, and null is
- * the usual answer: it means the design system's own value, which is what an unset property draws.
- * A token is *applied* by writing its value into every property it binds, and reset by unsetting
- * them again; the design holds the result as ordinary properties, so what a token is set to is read
- * back from the document rather than stored a second time.
- *
- * See [`UI_BUILDER_DESIGN_TOKENS.md`](../../../../../../docs/design/UI_BUILDER_DESIGN_TOKENS.md).
+ * Applying a token writes its value into every property it binds; resetting unsets them. The design
+ * holds ordinary properties, so a token's value is read back from the document. See
+ * [`UI_BUILDER_DESIGN_TOKENS.md`](../../../../../../docs/design/UI_BUILDER_DESIGN_TOKENS.md).
  */
 data class DesignToken(
   /** Stable and dotted, `color.primary` or `space.list`; the group is everything before the dot. */

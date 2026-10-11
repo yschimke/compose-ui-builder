@@ -26,11 +26,9 @@ import kotlin.test.assertNotNull
 import kotlinx.serialization.json.Json
 
 /**
- * A runtime renderer's pixels live in a DOM layer *under* the editor, and reach the screen through
- * the `BlendMode.Clear` hole the renderer punches in the canvas frame. The hole has to survive to
- * the window: cleared inside an offscreen layer, it only emptied that layer's buffer, which was
- * then composited back over the workspace — every pinned-runtime design drew as a blank canvas
- * while its device previews, which sit above the editor, drew fine.
+ * A runtime renderer's pixels live in a DOM layer *under* the editor and show through the
+ * `BlendMode.Clear` hole punched in the canvas frame. The hole must reach the window: cleared
+ * inside an offscreen layer, it would only empty that layer, leaving a blank canvas.
  */
 @OptIn(ExperimentalTestApi::class)
 class RuntimeCanvasPunchThroughTest {

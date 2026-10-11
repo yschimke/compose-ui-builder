@@ -15,30 +15,15 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * The component record the editor's code pane and problems panel judge a **pack** component by.
+ * The component record the editor's code pane and problems panel judge a **pack** component by. The
+ * embedded record is `m3-catalog`'s, which lacks pack components (they arrive with the catalog at
+ * run time).
  *
- * ## Why the editor needs one at all
- *
- * The pane runs the same `ScreenGenerator` the server's export does, against the record embedded at
- * build time — `m3-catalog`'s. A pack's components are not in it: they arrive with the catalog at
- * run time, projected by the server from the pack's own record, and the pane would report each one
- * as "no component in this catalog" while the export, generating from the real record, wrote its
- * call site perfectly well. Two answers to one question, which is the drift the pane exists to end.
- *
- * ## What it is, and what it is not
- *
- * The capability the server sent is the record's projection, so projecting it *back* recovers
- * exactly the parameters the server chose to offer — a `String` property is a `kotlin.String`
- * parameter, a slot is a `@Composable` lambda — and the call site is the callable the capability
- * names. That is enough for the pane to print the call the export will print, argument for
- * argument, for everything an author can set.
- *
- * It is not the record. Parameters the projection left out (a `Modifier`, a callback, a domain type
- * with a default) are not here, so where the export writes a placeholder the pane writes nothing —
- * which is also what the export writes when the parameter has a default, and the projection only
- * offers components whose call site was proven with the placeholder table. The export remains the
- * authority, and this is the pane's best reading of it rather than a second generator:
- * [ComponentRecordFile] is the one shape both consume.
+ * This projects the capability back into a record: `String` properties become `kotlin.String`
+ * parameters, slots `@Composable` lambdas, and the call site is the callable the capability names,
+ * enough to print the call the export prints. Parameters the projection left out (a `Modifier`, a
+ * callback, a defaulted domain type) are absent, so where the export writes a placeholder the pane
+ * writes nothing. The export stays the authority; [ComponentRecordFile] is the shape both consume.
  */
 internal fun CapabilityCatalog.packComponentRecords(): List<ComponentRecord> =
   componentPacks.packs.flatMap { pack ->
@@ -48,9 +33,8 @@ internal fun CapabilityCatalog.packComponentRecords(): List<ComponentRecord> =
   }
 
 /**
- * The same projection keyed by the id a design refers to each pack component by, which is what the
- * record-free Wear screen emitter takes: a `wear-m3` screen holding `confetti-wear/section-header`
- * is written from this record, and the pane and the export read the same call off it.
+ * The same projection keyed by design id, as the record-free Wear screen emitter takes it (e.g.
+ * `confetti-wear/section-header` in a `wear-m3` screen).
  */
 internal fun CapabilityCatalog.packComponentsById(): Map<String, ComponentRecord> =
   packComponentRecords().flatMap { record -> record.componentIds.map { it to record } }.toMap()
@@ -63,17 +47,12 @@ internal fun CapabilityCatalog.exportRecord(embedded: ComponentRecordFile?): Com
 }
 
 /**
- * The components this catalog declares and the canvas cannot draw as themselves — every pack's.
- *
- * The renderer draws each as a named placeholder rather than as an error: the component is in the
- * catalog, it exports and it renders on the native lane, just not here.
+ * The components this catalog declares that the canvas can't draw as themselves (every pack's):
+ * drawn as named placeholders, since they export and render on the native lane.
  */
 /**
- * Which canvas adapter each component wants, for the ids whose catalog names one.
- *
- * Only the components that declare a `canvas` appear, so an empty map — today's state for every
- * catalog — leaves the renderer keying on component ids exactly as before. See
- * [WasmCapability.canvas].
+ * Which canvas adapter each component wants, for ids whose catalog names one; an empty map keys on
+ * component ids. See [WasmCapability.canvas].
  */
 internal val CapabilityCatalog.canvasAdapterIds: Map<String, String>
   get() =
@@ -95,11 +74,8 @@ internal val CapabilityCatalog.nativeOnlyComponentIds: Set<String>
   get() = componentPacks.packs.flatMapTo(mutableSetOf()) { it.componentIds }
 
 /**
- * The frame this catalog declares for its screens — see [UiBuilderFrameGeometry].
- *
- * Read from `statusSemantics` rather than declared as a field for the reason
- * [CapabilityCatalog.previewSurfaces] gives: the wire type is published from another repository,
- * and a catalog that says nothing gets the frame its documents name.
+ * The frame this catalog declares for its screens (see [UiBuilderFrameGeometry]), read from
+ * `statusSemantics` like [CapabilityCatalog.previewSurfaces].
  */
 internal val CapabilityCatalog.frameGeometry: UiBuilderFrameGeometry
   get() = UiBuilderFrameGeometry.from(statusSemantics)

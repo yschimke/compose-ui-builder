@@ -79,33 +79,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * The Kotlin the Compose export would write for the document on the canvas.
+ * The Kotlin the Compose export would write for the document on the canvas, so a designer sees the
+ * code an edit produces without running an export.
  *
- * ## Why it is here rather than behind the export button
- *
- * The builder's proposition is that a design *is* code. Until this pane the only way to read the
- * code a design produced was to run an export and open the artifact, which is a round trip long
- * enough that nobody made it after a single edit — so "what did dropping that Column do to the
- * source" was, in practice, unanswerable.
- *
- * ## Why it shows refusals in the same place
- *
- * [EditorGeneratedCode.Refused] is not an error state of this pane, it is the pane's other answer.
- * A design the export cannot express has no source to show, and the reasons are what a designer
- * needs in order to make one — putting them behind a different tab would mean the pane silently
- * showed nothing whenever it mattered most.
- *
- * The text is selectable and not editable: it is generated, and a pane that let you type into it
- * would be offering an edit the next keystroke on the canvas throws away.
+ * [EditorGeneratedCode.Refused] shows the refusal reasons in the same place, since they are what
+ * the designer needs to make the design expressible. Selectable but not editable: it is regenerated
+ * on every canvas edit.
  */
 @Composable
 internal fun GeneratedCodePane(
   code: EditorGeneratedCode,
   /**
-   * What produced the source, because two generators feed this pane.
-   *
-   * A widget's Kotlin is not a Compose export and saying so would be wrong twice over: it is Remote
-   * Compose, and it goes out as a `WearWidgetDocument` rather than into that export's package.
+   * What produced the source: a widget's Kotlin is Remote Compose (a `WearWidgetDocument`), not the
+   * Compose export.
    */
   caption: String,
   modifier: Modifier = Modifier,
@@ -123,8 +109,7 @@ internal fun GeneratedCodePane(
               copied = null
             }
           }
-          // Getting the Kotlin out is what this pane is for, and selecting a few hundred lines by
-          // dragging through a scrolling sheet was the only way to do it (#358).
+          // A copy button, since copying is what this pane is for.
           Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
               copied ?: caption,
@@ -154,10 +139,8 @@ internal fun GeneratedCodePane(
           // scroll, a drag over the drop target — recomposes this pane without re-running it.
           val highlighted =
             remember(code.kotlin, syntaxTheme) { highlightKotlin(code.kotlin, syntaxTheme) }
-          // The first view starts at the code rather than at a screenful of imports. Once, when the
-          // pane first lays the source out: after that the reader's scroll is theirs, and an edit
-          // on
-          // the canvas does not throw them back to the top of the composable.
+          // Initially scroll past the imports, once; after that the reader's scroll is kept across
+          // edits.
           var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
           var pastImports by remember { mutableStateOf(false) }
           LaunchedEffect(layout) {
@@ -174,9 +157,7 @@ internal fun GeneratedCodePane(
               highlighted,
               Modifier.fillMaxSize().verticalScroll(vertical).horizontalScroll(horizontal),
               onTextLayout = { layout = it },
-              // The palette's own foreground rather than `onSurface`: whatever the highlighter did
-              // not claim is still code, and two sources for the one colour would show up as the
-              // unstyled runs sitting a shade off the styled ones.
+              // The palette's own foreground so unstyled runs match the styled ones.
               color = syntaxTheme.codeColor(),
               // Generated Kotlin is aligned by column, so a proportional face would misreport the
               // indentation the export actually writes.
@@ -212,8 +193,8 @@ internal fun GeneratedCodePane(
 }
 
 /**
- * The line the generated source's code starts on: the first after its `package` and `import` header
- * and the blank lines around them. 0 when there is no header to skip.
+ * The line the generated code starts on, after the `package`/`import` header and surrounding blank
+ * lines; 0 when there is none.
  */
 internal fun firstLineAfterImports(kotlin: String): Int {
   val lines = kotlin.lines()
@@ -226,42 +207,13 @@ internal fun firstLineAfterImports(kotlin: String): Int {
 }
 
 /**
- * The same design, drawn by real Compose on the host instead of by this browser.
+ * The same design drawn by real Compose on the host, beside the Wasm canvas so renderer differences
+ * are visible.
  *
- * ## Why the editor shows two renderers at once
- *
- * The Wasm canvas is immediate and costs the server nothing, and it cannot answer "what does this
- * look like on Android" — platform text metrics, the device frames the render lane knows, the
- * Robolectric-backed lane. Side by side is deliberate rather than a toggle: a difference between
- * the two renderers is a thing a designer needs to *see*, and one that replaced the other would
- * hide exactly that.
- *
- * ## Live where the host can stream, a still where it cannot
- *
- * The compile lane has always stood a live session up behind the still — the same daemon, the same
- * classes, and on a catalog whose native backend is Android that daemon is Robolectric-backed
- * Android. This pane now opens it: the frame is pushed rather than fetched, and a tap on it is
- * dispatched into the real composition rather than resolved against a map of rectangles. That is
- * what makes this the pane you can *use* the screen in, and the reason it is the only pane in the
- * workspace that leaves the browser.
- *
- * The still does not go away, because it is what there is until the first frame lands and what
- * there is when a host has no live backend for the design's mode. Two states, one pane, and the
- * label says which you are looking at rather than leaving you to guess from whether taps work.
- *
- * ## Selection belongs to the still
- *
- * A still is a picture with a map of node boxes over it, so clicking it selects a layer. A live
- * session is the screen, so clicking it *is* the click — a tap that both selected a node and
- * pressed the button under it would be two answers to one gesture, and the one a designer wants
- * here is the button. The layers panel still selects, on either.
- *
- * ## Refusals, again, in the same place
- *
- * A design the generator cannot express has no native render, and the reasons are the actionable
- * half — the same rule the code pane follows, and the same list, because it is the same gate. A
- * transport failure says something different and says it separately: try again, versus fix the
- * design.
+ * Live where the host can stream (frames pushed, taps dispatched into the real composition),
+ * otherwise the still, which is also shown until the first frame lands; the label says which.
+ * Clicking a still selects a layer (it has a node-box map); clicking a live session is the click.
+ * Refusals are shown here like in the code pane; transport failures are reported separately.
  */
 @Composable
 internal fun NativeRenderPane(
@@ -293,20 +245,16 @@ internal fun NativeRenderPane(
         style = MaterialTheme.typography.labelSmall,
       )
       when {
-        // The live frame wins over everything below it the moment one lands, including over a
-        // pending re-render: a stream that is painting is the most current thing this pane has,
-        // and dropping back to "Compiling this design…" because a still was re-requested would
-        // blank a working screen on every keystroke.
+        // A painting live frame wins over everything, including a pending re-render, so keystrokes
+        // do not blank it.
         liveFrame != null ->
           LiveNativeFrame(
             frame = liveFrame,
             onInput = { stream.send(it) },
             modifier = Modifier.fillMaxSize().padding(top = 8.dp),
           )
-        // A stream that failed with no still to fall back to. Gated on the still being absent
-        // too: the live lane is the *optional* half of this pane, and a full live-seat budget or a
-        // grant without live scope would otherwise blank a compiled frame that arrived perfectly
-        // well. Said separately from a compile failure because the two are fixed differently.
+        // A failed stream with no still to fall back on; live is optional, so a compiled still is
+        // never blanked by a live failure.
         liveFailure != null && render?.image == null ->
           SelectionContainer {
             Text(
@@ -379,12 +327,8 @@ internal fun NativeRenderPane(
 }
 
 /**
- * What the native pane calls itself, which is the one place a person learns whether taps will work.
- *
- * Three states rather than one label with a spinner: a still is a picture, a stream that has not
- * painted yet is a promise, and a painting stream is the screen. Naming the backend where the
- * catalog declared one ("live on Android") is the point of this whole pane — "native" is a claim
- * about a toolkit, and Android is which one.
+ * The native pane's caption, which tells the user whether taps will work: still, connecting, or
+ * live (naming the backend, e.g. "live on Android").
  */
 internal fun nativePaneCaption(live: Boolean, connecting: Boolean, backend: String): String {
   val where =
@@ -401,22 +345,12 @@ internal fun nativePaneCaption(live: Boolean, connecting: Boolean, backend: Stri
 }
 
 /**
- * A live native frame, and the gestures that reach the composition drawing it.
+ * A live native frame and the gestures forwarded to its composition.
  *
- * ## One factor, inverted
- *
- * The frame arrives in the daemon's own render pixels and is drawn scaled to fit this pane, so
- * there is exactly one factor between the two spaces — `displayed / image` — and a press is turned
- * back into image pixels by dividing by it. The same arithmetic [NativeRenderFrame] does for its
- * node boxes, in the other direction, and for the same reason: the host cannot be told about a
- * layout nobody on it can see.
- *
- * ## Why a tap is not a down and an up
- *
- * The daemon has a click fast-path that renders *between* press and release, so a batched
- * down-then-up can race `Modifier.clickable` and land as nothing. A press that never moves is
- * therefore sent as one `click` once it lifts, and the `pointerDown` is only sent when a drag
- * actually starts — which is also what makes a drag a drag rather than a click followed by moves.
+ * The frame is drawn scaled by one factor (`displayed / image`), which presses are divided by to
+ * get image pixels, as [NativeRenderFrame] does for node boxes. A stationary press is sent as one
+ * `click` on release (the daemon's click fast-path can race a batched down/up); `pointerDown` is
+ * sent only once a drag starts.
  */
 @Composable
 private fun LiveNativeFrame(
@@ -441,9 +375,7 @@ private fun LiveNativeFrame(
       contentDescription = "Live native preview",
       modifier =
         Modifier.size(displayedWidth, displayedHeight)
-          // Keyed on the scale as well as the frame's size: the handler closes over the factor it
-          // inverts, and a pane resized under a running stream would otherwise keep sending
-          // coordinates in the old one.
+          // Keyed on the scale too, since the handler closes over it.
           .pointerInput(imageWidth, imageHeight, scale) {
             awaitPointerEventScope {
               while (true) {
@@ -457,9 +389,7 @@ private fun LiveNativeFrame(
                   val event = awaitPointerEvent()
                   val change = event.changes.firstOrNull { it.id == down.id } ?: break
                   if (change.pressed) {
-                    // The threshold is the platform's own, so a press that wobbles by a pixel on
-                    // the way up is still a tap — which is what a mouse user means and what a
-                    // touch user cannot avoid.
+                    // The platform's touch slop, so a slight wobble is still a tap.
                     if (
                       !dragging &&
                         (change.position - down.position).getDistance() >
@@ -485,9 +415,8 @@ private fun LiveNativeFrame(
               }
             }
           }
-          // A Wear pane has no browser scroll surface: a wheel over it is a turn of the rotating
-          // side button. The stream protocol and daemon call this `rotaryScroll`; previously this
-          // pane only forwarded presses, so native Compose never received the wheel at all.
+          // On Wear a wheel is a rotating side button turn, forwarded as the protocol's
+          // `rotaryScroll`.
           .pointerInput(imageWidth, imageHeight, scale) {
             awaitPointerEventScope {
               while (true) {
@@ -501,9 +430,8 @@ private fun LiveNativeFrame(
                       (change.position.x / scale).roundToInt().coerceIn(0, imageWidth.toInt() - 1),
                     pixelY =
                       (change.position.y / scale).roundToInt().coerceIn(0, imageHeight.toInt() - 1),
-                    // Browser wheel deltas are CSS-pixel motion; the daemon's rotary input is
-                    // device-pixel motion. Keep the same half-pixel conversion the Wasm device
-                    // scene uses so moving from Preview to Native does not double the RSB speed.
+                    // Same half-pixel CSS-to-device conversion as the Wasm device scene, so RSB
+                    // speed matches Preview.
                     scrollDeltaY = change.scrollDelta.y * 0.5f,
                   )
                 )
@@ -516,34 +444,19 @@ private fun LiveNativeFrame(
 }
 
 /**
- * The design with the editor taken off it: the same renderer, every device, no compile.
+ * The design without the editor overlay: the same Wasm renderer, every claimed frame, no compile.
  *
- * ## Why this pane is not the native one
+ * Answers how the design behaves and survives other frames: controls and scrolling are live, and
+ * clicks do not select. It costs the host nothing, unlike the native pane ([EditorPane]).
  *
- * It draws exactly what the canvas beside it draws — the same Wasm Compose, the same document, the
- * same pixels — and that is deliberate. The question it answers is not "how does this look on
- * Android"; it is "how does this *behave*, and how does it survive the other frames". A full-size
- * selection overlay sits on the authoring canvas and swallows every tap, so a screen wired to react
- * could not be made to react by the person who wired it. Here there is no overlay: the controls are
- * live, the design's own scrolling is live, and nothing being clicked changes the selection.
- *
- * It is also free. Nothing here asks the host for anything, which is why it can be switched on
- * mid-thought and switched off again — and why the pane that *does* cost a compile is a separate
- * choice somebody makes on purpose ([EditorPane]).
- *
- * ## Only the selected frames, side by side
- *
- * One frame per selected device in `exportDevices`, plus the switched-on axes — exactly the
- * [UiBuilderVariantPane] list. The editor already draws the design's own frame; repeating it here
- * merely duplicates the first device in the common case and obscures the comparison this pane is
- * for. Laid out in a scrolling row rather than scaled to fit: a device frame shrunk to a thumbnail
- * answers nothing about text that only just fits.
+ * Draws one frame per selected `exportDevices` entry plus enabled axes (the [UiBuilderVariantPane]
+ * list), not the design's own frame, in a scrolling layout rather than shrunk to thumbnails.
  */
 @Composable
 internal fun DesignPreviewPane(
   document: UiBuilderDocument,
   /**
-   * The device and axis frames to draw after the design's own — see
+   * The device and axis frames to draw after the design's own; see
    * [UiBuilderDocument.variantPanes].
    */
   variants: List<UiBuilderVariantPane>,
@@ -551,13 +464,13 @@ internal fun DesignPreviewPane(
   /** The catalog's pinned runtime, which draws each device pane when the catalog has one. */
   deviceRenderer: UiBuilderCanvasRenderer? = null,
   /**
-   * Draw [variants] exactly as given. A Wear widget design otherwise swaps them for its host-shape
-   * panes; the compact layout's preview tab has already chosen the one pane it shows.
+   * Draw [variants] exactly as given, instead of a Wear widget's host-shape panes (the compact
+   * preview tab has already chosen one).
    */
   exactPanes: Boolean = false,
   /**
-   * Whether each frame's clock and animations run. Frames are handed a copy of their document that
-   * says so ([withTimeRunning]), which is how a catalog runtime drawing in its own frame hears it.
+   * Whether each frame's clock and animations run, via a document copy that says so
+   * ([withTimeRunning]) so catalog runtimes hear it too.
    */
   timeRunning: Boolean = false,
   /** Shows the [PreviewTimeToggle] when set. */
@@ -587,19 +500,9 @@ internal fun DesignPreviewPane(
           )
           return@BoxWithConstraints
         }
-        // One scale for the whole row, so two devices in it are drawn at the same ratio and are
-        // actually comparable — picking a scale per frame would make a watch and a tablet look the
-        // same size, which is the one thing this row exists to contradict.
-        //
-        // Chosen so the tallest frame fits the pane's height and the widest fits its width: the
-        // row then always shows at least one frame whole, and the rest are reached by scrolling
-        // rather than by squeezing every phone in the row down to a thumbnail.
-        //
-        // Capped at whichever is larger of 1:1 against the design's pixels and 1:1 against its dp.
-        // A 2x watch in a 1x host still draws at its own pixels. A 1x widget in a 2.625x host is no
-        // longer held to its pixels, which drew it at 38%, a strip nobody could read: that cap
-        // existed because the frame clipped before it was scaled, and [ConstrainedFramePane] now
-        // clips inside its scaled layer, so a frame can be magnified.
+        // One scale for the whole row so devices stay comparable, chosen so the tallest frame fits
+        // the height and the widest the width. Capped at the larger of 1:1 in design pixels and 1:1
+        // in dp; [ConstrainedFramePane] clips inside its scaled layer, so frames can be magnified.
         val tallest = panes.maxOf { it.heightDp }
         val widest = panes.maxOf { it.widthDp }
         val oneToOnePixels = panes.minOf {
@@ -608,21 +511,12 @@ internal fun DesignPreviewPane(
         val scale =
           minOf(maxHeight.value / (tallest + VARIANT_LABEL_ROOM_DP), maxWidth.value / widest)
             .coerceIn(MIN_CANVAS_ZOOM, maxOf(oneToOnePixels, 1f))
-        // How many frames fit across the pane at that scale, and the whole of "should this be a
-        // grid?". A watch frame is 192dp and a pane is often 700dp wide, so the row that answered
-        // a phone question — one frame per screen, the rest scrolled off the right — put three
-        // watches where two would fit and hid the third. Where two or more fit, the frames wrap
-        // instead: the same scale, the same comparison, all of them visible.
-        //
-        // The preview surface always scrolls vertically. In a compact pane `perRow` is one, so
-        // device previews stack rather than disappearing off the right edge behind a horizontal
-        // scroll. Wider panes retain the side-by-side comparison grid.
+        // How many frames fit across at that scale; where two or more fit, frames wrap into a grid.
+        // The surface always scrolls vertically, so narrow panes stack.
         val gap = 16.dp
         val perRow = ((maxWidth + gap) / ((widest * scale).dp + gap)).toInt().coerceAtLeast(1)
-        // Centred, so a row that fits sits in the middle of the pane rather than in its top-left.
-        // `FlowRow` remains a one-column grid when the pane is narrow.
-        // Hoisted so a runtime-drawn pane, a DOM layer placed by hand, is placed again as this
-        // column scrolls rather than staying at the window position it was first given.
+        // Centred `FlowRow`. The scroll is hoisted so runtime-drawn panes (hand-placed DOM layers)
+        // follow scrolling.
         val scroll = rememberScrollState()
         Column(
           Modifier.fillMaxSize().verticalScroll(scroll),
@@ -653,26 +547,12 @@ internal fun DesignPreviewPane(
 }
 
 /**
- * The frame itself, with the overlay that makes it a surface rather than a picture.
+ * The frame with the overlay that makes it selectable.
  *
- * ## The one coordinate transform
- *
- * The host reports each node's box in the frame's own pixels, and the frame is drawn scaled to fit
- * this pane. So there is exactly one factor — `displayed / image` — and it is computed here, where
- * the displayed size is decided, rather than being sent over the wire in a space that would have to
- * agree with a layout nobody on the server can see. The image is laid out at that exact size
- * instead of being left to [ContentScale.Fit], so the overlay and the pixels underneath it cannot
- * disagree about where the frame starts.
- *
- * ## Hit-testing picks the smallest box
- *
- * A click lands inside every ancestor of the node that drew it — the column, the card, the row —
- * and the innermost of those is the one a designer means, which is what the layers panel would
- * select too. Ties (a wrapper exactly the size of its child) go to whichever the host reported
- * first; there is no better answer and both are the same rectangle.
- *
- * A node with no reported box is not selectable here. That is the honest outcome for something the
- * render never placed, and the layers panel still selects it.
+ * Node boxes arrive in frame pixels and the image is laid out at an exact scaled size (not
+ * [ContentScale.Fit]), so one factor `displayed / image` maps between them. A click selects the
+ * smallest containing box (ties go to the first reported). Nodes without a box are not selectable
+ * here.
  */
 @Composable
 private fun NativeRenderFrame(

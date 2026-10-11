@@ -9,13 +9,11 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.Constraints
 
 /**
- * The canvas's drawing of `RemoteCollapsibleColumn` and `RemoteCollapsibleRow`.
- *
- * Compose foundation has no layout that HIDES a child rather than squeezing it, so this is one,
- * written to the rule the Remote Compose player applies (`CollapsibleColumnLayout` in remote-core):
- * when the children do not fit the main axis, the one with the lowest priority goes first, a tie
- * goes to the later child, and a child that states no priority is kept longest of all. A weighted
- * child shares what is left once the survivors are placed, as it does in a row or a column.
+ * The canvas's drawing of `RemoteCollapsibleColumn` and `RemoteCollapsibleRow`: a layout that hides
+ * children rather than squeezing them, following the player's rule (`CollapsibleColumnLayout` in
+ * remote-core). When children don't fit the main axis, the lowest priority goes first, ties go to
+ * the later child, and children without a priority are kept longest. Weighted children share what's
+ * left once the survivors are placed.
  *
  * @param priorities one entry per child, in order: its `collapsiblePriority`, or null for none.
  * @param weights one entry per child, in order: its `weight`, or null for none.
@@ -104,9 +102,8 @@ internal fun CollapsibleLinearLayout(
 }
 
 /**
- * The canvas's drawing of `RemoteFitBox`: its children are alternatives, and it shows the FIRST one
- * that fits the space it is given without shrinking. When none fits it draws nothing and takes no
- * room, which is what the player does.
+ * The canvas's drawing of `RemoteFitBox`: shows the FIRST child that fits without shrinking; when
+ * none fits it draws nothing and takes no room, as the player does.
  */
 @Composable
 internal fun FitBoxLayout(
@@ -115,9 +112,8 @@ internal fun FitBoxLayout(
   content: @Composable () -> Unit,
 ) {
   Layout(content, modifier) { measurables, constraints ->
-    // Each child measured once, unconstrained, to learn what it WANTS: a child that would have to
-    // be squeezed does not fit. The first that fits is placed as measured, which is inside the
-    // bounds by construction.
+    // Each child measured once unconstrained to learn its wanted size; the first that fits is
+    // placed as measured.
     val placeable =
       measurables
         .asSequence()

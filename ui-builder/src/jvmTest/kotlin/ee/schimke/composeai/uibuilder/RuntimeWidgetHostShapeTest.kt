@@ -21,13 +21,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * A catalog runtime is sent a document and a surface size, and nothing else about the pane it
- * fills. So the widget's host shape travels in the document it is sent.
- *
- * The editing canvas is the only surface the runtime draws. The preview panes — one per host shape
- * — used to be runtime surfaces too, which in the browser is a sandboxed iframe booting its own
- * Wasm per pane; they are drawn in-process now, in their shape through `LocalWearWidgetHostShape`,
- * and this pins that none of them reaches the runtime.
+ * A catalog runtime receives only a document and a surface size, so the widget's host shape travels
+ * in the document. Only the editing canvas uses the runtime; the per-shape preview panes draw
+ * in-process (via `LocalWearWidgetHostShape`), and this pins that none reaches the runtime.
  */
 @OptIn(ExperimentalTestApi::class)
 class RuntimeWidgetHostShapeTest {

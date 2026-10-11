@@ -10,12 +10,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
- * What the guidelines check needs from wherever the editor runs: somewhere to keep a person's own
- * OpenRouter key, a way to get one, and a way to send a request with it.
- *
- * The key belongs to the person at the keyboard and is spent on their account. It is kept in this
- * tab — on this device only when they choose to remember it — and sent to OpenRouter only, never to
- * the design host.
+ * What the guidelines check needs from wherever the editor runs: storage for the person's own
+ * OpenRouter key, a way to get one, and a way to send requests with it. The key is kept in this tab
+ * (on this device only if they opt in) and sent only to OpenRouter, never the design host.
  */
 interface DesignGuidelineHost {
   /** The stored key, or null when this person has not added one. */
@@ -31,8 +28,8 @@ interface DesignGuidelineHost {
   fun keyRemembered(): Boolean = false
 
   /**
-   * Keeps the key on this device ([remember] true) or for this session only (false), moving the
-   * stored key with the choice — turning it off removes the remembered copy.
+   * Keeps the key on this device ([remember] true) or for this session only (false); turning it off
+   * removes the remembered copy.
    */
   fun rememberKey(remember: Boolean) {}
 
@@ -61,16 +58,15 @@ interface DesignGuidelineHost {
   suspend fun picture(document: UiBuilderDocument): String?
 
   /**
-   * The Jetpack Compose source [document] exports to, shown to the model beside the design tree so
-   * rules about code are judged on the real calls. Null where the host cannot export it, or the
-   * export gate refuses the design; the tree is then all the model sees.
+   * The Jetpack Compose source [document] exports to, shown to the model beside the design tree.
+   * Null where the host can't export it or the gate refuses; the model then sees only the tree.
    */
   suspend fun source(document: UiBuilderDocument): String? = null
 
   /**
-   * The request the design host builds for [document] — the same one an agent gets from
-   * `ui_builder_guidelines_prompt`, with native device and unrolled pictures. Null where there is
-   * no such host; the editor then builds its own with [picture] and [source].
+   * The request the design host builds for [document] (as `ui_builder_guidelines_prompt` gives
+   * agents, with native device and unrolled pictures). Null without such a host; the editor then
+   * builds its own from [picture] and [source].
    */
   suspend fun hostedRequest(document: UiBuilderDocument): DesignGuidelineRequest? = null
 
@@ -116,9 +112,8 @@ interface DesignGuidelineHost {
 const val OPENROUTER_KEYS_URL: String = "https://openrouter.ai/settings/keys"
 
 /** The model a person starts with; any OpenRouter model id works. */
-// Called directly rather than through `typesafe/jev-router`, which routes this check to the same
-// model most of the time but picks at random, through dearer providers, and reads only the text —
-// so it never chooses for the pictures the visual rules are judged on.
+// Called directly rather than through `typesafe/jev-router`, which picks models at random (through
+// dearer providers) and reads only text, ignoring the pictures visual rules need.
 const val DEFAULT_GUIDELINE_MODEL: String = "deepseek/deepseek-v4.1-flash"
 
 sealed interface DesignGuidelineState {
@@ -216,9 +211,8 @@ class DesignGuidelineController(
   private var serverAccess: DesignGuidelineHost.ServerCheckAccess? = null
 
   /**
-   * Asks the host whether this account may run the check on the host's own key. When it may, the
-   * panel offers the check without asking for an OpenRouter key; a key of the person's own stays
-   * available through [useOwnKey].
+   * Asks the host whether this account may run the check on the host's own key; if so, no
+   * OpenRouter key is needed, though [useOwnKey] stays available.
    */
   suspend fun loadAccess() {
     val access = runCatching { host.serverAccess() }.getOrNull() ?: return

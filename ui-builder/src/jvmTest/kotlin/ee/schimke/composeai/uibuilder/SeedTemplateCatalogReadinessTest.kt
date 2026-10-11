@@ -22,17 +22,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Every seed template, against the catalog it is offered for: does it validate, and does it
- * generate source?
- *
- * The question a template has to answer before it can be MOVED anywhere. A template is the one
- * document nobody authored, so nothing else catches a property its catalog does not declare or a
- * child a slot refuses — it opens as an editor full of issues. And a template a catalog repository
- * is asked to carry is only worth carrying if it exports: the two claims the builder makes about
- * every design are that it is valid against its catalog pin and that it can be written as Kotlin.
- *
- * Written as a table walk rather than a test per template, because the point is coverage of
- * [UiBuilderNewDesignSeed.templateIds] for every served catalog: a per-template method cannot fail
- * when a template is added, and a template nobody checked is the case this exists for.
+ * generate source? Templates are documents nobody authored, so nothing else catches their mistakes.
+ * A table walk over [UiBuilderNewDesignSeed.templateIds] for every served catalog, so a newly added
+ * template is covered automatically.
  */
 class SeedTemplateCatalogReadinessTest {
 
@@ -89,9 +81,8 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   /**
-   * An A2UI design's Kotlin is the app that sends it; its other output is the payload itself. Every
-   * A2UI template has to produce both, and the Kotlin above has to be sending exactly the
-   * components the JSON carries.
+   * An A2UI design's Kotlin is the app that sends it, plus the payload; every template must produce
+   * both, with the Kotlin sending exactly the JSON's components.
    */
   @Test
   fun `every A2UI template exports its messages as A2UI JSON`() {
@@ -117,21 +108,11 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   /**
-   * The Jetcaster fixture ([UiBuilderNewDesignSeed.FIXTURE_TEMPLATE]) refuses, and the reasons it
-   * refuses for are the **projection's**. It is no longer an offered template — partly for this,
-   * partly because it uses `m3/snackbar-host`, which the published `m3-catalog` does not carry —
-   * but it is still the benchmark, so what keeps it from exporting stays asserted.
-   *
-   * The fixture is the Jetcaster reference design, drawn to exercise the canvas rather than written
-   * to be exported: it holds an adaptive `SupportingPaneScaffold` with a pane spacing, a carousel
-   * whose `items` is a `CarouselScope` DSL, grid spans belonging to the wrapper around a node, and
-   * `selected` properties comparing a state variable. None of those is a component the export has
-   * not been shown — they are values this vocabulary has no Kotlin for, so no component record,
-   * however complete, makes this document export.
-   *
-   * Asserted rather than skipped because the interesting change is the one that makes it pass: a
-   * fixture that starts exporting is one a catalog repository could carry as a template, and this
-   * test failing is how anyone learns that.
+   * The Jetcaster fixture ([UiBuilderNewDesignSeed.FIXTURE_TEMPLATE]) is no longer offered but
+   * remains the benchmark, and refuses for the **projection's** reasons: a carousel `items` DSL
+   * (`CarouselScope`), wrapper-owned grid spans, and `selected` state comparisons have no Kotlin in
+   * this vocabulary (and it uses `m3/snackbar-host`, absent from the published `m3-catalog`). If it
+   * starts exporting, this fails so someone notices.
    */
   @Test
   fun `jetcaster refuses for reasons no component record fixes`() {
@@ -145,9 +126,8 @@ class SeedTemplateCatalogReadinessTest {
         )
         .reasons
 
-    // The projection's own refusals, the ones no record can answer. The pane scaffold is no longer
-    // one of them: its directive, value and authored pane spacing are all computations the
-    // projection writes, through `PaneScaffoldDirective.copy` for the spacing.
+    // The projection's own refusals. The pane scaffold isn't among them: its directive, value and
+    // spacing (via `PaneScaffoldDirective.copy`) are written.
     assertTrue(
       reasons.none { it.contains("PaneScaffoldDirective") },
       "the pane scaffold still refuses: ${reasons.joinToString("; ")}",
@@ -172,9 +152,9 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   /**
-   * The same two lanes the editor's Code pane asks in the same order: the dedicated emitters first
-   * ([RecordFreeExport], which answers for the Wear screen and the Remote widget catalogs), then
-   * the record-driven generator for everything else.
+   * The same two lanes as the editor's Code pane, in order: the dedicated emitters
+   * ([RecordFreeExport], for Wear screen and Remote widget catalogs), then the record-driven
+   * generator.
    */
   private fun generate(catalog: CapabilityCatalog, document: UiBuilderDocument): Generated {
     RecordFreeExport.generate(

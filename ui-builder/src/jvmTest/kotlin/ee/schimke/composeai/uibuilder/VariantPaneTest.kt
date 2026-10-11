@@ -44,11 +44,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 /**
- * The strip beside the design: one document, one stored environment, several panes.
- *
- * A variant is a way of *looking*, so nothing here writes to the document and nothing here is a
- * second design — the rules and the reasons are in
- * `docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`.
+ * The strip beside the design: one document, one stored environment, several panes. Variants never
+ * write to the document; see `docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`.
  */
 class VariantPaneTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -152,18 +149,13 @@ class VariantPaneTest {
     }
   }
 
-  /**
-   * The set the export writes is the set the workspace draws. Before the strip existed a design
-   * could claim three devices and show its author one, with neither decision showing the other.
-   */
+  /** The set the export writes is the set the workspace draws. */
   @Test
   fun `each claimed device becomes a pane at that device's frame`() {
     val panes = withDevices("id:pixel_6", "id:pixel_tablet").variantPanes(presets, emptySet())
 
-    // The label states what the pane applied, not just which device it is named for: a row of
-    // frames whose names are "Pixel 6" and "Pixel Tablet" leaves somebody comparing two of them to
-    // guess which of width, height and density moved. Nothing draws a bezel — a device pane *is*
-    // these three numbers.
+    // The label states what the pane applied (width, height, density), not just the device name; no
+    // bezel is drawn.
     assertEquals(
       listOf("Pixel 6 · 411×914dp · 2.625×", "Pixel Tablet · 1280×800dp · 2×"),
       panes.map { it.label },
@@ -173,10 +165,7 @@ class VariantPaneTest {
     assertEquals("2.625", panes[0].document.environment["density"]?.let(::plain))
   }
 
-  /**
-   * A preset carries the only geometry there is, so an id the host offers no preset for is skipped
-   * rather than guessed at — the alternative draws a picture no renderer would reproduce.
-   */
+  /** An id the host offers no preset for is skipped rather than guessed at. */
   @Test
   fun `a device the host has no preset for is skipped`() {
     val panes = withDevices("id:pixel_6", "id:no_such_device").variantPanes(presets, emptySet())
@@ -185,9 +174,8 @@ class VariantPaneTest {
   }
 
   /**
-   * `exportDevices` is stored verbatim — no uniqueness, no size bound — so a document written
-   * through the protocol or MCP can name one device many times. Each repeat would otherwise be
-   * another full surface sharing one pane id.
+   * `exportDevices` is stored verbatim, so repeated devices must not yield duplicate panes sharing
+   * one id.
    */
   @Test
   fun `a device named twice draws one pane`() {
@@ -199,10 +187,8 @@ class VariantPaneTest {
   }
 
   /**
-   * The device a pane is named for, without the properties after it.
-   *
-   * Used by the tests about *which* devices get a pane, so the label's wording is pinned in exactly
-   * one place — the test above — rather than in every test that happens to read a label.
+   * The device a pane is named for, without the properties after it, so the label wording is pinned
+   * only in the test above.
    */
   private fun UiBuilderVariantPane.deviceName(): String = label.substringBefore(" · ")
 
@@ -266,9 +252,8 @@ class VariantPaneTest {
   }
 
   /**
-   * Both record-free emitters route on the root component id, so wrapping a Wear screen would
-   * quietly hand it to the record-driven generator instead. A board must not convert a design into
-   * something that exports differently without saying so.
+   * Record-free emitters route on the root id, so wrapping a Wear screen in a board would silently
+   * change how it exports; refused.
    */
   @Test
   fun `a Wear screen refuses to become one item of a board`() {
@@ -300,11 +285,8 @@ class VariantPaneTest {
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 
   /**
-   * You build the UI once and watch it adapt beside you.
-   *
-   * The devices and axes used to be drawn on the authoring canvas, which made the one surface you
-   * edit on grow a row of surfaces you cannot. The free preview opens alongside the editor, while
-   * the editor's own canvas remains a single editable frame however many devices it claims.
+   * You build the UI once and watch it adapt beside you: the preview pane holds the devices and
+   * axes, while the editor canvas stays a single editable frame.
    */
   @OptIn(ExperimentalTestApi::class)
   @Test
@@ -334,13 +316,8 @@ class VariantPaneTest {
     }
 
   /**
-   * Small frames wrap into rows instead of scrolling off the pane.
-   *
-   * A Wear screen claims four watches, and at their 2x density each frame is 384-480 host dp wide.
-   * In a wide pane three fit across; the row this replaced put all four side by side and hid
-   * whichever did not fit — the one place a person was meant to see every device the design ships
-   * on. So the assertion is a *row break*: the fourth selected device starts below the first, and
-   * the third shares the first's top line.
+   * Small frames wrap into rows instead of scrolling off the pane: with four 2x watch frames, the
+   * fourth starts below the first and the third shares its top line.
    */
   @OptIn(ExperimentalTestApi::class)
   @Test

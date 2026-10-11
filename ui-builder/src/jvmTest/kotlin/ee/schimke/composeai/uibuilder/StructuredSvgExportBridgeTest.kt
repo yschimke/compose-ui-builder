@@ -87,25 +87,10 @@ class StructuredSvgExportBridgeTest {
     // Skia may split a wrapped text node into a different number of line fragments across its
     // Linux and macOS backends. Authored node identity is the stable structural contract.
     assertEquals(26, emittedTextNodeIds.size)
-    // The supporting pane is `androidx.compose.material3.adaptive`'s own, and the real scaffold
-    // spends height on the margins and partition spacing the stand-in did not have. The design's
-    // last episode row is what that costs, and where the fold falls has now moved twice.
-    //
-    // It first clipped mid-row, then — once the real scaffold arrived — fell wholly below the
-    // fold, and this assertion was written to pin that clean boundary: *a design must not lose a
-    // title while keeping its summary*.
-    //
-    // It is mid-row again, and this time for a reason that is not a regression in the renderer.
-    // The design asks for a 744dp main pane beside a 512dp supporting one, and until
-    // yschimke/compose-preview-server#924 nothing read those numbers: the panes were whatever the
-    // library's own partitioning made them. Honouring them widens the supporting pane, its rows
-    // wrap over fewer lines, and three quarters of episode 139 now fits where none of it did.
-    // Only `-meta` is still under the fold.
-    //
-    // So the boundary is no longer a row, and the renderer cannot make it one: where the fold
-    // falls is the design's content measured against the design's own frame, and the only inputs
-    // this repository has are the ones the design set. Pinned here as the new truth rather than
-    // waived, because the number moving is how a future change to pane sizing gets noticed. See
+    // The real `SupportingPaneScaffold` spends height on margins and partition spacing, and the
+    // design's authored pane widths (744dp main, 512dp supporting) are honoured, so the fold now
+    // falls mid-row: only `-meta` of episode 139 is below it. Where the fold falls is the design's
+    // content against its own frame; pinned so a pane-sizing change is noticed. See
     // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`.
     val belowTheFold = setOf("detail-episode-139-meta")
     assertEquals(

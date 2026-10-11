@@ -22,10 +22,8 @@ internal object CatalogCutoverProbe {
 
   /**
    * `<catalog>: <finding>` for everything that is not clean under [CatalogOwnership.ALL].
-   *
-   * [published] is what each catalog publishes, by id; a test that asks "what if this catalog also
-   * declared X" passes the captured catalog with X added, which is exactly the change the catalog
-   * repository would make.
+   * [published] maps id to what each catalog publishes; tests may add a declaration to see its
+   * effect.
    */
   fun findings(
     published: Map<String, CatalogCapabilityV1> =

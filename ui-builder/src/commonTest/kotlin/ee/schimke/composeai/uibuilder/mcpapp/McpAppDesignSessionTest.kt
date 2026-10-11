@@ -21,10 +21,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The MCP App host's rules for a `.uid` file the host owns, against a fake host.
- *
- * Every case here is one the issue names (compose-ui-builder#364): load, save with `ifMatch`,
- * conflict, too-large, read-only, and an external edit to a clean and to a dirty design.
+ * The MCP App host's rules for a host-owned `.uid` file, against a fake host: load, save with
+ * `ifMatch`, conflict, too-large, read-only, and external edits to clean and dirty designs.
  */
 class McpAppDesignSessionTest {
   private val file = McpAppFile("home.uid", "host-resource://home")

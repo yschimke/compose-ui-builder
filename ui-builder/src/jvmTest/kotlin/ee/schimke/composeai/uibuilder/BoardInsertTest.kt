@@ -32,11 +32,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A design that holds several top-level items keeps them in a board, and a board is a node.
- *
- * The rules under test are stated once in `docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`: the
- * root list stays at one, the arrangement is an ordinary `layout/column` the inspector can edit,
- * and the wrap and the item that motivated it are one command so they undo together.
+ * A design holding several top-level items keeps them in a board, which is a node. Rules (from
+ * `docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`): one root, the arrangement is an ordinary
+ * editable `layout/column`, and the wrap plus its item are one command so they undo together.
  */
 class BoardInsertTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -66,11 +64,7 @@ class BoardInsertTest {
     )
   }
 
-  /**
-   * The arrangement is in the document, which is the difference between a board node and a
-   * synthetic one: "make the gap smaller" is an ordinary property edit rather than a constant in
-   * four consumers.
-   */
+  /** The arrangement is in the document, so "make the gap smaller" is an ordinary property edit. */
   @Test
   fun `the board carries its spacing and alignment as editable properties`() {
     val added =
@@ -110,10 +104,7 @@ class BoardInsertTest {
     assertEquals(3, second.document.boardItemCount)
   }
 
-  /**
-   * One command, so one undo. A board that appeared because of an Add disappears when that Add is
-   * taken back — the alternative is a wrapper left behind by an edit the author reversed.
-   */
+  /** One command, so one undo: the board disappears when the Add that created it is undone. */
   @Test
   fun `undo takes back the wrap and the item together`() {
     val initial = reducer.initial(document, selectedNodeId = null)
@@ -126,10 +117,7 @@ class BoardInsertTest {
     assertEquals(initial.document.nodes.keys, undone.document.nodes.keys)
   }
 
-  /**
-   * A board with one item is a screen that happens to sit in a column. Claiming otherwise would put
-   * "this is a board of several items" on a design showing one.
-   */
+  /** A board with one item is just a screen in a column, not "a board of several items". */
   @Test
   fun `one item is not yet a board`() {
     val added =
@@ -147,13 +135,8 @@ class BoardInsertTest {
   }
 
   /**
-   * An empty design has nothing to be beside, so it gets no board — the component becomes the root,
-   * exactly as an ordinary Add would place it.
-   *
-   * Not a tidiness point. Both record-free emitters route on the *root* component id, so a Wear
-   * screen added as the first item of a board would quietly stop being a Wear screen; the wrap is
-   * refused for an existing Wear root for that reason, and this is the case with no root to refuse
-   * over.
+   * An empty design gets no board: the component becomes the root. Record-free emitters route on
+   * the root id, so a Wear screen as a board item would stop being a Wear screen.
    */
   @Test
   fun `an empty design takes the component as its root rather than a board`() {
@@ -172,9 +155,8 @@ class BoardInsertTest {
   }
 
   /**
-   * The theme lives on a root `m3/surface`, and both lookups for it scanned the root list. Wrapping
-   * a themed screen therefore dropped its palette, type scale and corner radius from the canvas and
-   * made Apply theme refuse the document for having no root surface.
+   * The theme lives on a root `m3/surface`; lookups must still find it after a themed screen is
+   * wrapped in a board.
    */
   @Test
   fun `wrapping a themed screen keeps its theme`() {
@@ -221,9 +203,8 @@ class BoardInsertTest {
   }
 
   /**
-   * Every accepted edit and every collaborator delta rebuilds the editor from the authoritative
-   * document, so a tool mode not carried across is lost on the next keystroke anyone makes: the
-   * strip emptied and Add beside turned itself off one Add after being switched on.
+   * Every accepted edit and collaborator delta rebuilds the editor from the authoritative document,
+   * so tool modes (Add beside) must carry across.
    */
   @Test
   fun `the tool modes survive a document arriving`() {
@@ -239,10 +220,8 @@ class BoardInsertTest {
   }
 
   /**
-   * The wrap refusal is about the *root*, so a board that already exists has no wrap left to refuse
-   * — which is how a Wear scaffold could have become one item of a board on a design whose first
-   * Add was an ordinary layout. `RecordFreeExport` routes on the root component id, so that design
-   * would have lost its emitter and its native preview lane without saying so.
+   * A root-only component (a Wear scaffold) must also be refused as an item of an existing board;
+   * `RecordFreeExport` routes on the root id.
    */
   @Test
   fun `a component its emitter wants at the root is refused even onto an existing board`() {
@@ -256,9 +235,7 @@ class BoardInsertTest {
     RecordFreeExport.ROOT_ONLY_COMPONENT_IDS.forEach { rootOnly ->
       assertNotNull(reducer.besideRefusal(onBoard, rootOnly), rootOnly)
     }
-    // But not on an empty design, which has no board to become an item of: the component lands at
-    // the root, which is where its emitter wants it. Refusing there refused the one placement that
-    // was already correct.
+    // But not on an empty design: the component lands at the root, where its emitter wants it.
     val empty = reducer.initial(document.copy(roots = emptyList(), nodes = emptyMap()))
     RecordFreeExport.ROOT_ONLY_COMPONENT_IDS.forEach { rootOnly ->
       assertNull(reducer.besideRefusal(empty, rootOnly), rootOnly)
@@ -270,18 +247,9 @@ class BoardInsertTest {
   }
 
   /**
-   * Asking for a component's refusal on a design the *document* refuses answers about the document.
-   *
-   * `besideRefusal(state, componentId)` is two questions behind one name: it checks the component
-   * first, then falls through to the document. So on a Wear screen that is not yet a board it
-   * returns the wrap refusal for every component id it is handed, including ones with nothing wrong
-   * with them.
-   *
-   * That is fine for the call that gates the insert — the Add is refused either way, and the
-   * message is right — and a trap for any caller that wants to say something *per component*. The
-   * insert panel fell into it: it put this answer on every catalog row, so all 41 rows carried one
-   * sentence the destination line was already showing. A caller wanting only the component's own
-   * answer has to ask `besideRefusal(state)` first, and this test is here so that stays visible.
+   * `besideRefusal(state, componentId)` checks the component, then falls through to the document,
+   * so on a not-yet-board Wear screen it returns the wrap refusal for every id. Callers wanting a
+   * per-component answer (e.g. the insert panel) must ask `besideRefusal(state)` first.
    */
   @Test
   fun `a component refusal falls through to the document's, so a per-component caller must ask both`() {
@@ -306,9 +274,8 @@ class BoardInsertTest {
   }
 
   /**
-   * A played Remote Compose document is exactly the kind of asset a board holds, and the panel
-   * offered every such row under Add beside — then resolved an ordinary drop target anyway, so the
-   * row either refused after its fetch or landed inside the selection.
+   * Played Remote Compose document rows under Add beside must place beside, not resolve an ordinary
+   * drop target.
    */
   @Test
   fun `a remote compose document can be added beside the design`() {
@@ -343,10 +310,8 @@ class BoardInsertTest {
   }
 
   /**
-   * The refusal has to hold on every path in, not just the Add beside one: turning the switch off
-   * and pressing Add, or dragging the scaffold onto the board, reached the same placement through
-   * `dropTarget` — a column's `children` slot accepts the `Scaffold` role, so nothing else was
-   * going to refuse it.
+   * The refusal must hold on every path in, including plain Add and dragging onto the board via
+   * `dropTarget` (a column's `children` accepts the `Scaffold` role).
    */
   @Test
   fun `a root-only component has no slot destination at all`() {

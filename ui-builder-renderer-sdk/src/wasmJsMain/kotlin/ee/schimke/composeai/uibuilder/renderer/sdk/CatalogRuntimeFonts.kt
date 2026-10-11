@@ -12,19 +12,13 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * The fonts a catalog's own runtime draws a design's typefaces with, resolved the way the editor's
- * canvas resolves them.
+ * The fonts a catalog's own runtime draws a design's typefaces with, resolved as the editor's
+ * canvas does: shipped families from `fonts/fonts.json` (copied from `assets/rc-fonts`); others
+ * from the host's CORS-open `/api/fonts/google/{family}/{weight}` route, since the sandboxed
+ * opaque-origin frame cannot reach `fonts.gstatic.com`. Without the route, the platform face is
+ * used ([routeFallbackFontsThroughHost] for missing glyphs).
  *
- * A family the runtime ships comes from `fonts/fonts.json` beside the runtime page, where a
- * catalog's renderer build copies compose-ui-builder's `assets/rc-fonts`. Anything else comes from
- * the host's Google Fonts route, `/api/fonts/google/{family}/{weight}`, which fetches the file once
- * and answers CORS-open: a runtime frame is sandboxed with an opaque origin, so it can make no
- * credentialed request and could not reach `fonts.gstatic.com` through the page's policy anyway. A
- * host without the route answers 404 and the family stays on the platform face. A glyph no font
- * here has goes the same way ([routeFallbackFontsThroughHost]).
- *
- * Provide it around the document with `ProvideUiBuilderFonts`, and read a theme host's families
- * with `rememberThemeRoleFamilies`.
+ * Provide with `ProvideUiBuilderFonts`; read theme host families with `rememberThemeRoleFamilies`.
  */
 @OptIn(ExperimentalEncodingApi::class)
 fun catalogRuntimeFontRegistry(): UiBuilderFontRegistry {

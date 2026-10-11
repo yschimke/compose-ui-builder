@@ -1,17 +1,15 @@
 // Captures the landing page's screenshots (site/img) from a built or released Wasm editor.
 //
-// Every picture is the real editor: the archive's MCP App shell (ui-builder-web/src/mcp-app/),
-// opened in a small host page the way an agent's chat client opens it, on designs committed under
-// docs/design/fixtures/ui-builder/designs/. The chat column beside it is this script's own
-// scenery: it stages the prompt and the agent's reply, while the comment that appears there in the
-// last step is the real `ui/message` the editor sends. Nothing needs a server, so the same script
-// runs in the Pages workflow against the latest release and locally against a fresh build.
+// Every picture is the real editor: the archive's MCP App shell (ui-builder-web/src/mcp-app/) in a
+// small host page, on designs under docs/design/fixtures/ui-builder/designs/. The chat column is
+// staged scenery, except the final comment, which is the editor's real `ui/message`. Needs no
+// server.
 //
 // Usage: node capture.mjs <wasmDist or unpacked web zip> <out dir>
 //
-// The host plumbing is the same protocol `scripts/ui-builder-web-smoke/mcp-app-host.mjs` checks;
-// see docs/design/UI_BUILDER_MCP_APP_HOST.md. When the editor's chrome moves, the click points in
-// SCENES may need adjusting: run this, look at the PNGs, and fix the numbers.
+// The host plumbing follows docs/design/UI_BUILDER_MCP_APP_HOST.md (as
+// `scripts/ui-builder-web-smoke/mcp-app-host.mjs` checks). If the editor's chrome moves, adjust the
+// click points in SCENES.
 
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -238,11 +236,9 @@ async function open(options, viewport) {
   return { page, click, settle: (ms = 900) => page.waitForTimeout(ms) };
 }
 
-// The Wear list template exactly as New from template seeds it (SiteTemplateDesignsTest keeps it
-// current), and the agent's result, replayed from a committed design.
-// Both claim the three round watches as export devices, so the preview strip draws all three and
-// the Compose export writes them as @Preview(device = …). An editor whose shell has no device
-// presets (a release before them) skips the panes rather than guessing at their geometry.
+// The Wear list template as New from template seeds it (SiteTemplateDesignsTest keeps it current),
+// and the agent's result from a committed design. Both export to the three round watches; an
+// editor without device presets skips the panes.
 const WEAR_DEVICES = ['id:wearos_small_round', 'id:wearos_large_round', 'id:wearos_xl_round'];
 const withWearDevices = (text) => {
   const document = JSON.parse(text);
@@ -376,10 +372,8 @@ const SCENES = {
 // live page boots. Designs the gallery takes from committed fixtures are replayed to .uid first.
 const site = join(repo, 'site');
 const gallery = JSON.parse(await readFile(join(site, 'gallery.json'), 'utf8'));
-// A gallery design is about one design across devices, so each carries the devices it previews on
-// (`devices` in gallery.json) as its export devices: the preview strip draws them, live.html opens
-// with them, and the Compose export writes them as @Preview(device = …). A widget needs none: it
-// previews in its launcher hosts on its own.
+// Each gallery design carries its `devices` (gallery.json) as export devices, drawn in the preview
+// strip and written as @Preview(device = …). Widgets need none.
 for (const item of gallery) {
   if (!item.fixture) continue;
   const document = JSON.parse(await design(item.fixture));

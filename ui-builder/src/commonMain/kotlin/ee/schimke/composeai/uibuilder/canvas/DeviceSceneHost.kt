@@ -39,55 +39,29 @@ public val LocalDeviceSceneRoot =
 
 /**
  * A device pane drawn by **its own Compose scene**, so the design can be driven the way a watch
- * drives it — including the rotating side button.
+ * drives it, including the rotating side button.
  *
- * ## Why a scene rather than a subtree
+ * Rotary input is dispatched to the focused node and walked up (`FocusOwner.dispatchRotaryEvent`),
+ * and the only public entry is `ComposeScene.sendRotaryScrollEvent`: a scene, not a subtree.
+ * `DeviceSceneRotaryTest` pins what it takes: the scene's dispatch, the upward walk from focus, and
+ * a frame clock at a real cadence (the scroll is animated).
  *
- * The editor is one composition: the canvas, the frame beside it and every device pane are all
- * nodes in the same tree, which is why they are cheap and why they all share the editor's
- * `CompositionLocal`s. What they cannot share is the *input* a watch sends. Rotary input is
- * dispatched by Compose to the **focused** node and walked up from there
- * (`FocusOwner.dispatchRotaryEvent`), and the only public entry point that starts that walk is
- * `ComposeScene.sendRotaryScrollEvent` — a scene, not a subtree. A pane that is a subtree cannot be
- * told "the side button turned"; a pane that is a scene can.
+ * Costs:
+ * - **`CanvasLayersComposeScene` is `@InternalComposeUiApi`**, version-locked to compose-ui;
+ *   `JvmSkiaStructuredSvgRecorder` already depends on it, and a Compose bump is where it would
+ *   break.
+ * - **A second composition per pane**; the frame pump stops when the scene is idle, so only
+ *   animation costs extra.
+ * - **CompositionLocals do not cross**: the caller wraps [content] in the providers the design
+ *   needs.
  *
- * `DeviceSceneRotaryTest` is the experiment that settled it: a Wear `TransformingLazyColumn`
- * composed in a scene of its own turns through its own snap/fling behaviour when a rotary event
- * arrives, and it needed three things that are not in any documentation — the scene's dispatch, the
- * **upward** walk from focus (a rotary modifier below the focus target is never reached), and a
- * frame clock at a real cadence (the scroll is animated, so a clock that advances a nanosecond per
- * frame leaves the list exactly where it was while the event reports itself handled).
- *
- * ## What this costs, stated rather than discovered
- *
- * - **`CanvasLayersComposeScene` is `@InternalComposeUiApi`** — "use only between compose-ui
- *   modules sharing the same exact version, subject to change without notice in major, minor, or
- *   patch releases". `JvmSkiaStructuredSvgRecorder` already opts into the same factory for the SVG
- *   export lane, so this is a coupling the repository has taken once; a pane drawing through it
- *   inherits it and a Compose bump is where it would break.
- * - **A second composition per pane.** The scene composes, measures and draws on its own, and the
- *   editor blits the result. The frame pump below stops the moment the scene has nothing to do, so
- *   a settled design costs one draw rather than sixty a second — but an animating design costs two
- *   compositions while it animates.
- * - **CompositionLocals do not cross.** [content] is composed *inside* the scene, so the caller
- *   wraps it in whatever the design needs — the same providers the editor installs around its
- *   canvas, by value rather than by inheritance.
- *
- * ## Input
- *
- * A pointer press, move or release is forwarded into the scene, and a wheel is forwarded as
- * **rotary**: one wheel notch is scaled by [WHEEL_PIXELS_PER_ROTARY_TICK] into the pixels a
- * rotating side button reports. The wheel is the pane's while the pointer is over it, which is a
- * deliberate change from the editor's own scrolling — the pane is where a design is driven, and the
- * workspace still scrolls everywhere else.
+ * Pointer press, move and release are forwarded; a wheel is forwarded as **rotary**, scaled by
+ * [WHEEL_PIXELS_PER_ROTARY_TICK]. The wheel belongs to the pane while the pointer is over it.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 @Composable
 internal fun DeviceSceneHost(
-  /**
-   * What the scene is of. The scene is rebuilt when this changes — a new document revision, a
-   * different device frame, a different density.
-   */
+  /** What the scene is of; it is rebuilt when this changes (revision, device frame, density). */
   key: Any,
   sizePx: IntSize,
   density: Density,
@@ -95,25 +69,20 @@ internal fun DeviceSceneHost(
   /** Whether a wheel over this pane is delivered as rotary. Off for panes that are not a device. */
   rotary: Boolean = true,
   /**
-   * What [content] draws — the design, for a device pane. A change asks the scene for a frame; see
-   * the pump below for why the lambda cannot say so itself.
+   * What [content] draws (the design, for a device pane). A change asks the scene for a frame; see
+   * the pump below.
    */
   contentKey: Any? = null,
   modifier: Modifier = Modifier,
   content: @Composable () -> Unit,
 ) {
-  // The scene is rebuilt when the *frame* changes, not when the design does. A scene composes its
-  // content once; handing it the latest lambda through a state is what lets an edit recompose the
-  // design inside a scene that is already standing, instead of tearing down and rebuilding a
-  // composition on every keystroke.
+  // The scene is rebuilt per frame, not per design edit: the latest lambda is passed through state
+  // so edits recompose inside the standing scene.
   val latestContent = rememberUpdatedState(content)
   val sceneRoot = LocalDeviceSceneRoot.current
-  // The editor's font resolver, not the scene's own. Bundled fonts are registered with it, and on
-  // the web so is every fallback font Compose downloads for a glyph none of them has (an emoji, a
-  // symbol). A scene with its own resolver never sees that font: its text stays unresolved, the
-  // web's unresolved-symbol registry hears about it again on the next layout, and Compose
-  // downloads the same file again — a weather widget's "☀️" fetched one 200 KB Noto Color Emoji
-  // slice 116 times in ten seconds, held each copy, and still drew a box in all three previews.
+  // The editor's font resolver, not the scene's own: bundled and downloaded fallback fonts (emoji,
+  // symbols) are registered with it. A separate resolver would never see them and re-download the
+  // same font on every layout.
   val fontFamilyResolver = LocalFontFamilyResolver.current
   val holder =
     remember(key, sizePx, density, layoutDirection, fontFamilyResolver) {
@@ -124,17 +93,11 @@ internal fun DeviceSceneHost(
       }
     }
   DisposableEffect(holder) { onDispose { holder.close() } }
-  // The pump asks for frames only while the scene has work: a design that has settled costs a draw,
-  // and one that is animating (a spinner, a rotary fling) keeps its own frames.
+  // The pump asks for frames only while the scene has work: a settled design costs one draw, an
+  // animating one keeps its frames.
   //
-  // Restarted by an edit as well as by input. An edit invalidates the scene's own composition —
-  // a composable lambda is updated in place rather than replaced, so [content] keeps its identity
-  // and cannot key anything — but the scene only composes inside [DeviceScene.frame], and nothing
-  // else calls it. Keyed on input alone, the loop exited with the first settled frame, so every
-  // pane
-  // kept drawing the revision it opened on until a pointer happened to cross it: a widget's three
-  // host previews stayed empty while its canvas filled up. [contentKey] is the caller saying what
-  // the lambda draws, and one frame is always taken for it.
+  // Restarted by edits as well as input: the scene only composes inside [DeviceScene.frame], and
+  // the lambda keeps its identity, so [contentKey] says what is drawn and always gets one frame.
   var pump by remember(holder) { mutableIntStateOf(0) }
   LaunchedEffect(holder, pump, contentKey) {
     do {
@@ -188,13 +151,9 @@ internal fun DeviceSceneHost(
 }
 
 /**
- * How far one wheel notch scrolls, in the pixels a rotating side button reports.
- *
- * A notch on the web is about 100px of scroll and a Wear encoder tick is a fraction of a row, so
- * without scaling one notch would throw the list several items. This is a *feel* constant and it is
- * approximate on purpose: a real encoder is high-resolution and a wheel is not, so the snap
- * behaviour will settle on different boundaries than a watch would. The pane says so in its caption
- * rather than implying it is the watch's own feel.
+ * How far one wheel notch scrolls, in the pixels a rotating side button reports. An approximate
+ * feel constant (a web notch is ~100px, an encoder tick a fraction of a row); the pane's caption
+ * says it isn't the watch's own feel.
  */
 private const val WHEEL_PIXELS_PER_ROTARY_TICK = 0.5f
 
@@ -244,8 +203,8 @@ internal class DeviceScene(
   }
 
   /**
-   * A rotating side button. Returns whether the scene delivered it — a design with nothing rotary
-   * on it (or nothing focused) answers false, and the caller then leaves the wheel to the editor.
+   * A rotating side button. Returns whether the scene delivered it; false (nothing rotary or
+   * focused) leaves the wheel to the editor.
    */
   fun rotary(verticalScrollPixels: Float, timeMillis: Long): Boolean =
     !closed && scene.sendRotaryScrollEvent(verticalScrollPixels, 0f, timeMillis)

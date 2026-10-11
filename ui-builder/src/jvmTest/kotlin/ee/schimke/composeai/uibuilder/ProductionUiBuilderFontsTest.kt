@@ -21,8 +21,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
- * A production render — a design's thumbnail, its PNG export — draws in the design's typefaces from
- * the first frame, where it used to draw every one in the platform face.
+ * A production render (a thumbnail, a PNG export) draws in the design's typefaces from the first
+ * frame.
  */
 @OptIn(ExperimentalTestApi::class)
 class ProductionUiBuilderFontsTest {

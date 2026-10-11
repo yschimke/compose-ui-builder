@@ -42,12 +42,8 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * The JVM half of the reference overlay: a file dialog, a link fetcher, and a file per design.
- *
- * The browser host keeps references on the serve host and refuses to hold a design-tool credential,
- * because that page is served to whoever has the link. This one runs as the operator, on their
- * machine, so it may read *their* Figma token from the environment — `FIGMA_TOKEN`, the name
- * Figma's own tooling uses — and render a frame through Figma's images API. Without one, a Figma
- * link is refused with the paste route, exactly as on the web.
+ * Running as the operator, it may read their `FIGMA_TOKEN` to render a Figma frame; without one,
+ * Figma links are refused as on the web.
  */
 class JvmReferenceHost(
   /** Where this design's reference is kept, or null to keep it for the session only. */

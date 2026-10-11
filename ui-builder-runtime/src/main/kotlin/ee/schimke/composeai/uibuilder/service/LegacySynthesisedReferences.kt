@@ -3,19 +3,9 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 
 /**
- * The pins the Kotlin catalogs this build synthesises give the designs created against them,
- * frozen.
- *
- * A stored design names the exact catalog reference it was created against, and `resolve` accepts
- * only a reference it can name (#796). While a catalog is synthesised that reference is computed
- * from the generator; once the catalog is catalog-owned the generator no longer runs, and once the
- * cutover deletes it there is nothing left to compute it from. So it is written down here, and
- * `CatalogCutoverReadinessTest` holds every row equal to what the generator produces for as long as
- * both exist — the same freeze-before-delete order `UI_BUILDER_CATALOG_CUTOVER.md` uses for every
- * other fact that moves.
- *
- * Only catalog ids this build has ever synthesised are here. A catalog that was only ever published
- * has no legacy pin to honour.
+ * The pins the synthesised Kotlin catalogs gave designs created against them, frozen so `resolve`
+ * can still accept them once the generators stop running. `CatalogCutoverReadinessTest` holds every
+ * row equal to the generator while both exist. Only ids this build ever synthesised are listed.
  */
 internal object LegacySynthesisedReferences {
 

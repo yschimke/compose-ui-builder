@@ -12,11 +12,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
- * The Properties panel for a text in a Wear widget closes when its close button says it will.
- *
- * Checked on both layouts, because they draw the panel from different state: the wide one from
- * whether the inspector is open, the compact one — anything under 840dp, which an editor beside its
- * preview pane easily is — from which bottom sheet is showing.
+ * The Properties panel for a text in a Wear widget closes when its close button says it will, on
+ * both layouts: the wide one keys on whether the inspector is open, the compact one (under 840dp)
+ * on which bottom sheet shows.
  */
 @OptIn(ExperimentalTestApi::class)
 class WearWidgetTextInspectorCloseTest {

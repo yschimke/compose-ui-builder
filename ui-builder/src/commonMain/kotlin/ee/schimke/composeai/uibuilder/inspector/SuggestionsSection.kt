@@ -39,15 +39,10 @@ internal data class SuggestionRow(
 )
 
 /**
- * The suggestions waiting on this design, at the top of the comments tab.
- *
- * Beside the discussion and the review verdict because it is the same conversation: an agent asked
- * "shall I?", and this is where a person answers — look ([onShow] swaps the canvas for the proposal
- * and its diff), then **Accept** (the branch's replay-merge) or **Reject** (archive it). Nothing is
- * applied by looking.
- *
- * It holds no state of its own: [rows] and [outcome] are whatever the host last said, and a click
- * shows nothing until the host has answered.
+ * The suggestions waiting on this design, at the top of the comments tab: look ([onShow] swaps the
+ * canvas for the proposal and its diff), then **Accept** (the branch's replay-merge) or **Reject**
+ * (archive). Nothing applies by looking. Stateless: [rows] and [outcome] are the host's last
+ * answer.
  */
 @Composable
 internal fun SuggestionsSection(

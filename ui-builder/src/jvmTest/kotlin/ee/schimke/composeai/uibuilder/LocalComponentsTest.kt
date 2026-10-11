@@ -24,11 +24,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A screen like Gmail's inbox, built once as rows of text, and the row turned into `InboxEmail`.
- *
- * The flow under test is the one a designer takes: build one row, make it a component, place it
- * again with different content, and find it in the palette and as its own composable in the code —
- * then, once the app ships its own `InboxEmail`, swap the design's copy for it.
+ * A screen like Gmail's inbox: build one row, make it the `InboxEmail` component, place it again
+ * with different content, find it in the palette and the code, then swap it for the app's own
+ * `InboxEmail` once shipped.
  */
 class LocalComponentsTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

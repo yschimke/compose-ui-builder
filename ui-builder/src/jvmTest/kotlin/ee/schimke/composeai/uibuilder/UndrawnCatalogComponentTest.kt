@@ -18,25 +18,14 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 /**
- * What the canvas draws for a component the catalog offers and it has no case for.
+ * What the canvas draws for a component the catalog offers and it has no case for. The renderer's
+ * `else` distinguishes:
+ * - an id **no catalog offers** (stale import, wrong pin, typo): an error;
+ * - an id **the catalog offers** that this canvas can't draw: a named placeholder, as the published
+ *   shelf promises (`PublishedUiBuilderCatalog.wasm()`), like Wear and pack components.
  *
- * `UiBuilderRenderer` dispatches on `when (componentId)` over ids compiled into this module, and
- * everything else fell to one `else` that drew an error container reading "Unsupported component".
- * That branch was answering two questions with one sentence:
- * - an id **no catalog offers** — a stale import, the wrong pin, a typo. Something is wrong.
- * - an id **the catalog offers** and this canvas has no case for. Nothing is wrong: the component
- *   is on the palette, it exports, and its own catalog renders it.
- *
- * The second is the whole of m3-catalog#324's other half. A published m3 catalog serves 108 `m3/`
- * components and this renderer has a case for twenty-five, so **eighty-three of them could be
- * inserted from the palette and drew a red error box** — while the shelf that served them published
- * the note "drawn on the canvas as a named placeholder" for every one
- * (`PublishedUiBuilderCatalog.wasm()`). The canvas now keeps that promise, with the placeholder the
- * Wear and pack components already use.
- *
- * Asserted through `UiBuilderEditor` rather than by providing the composition local directly: the
- * defect was that nothing supplied the catalog's ids to the renderer, so a test that supplies them
- * itself would pass against the broken build.
+ * Asserted through `UiBuilderEditor`, since the defect was nothing supplying the catalog's ids to
+ * the renderer.
  */
 @OptIn(ExperimentalTestApi::class)
 class UndrawnCatalogComponentTest {
@@ -51,10 +40,8 @@ class UndrawnCatalogComponentTest {
     runEditor {
       setContent { UiBuilderEditor(document = documentPlacing(UNDRAWN), catalog = catalog) }
 
-      // The placeholder writes the id's own words, and only those — `m3/badge` reads "badge".
-      // Matched exactly rather than as a substring: the layers panel and the inspector both carry
-      // "Badge · m3/badge", so a substring match finds three nodes and proves nothing about which
-      // surface drew what. The one node whose whole text is the id's tail is the canvas's.
+      // Matched exactly: the layers panel and inspector show "Badge · m3/badge", but only the
+      // canvas placeholder's whole text is "badge".
       onNodeWithText("badge").assertExists()
       // And the error container is gone. This is the assertion that fails before the fix: the
       // node drew "Unsupported component: m3/badge" and nothing else.
@@ -97,9 +84,8 @@ class UndrawnCatalogComponentTest {
 
   private companion object {
     /**
-     * A real component of the published m3 shelf that this renderer has no case for — one of the
-     * eighty-three. Not in a pack, deliberately: a pack's ids are caught by an earlier branch, and
-     * the gap this is about is a component the catalog adds directly.
+     * A real published m3 component this renderer has no case for, not in a pack (packs are caught
+     * by an earlier branch).
      */
     const val UNDRAWN = "m3/badge"
 

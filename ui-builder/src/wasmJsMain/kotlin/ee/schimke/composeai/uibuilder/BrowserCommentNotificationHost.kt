@@ -17,14 +17,12 @@ import kotlinx.serialization.json.Json
  * The browser half of "Notify me about replies": the `Notification` API, the push service worker
  * and the host's `/api/push/…` routes.
  *
- * Every probe and call mirrors compose-preview-server's own client (`serve-web/src/push/`), because
- * the worker this registers is that server's — `/push-sw.js` at scope `/` — and the subscription
- * belongs to the origin, shared with Settings → Notifications on every other page of the site. The
- * worker has no `fetch` handler, so although its scope is the whole origin it cannot change how the
- * editor loads, and this page's own `/ui-builder/` worker keeps controlling it.
+ * Mirrors compose-preview-server's client (`serve-web/src/push/`), since the worker is that
+ * server's (`/push-sw.js` at scope `/`) and the subscription is origin-wide, shared with Settings →
+ * Notifications. The worker has no `fetch` handler, so this page's `/ui-builder/` worker still
+ * controls loading.
  *
- * Each JS function guards its probes: a sandboxed frame throws on merely reading
- * `navigator.serviceWorker`, and a notification switch must never be what breaks the editor.
+ * Every JS function guards its probes: sandboxed frames throw on reading `navigator.serviceWorker`.
  */
 internal class BrowserCommentNotificationHost(
   /** False for a design kept in this browser (`?storage=local`): nobody to notify about. */
@@ -142,8 +140,8 @@ private data class PushSubscriptionWire(
 private data class PushSubscriptionKeysWire(val p256dh: String = "", val auth: String = "")
 
 /**
- * `support.ts`'s `browserEnvironment`, plus whether this page is inside a frame. A frame whose
- * parent is another origin throws on reading `window.top`'s identity, which counts as framed.
+ * `support.ts`'s `browserEnvironment`, plus whether this page is framed (a cross-origin parent
+ * throws on `window.top`, which counts as framed).
  */
 @JsFun(
   """() => {
@@ -170,8 +168,8 @@ private external fun pushEnvironment(): String
 private external fun pushPermission(): String
 
 /**
- * Called synchronously from the click, so the browser sees the gesture. The callback form is for a
- * Safari old enough to return nothing from `requestPermission`.
+ * Called synchronously from the click so the browser sees the gesture; the callback form supports
+ * old Safari.
  */
 @JsFun(
   """() => new Promise((resolve) => {
@@ -183,8 +181,8 @@ private external fun pushPermission(): String
 private external fun pushRequestPermission(): Promise<JsString>
 
 /**
- * The subscription held by the root-scoped registration, as `toJSON()`, or `''`. A registration for
- * `/` that has no `pushManager` is some other worker and is not ours to read.
+ * The subscription held by the root-scoped registration, as `toJSON()`, or `''`. A `/` registration
+ * without `pushManager` isn't ours.
  */
 @JsFun(
   """() => navigator.serviceWorker.getRegistration('/').then((registration) => {
@@ -196,9 +194,8 @@ private external fun pushRequestPermission(): Promise<JsString>
 private external fun pushExistingSubscription(): Promise<JsString>
 
 /**
- * `settings.ts`'s `turnOn` after the permission and the key: register, wait for an active worker
- * (`subscribe` refuses before that), drop a subscription made under a key this server no longer
- * signs with, and subscribe with `userVisibleOnly`.
+ * `settings.ts`'s `turnOn` after permission and key: register, wait for an active worker, drop a
+ * subscription under a key this server no longer signs with, and subscribe with `userVisibleOnly`.
  */
 @JsFun(
   """(workerUrl, publicKey) => {

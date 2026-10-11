@@ -27,13 +27,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A palette drop on the empty ground adds beside the design.
- *
- * The pointer over the workspace but not over the design is a place nothing can be inserted *into*;
- * the honest answer to a release there is the panel's own add-beside — a top-level item on the
- * board — rather than a swallow. Driven through the real palette drag on the real editor, so the
- * whole path is under test: the gesture, the empty-ground decision, the board prelude and the
- * insert, and the selection that follows the inserted node.
+ * A palette drop on the empty ground adds beside the design (a top-level board item) rather than
+ * being swallowed. Driven through the real palette drag: gesture, empty-ground decision, board
+ * prelude, insert, and the selection following the new node.
  */
 @OptIn(ExperimentalTestApi::class)
 class BesideDropTest {

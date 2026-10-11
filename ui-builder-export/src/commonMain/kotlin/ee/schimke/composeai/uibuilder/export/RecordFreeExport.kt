@@ -12,16 +12,13 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 object RecordFreeExport {
 
   /**
-   * Record-free export under the catalog-owned cutover: [route] is what
+   * Record-free export under the catalog-owned cutover, where [route] is what
    * `CatalogExportRouting.route` resolved from the catalog's `composeSourceExport` declaration.
    *
-   * A declared launcher widget reaches [LauncherWidgetCodeExporter] whatever its root is called,
-   * provided the root is one of the catalog's [launcherRoots]
-   * (`CatalogExportRouting.launcherRoots`, the components it marks `LauncherWidgetHost`), previewed
-   * at the catalog's [frameSizes]. Every other record-free route is the platform-routed [generate]
-   * below, asked as the platform its declaration names. The record projection and an undeclared or
-   * unsupported route are null: the record-driven generator owns those designs, and nothing
-   * record-free may answer for them first.
+   * A declared launcher widget reaches [LauncherWidgetCodeExporter] when its root is one of
+   * [launcherRoots], previewed at [frameSizes]. Other record-free routes use the platform-routed
+   * [generate] below. The record projection and undeclared or unsupported routes return null: the
+   * record-driven generator owns those.
    */
   fun generate(
     document: UiBuilderDocument,
@@ -44,9 +41,8 @@ object RecordFreeExport {
     )
 
   /**
-   * The route-aware [generate], writing variable font text's declarations with [variableFonts].
-   * Every export entry point takes it as an overload of its own beside the published one, not a
-   * default argument, to keep the published JVM descriptors (see [nativePreview]).
+   * The route-aware [generate], writing variable font text declarations with [variableFonts]. An
+   * overload rather than a default argument, to keep published JVM descriptors.
    */
   fun generate(
     document: UiBuilderDocument,
@@ -71,10 +67,9 @@ object RecordFreeExport {
     }
 
   /**
-   * The route-aware [generate] for the service's document, with the refusals the platform overload
-   * below applies: the candidate document drops `predicate`, `accessibility` and the token and
-   * asset bindings, so a route that converts must refuse a design holding them rather than lose
-   * them.
+   * The route-aware [generate] for the service's document. The candidate document drops
+   * `predicate`, `accessibility` and token/asset bindings, so a converting route refuses designs
+   * holding them.
    */
   fun generate(
     document: DesignDocumentV1,
@@ -186,11 +181,8 @@ object RecordFreeExport {
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     variableFonts: VariableFontExport,
   ): Generated? {
-    // An A2UI design is never a widget or a Wear screen, and every one of its designs has Kotlin:
-    // the app-side program that sends its payload to AndroidX's A2UI processor. Asked first so a
-    // design pinned to the A2UI catalog is answered by the A2UI emitter whatever its root is — a
-    // root outside the palette is then that emitter's refusal, named, rather than a fall-through to
-    // a generator that has never heard of `a2ui/`.
+    // A2UI designs always have Kotlin (the app-side program sending the payload). Asked first so
+    // the A2UI emitter answers, and names any refusal, whatever the root.
     if (platform == UiBuilderCatalogPlatform.A2UI) {
       return when (val result = A2uiComposeExporter.export(document, packageName)) {
         is A2uiComposeExporter.Result.Emitted ->
@@ -214,9 +206,7 @@ object RecordFreeExport {
       ?.let {
         return it
       }
-    // Remote Kotlin source is written in every build. What the build flag still withholds — state
-    // selection, repetition, bound actions — `RemoteContentEmitter` refuses by name, so a design
-    // using one gets a refusal that says so rather than no code at all.
+    // Remote source is always written; features the build flag withholds are refused by name.
     if (platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE) return null
     // A launcher widget is a Remote Compose root with a scaffold of its own: the
     // `RemoteComposeWidget` class around the body, which the inline exporter below never writes.
@@ -264,9 +254,8 @@ object RecordFreeExport {
         return it
       }
     if (platform == UiBuilderCatalogPlatform.A2UI) {
-      // What the candidate document cannot carry, refused here rather than dropped by the
-      // conversion below: A2UI states accessibility and visibility as properties of its own
-      // components, and has no token or asset registry to resolve a binding against.
+      // What the candidate document cannot carry is refused rather than dropped: A2UI states
+      // accessibility and visibility as component properties and has no token or asset registry.
       val unsupported = buildList {
         if (document.tokenBindings.isNotEmpty())
           add("tokenBindings: A2UI has no design tokens; write the value on the component")
@@ -328,10 +317,9 @@ object RecordFreeExport {
       misplacesWearContent(platform, document.nodes.values.map { it.componentId })
 
   /**
-   * Why a Wear design neither Wear emitter takes (one whose root is not a widget container or
-   * screen scaffold) does not export, as one sentence instead of a per-component "no record"
-   * refusal. Only for a [UiBuilderCatalogPlatform.WEAR] catalog and a design holding a record-free
-   * component ([CATALOG_SYSTEM_IDS]).
+   * Why a Wear design neither Wear emitter takes (root is not a widget container or screen
+   * scaffold) does not export, as one sentence. Only for a [UiBuilderCatalogPlatform.WEAR] catalog
+   * and a design holding a record-free component ([CATALOG_SYSTEM_IDS]).
    */
   private fun wearRootRefusal(
     platform: UiBuilderCatalogPlatform,
@@ -361,13 +349,8 @@ object RecordFreeExport {
       componentIds.any { it.substringBefore('/') in CATALOG_SYSTEM_IDS }
 
   /**
-   * The catalog system ids whose designs export without a component record.
-   *
-   * Derived from the roots the emitters actually accept rather than declared beside them: a
-   * component id is `<catalog system id>/<component>` throughout this builder, so a new record-free
-   * root is in this set the moment its emitter accepts it. A hand-kept list would let the two drift
-   * — and drifting *towards* exportable is a catalog that advertises an action every export of it
-   * then refuses.
+   * The catalog system ids whose designs export without a component record, derived from the roots
+   * the emitters accept so the two cannot drift.
    */
   val CATALOG_SYSTEM_IDS: Set<String> =
     (WEAR_WIDGET_CONTAINER_IDS + WearScreenCodeExporter.SCAFFOLD).mapTo(mutableSetOf()) {
@@ -386,11 +369,10 @@ object RecordFreeExport {
    * record-driven generator owns.
    *
    * @param packageName the package the file declares, or null for a snippet (the Code pane).
-   *     @param previews whether a Wear screen's file carries its preview fan-out; the native
-   *       preview lane passes `false` because its bundle lacks tooling (see
-   *       [WearScreenCodeExporter.export]).
-   *     @param packComponents pack components a Wear screen may hold, by id, as records; widgets
-   *       take none.
+   * @param previews whether a Wear screen's file carries its preview fan-out; the native preview
+   *   lane passes `false` (see [WearScreenCodeExporter.export]).
+   * @param packComponents pack components a Wear screen may hold, by id, as records; widgets take
+   *   none.
    */
   fun generate(
     document: UiBuilderDocument,
@@ -421,17 +403,12 @@ object RecordFreeExport {
     variableFonts: VariableFontExport,
   ): Generated? =
     when {
-      // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
-      // nodes are not Compose modifiers, so there is nothing for a test tag to be written onto —
-      // and the native preview lane, which is the only caller that asks for tags, reaches a widget
-      // through [nativePreview] rather than here. Accepting the flag and dropping it would read as
-      // support.
+      // No [tagNodes] for a widget: Remote Compose nodes have no modifiers to tag, and the native
+      // lane reaches widgets through [nativePreview].
       document.isWearWidget() ->
-        // A widget takes no PACK components — a pack's Jetpack Compose composable cannot be
-        // played as Remote Compose — and it does take its own catalog's record, which is a
-        // different thing wearing the same parameter. `RemoteContentEmitter` falls back to it for
-        // a component it has no hand-written case for, which is most of what a Remote catalog
-        // publishes.
+        // A widget takes no pack components (Jetpack Compose cannot play as Remote Compose); the
+        // parameter carries its own catalog's record instead, for `RemoteContentEmitter`'s
+        // fallback.
         WearWidgetCodeExporter.export(document, packageName, assets, packComponents).generated()
       document.isWearScreen() ->
         WearScreenCodeExporter.export(
@@ -449,10 +426,8 @@ object RecordFreeExport {
   /** What a record-free design generates, or why it does not. */
   sealed interface Generated {
     /**
-     * @param composableName the function the file declares, where the emitter writes one this
-     *   caller has to name again — the native preview lane wraps it in a `@Preview` and imports it
-     *   by name. Null for a Wear widget, whose source declares a `WearWidgetDocument` rather than a
-     *   composable and which that lane reaches through [nativePreview] instead.
+     * @param composableName the function the file declares, which the native preview lane imports
+     *   and wraps in a `@Preview`. Null for a Wear widget, which declares a `WearWidgetDocument`.
      */
     data class Emitted(val source: String, val composableName: String? = null) : Generated
 
@@ -514,9 +489,8 @@ object RecordFreeExport {
   }
 
   /**
-   * The tagged overloads above, plus the Wear root refusal when [platform] is given (the native
-   * preview lane needs [tagNodes]). Separate overloads rather than a default argument to keep the
-   * published JVM descriptors (see [nativePreview]).
+   * The tagged overloads above, plus the Wear root refusal when [platform] is given. Separate
+   * overloads to keep the published JVM descriptors (see [nativePreview]).
    */
   fun generate(
     document: UiBuilderDocument,
@@ -620,20 +594,15 @@ object RecordFreeExport {
       }
 
   /**
-   * Whether [document] generates through an emitter here rather than through `ScreenGenerator`.
-   *
-   * Public because one caller needs the question without the answer: the server's **native
-   * preview** lane compiles generated Jetpack Compose against the catalog bundle, and a design
-   * whose source is Remote Compose or Wear Compose is not something it can build — so it refuses,
-   * and wants to say why rather than run a generator and discard the source.
+   * Whether [document] generates through an emitter here rather than `ScreenGenerator`. Public so
+   * the native preview lane can explain a refusal without running a generator.
    */
   fun applies(document: DesignDocumentV1): Boolean = document.isRecordFree()
 
   /**
-   * Whether a record-free design's source is Kotlin a Compose classpath can build: Wear screens
-   * are, so the native lane can render them on the Android daemon
-   * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`); Wear widgets are Remote Compose and reach that lane
-   * through [nativePreview].
+   * Whether a record-free design's source can build on a Compose classpath: Wear screens can
+   * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`); Wear widgets are Remote Compose and use
+   * [nativePreview].
    */
   fun composeCompilable(document: DesignDocumentV1): Boolean {
     val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
@@ -641,13 +610,8 @@ object RecordFreeExport {
   }
 
   /**
-   * Whether this record-free design is a **Wear widget**, whose native lane source is its own.
-   *
-   * The complement of [composeCompilable] within [applies] rather than its negation restated: a
-   * widget reaches the native preview lane too, and by a third road — [nativePreview] writes a
-   * `@RemoteComposable` body, a `WearWidgetBrush` and a container spec, none of which is the file
-   * [generate] hands a designer. Asked of the emitter's target for the reason [CATALOG_SYSTEM_IDS]
-   * is derived from one.
+   * Whether this record-free design is a Wear widget, whose native-lane source comes from
+   * [nativePreview] rather than [generate].
    */
   fun isWearWidget(document: DesignDocumentV1): Boolean {
     val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
@@ -667,7 +631,7 @@ object RecordFreeExport {
 
   /**
    * As above, resolving components without a hand-written case through [components]. A separate
-   * overload (not a default argument) because v3.21.0 shipped the other descriptor (#691).
+   * overload because v3.21.0 shipped the other descriptor.
    *
    * @param components the catalog's component record by id — the same map [generate] takes as
    *   `packComponents`, so preview and export cannot disagree.
@@ -709,10 +673,8 @@ object RecordFreeExport {
   /** What a widget generates for the native preview lane, or why it does not. */
   sealed interface NativePreview {
     /**
-     * @param name the base identifier the file declares `<name>Content`, `<name>Background` and
-     *   `<name>Params` under.
-     * @param widthDp the container's whole frame — content plus padding — which is what the preview
-     *   is measured at and what the canvas beside it draws.
+     * @param name the base identifier for `<name>Content`, `<name>Background` and `<name>Params`.
+     * @param widthDp the container's whole frame (content plus padding), as previewed and drawn.
      */
     data class Emitted(
       val source: String,

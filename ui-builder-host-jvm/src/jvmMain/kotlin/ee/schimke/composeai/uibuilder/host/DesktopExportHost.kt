@@ -27,16 +27,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * The desktop half of [UiBuilderExportHost]: renders in this process, writes to the clipboard and
- * to a file the person picks.
- *
- * The browser host asks the server for its pictures. A desktop or IntelliJ session has no server to
- * ask, and before this host existed those hosts offered no Export menu at all. The JVM target
- * already carries the structured SVG recorder the server's export lane is built on, so SVG here is
- * the same Figma-pasteable markup, and PNG is the same surface drawn to a raster
- * ([JvmDocumentRasterizer]).
- *
- * There are no links: a local design has no URL for anyone else to open.
+ * The desktop half of [UiBuilderExportHost]: renders in-process and writes to the clipboard or a
+ * chosen file. Uses the same structured SVG recorder as the server's export lane, and PNG via
+ * [JvmDocumentRasterizer]. No links: a local design has no URL.
  */
 class DesktopExportHost(
   private val catalog: CapabilityCatalog,

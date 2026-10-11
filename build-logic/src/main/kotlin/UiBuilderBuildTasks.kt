@@ -1,37 +1,19 @@
 import java.net.URLClassLoader
 
-// Task types `:ui-builder`'s build script registers. They lived inline in that script, which made
-// them uncompilable on their own, untestable, and recompiled with every edit to the script; here
-// they are ordinary classes of the build-logic included build.
+// Task types `:ui-builder`'s build script registers, as ordinary build-logic classes.
 
 /**
- * Formats one generated file the way `ktfmtCheck` will judge it — which is NOT `ktfmt
+ * Formats one generated file the way `ktfmtCheck` judges it — which is not `ktfmt
  * --google-style`.
  *
- * Both gates resolve ktfmt 0.64 and both say `googleStyle`, so they read as interchangeable. They
- * are not. `Formatter.GOOGLE_FORMAT`, which the CLI's `--google-style` uses as-is, carries
- * `preserveLambdaBreaks = true`; `ktfmt-gradle` 0.27.0 builds its options through
- * `FormattingOptionsBean`, whose six fields do not include that one, so the plugin formats with
- * ktfmt's default of `false`. A lambda an author broke across lines and that would fit on one is
- * therefore kept by the CLI and collapsed by the plugin — the same file, two answers, and the
- * plugin's is the one CI enforces (#822).
+ * The CLI's `Formatter.GOOGLE_FORMAT` has `preserveLambdaBreaks = true`; `ktfmt-gradle` 0.27.0
+ * builds options via `FormattingOptionsBean`, which leaves it at the default `false`. This output
+ * is compared against the Jetcaster fixture that `ktfmtCheckAll` enforces, so it must match the
+ * plugin exactly: the values below are `KtfmtExtension.googleStyle()` plus defaults, through the
+ * same six-argument constructor `KtfmtWorkAction.toFormattingOptions` calls.
  *
- * That mattered here because the Jetcaster fixture is formatted by one and checked by the other:
- * this task's output is compared against
- * `ui-builder-generated-jetcaster/.../JetcasterDiscoverExpanded.kt`, which `ktfmtCheckAll` holds to
- * the plugin's formatting. The day `ScreenGenerator` emits such a lambda the two gates would want
- * different bytes and neither could be satisfied.
- *
- * So this reproduces the plugin's options exactly rather than approximating them with a CLI flag —
- * there is no flag: `--google-style`, `--meta-style` and `--kotlinlang-style` are the only styles
- * the CLI exposes and none of them is what the plugin does. The numbers below are
- * `KtfmtExtension.googleStyle()` plus that class's defaults, and the constructor chosen is the same
- * six-argument one `KtfmtWorkAction.toFormattingOptions` calls, so anything ktfmt adds a default
- * for lands here the way it lands there.
- *
- * ktfmt is loaded from the `ktfmtCli` configuration reflectively, under the platform loader: it
- * keeps ONE version of ktfmt in the build (the version catalog's) and keeps its Kotlin runtime out
- * of Gradle's.
+ * ktfmt is loaded reflectively from the `ktfmtCli` configuration under the platform loader, keeping
+ * one ktfmt version in the build and its Kotlin runtime out of Gradle's.
  */
 abstract class FormatLikeKtfmtPlugin : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.Classpath
@@ -97,17 +79,10 @@ abstract class VerifyGeneratedSource : org.gradle.api.DefaultTask() {
  * Embeds the component record the Compose export reads, so the editor judges a design against the
  * same artefact the server exports against.
  *
- * Generated from `m3-catalog-components-v1.json` rather than copied, because a second copy of the
- * record is the drift this module is removing. It lands as a Kotlin constant rather than a resource
- * because resource loading differs between the JVM and wasmJs, and the panel must behave the same
- * in both — the browser is where it actually runs.
- *
- * `compose-foundation-components-v1.json` is merged in for the same reason `ComponentRecordSource`
- * unions it server-side: `layout/column` and `asset/image` belong to `androidx.compose.foundation`
- * rather than to any catalog, and a panel judging a design without them would report every layout
- * node as having no record while the server exported it happily. The two files share no component,
- * so the merge is a concatenation; the server owns the rule for when they would, and this states
- * the same outcome on the side that cannot see it.
+ * Generated from `m3-catalog-components-v1.json` (not copied), as a Kotlin constant because
+ * resource loading differs between JVM and wasmJs. `compose-foundation-components-v1.json` is
+ * merged in as `ComponentRecordSource` does server-side, since `layout/` and `asset/` components
+ * belong to foundation.
  */
 abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.InputFile
@@ -140,22 +115,11 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
 
   /**
-   * [record] with [foundation]'s components appended, as compact JSON text.
+   * [record] with [foundation]'s components appended, as compact JSON (the text ships and stays
+   * resident in Wasm). Parsed, not spliced, so reformatting either file cannot break it.
    *
-   * Compact because nothing reads the constant but a parser, and every byte of it ships: Kotlin/Wasm
-   * imports each string literal, so the browser creates the whole text when the module starts and
-   * keeps it, and the module's own bytes stay resident beside it. Pretty-printed, a third of it was
-   * indentation.
-   *
-   * Parsed rather than spliced textually: both files are written by hand and a splice assuming
-   * either one's formatting would break the first time somebody reformatted it.
-   *
-   * The skip is `ComponentRecordSource.withFoundation`'s, rule for rule — the canonical id AND the
-   * component ids — because this constant and that union describe the same record to two readers.
-   * Keyed on the canonical id alone, a catalog that carried its own `Column` under a canonical id
-   * of its own would keep it on the server and get BOTH here, so the browser's panel would see
-   * `layout/column` claimed twice and refuse an export the server writes happily. The two files
-   * share neither key today; a rule that only holds while that is true is not the rule.
+   * The skip rule matches `ComponentRecordSource.withFoundation` exactly (canonical id and
+   * component ids), so the browser and server see the same record.
    */
   private fun merged(): String {
     @Suppress("UNCHECKED_CAST")
@@ -190,10 +154,8 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
         appendLine()
         appendLine("// Generated from ${sourceDescription.get()}. Do not edit.")
         appendLine()
-        // A raw string, with every `$` escaped: `typeFqn` values carry them (a nested classifier
-        // is `Arrangement${'$'}Vertical` in a JVM name), and Kotlin would read them as template
-        // interpolation. `val` rather than `const val` for the same reason — an escaped raw string
-        // is not a compile-time constant.
+        // A raw string with every `$` escaped (`typeFqn` values contain them); hence `val`, not
+        // `const val`.
         appendLine("internal val ${constantName.get()}: String =")
         val escaped = json.trimEnd().replace("$", "\${'\$'}")
         appendLine("  \"\"\"" + escaped + "\"\"\"")
@@ -204,23 +166,12 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
 
 /**
  * Fails when the `androidx.window` the server's renderer sidecar carries is not the one this
- * module's design render actually links against.
+ * module's design render links against.
  *
- * The sidecar copy exists because the daemon force-delegates `androidx.*` classes to its parent
- * loader while promoting jars to that parent by GROUP, and the JetBrains port
- * `org.jetbrains.androidx.window:window-core` matches the package rule but not the group rule —
- * `server/build.gradle.kts` carries the full explanation and
- * [#812](https://github.com/yschimke/compose-preview-server/issues/812) the failure it caused.
- *
- * The consequence for versions is the part worth a gate. The sidecar sits AHEAD of the bundle's own
- * dependencies on the parent classpath, so its copy is the one the render links against whatever
- * the bundle recorded. Pinned here and resolved there, the two can drift the next time the adaptive
- * artifacts move — and the symptom would be a `NoSuchMethodError` in the middle of a render, on a
- * lane only the visual harness exercises. Comparing them at build time costs nothing and names the
- * two numbers.
- *
- * Lives in this module because this is where the version is decided: `window-core` arrives under
- * `compose-material3-adaptive`, and reading it anywhere else would be reading a copy.
+ * The sidecar sits ahead of the bundle's dependencies on the parent classpath (see
+ * `server/build.gradle.kts`), so its copy wins at render time; drift would surface as a
+ * `NoSuchMethodError` mid-render. Lives here because `window-core` arrives via
+ * `compose-material3-adaptive` in this module.
  */
 abstract class CheckWindowSidecarVersion : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.Classpath
@@ -248,12 +199,9 @@ abstract class CheckWindowSidecarVersion : org.gradle.api.DefaultTask() {
 }
 
 /**
- * The newest releases' notes from the repository's `CHANGELOG.md`, embedded as Kotlin so the home
- * screen can say what changed without fetching anything.
- *
- * Read from the file release-please writes, so the notes are exactly what was released and need no
- * second copy. Features are shown and fixes only for a release that has no features; the links and
- * commit hashes are dropped, because the home screen is not the place to read them.
+ * The newest releases' notes from `CHANGELOG.md`, embedded as Kotlin so the home screen can show
+ * them without fetching. Features are shown, fixes only for a release without features; links and
+ * hashes are dropped.
  */
 abstract class EmbedReleaseNotes : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.InputFile
@@ -341,17 +289,10 @@ abstract class EmbedReleaseNotes : org.gradle.api.DefaultTask() {
 }
 
 /**
- * The design document and mutation JSON Schemas, taken from the pinned `ui-builder-protocol` jar
- * rather than kept here by hand.
- *
- * compose-preview-contracts generates them from the protocol's own serializers (since 3.13.0), so a
- * mutation added there arrives here with the pin bump. The copies this replaced were written by hand
- * and only *checked* against the serializer, which is how adding `setComponentArguments` turned
- * this repository's CI red until someone edited a JSON file to match.
- *
- * Published under this repository's names with its stable `$id`s, because a release attaches them
- * at a URL fixed per version (`releases/download/<tag>/<file>`) that a `.uid` or a mutation cites
- * (#320); only where the content comes from changes.
+ * The design document and mutation JSON Schemas, extracted from the pinned `ui-builder-protocol`
+ * jar (generated from the protocol's serializers since 3.13.0) rather than maintained by hand.
+ * Published under this repository's names with stable `$id`s, since releases attach them at
+ * per-version URLs that documents cite.
  */
 abstract class ExtractProtocolSchemas : org.gradle.api.DefaultTask() {
   /** The protocol's JVM jar; its `schemas/` entries are the generated schemas. */

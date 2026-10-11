@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * The design's colours as the property inspector previews them: the same four roles the theme tab
- * edits laid over the Material baseline, light or dark after the background — the recipe the canvas
- * uses — so a swatch shows what the design will draw rather than the editor's own chrome.
+ * The design's colours for inspector previews: the theme tab's four roles over the Material
+ * baseline, light or dark by background, as the canvas does, so swatches match the design rather
+ * than the editor chrome.
  */
 internal val LocalInspectorColorScheme = staticCompositionLocalOf<ColorScheme?> { null }
 
@@ -210,9 +210,8 @@ private val GLYPH_PROPERTIES =
   )
 
 /**
- * A small picture of what an option does: lines aligned the way text would be, a dot where content
- * sits in its box, blocks spaced as an arrangement spaces children, a light or dark page for a
- * theme. Drawn rather than taken from an icon set so every option of every property has one.
+ * A small drawn picture of what an option does (text alignment lines, a content dot, spaced blocks,
+ * a light/dark page), so every option of every property has one.
  */
 @Composable
 internal fun EnumOptionGlyph(property: String, option: String, modifier: Modifier = Modifier) {

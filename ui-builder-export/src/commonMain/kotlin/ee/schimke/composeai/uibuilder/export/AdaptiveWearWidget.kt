@@ -6,20 +6,14 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Every component a Wear widget design can have as its root: the two fixed containers and the
- * adaptive one. Each check that asks "is this a widget?" reads this set, so the adaptive container
- * is a widget everywhere the fixed ones are.
+ * adaptive one. Every "is this a widget?" check reads this set.
  */
 val WEAR_WIDGET_CONTAINER_IDS: Set<String> =
   WearWidgetScaffoldSize.entries.map { it.componentId }.toSet() + AdaptiveWearWidget.COMPONENT_ID
 
 /**
- * **Experimental.** A Wear widget authored once and adapted to whichever container the host gives
- * it.
- *
- * A widget is placed in a Small (216×76dp) or a Large (216×124dp) container, and the launcher tells
- * it which through `WearWidgetParams.containerType`. The two fixed containers,
- * `remote-m3/widget-container-small` and `-large`, make a designer pick one; this one takes the
- * content of the Large widget as named slots and decides how each slot survives the move to Small:
+ * Experimental. A Wear widget authored once and adapted to the Small (216×76dp) or Large
+ * (216×124dp) container the host gives it (`WearWidgetParams.containerType`):
  *
  * | slot         | Large                       | Small                         |
  * |--------------|-----------------------------|-------------------------------|
@@ -28,18 +22,9 @@ val WEAR_WIDGET_CONTAINER_IDS: Set<String> =
  * | `action`     | bottom of the column        | end of the row                |
  * | `background` | the container's brush chain | the same brush chain          |
  *
- * The rule is fixed, which is what makes this a template rather than a layout: the designer fills
- * slots and the template owns the arrangement. Only the top level of a widget can be adaptive,
- * because only the top level is told its container size.
- *
- * ## One resolution, read by every surface
- *
- * Nothing downstream learns a third container. [resolve] turns an adaptive design into the ordinary
- * Small or Large design it becomes at that size — a `layout/row` or `layout/column` holding the
- * slot contents, inside the fixed container — so the preview panes, the native render and the code
- * export each run the lane that already exists for a fixed container, twice. The adaptive rule
- * therefore lives in exactly one place, and a surface cannot draw one arrangement while the export
- * writes another.
+ * The template owns the arrangement; only the top level can be adaptive. [resolve] turns an
+ * adaptive design into the ordinary fixed-container design for a size, so every surface (preview,
+ * native render, export) reuses its fixed-container lane and the rule lives in one place.
  */
 object AdaptiveWearWidget {
   const val COMPONENT_ID: String = "remote-m3/widget-container-adaptive"
@@ -67,25 +52,16 @@ object AdaptiveWearWidget {
    * The fixed-container design this adaptive design becomes at [size], or the document unchanged
    * when its root is not adaptive.
    *
-   * The root keeps its id, its properties and its background slot, and becomes the fixed container
-   * for [size]. Its content is two synthesized layout nodes: an outer column (Large) or row (Small)
-   * holding a weighted inner column for the text slots and, after it, the action. The weight gives
-   * the text whatever the action leaves, so the action sits at the bottom of a Large widget and at
-   * the end of a Small one — with nothing but `weight` and `spacedBy`, which the Remote Compose
-   * emitter writes, so the canvas and the export lay it out the same way.
-   *
-   * Every node the designer placed keeps its id through the resolution, so a selection, a comment
-   * or a diagnostic about `adaptive-headline` still names the node the designer placed. A slot the
-   * size hides takes its subtree out of the document entirely, so nothing downstream has to know to
-   * skip it.
+   * The root keeps its id, properties and background, becoming the fixed container. Its content is
+   * an outer column (Large) or row (Small) holding a weighted text column and then the action,
+   * using only `weight` and `spacedBy` so canvas and export agree. Authored node ids are preserved;
+   * a hidden slot's subtree is removed entirely.
    */
   fun resolve(document: UiBuilderDocument, size: WearWidgetScaffoldSize): UiBuilderDocument {
     val rootId = document.roots.singleOrNull() ?: return document
     val root = document.nodes[rootId]?.takeIf { it.componentId == COMPONENT_ID } ?: return document
     val visible = visibleSlots(size)
-    // Allocated against the ids already in use: a document written through the protocol may hold
-    // any id, and a synthesized node that took an authored one would overwrite it — and could
-    // point the resolved graph back at its own parent.
+    // Allocated against existing ids so a synthesized node cannot overwrite an authored one.
     val layoutId = document.freshId("$rootId-${size.name.lowercase()}")
     val textId = document.freshId("$layoutId-text", taken = setOf(layoutId))
     val large = size == WearWidgetScaffoldSize.Large
@@ -140,13 +116,7 @@ object AdaptiveWearWidget {
   /** Between the text and the action, on whichever axis the size stacks them. */
   const val ACTION_SPACING_DP: Int = 8
 
-  /**
-   * A new adaptive widget, its slots already filled so both sizes have something to show.
-   *
-   * A meeting reminder, because it is the shape the rule is for: the headline is what a glance
-   * needs, the supporting line is what a Large widget has room to add, and the action is what the
-   * wearer taps — so the Small widget keeps the headline and the button and drops the detail.
-   */
+  /** A new adaptive widget with filled slots (a meeting reminder) so both sizes show something. */
   fun newDocument(
     designId: String,
     catalogPin: JsonObject,
@@ -215,10 +185,8 @@ object AdaptiveWearWidget {
     listOf(id) + nodes[id]?.slots?.values.orEmpty().flatten().flatMap { subtree(it) }
 
   /**
-   * `remote-m3/remote-text`, the catalog's own `RemoteText`. Not `m3/text`: the published
-   * `remote-m3` catalog does not declare the borrowed Material 3 id, so a seed naming it was
-   * refused as `UNKNOWN_COMPONENT` the moment the service validated it. [style] is a role on
-   * `RemoteTypography`'s Wear scale, which is what that component's `style` accepts.
+   * `remote-m3/remote-text`, not `m3/text`, which the published `remote-m3` catalog does not
+   * declare. [style] is a `RemoteTypography` Wear-scale role.
    */
   private fun text(id: String, text: String, style: String, color: String) =
     UiBuilderNode(

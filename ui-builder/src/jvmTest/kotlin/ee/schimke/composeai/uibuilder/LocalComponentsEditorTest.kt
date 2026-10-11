@@ -24,9 +24,9 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 
 /**
- * The editor itself, with an inbox whose row has been made `InboxEmail` and placed three times: the
- * palette offers it on its "This design" shelf, and a selected placement is inspected as the
- * component it places. The screenshots it writes are the evidence a reviewer looks at.
+ * The editor with an inbox whose row is `InboxEmail`, placed three times: the palette offers it on
+ * its "This design" shelf, and a selected placement is inspected as its component. Writes
+ * screenshots for reviewers.
  */
 @OptIn(ExperimentalTestApi::class)
 class LocalComponentsEditorTest {

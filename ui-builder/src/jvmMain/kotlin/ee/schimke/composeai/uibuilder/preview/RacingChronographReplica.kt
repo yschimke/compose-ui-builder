@@ -72,26 +72,19 @@ private fun wave(y: Double, phase: Double): List<Pair<Double, Double>> =
   }
 
 /**
- * A racing chronograph in the manner of the RM 11-03 McLaren that Formula 1 drivers wear, drawn
- * from a front-on reference photograph, for looking at only — never offered as a template, and
- * carrying no maker's or team's wordmark.
+ * A racing chronograph in the manner of the RM 11-03 McLaren, drawn from a front-on reference
+ * photograph, for looking at only: never offered as a template, and carrying no maker's or team's
+ * wordmark.
  *
- * - **Case.** A tonneau in carbon TPT: dark layers with grey striations, a few of them orange, cut
- *   by a polished bevel that catches the light along its left flank and top. Eight black spline
- *   screws hold the bezel, each with its six splines and a highlight on its domed head; hollow
- *   titanium trapezoids sit at twelve and six. At three, an orange knurled crown in a titanium
- *   guard; at two and four, the START/STOP and RESET/FLY-B pushers.
- * - **Flange.** Black, with a minute track, a tachymeter scale in green placed where 3600 ÷ seconds
- *   falls, and lume plots at the hours.
- * - **Dial.** Skeletonised: the movement runs underneath — wheels turning at their ratios, the
- *   escape wheel stepping eight times a second, the balance swinging at 4 Hz under grey bridges
- *   with polished edges. Over it, outlined orange numerals, a large date under twelve, and three
- *   registers: running seconds at nine (green), the chronograph minutes at three (yellow), its
- *   hours at six (orange).
- * - **Hands.** Faceted swords — each half a different shade, so the ridge reads as a polished edge
- *   — with lume; the central chronograph seconds sweeps.
- * - **Crystal.** Two reflections, a soft wide one and a sharp one, and a bright line where its edge
- *   meets the bezel.
+ * - **Case.** Carbon TPT tonneau with grey and orange striations and a polished bevel; eight spline
+ *   screws; titanium trapezoids at twelve and six; an orange knurled crown at three; pushers at two
+ *   and four.
+ * - **Flange.** Black, with a minute track, a green tachymeter scale and lume plots.
+ * - **Dial.** Skeletonised over a moving movement (escape wheel stepping 8×/s, balance at 4 Hz);
+ *   outlined orange numerals, a large date, and three registers: running seconds at nine (green),
+ *   chronograph minutes at three (yellow), hours at six (orange).
+ * - **Hands.** Two-tone faceted swords with lume; a sweeping central chronograph seconds.
+ * - **Crystal.** A soft wide reflection, a sharp one, and a bright edge line.
  */
 internal fun racingChronographReplica(
   designId: String,
@@ -314,11 +307,8 @@ private fun superellipsePath(rx: Double, ry: Double, n: Double = 3.2): String =
 
 /**
  * The point [inset] in from the crystal's edge, on the ray from the centre at [degrees] clockwise
- * from twelve.
- *
- * Found on [CRYSTAL_OUTLINE] itself, so whatever sits on the flange follows the opening it is seen
- * through: a curve fitted to the opening instead drifted out over the bezel at the corners. The
- * inset is measured square to the edge, not along the ray, so it holds at the corners too.
+ * from twelve. Found on [CRYSTAL_OUTLINE] itself, with the inset measured square to the edge, so
+ * flange elements follow the opening at the corners.
  */
 private fun onCrystal(degrees: Double, inset: Double): Pair<Double, Double> {
   val a = degrees * PI / 180

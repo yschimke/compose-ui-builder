@@ -55,24 +55,20 @@ public interface UiBuilderCatalogExecutor {
 
   /**
    * The pin a document must carry for [resolve] to answer with [catalog], or null when this
-   * executor cannot say. Defaulted so an executor that predates the question still compiles; a null
-   * here means a client is back to guessing the digest, which is what the answer exists to end.
+   * executor cannot say. Defaulted for source compatibility with older executors.
    */
   public fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? = null
 
   /**
    * Whether one property write carries a value of the kind the catalog means — the semantic half of
-   * [validate] (yschimke/compose-preview-server#487). Asked only where a value is chosen
-   * (`setProperty`, `insertNode`), never document-wide, so designs predating a rule stay editable.
-   * Refusals are `INVALID_PROPERTY` naming the node and field.
+   * [validate]. Asked only where a value is chosen (`setProperty`, `insertNode`), never
+   * document-wide, so older designs stay editable. Refusals are `INVALID_PROPERTY`.
    */
   public fun validateWrite(
     catalog: CatalogCapabilityV1,
     /**
-     * The document the node is being written into. It is what makes an `assetKey` resolvable beyond
-     * the catalog's own registry: a key pinned into `assets` by the asset lane
-     * (`UiBuilderAssetPort`) is one the canvas draws, and a rule that read only the catalog would
-     * refuse the picture a designer just uploaded.
+     * The document the node is being written into, so an `assetKey` pinned into its `assets` by the
+     * asset lane resolves as well as the catalog's registry.
      */
     document: DesignDocumentV1,
     node: DesignNodeV1,
@@ -139,21 +135,14 @@ public data class UiBuilderServiceLimits(
   val retainedCommittedOperations: Int = 1_024,
   val retainedOperationOutcomes: Int = 4_096,
   /**
-   * The most whole-document revisions one design may retain. Each is a full copy of the document
-   * and position map, so the old 1,025 dominated the store (yschimke/compose-preview-server#568);
-   * `SNAPSHOT_REQUIRED` lets clients learn how far back retention goes. See
-   * `docs/design/UI_BUILDER_STATE_STORAGE.md`.
+   * The most whole-document revisions one design may retain; each is a full copy of the document
+   * and position map. See `docs/design/UI_BUILDER_STATE_STORAGE.md`.
    */
   val retainedRevisionSnapshots: Int = 128,
   /**
-   * The byte budget those retained revisions share, which binds first when documents are large.
-   *
-   * A count alone bounds nothing: at `maximumSerializedDocumentBytes` a design retaining 128
-   * revisions would want a gigabyte. The depth actually used is this budget divided by the size of
-   * the document being retained — measured, not guessed, from the canonical bytes the commit
-   * already hashes — clamped between [minimumRetainedRevisionSnapshots] and
-   * [retainedRevisionSnapshots]. Position snapshots follow the same depth and cost a fraction of
-   * it.
+   * The byte budget retained revisions share, which binds first for large documents. Effective
+   * depth is this budget divided by the canonical document size, clamped between
+   * [minimumRetainedRevisionSnapshots] and [retainedRevisionSnapshots].
    */
   val retainedRevisionBytes: Long = 2L * 1_024 * 1_024,
   /**
@@ -169,12 +158,8 @@ public data class UiBuilderServiceLimits(
    */
   val retainedUndoBytes: Long = 4L * 1_024 * 1_024,
   /**
-   * Undo steps kept regardless of [retainedUndoBytes], so undo never becomes unavailable.
-   *
-   * Pruning past this point degrades rather than breaks: `undo` and `redo` resolve their target
-   * through a lookup that answers `UNKNOWN_OPERATION` when it is gone, and a `restoreNode` whose
-   * tombstone has aged out is refused with `DELETED_NODE`. What a designer loses is depth, and only
-   * on a design whose individual operations are large enough to spend the budget.
+   * Undo steps kept regardless of [retainedUndoBytes]. Pruning further degrades gracefully: undo
+   * answers `UNKNOWN_OPERATION` and restore answers `DELETED_NODE`.
    */
   val minimumRetainedUndoOperations: Int = 8,
   val retainedAuditRecords: Int = 4_096,
@@ -193,9 +178,8 @@ public data class UiBuilderServiceLimits(
   val maximumEmbeddedAssetBytes: Int = 6 * 1_024 * 1_024,
   val presenceTtlMillis: Long = 30_000,
   /**
-   * Ceiling on one uploaded asset ([UiBuilderAssetPort.putAsset]). A megabyte is a generous
-   * photograph at the sizes a phone screen draws one; it is also what every render lane carries
-   * inline to the daemon on each export, so this bounds a request as much as a file.
+   * Ceiling on one uploaded asset ([UiBuilderAssetPort.putAsset]). Every render lane carries assets
+   * inline on each export, so this bounds requests too.
    */
   val maximumAssetBytes: Int = 1_024 * 1_024,
   /** How many keys one design's `assets` map may hold. */
@@ -256,13 +240,8 @@ public class PersistentUiBuilderService(
    */
   private val assets: UiBuilderAssetStore?,
   /**
-   * Resolves the outline of an icon a design names, so the design can carry its own picture.
-   *
-   * Null on a host with no icon source, which leaves the registry empty and every lane exactly as
-   * it was. Hosts that have one fill it here rather than in the editor, because the editor is not
-   * the only thing that writes: `ui_builder_apply` writes an icon over MCP, a `CreateDesign` can
-   * carry one from the start, and such a design can be exported or natively previewed before
-   * anybody opens it.
+   * Resolves icon outlines so a design carries its own picture. Null leaves the registry empty.
+   * Filled here rather than in the editor because MCP writes and `CreateDesign` also add icons.
    */
   private val iconOutlines: IconOutlineResolver?,
 ) :
@@ -273,9 +252,8 @@ public class PersistentUiBuilderService(
   UiBuilderBranchPort {
 
   /**
-   * The constructor published before icon outlines existed. A defaulted parameter compiles to two
-   * JVM constructors (plain and synthetic `DefaultConstructorMarker`), so the defaults live here to
-   * keep exactly the two descriptors 3.24 published.
+   * The constructor published before icon outlines existed; defaults live here to keep exactly the
+   * two JVM descriptors 3.24 published.
    */
   public constructor(
     designStore: UiBuilderDesignStateStore,
@@ -298,12 +276,8 @@ public class PersistentUiBuilderService(
   )
 
   /**
-   * The single-file storage this service was built on, behind the per-design port.
-   *
-   * Kept for the hosts that never had a directory to write into — an in-memory storage, a test, a
-   * caller outside this repository — and for `migratePersistenceToLatest`, which is about that
-   * format and only that format. A host with a state directory opens [UiBuilderDesignStateStore]
-   * instead, and pays per design rather than per store on every edit.
+   * The single-file storage this service was built on, for hosts without a state directory and for
+   * `migratePersistenceToLatest`. Hosts with a directory use [UiBuilderDesignStateStore].
    */
   public constructor(
     storage: UiBuilderStateStorage,
@@ -461,11 +435,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * What the durable storage holds against its ceiling, or null when it reports neither.
-   *
-   * Read where every other gauge is read, under the service lock, and never allowed to fail a
-   * status route: a storage that throws while being asked how big it is reports nothing rather than
-   * taking down the answer it is one row of.
+   * What the durable storage holds against its ceiling, or null when it reports neither. Never
+   * allowed to fail a status route.
    */
   private val storageUsage: UiBuilderStorageUsage?
     get() = runCatching { store.usage() }.getOrNull()
@@ -476,29 +447,20 @@ public class PersistentUiBuilderService(
 
   /**
    * Why one stored design cannot be served, held rather than thrown so one bad design never stops
-   * the server from starting. Requests naming it get the reason, and `diagnostics()` counts them.
-   * Owners can still delete it and `adminDesignDocument` can still read it out.
-   *
-   * Integrity is a different line: checksum, truncation or unknown-format failures are still
-   * refused by the storage layer (`restoreBackup` recovers).
+   * startup. Owners can still delete it and `adminDesignDocument` can read it out. Integrity
+   * failures (checksum, truncation, format) are still refused by the storage layer.
    */
   private data class UnusableDesign(
     val code: ServiceErrorCodeV1,
     val reason: String,
     /**
-     * True when the *store* could not read this design, rather than the catalog refusing a document
-     * it read fine. The two are unusable for different reasons and recover differently: a document
-     * the catalog outgrew can be downloaded and repaired, and one the store cannot decode can only
-     * be retired.
+     * True when the store could not read this design (only retirement recovers), rather than the
+     * catalog refusing a readable document (which can be downloaded and repaired).
      */
     val storeQuarantine: Boolean = false,
     /**
-     * True when the document is sound and the CATALOG is what moved — the pin names a revision this
-     * deployment no longer serves, or the served one refuses a document it read fine.
-     *
-     * The distinction earns its keep in [execute]: a design in this state may still be asked what
-     * moving it to another catalog would cost, because that is the only repair it has. A document
-     * that is itself broken cannot be repaired by a catalog move and stays refused.
+     * True when the document is sound and the catalog moved. Such a design may still ask for a
+     * catalog upgrade preview in [execute] — its only repair.
      */
     val catalogFault: Boolean = false,
   )
@@ -514,10 +476,7 @@ public class PersistentUiBuilderService(
           unusableReason(designId, design)?.let { designId to it }
         }
         .toMap() +
-        // A design whose own files could not be read. The single-file store could not have this
-        // entry: its checksum covered every design at once, so one bad byte was the whole lane
-        // rather than one design. Reported like any other unusable design, and repaired the same
-        // way — by an operator who can now see which one it is.
+        // A design whose own files could not be read, reported like any other unusable design.
         loadedPersistence.quarantined.mapValues { (_, record) ->
           UnusableDesign(
             ServiceErrorCodeV1.INTERNAL,
@@ -536,15 +495,10 @@ public class PersistentUiBuilderService(
     ConcurrentHashMap(loadedPersistence.quarantined)
 
   /**
-   * The same design pinned to the catalog reference this deployment actually serves.
-   *
-   * `--ui-builder-published-catalogs` changes a catalog's reference without changing what fits it.
-   * The server accepts both (#816), but the browser compares the pin against the served catalog and
-   * refused every export (#818). Re-pinning here keeps that knowledge server-side; every downstream
-   * `catalogs.resolve(...)` sees the result. In memory only — see [persistRePins].
-   *
-   * Safe because the pin must resolve to a served catalog with the same `systemId` and the document
-   * must validate against it, so drifted documents keep failing under their own pin.
+   * The same design pinned to the catalog reference this deployment serves, since
+   * `--ui-builder-published-catalogs` changes references and the browser compares pins. In memory
+   * only — see [persistRePins]. Safe because the pin must resolve to a served catalog with the same
+   * `systemId` and the document must validate against it.
    */
   private fun PersistedDesignV1.rePinned(): PersistedDesignV1 {
     val pin = document.catalogPin
@@ -564,18 +518,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * The same design with the required properties its catalog started requiring filled in
-   * ([withRequiredPlaceholders]), when that is the ONLY thing wrong with it.
-   *
-   * A design whose pin resolves but whose tab row predates `selectedTabIndex` becoming required was
-   * refused on every request (`invalid stored design …: required property selectedTabIndex is
-   * missing`), and nothing an owner could do in the editor reached it, because the editor never
-   * opened. Filling the generator's own placeholder makes it openable and editable again; the value
-   * is real and stays the owner's to change.
-   *
-   * Narrow on purpose: only when the probe fails, the fill changes something, and the filled
-   * document then validates. A design with any other defect is returned untouched and keeps its
-   * honest refusal. Written through to the store by [persistRePins], like a moved pin.
+   * The design with newly required properties filled by [withRequiredPlaceholders], when that is
+   * the only thing wrong with it — otherwise the editor could never open it to fix it. Any other
+   * defect returns it untouched. Written through by [persistRePins].
    */
   private fun PersistedDesignV1.withNewlyRequiredFilled(): PersistedDesignV1 {
     val catalog = catalogs.resolve(document.catalogPin) ?: return this
@@ -592,13 +537,9 @@ public class PersistentUiBuilderService(
   private data class RePinOutcome(val designs: Int = 0, val failure: String? = null)
 
   /**
-   * Writes the re-pinned designs through to the store once at startup, so stored pins converge
-   * before a synthesised catalog is retired (#819 step 3) even for designs nobody edits. Only moved
-   * pins are written.
-   *
-   * Not fatal: the in-memory re-pin already serves correctly, and a failure is reported via
-   * [diagnostics]. The count is what was attempted, since [UiBuilderDesignStore.commit] is per
-   * design.
+   * Writes re-pinned designs through to the store once at startup so stored pins converge even for
+   * designs nobody edits. Not fatal: failures surface via [diagnostics]. The count is what was
+   * attempted.
    */
   private fun persistRePins(): RePinOutcome {
     // Identity, not equality: `rePinned` returns the receiver untouched when it changes nothing, so
@@ -612,11 +553,8 @@ public class PersistentUiBuilderService(
       store.commitAll(changed)
       RePinOutcome(designs = changed.size)
     } catch (failure: Exception) {
-      // The CLASS, never the message. `/status.json` is unauthenticated on a `--public` host and
-      // this map is owner-free by contract, but the store says `cannot store UI-builder design
-      // <id> under <directory>` -- a design id and the absolute state path, published to anyone
-      // who can reach the host. The class name is bounded, identifies nobody, and still separates
-      // the store refusing the write from the filesystem refusing it.
+      // The class, never the message: `/status.json` is unauthenticated on `--public` hosts and the
+      // message carries a design id and state path.
       RePinOutcome(designs = changed.size, failure = failure::class.java.simpleName)
     }
   }
@@ -644,9 +582,8 @@ public class PersistentUiBuilderService(
           "catalog unavailable for stored design $designId",
           catalogFault = true,
         )
-    // Judged on the probe: a property the catalog stopped declaring is a warning about this
-    // design, not a reason to refuse every request naming it. What the probe still refuses is a
-    // real defect -- an unknown component has nothing to draw -- and stays fatal.
+    // Judged on the probe: an undeclared property is a warning; a real defect (unknown component)
+    // stays fatal.
     val probe = design.document.withoutProperties(undeclaredProperties(design.document, catalog))
     catalogs.validate(probe, catalog)?.let {
       return UnusableDesign(
@@ -659,10 +596,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * The design a request is about, or null for the requests that are about none of them.
-   *
-   * Listing is deliberately in the second group: a design that cannot be served still appears, so
-   * an operator can see that it is there. Hiding it would make it unfindable as well as unusable.
+   * The design a request is about, or null. Listing is in the null group so unusable designs still
+   * appear to operators.
    */
   private fun UiBuilderServiceRequest.designId(): String? =
     when (this) {
@@ -736,9 +671,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * An asset write is a commit without an operation: revision and sequence move, but no
-   * `CommittedOperationV1` can describe it, so `history` is cut here and subscribers get a whole
-   * snapshot. Not undoable; re-pointing the key or deleting the node takes it back.
+   * An asset write is a commit without an operation: `history` is cut and subscribers get a whole
+   * snapshot. Not undoable.
    */
   private fun putAssetLocked(write: UiBuilderAssetWrite): LockedExecution {
     val store =
@@ -1010,9 +944,8 @@ public class PersistentUiBuilderService(
     if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(forbidden("read", designId))
     }
-    // The commit audit first, the operation log over it: an asset upload clears the log but keeps
-    // the revisions, and records its author only in the audit, so reading the log alone would
-    // name nobody for every revision at or before the upload.
+    // The commit audit first, then the log: an asset upload clears the log but its author is only
+    // in the audit.
     val authors =
       design.audit
         .filter { it.kind == AuditKindV1.COMMIT }
@@ -1037,10 +970,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * See [UiBuilderServiceRequest.RestoreRevision]. Built as the wire operation it is recorded as
-   * and handed to [apply], so it shares everything a submission gets there: the write check,
-   * idempotency on [UiBuilderServiceRequest.RestoreRevision.operationId], the rate limit, quotas,
-   * the history record and the broadcast to subscribers.
+   * See [UiBuilderServiceRequest.RestoreRevision]. Built as a wire operation and handed to [apply],
+   * so it gets the same checks, idempotency, limits, history and broadcast.
    */
   private fun restore(
     actor: AuthenticatedUiBuilderActor,
@@ -1051,12 +982,9 @@ public class PersistentUiBuilderService(
     if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(notFound(request.designId))
     }
-    // A retry of a restore that already committed: the mutation below is derived from the current
-    // document, which that restore changed, so rebuilding it would fingerprint differently and be
-    // refused as a reused operation id. Answer with the recorded outcome instead, as [apply] does
-    // for any replayed submission — but only to the actor that may write, and only when what was
-    // recorded under this id is this actor's restore of this revision. Anything else reusing the
-    // id is refused exactly as [apply] refuses it.
+    // A retry of a committed restore: rebuilding would fingerprint differently, so replay the
+    // recorded outcome — only to a writer, and only if the record is this actor's restore of this
+    // revision. Any other reuse of the id is refused as in [apply].
     design.operationOutcomes[request.operationId]?.let { prior ->
       if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
         return serviceError(forbidden("write", request.designId))
@@ -1198,12 +1126,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * Commit a complete document rather than pretending its changes are a v1 operation batch.
-   *
-   * The operation outcome is durable and idempotent. Both changes cut the v1 delta window because
-   * it cannot describe either whole-document replacement or provenance. A content replacement also
-   * cuts conflict and undo state; a provenance-only home move preserves those. Subscribers receive
-   * the whole snapshot either way.
+   * Commit a complete document rather than a v1 operation batch. The outcome is durable and
+   * idempotent. Both kinds cut the delta window; content replacement also cuts conflict and undo
+   * state, a provenance-only home move preserves them.
    */
   private fun replaceWholeDocument(
     actor: AuthenticatedUiBuilderActor,
@@ -1245,9 +1170,8 @@ public class PersistentUiBuilderService(
         }
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(replay))
     }
-    // Admitted before anything is recorded, as an operation batch is: a stale base revision is a
-    // durable rejection, and persisting one must spend the same budget an accepted change does.
-    // The rate-limit refusal itself stays unrecorded so the same operation id can retry.
+    // Admitted before recording: a durable rejection spends budget like an accepted change. The
+    // rate-limit refusal itself is unrecorded so the operation id can retry.
     if (!admitMutation(actor.actorId, designId, 1)) {
       rejectedMutationRate.incrementAndGet()
       return LockedExecution(
@@ -1323,9 +1247,8 @@ public class PersistentUiBuilderService(
           RejectionCodeV1.INVALID_COMMAND,
           "catalog pin is unavailable",
         )
-    // A home move does not author content. Validate it with the same exact-value tolerance used by
-    // ordinary edits so a catalog that stopped declaring one stored property cannot prevent a
-    // provenance-only move. Replacement content is new input and remains strict.
+    // A home move authors no content, so it uses the edit-time tolerance for undeclared stored
+    // properties; replacement content stays strict.
     val validationProbe =
       if (replacesContent) document
       else document.withoutProperties(undeclaredProperties(design.document, catalog))
@@ -1339,9 +1262,7 @@ public class PersistentUiBuilderService(
         issue.message,
       )
     }
-    // Replacement content is a write of every property of every node, so it answers to the same
-    // value rules an insert does (`validateWrite`): without this, a replacement could commit the
-    // unresolvable `asset/image` key or mistyped colour an insert or setProperty is refused.
+    // Replacement content answers to the same value rules as an insert (`validateWrite`).
     if (replacesContent) {
       document.nodes.values.forEach { node ->
         node.properties.keys.forEach { property ->
@@ -1383,23 +1304,20 @@ public class PersistentUiBuilderService(
       )
     val outcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
     val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
-    // A home move changes provenance only. Re-deriving positions would replace the allocated
-    // structural keys retained by accepted insert/move operations with fresh `initial:*` keys,
-    // making their later compensation look unsafe even though the tree did not change.
+    // A home move keeps positions: re-deriving would replace allocated structural keys and make
+    // later compensation look unsafe.
     val positions = if (replacesContent) derivePositions(document) else design.positions
     val updated =
       design.copy(
         document = document,
         lastSequence = sequence,
-        // Neither v1 delta vocabulary nor CommittedOperationV1 can express a whole-document/home
-        // change. Cut only the catch-up log so a disconnected client before this sequence receives
-        // a snapshot; undo records, conflict touches and tombstones are separate and survive moves.
+        // The v1 deltas cannot express this, so cut only the catch-up log (disconnected clients get
+        // a snapshot); undo records, conflict touches and tombstones survive.
         history = emptyList(),
-        // An open branch's fork revision keeps its document through a replacement, so the
-        // branch can still be compared with where it started; its POSITION state does not survive
-        // a content replacement, which cuts every older base exactly as it does for a live editor:
-        // a merge across one is refused with `REVISION_NOT_RETAINED` rather than replayed onto a
-        // document nobody's edits were authored against.
+        // An open branch's fork revision keeps its document so the branch can be compared; its
+        // position state does not survive a content replacement, so merges across it are refused
+        // with
+        // `REVISION_NOT_RETAINED`.
         revisionSnapshots =
           (design.revisionSnapshots + RevisionStateV1(document, sequence)).retainedRevisions(
             retained,
@@ -1523,14 +1441,9 @@ public class PersistentUiBuilderService(
     )
 
   /**
-   * See [UiBuilderServiceRequest.RenameDesign] for why this is not a mutation. The current
-   * revision's retained snapshot is renamed with the live document, so reading the design *at* its
-   * current revision agrees with reading it plainly; earlier revisions keep the title they had,
-   * which is what a historical read is for.
-   *
-   * Nothing is pushed to subscribers: the protocol client discards a snapshot that does not advance
-   * its sequence cursor, and a rename advances nothing. An open editor sees the new title when it
-   * next opens the design; a listing sees it at once.
+   * See [UiBuilderServiceRequest.RenameDesign]. The current revision's snapshot is renamed too;
+   * earlier revisions keep their title. Nothing is pushed: a rename does not advance the sequence,
+   * so clients would discard the snapshot.
    */
   private fun rename(
     actor: AuthenticatedUiBuilderActor,
@@ -1569,9 +1482,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * See [UiBuilderServiceRequest.DeleteDesign] for who may; shares [removeLocked] with
-   * [adminDeleteDesign]. Unusable designs are deletable by their owner; an unreadable one is
-   * checked against its quarantine header, and without one stays the operator's to retire.
+   * See [UiBuilderServiceRequest.DeleteDesign]; shares [removeLocked] with [adminDeleteDesign].
+   * Unusable designs are deletable by their owner; an unreadable one is checked against its
+   * quarantine header, and without one stays the operator's to retire.
    */
   private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId]
@@ -1579,9 +1492,7 @@ public class PersistentUiBuilderService(
       if (!design.ownedBy(actor)) {
         return serviceError(forbidden("delete", designId))
       }
-      // Closed under the lock, as [updateAccess] closes the streams of an actor it revoked: a
-      // subscriber learns the design is gone only after the removal is durable, which
-      // [removeLocked] guarantees by committing first.
+      // Closed under the lock, after [removeLocked] has made the removal durable.
       removeLocked(designId).forEach(SubscriberMailbox::close)
       return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
     }
@@ -1599,9 +1510,8 @@ public class PersistentUiBuilderService(
         return serviceError(forbidden("delete", designId))
       }
       store.remove(designId)
-      // The same two clears [adminDeleteDesign]'s quarantine branch makes: a stale entry would
-      // answer this id with the reason rather than "not found", and would follow a design
-      // re-created under it.
+      // A stale entry would answer this id with the reason rather than "not found", even for a
+      // re-created design.
       unusableDesigns.remove(designId)
       quarantinedDesigns.remove(designId)
       return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
@@ -1619,15 +1529,9 @@ public class PersistentUiBuilderService(
     if (requested.id.isBlank() || requested.id in persisted.designs) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design id is blank or already exists")
     }
-    // A design whose files could not be read is absent from the map above but present on the disk,
-    // under the directory this id resolves to. Creating over it would write into somebody else's
-    // design — and the id would then answer every request with the stale quarantine, while a delete
-    // aimed at the quarantine took the new design with it. Retiring the old one is the door.
-    //
-    // Asked of the store by place rather than by id, because a quarantine is not always reported
-    // under the id it holds: a design whose header will not parse has no id to be read out of it
-    // and is reported under its directory, and one restored under another name is reported under
-    // that name. Either still occupies the directory this id resolves to.
+    // A quarantined design occupies this id's directory on disk; creating over it would corrupt
+    // both. Asked of the store by place, since a quarantine may be reported under a different
+    // name.
     val holder =
       store.quarantineHolding(requested.id)
         ?: requested.id.takeIf { unusableDesigns[it]?.storeQuarantine == true }
@@ -1650,10 +1554,8 @@ public class PersistentUiBuilderService(
     validateEnvironment(requested.environment)?.let {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it.message)
     }
-    // Validate the candidate BEFORE resolving its outlines. Resolution can download and parse a
-    // 10 MB font under the lock this whole service shares, and malformed input should cost a
-    // structured error rather than a cold host's first font fetch — so the cheap guard runs on
-    // what the caller sent, and the quota is checked again below on what actually gets stored.
+    // Validate before resolving outlines: resolution may fetch a large font under the shared lock.
+    // The quota is re-checked below on what gets stored.
     val candidate = requested.copy(createdAtEpochMillis = now, updatedAtEpochMillis = now)
     documentQuotaIssue(candidate, countRejection = true)?.let {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it)
@@ -1667,10 +1569,7 @@ public class PersistentUiBuilderService(
     catalogs.validate(candidate, catalog)?.let {
       return serviceError(it.toServiceError())
     }
-    // Only now, on a document that is known to be well-formed. The outlines are part of what gets
-    // stored, so the quota is re-checked against them: adding them after the check can carry a
-    // design past `maximumEmbeddedAssetBytes` and have it quarantined on the next start for
-    // exceeding a limit it was accepted under.
+    // Outlines are stored, so re-check the quota with them included.
     val document = withIconOutlines(candidate)
     documentQuotaIssue(document, countRejection = true)?.let {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it)
@@ -1678,16 +1577,12 @@ public class PersistentUiBuilderService(
 
     val design =
       PersistedDesignV1(
-        // The same `document` the snapshot below stores: a design can be created with its icons
-        // already in it — an MCP `CreateDesign`, a template, a pack — and an immediate export or
-        // `GetSnapshot(revision = 0)` must not read a retained snapshot without them.
+        // The same `document` the snapshot stores, so an immediate export or `GetSnapshot(revision
+        // = 0)` sees the icons.
         document = document,
         lastSequence = 0,
-        // Owned by the human when the caller is acting for one. An agent's grant is a
-        // short-lived delegation of *their* authority, so a design it creates has to outlive the
-        // grant in the hands of the person who approved it — the alternative is what this fixes: a
-        // design owned by an id that stops existing in an hour, which its own approver is then
-        // refused when they open the link the agent sent them.
+        // Owned by the human an agent acts for: the agent's grant is short-lived, and the design
+        // must outlive it.
         access =
           DesignAccessControlV1(0, canonicalActorId(actor.onBehalfOfActorId ?: actor.actorId)),
         revisionSnapshots = listOf(RevisionStateV1(document, 0)),
@@ -1721,11 +1616,8 @@ public class PersistentUiBuilderService(
         // it: five alternatives of one screen are one design being explored, not six designs.
         .filter { it.branch == null }
         .forEach { add(it.document.id to { it.listItem(actor) }) }
-      // A design the store could not read is listed too, when its quarantine knows who owns it:
-      // a design the owner cannot see is one they cannot delete, and the file manager is where
-      // both happen. Reported under the id its header named and never under the renamed key a
-      // collision forced — that key shares its owner with a live design of the same id, and a
-      // second row for it would be a lie about how many designs there are.
+      // Quarantined designs with a known owner are listed so the owner can delete them. Reported
+      // under the header's id, never a collision-renamed key.
       quarantinedDesigns.forEach { (designId, record) ->
         val header = record.header ?: return@forEach
         if (designId != record.designId || designId in persisted.designs) return@forEach
@@ -1800,11 +1692,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * What [actor] may do here, or a not-found that does not say whether the design exists.
-   *
-   * A design this actor cannot read answers exactly as a design that is not here does. That is the
-   * whole reason this is safe to expose to a grantee where [access] is not: it describes only the
-   * caller's own reach, and an actor learns nothing it could not learn by opening the design.
+   * What [actor] may do here, or a not-found indistinguishable from a missing design. It only
+   * describes the caller's own reach, so it is safe for grantees.
    */
   private fun actions(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
@@ -1923,10 +1812,8 @@ public class PersistentUiBuilderService(
       sourceDocumentHash = documentHash(source),
       status =
         if (blocked) CatalogUpgradePreviewStatusV1.BLOCKED else CatalogUpgradePreviewStatusV1.READY,
-      // Names this preview, not its document: an apply quotes it back, and a plan that changed
-      // between the two -- a catalog republished under the same pin, a rule edited here -- must
-      // not be accepted as the one somebody looked at. Hashing the candidate alone would miss
-      // exactly that, since two plans can land on the same document by different routes.
+      // Names this preview, not its document: two plans can reach the same document by different
+      // routes, and an apply must match the plan that was looked at.
       previewDigest =
         sha256(
           listOf(
@@ -2079,13 +1966,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * The design with the outlines of every icon it names present, and stale ones dropped.
-   *
-   * Run on the reduced design rather than inside the reducer so that it applies to every write once
-   * — an apply, a batch, an undo, a redo — instead of to whichever mutations somebody remembered.
-   * It cannot fail a write: a host with no resolver, or one whose icon cache is cold, leaves the
-   * entries it already had and adds none, so an offline write is a design with fewer pictures
-   * rather than a rejected command.
+   * The design with every named icon's outline present and stale ones dropped. Run on the reduced
+   * design so it applies to every write. Never fails a write: without a resolver or with a cold
+   * cache, existing entries are kept.
    */
   private fun withIconOutlines(design: PersistedDesignV1): PersistedDesignV1 {
     val document = withIconOutlines(design.document)
@@ -2198,9 +2081,8 @@ public class PersistentUiBuilderService(
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(reduction.outcome))
     }
     if (submission.isCatalogUpgradeOnly()) {
-      // The write above was validated against the target catalog, so the condition that held this
-      // design out of every ordinary request has been repaired in this process as well as on disk.
-      // Leaving the boot-time entry behind would make a successful recovery require a restart.
+      // The write was validated against the target catalog, so the design is repaired; clear the
+      // boot-time entry without a restart.
       unusableDesigns.remove(submission.designId)
     }
 
@@ -2228,10 +2110,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * One submission through the reducer, with its outcome recorded against [fingerprint] and the
-   * undo and tombstone budgets applied — everything [apply] does short of committing and
-   * broadcasting. Shared with the branch merge, which runs it over a working copy of the parent and
-   * commits only when the whole replay landed.
+   * One submission through the reducer, with its outcome recorded and undo/tombstone budgets
+   * applied — [apply] short of committing and broadcasting. Shared with branch merge.
    */
   private fun reduceAndRecord(
     design: PersistedDesignV1,
@@ -2259,9 +2139,8 @@ public class PersistentUiBuilderService(
     val recorded =
       reduction.design.copy(
         operationOutcomes = outcomes,
-        // Two bounds, and the byte one is the load-bearing half: keeping `acceptedOperations` a
-        // subset of the retained outcomes preserves the invariant those two have always had, and
-        // the budget is what stops one design's undo records from being most of the store.
+        // The byte budget is the load-bearing bound; the subset keeps `acceptedOperations` within
+        // the retained outcomes.
         acceptedOperations =
           reduction.design.acceptedOperations
             .filterKeys { it in outcomes.keys }
@@ -2293,11 +2172,8 @@ public class PersistentUiBuilderService(
     branchError(UiBuilderServiceError(code, message))
 
   /**
-   * The revisions of [designId] an open branch forked at. Retention keeps them however far the
-   * design moves on; archiving or merging the branch releases the pin at the next commit.
-   *
-   * Derived from the branch records rather than stored on the parent, so the two can never
-   * disagree: a crash between writing a branch and writing its parent is not a state that exists.
+   * The revisions of [designId] an open branch forked at, kept by retention until the branch is
+   * archived or merged. Derived from branch records so they cannot disagree.
    */
   private fun pinnedRevisions(designId: String): Set<Long> =
     persisted.designs.values.mapNotNullTo(mutableSetOf()) { design ->
@@ -2362,9 +2238,8 @@ public class PersistentUiBuilderService(
     val forkDocument =
       if (revision == parent.document.revision) parent.document
       else parent.revisionSnapshots.firstOrNull { it.document.revision == revision }?.document
-    // The parent's position state at the fork is what the merge's first command is reduced
-    // against, so a revision without it cannot be branched from — however much of its document
-    // survives.
+    // The merge reduces against the parent's position state at the fork, so a revision without one
+    // cannot be branched from.
     val forkPositions = parent.positionSnapshots.firstOrNull { it.revision == revision }?.positions
     if (forkDocument == null || forkPositions == null) {
       return branchError(
@@ -2405,10 +2280,8 @@ public class PersistentUiBuilderService(
       )
     }
     val now = clock.millis()
-    // The fork's document under the branch's own id, at the fork's own revision: the branch's
-    // revisions continue the parent's numbering from the fork, so "revision 7 of the branch" is
-    // read as "the fork at 5, and two edits". No home: a branch lives only on this service, and its
-    // way back to the parent's home is the merge.
+    // The fork's document under the branch id, at the fork revision (branch revisions continue the
+    // parent's numbering). No home: a branch returns to the parent only by merge.
     val document =
       forkDocument.copy(
         id = branchId,
@@ -2522,12 +2395,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * See [UiBuilderBranchRequest.MergeBranch].
-   *
-   * The replay is [replayCommandLog], the same loop the browser's Sync runs, driven here through
-   * [reduceAndRecord] over a working copy of the parent. Nothing is committed until the whole log
-   * has landed, so a refusal leaves the parent, the branch and every sibling exactly as they were —
-   * which is also all a dry run is.
+   * See [UiBuilderBranchRequest.MergeBranch]. Replays via [replayCommandLog] through
+   * [reduceAndRecord] over a working copy of the parent; nothing commits until the whole log lands,
+   * so a refusal (or a dry run) changes nothing.
    */
   private fun mergeBranch(
     actor: AuthenticatedUiBuilderActor,
@@ -2600,9 +2470,8 @@ public class PersistentUiBuilderService(
     var working: PersistedDesignV1 = parent
     val committed = mutableListOf<CommittedOperationV1>()
     val authors = branchDesign.branchLog.associate { it.operationId() to it.actorId() }
-    // Positions come from the base chain; staleness from the fork. Every replayed command's author
-    // saw the fork and the branch's own earlier commands and nothing the parent did since, so each
-    // one — not only the first — reports overwriting a parent edit made between the fork and now.
+    // Positions come from the base chain, staleness from the fork: every replayed command reports
+    // overwriting a parent edit made since the fork.
     val staleness = StalenessWindow(since = record.forkRevision, through = parent.document.revision)
     val replay =
       replayCommandLog(record.forkRevision, log) { command, base ->
@@ -2616,11 +2485,8 @@ public class PersistentUiBuilderService(
           )
         }
         val fingerprint = submissionFingerprint(json, rebased)
-        // Attributed to whoever authored it on the branch, not to the merging actor: undo is
-        // per-author (`ACTOR_MISMATCH`), so this is what lets that author undo their own work after
-        // it lands, and what makes a conflict notice name the right person. The merging actor is
-        // recorded on the branch record. These ids come from the branch's own log, which only
-        // this service wrote — never from a request.
+        // Attributed to the branch author, not the merging actor, so per-author undo and conflict
+        // notices work. Ids come from the service-written branch log, never a request.
         val author = AuthenticatedUiBuilderActor(rebased.actorId())
         when (val reduced = reduceAndRecord(working, author, rebased, fingerprint, staleness)) {
           is Reduced.Unrecorded -> ReplayAnswer.of(reduced.outcome)
@@ -3065,11 +2931,8 @@ public class PersistentUiBuilderService(
         )
     if (!catalog.supports(request.format))
       return invalid("catalog does not support ${request.format} export")
-    // Exported WITHOUT the properties the catalog no longer declares, and validated in that shape.
-    // Not a silent edit of the design: the stored document keeps every one of them, and the catalog
-    // has no meaning to give a property it does not declare, so there is nothing an exporter could
-    // faithfully write for it. Emitting the original would put a value into generated source that
-    // the catalog cannot account for, which is the one outcome worse than leaving it out.
+    // Exported without properties the catalog no longer declares; the stored document keeps them,
+    // but the catalog gives them no meaning an exporter could write.
     val exported = document.withoutProperties(undeclaredProperties(document, catalog))
     catalogs.validate(exported, catalog)?.let {
       return UiBuilderServiceResponse.Error(it.toServiceError())
@@ -3091,11 +2954,8 @@ public class PersistentUiBuilderService(
 
   /**
    * [staleness] is which earlier commits the command's `STALE_*` checks treat as concurrent.
-   * Absent, it is everything after the revision the command's author saw — its own base for a live
-   * edit, the run's start for a Sync command carrying `stalenessBaseRevision`. A branch merge
-   * passes the fork-to-parent-head window instead, so a replayed command that is not the first
-   * still sees the parent's concurrent edits while it resolves positions against its predecessor;
-   * see [StalenessWindow].
+   * Default: everything after the author's base revision. A branch merge passes the
+   * fork-to-parent-head window instead; see [StalenessWindow].
    */
   private fun reduce(
     design: PersistedDesignV1,
@@ -3201,9 +3061,7 @@ public class PersistentUiBuilderService(
           RejectionCodeV1.REVISION_NOT_RETAINED,
           "position state for revision ${command.baseRevision} is not retained",
         )
-    // Resolved before the first mutation rather than after the last, because a write is checked
-    // against the catalog as it is applied (`UiBuilderCatalogExecutor.validateWrite`), not only as
-    // a whole document afterwards.
+    // Resolved first: each write is validated against the catalog as it is applied.
     val catalog =
       catalogs.resolve(design.document.catalogPin)
         ?: return rejectedReduction(
@@ -3252,12 +3110,8 @@ public class PersistentUiBuilderService(
     validateTopology(working.document)?.let {
       return rejectedReduction(design, command.operationId, it)
     }
-    // The undeclared VALUES this design already carried are tolerated; anything else is not.
-    // `withoutProperties` drops a property only where the candidate still holds the stored value,
-    // so both a freshly invented undeclared property and a rewrite of a tolerated one stay in the
-    // probe, where `validate` rejects them as it always has -- nobody gets to author against a
-    // property the catalog does not have, under cover of one it once had. Without this the design
-    // would open and then refuse every edit, which is worse than plainly unusable.
+    // Tolerate only undeclared values this design already carried; new or rewritten undeclared
+    // properties stay in the probe and are rejected by `validate`.
     val tolerated = undeclaredProperties(design.document, catalog)
     catalogs.validate(working.document.withoutProperties(tolerated), catalog)?.let {
       return rejectedReduction(design, command.operationId, it.toRejection())
@@ -3369,11 +3223,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * A restore, recorded as the whole-document replacement it is: [RESTORE_DIGEST_PREFIX] plus the
-   * revision in the digest, and both hashes binding it to exactly the documents it replaces and
-   * brings back. Nothing is taken on trust from the wire — the retained revision is looked up again
-   * here and its hash must match — so the only way to commit one is to name a revision this design
-   * really had.
+   * A restore, recorded as a whole-document replacement ([RESTORE_DIGEST_PREFIX] plus revision).
+   * The retained revision is looked up again and its hash must match, so only a revision this
+   * design really had can be restored.
    */
   private fun reduceRestore(
     design: PersistedDesignV1,
@@ -3419,9 +3271,7 @@ public class PersistentUiBuilderService(
       design,
       actor,
       command,
-      // Positions are derived afresh, as a created design's are: the retained document is whole,
-      // and the positions kept for the current one describe nodes that may no longer exist. A node
-      // coming back is no longer a tombstone.
+      // Positions are derived afresh, as for a created design; restored nodes leave the tombstones.
       WorkingDesign(restored, design.tombstones - restored.nodes.keys, derivePositions(restored)),
       listOf(
         CatalogUpgradeChangeRecordV1(
@@ -3556,13 +3406,8 @@ public class PersistentUiBuilderService(
     val revision = design.document.revision + 1
     val sequence = design.lastSequence + 1
     val now = clock.millis()
-    // Outlines are resolved HERE, on the accepted candidate, and not after `reduce` returns.
-    // Everything below reads this value — the canonical bytes, the accepted hash, the retained
-    // revision snapshot — so filling the registry afterwards would hand a client a hash and a
-    // delta for a document the host does not have, and would leave `OpenDesign` and a
-    // revision-pinned export disagreeing about what the design contains. A rejected reduction
-    // never reaches this function at all, so it can no longer change a document without
-    // advancing its revision.
+    // Outlines resolve here, on the accepted candidate, because everything below (canonical bytes,
+    // hash, retained snapshot) must describe the same document.
     val document =
       withIconOutlines(working.document).copy(revision = revision, updatedAtEpochMillis = now)
     val canonical = documentCanonicalBytes(document)
@@ -3656,10 +3501,8 @@ public class PersistentUiBuilderService(
         positions = working.positions,
         positionSnapshots = positionSnapshots,
         acceptedOperations = accepted,
-        // Pruned against the oldest revision a submission can still name, NOT by a count of its
-        // own. `reduceCommand` refuses a `baseRevision` with no retained position snapshot, so that
-        // is exactly the window a staleness check can be asked about, and matching the two here is
-        // what keeps the answer "nobody wrote this" from meaning "we no longer know".
+        // Pruned against the oldest revision a submission can still name (the oldest retained
+        // position snapshot), so "nobody wrote this" never means "we no longer know".
         conflictTouches =
           (design.conflictTouches +
               ConflictTouchRecordV1(
@@ -3703,12 +3546,8 @@ public class PersistentUiBuilderService(
               mutation.node.id,
             )
           }
-          // A node arrives with its slots empty, and each child arrives with a `location` naming
-          // it. A slot list here is not a placement: nothing allocates the child a position under
-          // this node, so a child inserted later in the same batch failed as an internal,
-          // retryable error when the snapshot walked to an id that did not exist yet, and an
-          // existing child would be held by two parents at once. Refused by name instead, because
-          // resending the same batch can never succeed.
+          // A node arrives with empty slots; children are placed by their own `location`. A
+          // non-empty slot list is refused by name since resending can never succeed.
           mutation.node.slots.forEach { (slot, children) ->
             children.firstOrNull()?.let { child ->
               fail(
@@ -3724,9 +3563,7 @@ public class PersistentUiBuilderService(
               )
             }
           }
-          // An insert is a write of every property at once, and it is how an `asset/image` with a
-          // key nothing resolves arrived (#484): checked here, per property, the way a
-          // `setProperty` of the same value would be.
+          // An insert writes every property, so each is checked as a `setProperty` would be.
           mutation.node.properties.keys.forEach { property ->
             catalogs.validateWrite(catalog, working.document, mutation.node, property)?.let {
               fail(RejectionCodeV1.INVALID_PROPERTY, it.message, index, mutation.node.id, it.field)
@@ -3935,16 +3772,13 @@ public class PersistentUiBuilderService(
               nodes =
                 working.document.nodes + (node.id to node.copy(modifiers = mutation.modifiers))
             )
-          // The same staleness question the property lane asks, one field over: another actor
-          // rewriting this node's chain since the base revision is a conflict rather than a
-          // refusal, because the chain is a value and the last writer wins.
+          // Another actor rewriting this node's chain since the base revision is a conflict, not a
+          // refusal: the chain is a value and the last writer wins.
           val conflicts =
             if (staleness.stale(original, touchKey("m", mutation.nodeId)))
               listOf(
                 CommandConflictV1(
-                  // `STALE_PROPERTY_WRITE` because the wire has no modifier-specific code, and
-                  // `modifiers` is the field it names — the same reading the browser reducer
-                  // reports its own stale chain writes under.
+                  // The wire has no modifier-specific code; the browser reducer uses the same one.
                   ConflictCodeV1.STALE_PROPERTY_WRITE,
                   mutation.nodeId,
                   MODIFIERS_FIELD,
@@ -4010,11 +3844,8 @@ public class PersistentUiBuilderService(
           val before = working.document.stateVariables[mutation.name]
           val declarations =
             working.document.stateVariables + (mutation.name to mutation.declaration)
-          // A redefinition is a write against everything already reading the variable. Narrowing
-          // one — dropping its nullability out from under a `selectOrClear`, or changing what it
-          // holds out from under a `toggle` — leaves a design whose renderer coerces and whose
-          // exporter emits a `TODO` that throws on the first press. Refused whole rather than
-          // applied and then discovered.
+          // Redefining a variable that is read elsewhere could narrow it under a `selectOrClear` or
+          // `toggle`; refused whole.
           working.document.stateUsageIssue(declarations)?.let { issue ->
             fail(
               RejectionCodeV1.INVALID_DOCUMENT,
@@ -4041,10 +3872,7 @@ public class PersistentUiBuilderService(
                 field = mutation.name,
               )
           val declarations = working.document.stateVariables - mutation.name
-          // The obligation the contract states on this type: a property, a predicate or an action
-          // still naming the variable makes the removal a rejection rather than a write. A design
-          // that keeps the reference renders blank instead of failing, which is the worse of the
-          // two ways to be wrong.
+          // A variable still referenced cannot be removed: the design would render blank silently.
           working.document.stateUsageIssue(declarations)?.let { issue ->
             fail(
               RejectionCodeV1.INVALID_DOCUMENT,
@@ -4069,13 +3897,8 @@ public class PersistentUiBuilderService(
               operationIndex = index,
             )
           }
-          // The body has to exist before the name can point at it. A declaration naming a root
-          // this document does not hold is a component that draws nothing, and an instance of it
-          // reports success while rendering blank — the same failure the state-variable rules
-          // exist to prevent, one level up.
-          //
-          // An import is a batch: the body's `insertNode`s precede the declaration, so by the time
-          // this runs the root is in `working.document` even though it was not in the base.
+          // The body must exist before the declaration names it. In an import batch, the body's
+          // `insertNode`s precede the declaration, so the root is already in `working.document`.
           if (mutation.declaration.root !in working.document.nodes) {
             fail(
               RejectionCodeV1.INVALID_DOCUMENT,
@@ -4102,12 +3925,8 @@ public class PersistentUiBuilderService(
                 operationIndex = index,
                 field = mutation.componentKey,
               )
-          // The obligation this mutation's contract states: a placement may still name the key,
-          // and a placement whose component is gone draws nothing while reporting success.
-          //
-          // The body is deliberately not checked — undeclaring alone leaves a subtree nothing
-          // draws, which is what a body looks like between being written and being named, and is a
-          // legitimate intermediate state rather than a broken document.
+          // A placement may still name the key and would draw nothing. The body is not checked: an
+          // unnamed body is a legitimate intermediate state.
           working.document.nodes.values
             .firstOrNull { it.component?.componentKey == mutation.componentKey }
             ?.let { placement ->
@@ -4139,9 +3958,7 @@ public class PersistentUiBuilderService(
             )
           }
           val before = node.eventBindings[mutation.event]
-          // `actions` has no default on the wire, so an unbind arrives as a present empty list
-          // rather than an absent field. Taken as the instruction it is: the event loses its
-          // binding, and the document carries no empty list to mean the same thing twice.
+          // `actions` has no wire default, so unbind arrives as an empty list; store it as absent.
           val after = mutation.actions.takeIf { it.isNotEmpty() }
           val bindings =
             if (after == null) node.eventBindings - mutation.event
@@ -4203,11 +4020,8 @@ public class PersistentUiBuilderService(
     }
 
   /**
-   * One property write, for a `setProperty` and for the explicit `removeNodeProperty` alike.
-   *
-   * A [NullValueV1] value unsets the property (#480); `RemoveNodePropertyMutationV1` says the same
-   * thing in its own words and arrives here with that value, so there is one removal path and the
-   * two spellings cannot drift.
+   * One property write, for `setProperty` and `removeNodeProperty` alike: a [NullValueV1] value
+   * unsets the property, so there is one removal path.
    */
   private fun writeProperty(
     working: WorkingDesign,
@@ -4228,13 +4042,8 @@ public class PersistentUiBuilderService(
     }
     val beforePresent = property in node.properties
     val before = node.properties[property]
-    // A null value unsets the property rather than storing a null. A stored null is what
-    // the catalog validator refuses ("does not match its catalog JSON type"), and what the
-    // Compose export refuses again; an *absent* property is the state every node starts in
-    // and the one whose default the renderer applies. Whether the property may be absent is
-    // not decided here: the catalog validation the whole batch passes through afterwards
-    // refuses an unset required property with its usual located message. An unset is not a
-    // write of a value either, so the catalog's value rules are asked only of a set.
+    // A null value unsets rather than stores a null (which validation and export refuse).
+    // Required-ness is checked by the batch's catalog validation; value rules apply only to a set.
     val afterPresent = value !is NullValueV1
     val written =
       if (afterPresent) {
@@ -4396,9 +4205,7 @@ public class PersistentUiBuilderService(
             val declarations =
               if (target == null) working.document.stateVariables - change.name
               else working.document.stateVariables + (change.name to target)
-            // Putting a declaration back is only safe if nothing has since come to read it — a
-            // removal undone is harmless, but a re-declaration undone would strand whatever was
-            // written against it in the meantime.
+            // Re-declaring is only safe if nothing has since come to read it.
             val document = working.document.copy(stateVariables = declarations)
             document.stateUsageIssue(declarations)?.let { issue ->
               fail(
@@ -4485,13 +4292,9 @@ public class PersistentUiBuilderService(
               )
             }
             val target = if (undo) change.before else change.after
-            // Taking a declaration back out is only safe if nothing still places it — but that is
-            // asked of the *finished* compensation, below, not here: making a component inserts
-            // its first placement in the same command, and undoing that command takes the
-            // declaration out before it deletes the placement.
-            // Putting one back has the same obligation a declaration does: it must still name a
-            // body this document holds, or the compensation writes the broken state the forward
-            // path refuses.
+            // Taking a declaration out is checked on the finished compensation below (undoing "make
+            // component" removes the declaration before the placement). Putting one back must still
+            // name a body this document holds.
             if (target != null && target.root !in working.document.nodes) {
               fail(
                 RejectionCodeV1.UNSAFE_COMPENSATION,
@@ -4528,9 +4331,8 @@ public class PersistentUiBuilderService(
             )
         }
       }
-      // Undoing a `declareComponent` that somebody has since instantiated would leave a placement
-      // drawing nothing and reporting success, which is the state the removal rule refuses to
-      // commit in the first place. The mirror of the state-variable check above.
+      // Undoing a `declareComponent` that has since been instantiated would leave a placement
+      // drawing nothing; mirrors the state-variable check.
       working.document.nodes.values
         .firstOrNull { node ->
           node.component?.componentKey?.let { it !in working.document.components } == true
@@ -4547,9 +4349,8 @@ public class PersistentUiBuilderService(
       val catalog =
         catalogs.resolve(working.document.catalogPin)
           ?: fail(RejectionCodeV1.INVALID_DOCUMENT, "catalog pin is unavailable")
-      // Same tolerance as `reduceBatch`: undoing or redoing an operation on a design the catalog
-      // outgrew must not be the thing that fails, or an edit made before the catalog moved could
-      // never be taken back.
+      // Same tolerance as `reduceBatch`, so edits made before the catalog moved can still be
+      // undone.
       val tolerated = undeclaredProperties(design.document, catalog)
       catalogs.validate(working.document.withoutProperties(tolerated), catalog)?.let {
         throw ReductionFailure(it.toRejection())
@@ -4755,11 +4556,8 @@ public class PersistentUiBuilderService(
       .toMap()
 
   /**
-   * The stored document, read straight out of the loaded state and rendered as JSON.
-   *
-   * Pretty-printed rather than canonical on purpose: the caller is a person about to edit it, not a
-   * checksum. Nothing here consults [catalogs] or [limits], which is the whole point — a design
-   * held back because one of those changed is the design most likely to need copying out.
+   * The stored document as pretty JSON, for a person to edit. Consults neither [catalogs] nor
+   * [limits], so designs held back by them can still be copied out.
    */
   override fun adminDesignDocument(designId: String): String? = lock.withLock {
     val document = persisted.designs[designId]?.document ?: return null
@@ -4767,10 +4565,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * Replace a quarantined design's document with a repaired one, checked against the same
-   * conditions that quarantined it. Restricted to unusable designs, which nothing watches; their
-   * history is replaced and the sequence continues upward so no client mistakes the repaired design
-   * for the old one.
+   * Replace a quarantined design's document with a repaired one, checked against the conditions
+   * that quarantined it. History is replaced and the sequence continues upward.
    */
   override fun adminRepairDesign(designId: String, documentJson: String): UiBuilderAdminRepair =
     lock.withLock {
@@ -4805,9 +4601,7 @@ public class PersistentUiBuilderService(
           createdAtEpochMillis = existing.document.createdAtEpochMillis,
           updatedAtEpochMillis = now,
         )
-      // The same question the original failed, asked of the replacement. Answering it here is what
-      // keeps the store's invariant — everything loaded is either servable or named as not — true
-      // after a write as well as after a load.
+      // The same check the original failed: everything loaded is either servable or named as not.
       unusableReason(designId, existing.copy(document = document))?.let {
         return UiBuilderAdminRepair.Rejected(it.reason)
       }
@@ -4833,11 +4627,7 @@ public class PersistentUiBuilderService(
 
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
-      // A design whose stored files could not be read is not in the design map — there is no
-      // document to put there — but it is still on the disk, still counted against the store, and
-      // still the operator's to retire. Retiring it is the one action that has to keep working when
-      // reading it does not; download and repair genuinely cannot, because both need the document
-      // the store could not decode.
+      // An unreadable design is not in the map but is still on disk; retiring it must keep working.
       if (designId !in persisted.designs) {
         if (unusableDesigns[designId]?.storeQuarantine != true) return false
         store.remove(designId)
@@ -4871,12 +4661,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * Stores one design's new value, and only that design's.
-   *
-   * The whole-store candidate this replaced is what made an edit cost `O(everything stored)`: a
-   * padding value nudged in the smallest of 36 designs re-serialized all 23.4 MB, including the
-   * 12.5 MB belonging to a design the edit never touched (yschimke/compose-preview-server#578). The
-   * store is handed the value before and after so it can write only the parts that differ.
+   * Stores one design's new value, and only that design's. The store gets before and after so it
+   * writes only what differs, keeping an edit's cost proportional to that design.
    */
   private fun commitDesign(designId: String, updated: PersistedDesignV1) {
     store.commit(designId, persisted.designs[designId], updated)
@@ -4893,9 +4679,7 @@ public class PersistentUiBuilderService(
    * No migration is attempted during startup. The storage must retain the exact v1 generation and
    * support explicit restore; a failed durable readback is rolled back before this method fails.
    *
-   * A host on the per-design store has nothing to do here: that store migrates a v2 file the first
-   * time it opens one, so this answers "already at the latest" rather than refusing, which is what
-   * `--ui-builder-migrate-state` on such a host should hear.
+   * The per-design store migrates on open, so on such a host this answers "already at the latest".
    */
   public fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = lock.withLock {
     val legacy =
@@ -4956,8 +4740,7 @@ private fun conservativeDecodedBase64Bytes(encoded: String): Long {
 
 /**
  * Whether this recorded submission is [actor]'s restore of [revision] — the only record a
- * [UiBuilderServiceRequest.RestoreRevision] retry may replay. Read off the fingerprint, which is
- * the canonical wire command, so it needs nothing beyond what the record already keeps.
+ * [UiBuilderServiceRequest.RestoreRevision] retry may replay. Read off the fingerprint.
  */
 private fun OperationOutcomeRecordV1.isRestoreOf(
   revision: Long,

@@ -18,12 +18,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
 /**
- * A device pane follows the design, not only the pointer.
- *
- * The scene composes inside its own frame pump, and that pump used to be restarted by forwarded
- * input alone. An edit invalidated the scene's recomposer and nothing asked it for a frame, so a
- * Wear widget's three host previews kept drawing the empty container they opened on while the
- * canvas beside them filled up — until a pointer happened to cross one of them.
+ * A device pane follows the design, not only the pointer: an edit must also restart the scene's
+ * frame pump, or panes keep drawing the revision they opened on.
  */
 @OptIn(ExperimentalTestApi::class)
 class DeviceSceneHostTest {
@@ -56,9 +52,8 @@ class DeviceSceneHostTest {
   }
 
   /**
-   * The scene resolves fonts through the editor's resolver. On the web, Compose installs a fallback
-   * font it downloads for a missing glyph into that resolver only; a scene with its own never saw
-   * it, kept reporting the glyph as unresolved, and the same emoji font was fetched again on every
+   * The scene resolves fonts through the editor's resolver, where the web's downloaded glyph
+   * fallbacks are installed; a private resolver would re-download the same emoji font on every
    * layout.
    */
   @Test

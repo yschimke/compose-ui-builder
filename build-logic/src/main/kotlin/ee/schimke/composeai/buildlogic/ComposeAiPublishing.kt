@@ -7,35 +7,23 @@ import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.configure
 
 /**
- * The artifact id a module publishes under: its project path, flattened, behind the repository's
- * prefix.
- *
- * `:ui-builder-runtime` -> `compose-preview-ui-builder-runtime`. Derived rather than declared
- * because two things have to agree about it and neither can see the other: the POM a module
- * publishes, and the constraint the BOM writes for that module. The daemon repository states the
- * same rule for the same reason, and pins it with a test.
- *
- * The prefix is `compose-preview-`, not `compose-ui-builder-`, and that is not a tidiness
- * question: these coordinates were released up to 3.24.0 from compose-preview-server under exactly
- * these names, and its version catalog names them today. A repository moving does not get to
- * rename the artifacts it already shipped.
+ * The artifact id a module publishes under: its flattened project path behind the repository's
+ * prefix (`:ui-builder-runtime` -> `compose-preview-ui-builder-runtime`). Derived so the POM and
+ * the BOM constraint agree. The `compose-preview-` prefix keeps the names these coordinates were
+ * already released under.
  */
 internal fun Project.publishedArtifactId(): String =
   "compose-preview-" + path.removePrefix(":").replace(':', '-')
 
 /**
- * The version this build publishes [artifactId] at (or the tag itself, with no id): the release tag when there is one, otherwise
- * the next patch as a snapshot.
+ * The version this build publishes [artifactId] at (or the tag itself, with no id): the release
+ * tag when there is one, otherwise the next patch as a snapshot.
  *
- * `PLUGIN_VERSION` is what the release workflow exports. Without it - every local build and every
- * CI run that is not a release - the version is derived from `.release-please-manifest.json`, so a
- * developer's `publishToMavenLocal` cannot collide with a released coordinate.
- *
- * On a PLANNED release (`-Pcomposeai.publishSet`, written by `maven-publish-plan.sh`) a module the
- * plan skips carries the version it last published at, read from `publishing-manifest.json`, so a
- * POM never names a sibling version that was never uploaded. That resolution lives in
- * [PublishedVersions] and is applied here, for the modules, and by [resolvedPublishedVersion], for
- * the BOM's constraints, so the two cannot disagree.
+ * `PLUGIN_VERSION` comes from the release workflow; otherwise the version derives from
+ * `.release-please-manifest.json`, so local `publishToMavenLocal` cannot collide with a release.
+ * On a planned release (`-Pcomposeai.publishSet`), skipped modules keep their last published
+ * version from `publishing-manifest.json` via [PublishedVersions], shared with
+ * [resolvedPublishedVersion] for the BOM.
  */
 internal fun Project.publishedVersion(artifactId: String? = null): String {
   val tag = providers.environmentVariable("PLUGIN_VERSION").orNull?.takeIf(String::isNotBlank)
@@ -82,13 +70,9 @@ private fun Project.nextPatchSnapshotVersion(): String {
 }
 
 /**
- * Everything a published POM carries beyond its coordinates, in one place for the library modules
- * and the platform alike.
- *
- * Signing is conditional on the version: a snapshot is not signed, which is what lets the
- * external-consumer gate stage the whole publish set into a local repository with no key and no
- * Maven Central credentials. A release is signed, and fails loudly without a key rather than
- * publishing something unverifiable.
+ * Everything a published POM carries beyond its coordinates, for library modules and the platform.
+ * Snapshots are unsigned (so the external-consumer gate can stage locally); releases are signed and
+ * fail without a key.
  */
 internal fun Project.configureComposeAiPublication(
   artifactId: String,

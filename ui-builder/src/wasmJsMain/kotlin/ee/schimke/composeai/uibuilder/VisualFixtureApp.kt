@@ -66,12 +66,8 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * The capture fixtures the browser harness drives by `?mode=`: the Jetcaster and Confetti replays,
- * the interactive editor over a fixture, and the hand-written Confetti oracle they are compared to.
- *
- * They ship in the same bundle as the live editor on purpose — the harness captures the production
- * archive, so a fixture built separately would prove nothing about what users load — but they are
- * not the application, and they lived in `Main.kt` beside it. This file is where they live now, so
- * the entry point reads as the entry point.
+ * the interactive editor over a fixture, and the hand-written Confetti oracle. Shipped in the
+ * production bundle so the harness tests what users load, but kept out of `Main.kt`.
  */
 @Composable
 internal fun VisualFixtureApp(mode: String) {
@@ -130,9 +126,8 @@ internal fun VisualFixtureApp(mode: String) {
             inspectionPublisher.offer(collector, it.revision)
           },
           showSelectionOverlay = mode != "interactive-editor-clean",
-          // The clean lane exists to prove the editor draws the design the same as the harness
-          // does, pixel for pixel. Framing it would compare a resample, so that one mode opens
-          // pinned at 1:1 while every editing surface opens framed.
+          // The clean lane compares the editor's drawing to the harness's pixel for pixel, so it
+          // opens pinned at 1:1; editing surfaces open framed.
           initialCanvasZoom = if (mode == "interactive-editor-clean") 1f else null,
           onHelp = ::openUiBuilderGuide,
         )
@@ -364,13 +359,7 @@ private fun ScheduleListItem(
 }
 
 /**
- * The Remote Compose documents the *serving* catalog of the same name publishes.
- *
- * The document's catalog pin names the capability adapter and the published serving catalog, so the
- * palette needs no second piece of configuration to find its content. A box serving one without the
- * other simply gets an empty palette.
- *
- * A failure is not fatal, for the same reason [loadDevicePresets]'s is not: the builder without a
- * Remote Compose palette is where it was before this existed, while a builder that refuses to open
- * because a catalog listing 404'd is worse than one that opens with one panel missing.
+ * The Remote Compose documents the *serving* catalog of the same name publishes, found via the
+ * document's catalog pin. Not fatal on failure, like [loadDevicePresets]: the builder opens with an
+ * empty palette.
  */

@@ -112,8 +112,8 @@ class FigmaRoundTripTest {
 
   /**
    * The same scene built in a real Figma file by the design-parity plugin, read back untouched and
-   * after a designer's edits. What Figma adds on its own — a size for every styled text, black for
-   * unfilled text, a fixed size for every frame without auto layout — must not read as an edit.
+   * after edits. Figma's own additions (a size for every styled text, black for unfilled text,
+   * fixed sizes for frames without auto layout) must not read as edits.
    */
   @Test
   fun `a frame read back from real Figma changes nothing until a designer edits it`() {

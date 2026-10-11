@@ -27,14 +27,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.EncodedImageFormat
 
 /**
- * The upstream Wear sample designs on the editor's two surfaces: the **canvas**, which unrolls the
- * whole list for editing, and the **device preview**, one screenful in the round frame.
- *
- * `DesignFixturesTest` proves each sample replays, validates and exports; nothing there composes
- * one. This does, and asks the composition two things only the drawing can answer: every label the
- * design authored reached it, and no node fell through to the renderer's "Unsupported component"
- * error. Both surfaces are also written as PNGs to `build/wear-sample-canvas/`, which is what the
- * write-up in `docs/design/UI_BUILDER_WEAR_SAMPLES.md` compares against the native render.
+ * The upstream Wear sample designs on the editor's two surfaces: the **canvas** (whole list
+ * unrolled) and the **device preview** (one screenful in the round frame). Asserts every authored
+ * label reached the composition and nothing fell to "Unsupported component". PNGs go to
+ * `build/wear-sample-canvas/` for `docs/design/UI_BUILDER_WEAR_SAMPLES.md`.
  */
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
 class WearSampleDesignCanvasTest {
@@ -78,9 +74,8 @@ class WearSampleDesignCanvasTest {
       val document = document(design)
       // The round device frame: one 192dp screenful at the design's own 2.0 density.
       write(out, "$design-device", 384, 384) { UiBuilderSurface(document, unrolled = false) }
-      // The editing canvas: the list unrolled into the stadium, as tall as its content — measured
-      // against an unbounded height the way the editor measures its extent, never less than the
-      // one screenful the round frame holds itself to.
+      // The editing canvas: measured against unbounded height as the editor measures its extent,
+      // never less than one screenful.
       val extent = unboundedHeight { UiBuilderSurface(document, unrolled = true) }
       assertTrue(extent >= 384, "$design: the extent is shorter than one screen ($extent px)")
       write(out, "$design-canvas", 384, extent) { UiBuilderSurface(document, unrolled = true) }

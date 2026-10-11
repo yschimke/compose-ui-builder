@@ -17,15 +17,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A run of identical siblings is generated as one `repeat`.
- *
- * The document has no loop, so a twelve-cell contribution row is twelve nodes — and the export
- * printed twelve identical `Surface` calls, which is a faithful screen nobody can read. The fold is
- * spelling, not semantics: the same calls, in the same order, in the same parent scope.
- *
- * What each test here pins is a boundary of that claim rather than the happy path alone: a run of
- * two is still written out, a cell that differs breaks the run at itself, and a subtree claiming an
- * identity keeps every one of its copies.
+ * A run of identical siblings is generated as one `repeat`. The fold is spelling, not semantics:
+ * the same calls, in the same order, in the same scope. Boundaries pinned: a run of two is written
+ * out, a differing cell breaks the run, and identity-bearing subtrees aren't folded.
  */
 class RepeatedSiblingFoldTest {
   private val reference by lazy {
@@ -77,13 +71,9 @@ class RepeatedSiblingFoldTest {
   }
 
   /**
-   * Which ids survive a fold, stated exactly.
-   *
-   * Every folded **sibling** is named in the comment above its run. Their descendants are not, and
-   * deliberately: the emitted body carries the located comments of the first copy, and naming
-   * `cell-1-label` through `cell-11-label` too would put back, as comments, the text the fold just
-   * removed. The copies are identical — that is the premise — so a descendant is found through the
-   * sibling id that stands for it.
+   * Which ids survive a fold, stated exactly. Every folded **sibling** is named in the comment
+   * above its run; descendants aren't (the copies are identical), so they're found via their
+   * sibling's id.
    */
   @Test
   fun `every folded sibling is named, and a copy's descendants are found through it`() {
@@ -100,12 +90,8 @@ class RepeatedSiblingFoldTest {
   }
 
   /**
-   * `repeat` and the `it` it binds are names like any other, and the emitted form owns that.
-   *
-   * `exportedStateIdentifier` leaves both alone, so a design declaring state called either gets a
-   * local of that name in the generated function — an unqualified call would resolve to it, and the
-   * lambda's implicit parameter would shadow a read of it. `kotlin.repeat(n) { _ -> … }` can be
-   * captured by neither, so the fold still happens and the cells still read what they read.
+   * `repeat` and `it` may be captured by design state names, so the fold writes `kotlin.repeat(n) {
+   * _ -> … }`, which neither can capture.
    */
   @Test
   fun `state named it or repeat does not capture the folded call or its parameter`() {
@@ -118,11 +104,8 @@ class RepeatedSiblingFoldTest {
   }
 
   /**
-   * The one name left to protect, protected the same way as the others.
-   *
-   * A design whose state is called `kotlin` gets a local that captures the qualifier a folded run
-   * writes, so it is printed the long way rather than refused — the design is legal and the canvas
-   * draws it.
+   * A design state named `kotlin` would capture the qualifier, so such a design is printed the long
+   * way rather than refused.
    */
   @Test
   fun `state named kotlin turns the fold off, because the run qualifies through that root`() {
@@ -133,11 +116,8 @@ class RepeatedSiblingFoldTest {
   }
 
   /**
-   * The other way the qualifier can be taken: an adapter's own import.
-   *
-   * `ComposeAssetAdapter.renderer.importName` is supplied by the caller rather than by the design,
-   * so no check over the document can see it — and a declaration imported as `kotlin` would capture
-   * the qualifier and leave `repeat` unresolved.
+   * An adapter import (`ComposeAssetAdapter.renderer.importName`) bound to `kotlin` also captures
+   * the qualifier; it's caller-supplied, invisible to document checks.
    */
   @Test
   fun `an asset renderer imported as kotlin turns the fold off`() {
@@ -157,11 +137,8 @@ class RepeatedSiblingFoldTest {
   }
 
   /**
-   * An import binds its alias, not its last segment.
-   *
-   * `import app.artwork.Renderer as kotlin` puts `kotlin` in scope, and reading the dotted tail of
-   * that string answers `Renderer as kotlin` — a name nothing collides with, so the fold would have
-   * gone ahead and qualified through a captured name.
+   * An import binds its alias, not its last segment (`import app.artwork.Renderer as kotlin` binds
+   * `kotlin`).
    */
   @Test
   fun `a renderer aliased to kotlin turns the fold off as surely as one named it`() {
@@ -194,11 +171,8 @@ class RepeatedSiblingFoldTest {
   }
 
   /**
-   * Depth changes nothing about the answer, only what it costs to reach.
-   *
-   * Signatures are memoised and a list too short to hold a run is emitted without computing one, so
-   * this pins that neither shortcut loses the fold at the bottom of a deep chain of single-child
-   * containers — the shape both were introduced for.
+   * Depth changes nothing about the answer: memoised signatures and the short-list shortcut must
+   * not lose the fold at the bottom of a deep single-child chain.
    */
   @Test
   fun `a run nested under a chain of single-child containers still folds`() {
@@ -272,11 +246,8 @@ class RepeatedSiblingFoldTest {
     )
 
   /**
-   * How many cell bodies the source actually holds.
-   *
-   * Counted from the located node comment each emitted node carries rather than from the call — the
-   * generated file's compatibility helpers contain `Surface(` of their own, and a count that
-   * included those would move whenever a helper did.
+   * How many cell bodies the source holds, counted from each emitted node's located comment
+   * (helpers contain `Surface(` too).
    */
   private fun emittedCellBodies(source: String): Int =
     Regex("// node:cell-\\d+ ").findAll(source).count()

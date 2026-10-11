@@ -61,9 +61,7 @@ internal fun RemoteComposeDocument(
   val encoded = node.string("documentBase64")
   val url = node.string("documentUrl")
   val resolve = LocalRemoteComposeDocuments.current
-  // Bytes win. A design that carries its own document has already been decided; reaching for the
-  // network as well would make an offline reopen of a saved design depend on a host it does not
-  // need, and would leave two answers to the question of what this node holds.
+  // Embedded bytes win over the network, so a saved design reopens offline and has one answer.
   val decoded =
     when {
       encoded.isNotBlank() -> remember(encoded) { decodeRemoteComposeDocument(encoded) }
@@ -147,24 +145,12 @@ internal fun RemoteComposeDocument(
 /**
  * A captured inline subtree, played rather than described.
  *
- * ## Why the registry is built from the design and not from the document
+ * The registry is built from the design: each `remote-compose/custom` under this node registers a
+ * renderer under its `name` (as the generated `RemoteCustomComponent(name = …)` wrote) that draws
+ * its own children. This lets Compose nest inside Remote Compose inside Compose with a real player.
  *
- * The captured document names its custom components by the string the generated body wrote —
- * `RemoteCustomComponent(name = "field")`, from the node's own `name` property — and the host is
- * what supplies the Compose that fills each one. So the two halves of that contract are the design
- * node and its `content` slot, and they are what this walks: every `remote-compose/custom` under
- * this node registers a renderer under its `name` that draws its own children.
- *
- * That is the same seam an embedded `remote-compose/document` uses through its named slots, reached
- * from the other side — and it is what makes a design nest Compose inside Remote Compose inside
- * Compose with a real player in the middle rather than a frame.
- *
- * ## The walk stops at a custom component
- *
- * What is under one is host content again, so its own descendants are not part of the remote
- * subtree and must not be searched for further custom components: a `remote-compose/custom` nested
- * inside another one's `content` belongs to whatever *that* content is, not to this document. The
- * same rule `RemoteScopes` applies when it decides which vocabulary a node is written in.
+ * The walk stops at a custom component: what's under one is host content again, as in
+ * `RemoteScopes`.
  */
 @Composable
 internal fun PlayedInlineRemoteContent(
@@ -192,10 +178,8 @@ internal fun PlayedInlineRemoteContent(
     content
   }
   val customComponents = RcCustomComponentRegistry(renderers)
-  // The same preflight the embedded document runs, and it earns its place here for a sharper
-  // reason: these bytes were generated from this design, so an unregistered name is a disagreement
-  // between the emitter and the canvas rather than a document somebody else published. Saying which
-  // name is missing is what turns that into something an author can act on.
+  // Same preflight as an embedded document; here an unregistered name means the emitter and canvas
+  // disagree, so name it.
   val missing =
     remember(rcDocument, customComponents.names) {
       rcDocument
@@ -213,13 +197,9 @@ internal fun PlayedInlineRemoteContent(
       "dark" -> RcPlayerTheme.Dark
       else -> RcPlayerTheme.System
     }
-  // The document's own shape, where it declares one, and this is the one place an inline node
-  // differs from an embedded one on purpose. An embedded document is a node an author added and
-  // sized: its modifiers are what they asked for, and overriding them with the bytes' aspect would
-  // ignore the ask. An inline node was never sized *as a document* — the author drew a subtree, and
-  // the only statement about how much room it wants is the one the capture wrote into the header.
-  // Without this the player takes every pixel the column has left and the design's own content
-  // below the remote content stops being drawn at all.
+  // Use the document's declared shape: an inline node was never sized as a document, so the
+  // capture's header is the only size statement. Without it the player takes all remaining space
+  // and hides content below.
   val header = rcDocument.header
   val shaped =
     if (header.width > 0 && header.height > 0) {
@@ -241,11 +221,9 @@ internal fun PlayedInlineRemoteContent(
 }
 
 /**
- * The player's faces: the families the host has loaded ([LocalUiBuilderFontFamilies]), by the name
- * the document carries — a theme's `google:Exo 2` included — over the player's own defaults.
- *
- * Without it the player drew every named family in its default face, so a Remote widget's theme
- * typefaces were lost in the canvas and in every PNG of it, though the generated widget names them.
+ * The player's faces: the families the host has loaded ([LocalUiBuilderFontFamilies]), by the
+ * document's names (e.g. `google:Exo 2`), over the player's defaults, so theme typefaces show on
+ * the canvas and in PNGs.
  */
 @Composable
 private fun hostTypefaces(): RcTypefaceLoader {
@@ -262,11 +240,8 @@ private fun hostTypefaces(): RcTypefaceLoader {
 }
 
 /**
- * Every custom component in [host]'s remote subtree, as `name` to the node ids that fill it.
- *
- * A map rather than a list because that is what a registry is keyed by, and two nodes sharing one
- * name is a design decision rather than an error — the later one wins here, exactly as it would in
- * a registry built by hand.
+ * Every custom component in [host]'s remote subtree, as `name` to the node ids that fill it; a
+ * duplicated name is allowed and the later one wins, as in a hand-built registry.
  */
 private fun UiBuilderDocument.customComponentFills(host: UiBuilderNode): Map<String, List<String>> {
   val fills = mutableMapOf<String, List<String>>()

@@ -263,10 +263,8 @@ private constructor(
   ): UiBuilderNativeRender? = remotePreview?.render(document, hostShape)
 
   private suspend fun openOrCreate() {
-    // A catalog read from disk is usually a regeneration of the packaged one, with a new revision.
-    // A design pinned to the old revision would then fail every export on CATALOG_PIN_MISMATCH
-    // while being edited against the new capabilities — so the design follows the catalog it is
-    // being authored against, as a stored record and as a project document alike.
+    // A catalog read from disk is usually a regenerated packaged one with a new revision; the
+    // design follows it so exports do not fail on CATALOG_PIN_MISMATCH.
     if (appliedOverride != null) {
       // A store that cannot be rewritten (read-only, full) still opens the design, at its old pin,
       // and says why exports may refuse it, rather than leaving the editor blank.
@@ -324,12 +322,8 @@ private constructor(
   }
 
   /**
-   * Stops taking edits, lets the ones already queued land, then stops.
-   *
-   * An edit is queued the moment it is made and persisted when the worker reaches it, so closing
-   * straight after an edit — New, Open, closing the last IDE editor — used to cancel the worker
-   * with the edit still in the queue. Draining is bounded: a design that never opened has nothing
-   * to apply its queue to, and must not hold the caller forever.
+   * Stops taking edits, lets queued ones land, then stops, so closing right after an edit does not
+   * lose it. Draining is bounded, since a design that never opened cannot apply its queue.
    */
   override fun close() {
     // IDE hosts provide coroutines themselves. Avoid the compiler-generated close$default

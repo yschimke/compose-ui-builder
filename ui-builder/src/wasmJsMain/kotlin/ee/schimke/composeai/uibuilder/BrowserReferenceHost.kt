@@ -32,20 +32,11 @@ import kotlinx.serialization.json.Json
 
 /**
  * The browser half of the reference overlay: picking a picture, catching a paste, snapshotting the
- * design, and keeping the whole stack on the server.
+ * design, and keeping the stack on the server. The common editor only sees [ReferenceImportOutcome]
+ * and [RestoredReference].
  *
- * Everything unportable lives here on purpose. `:ui-builder`'s editor is common Compose and has no
- * file picker, no clipboard, no `fetch` and no idea what a `Blob` is; it takes a
- * [ReferenceImportOutcome] and a [RestoredReference] and asks no further questions. That is the
- * same split the device-preset menu and the native-render pane already use.
- *
- * ### On Figma
- *
- * There is no Figma API call here, and there is not meant to be: the serve host holds no Figma
- * credential and makes no outbound call for a reference. The import path is the one Figma already
- * supports well — select a frame or a component, copy it as PNG or SVG, and paste it here (or
- * export it and pick the file). [sourceUrl] carries the Figma node URL when the operator supplies
- * one, as a link back, never as something this code will fetch.
+ * No Figma API call is made: the host holds no Figma credential. Users copy a frame as PNG or SVG
+ * and paste it (or pick an exported file); [sourceUrl] keeps the Figma node URL as a link only.
  */
 internal class BrowserReferenceHost(
   private val designId: String,
@@ -103,11 +94,8 @@ internal class BrowserReferenceHost(
   }
 
   /**
-   * Persist the current stack.
-   *
-   * Two routes rather than one, chosen by whether the pictures changed. Dragging an opacity slider
-   * or rubbing out a mark must not re-upload several megabytes per frame, and it is the caller —
-   * which knows what it last sent — that can tell the two apart cheaply.
+   * Persist the current stack. Two routes, chosen by whether the pictures changed, so slider drags
+   * and erasing don't re-upload megabytes; the caller knows what it last sent.
    */
   suspend fun save(reference: ReferenceOverlayState, imagesChanged: Boolean): String? {
     if (!reference.hasContent) {
@@ -149,23 +137,14 @@ internal class BrowserReferenceHost(
   suspend fun pickFile(): ReferenceImportOutcome =
     awaitImport(::pickReferenceFilePromise, "import-file")
 
-  /**
-   * The next image pasted onto the page.
-   *
-   * A promise resolved by a `paste` listener rather than a poll: pasting is an event, and a loop
-   * asking a global every few hundred milliseconds would either miss one or burn a frame budget
-   * doing nothing. Copy a frame in Figma, press paste here, and this returns.
-   */
+  /** The next image pasted onto the page, resolved by a `paste` listener. */
   suspend fun awaitPaste(): ReferenceImportOutcome =
     awaitImport(::awaitReferencePastePromise, "import-paste")
 
   /**
-   * A picture fetched from a link the operator pasted.
-   *
-   * A plain image URL is fetched by the browser itself, so it works exactly when the site serving
-   * it allows a cross-origin read — which most image CDNs do and most app pages do not, and the
-   * refusal says so. A Figma link is refused with the paste route instead: rendering a frame needs
-   * a Figma token, and this host neither holds one nor asks the operator to type one into a page.
+   * A picture fetched from a link the operator pasted. Plain image URLs are fetched by the browser
+   * (works only if the site allows cross-origin reads). Figma links are refused with the paste
+   * route instead, since rendering needs a Figma token this host doesn't hold.
    */
   suspend fun fetchUrl(text: String): ReferenceImportOutcome =
     when (val parsed = parseReferenceUrl(text)) {
@@ -180,11 +159,8 @@ internal class BrowserReferenceHost(
     }
 
   /**
-   * The design as it stands, rendered by the host, as a picture to build against.
-   *
-   * Uses the design's own PNG export rather than a screen grab of the editor: the export is the
-   * design, with none of the editor's chrome, selection outlines or overlay in it — which is what
-   * makes it usable as the *next* reference rather than a picture of the last one.
+   * The design as it stands, rendered by the host's PNG export (no editor chrome, selection or
+   * overlay), as a picture to build against.
    */
   suspend fun snapshotDesign(revision: Long? = null): ReferenceImportOutcome {
     val result =
@@ -225,10 +201,8 @@ internal class BrowserReferenceHost(
       try {
         awaitJsString(source())
       } catch (e: CancellationException) {
-        // Not a picture that could not be read: whoever was waiting has gone. Answering `Refused`
-        // here turned the paste loop in `LiveSessionApp` — `while (true)` around this call — into
-        // a loop that never suspends once its effect is cancelled, which froze the tab the moment
-        // the home page's session made way for a new design.
+        // Cancellation, not a refusal: answering `Refused` here made the `while (true)` paste loop
+        // in `LiveSessionApp` spin without suspending and freeze the tab.
         throw e
       } catch (_: Exception) {
         return ReferenceImportOutcome.Refused("the picture could not be read")
@@ -344,10 +318,7 @@ private fun ReferenceMark.toWire() =
     text = text,
   )
 
-/**
- * Tolerant on the way in, for the same reason the device-preset payload is: a host that learns a
- * new reference field must not blank somebody's overlay.
- */
+/** Lenient decoding, so a new reference field on the host doesn't blank the overlay. */
 private val referenceJson = Json {
   ignoreUnknownKeys = true
   encodeDefaults = true
@@ -404,8 +375,8 @@ private data class ReferenceSettingsPayload(
   val splitPercent: Int = 50,
   val alwaysShowBoxes: Boolean = false,
   /**
-   * Sent, and read back where the host keeps it. A host whose stored shape predates the field drops
-   * it (it decodes leniently) and the editor reads [ReferenceFit.Contain] back.
+   * Hosts whose stored shape predates the field drop it, and the editor reads
+   * [ReferenceFit.Contain] back.
    */
   val fit: String = "contain",
 )
@@ -462,16 +433,10 @@ private suspend fun awaitJsString(promise: Promise<JsString>): String =
   }
 
 /**
- * One `fetch` with a method of our choosing.
- *
- * The shared [ee.schimke.composeai.uibuilder.client.UiBuilderHttpTransport] is POST-only, because
- * the protocol it was built for is; these routes are plain REST, and widening that interface for
- * one caller would push a browser concern into common code.
- *
- * The URL arrives from [sameOriginRequestUrl], which is what carries the page's token. This used to
- * say a same-origin cookie was credential enough; on a `--token` server it is not, and
- * `/api/ui-builder/v1/designs/<id>/reference` answered 401 on every load — silently, because the
- * caller treats a failed read as "no overlay saved yet".
+ * One `fetch` with a method of our choosing: the shared
+ * [ee.schimke.composeai.uibuilder.client.UiBuilderHttpTransport] is POST-only and these are REST
+ * routes. The URL comes from [sameOriginRequestUrl], which carries the page's token (a cookie alone
+ * isn't enough on a `--token` server).
  */
 @JsFun(
   """(method, url, body, hasBody) => fetch(url, {
@@ -491,8 +456,8 @@ private external fun referenceFetch(
 ): Promise<JsString>
 
 /**
- * A cross-origin image fetch, handed to the same reader a picked file goes through so a link is
- * sniffed, measured and refused by exactly the rules a file is.
+ * A cross-origin image fetch, handed to the same reader a picked file goes through so links and
+ * files obey the same rules.
  */
 @JsFun(
   """(url) => fetch(url, { mode: 'cors', credentials: 'omit' })
@@ -513,11 +478,8 @@ private external fun referenceFetch(
 private external fun fetchReferenceUrlPromise(url: String): Promise<JsString>
 
 /**
- * A file dialog, resolved with the chosen picture or with an empty string when it is dismissed.
- *
- * Cancellation cannot be detected reliably across browsers, so this also resolves empty when the
- * window regains focus with nothing chosen — otherwise a dismissed dialog would leave the panel
- * saying "Choosing…" until the page was reloaded.
+ * A file dialog, resolved with the chosen picture or empty when dismissed. Cancellation isn't
+ * reliably detectable, so it also resolves empty when the window regains focus with nothing chosen.
  */
 @JsFun(
   """() => new Promise((resolve) => {
@@ -560,11 +522,8 @@ private external fun pickReferenceFilePromise(): Promise<JsString>
 private external fun awaitReferencePastePromise(): Promise<JsString>
 
 /**
- * Installs the shared file reader the two pickers above call.
- *
- * One implementation rather than two copies inside the `@JsFun` bodies: reading a `Blob` into
- * base64, sniffing its type and measuring it is the fiddly part, and having it twice is how the
- * paste path and the file path drift into disagreeing about what they accept.
+ * Installs the shared file reader the two pickers above call (base64, type sniffing, measuring), so
+ * paste and file paths can't disagree.
  */
 @JsFun(
   """() => {

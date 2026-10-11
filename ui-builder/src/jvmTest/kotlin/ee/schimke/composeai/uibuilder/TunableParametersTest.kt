@@ -30,9 +30,8 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * Tunables: named numbers with a range that drive numeric properties while their slider moves.
- *
- * The rule every test here leans on is that dragging is a way of *looking* — the document, its
- * revision and the undo log stay exactly where they were until Apply, and Apply is one edit.
+ * Dragging is only looking: document, revision and undo log stay put until Apply, which is one
+ * edit.
  */
 class TunableParametersTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -127,9 +126,9 @@ class TunableParametersTest {
         UiBuilderEditorEvent.SetTunedValue(widthName, 150.0),
       )
 
-    // Undo compensates property writes and modifier writes in separate lanes and refuses a batch
-    // that mixes them, and a host is sent the one command an event made — so each lane is its own
-    // ApplyTunables, and the editor dispatches the second when the first leaves one.
+    // Undo compensates property and modifier writes in separate lanes (refusing mixed batches) and
+    // hosts get one command per event, so each lane is its own ApplyTunables; the editor dispatches
+    // the second when the first leaves one.
     val first = state.on(UiBuilderEditorEvent.ApplyTunables)
     assertIs<CommandOutcome.Accepted>(first.lastOutcome)
     assertNotNull(reducer.acceptedSubmission(state, first), "the property lane is sent")

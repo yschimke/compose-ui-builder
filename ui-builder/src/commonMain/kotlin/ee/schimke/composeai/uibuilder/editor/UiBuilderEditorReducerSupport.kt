@@ -54,10 +54,8 @@ internal const val THEME_CONTENT = "themeContentColor"
 internal const val THEME_TYPE_SCALE = "themeTypeScale"
 internal const val THEME_CORNER_RADIUS = "themeCornerRadiusDp"
 /**
- * The property-value shapes that read a state variable rather than holding a value.
- *
- * `stateEquals` is one too — the fixture's filter chips use it for `selected` — so treating only
- * `state` as a binding would report a chip as unbound and refuse to unbind it.
+ * Property-value shapes that read a state variable rather than holding a value; `stateEquals`
+ * counts too (filter chips' `selected`).
  */
 internal val STATE_VALUE_TYPES = setOf("state", "stateEquals")
 
@@ -65,8 +63,8 @@ internal val STATE_VALUE_TYPES = setOf("state", "stateEquals")
 internal val COMPUTED_VALUE_TYPES = setOf(UiExpressions.EXPR, UiExpressions.SYSTEM)
 
 /**
- * One computed value of each scalar kind a property can hold. A property that accepts any of them
- * offers a formula; which kinds a particular formula may produce is the validator's question.
+ * One computed value of each scalar kind a property can hold; a property accepting any of them
+ * offers a formula.
  */
 internal val FORMULA_PROBES: List<JsonObject> =
   listOf(
@@ -116,10 +114,9 @@ internal val THEME_PROPERTIES =
   )
 
 /**
- * Theme-host properties the Theme panel owns and the Properties inspector leaves out: the typefaces
- * and the default text style, on every kind of theme host. Left out of the inspector's list only —
- * [UiBuilderEditorReducer.propertyFields] still returns them, because a `CommitProperty` from an
- * agent or the protocol is validated against that list.
+ * Theme-host properties the Theme panel owns (typefaces, default text style), hidden from the
+ * Properties inspector only. [UiBuilderEditorReducer.propertyFields] still returns them because
+ * agent `CommitProperty`s are validated against that list.
  */
 internal val THEME_PANEL_PROPERTIES: Set<String> =
   ThemeTypefaces.PROPERTIES + ThemeTextStyle.PROPERTY
@@ -136,11 +133,8 @@ internal fun ownsThemePanelProperties(fields: List<EditorPropertyField>): Boolea
 }
 
 /**
- * The `m3/surface` this design hangs its theme on, or null.
- *
- * [topLevelNodes] rather than `roots` so that wrapping a themed screen in a board keeps its theme:
- * the board is a container the editor put there, and the surface under it is still the top of the
- * design. The renderer asks the same question the same way.
+ * The `m3/surface` this design hangs its theme on, or null. Uses [topLevelNodes] so a themed screen
+ * wrapped in a board keeps its theme, as the renderer does.
  */
 internal fun UiBuilderDocument.themeHost(): UiBuilderNode? = topLevelNodes.firstOrNull {
   it.componentId == "m3/surface"
@@ -202,12 +196,8 @@ internal fun ComponentCapability.slot(name: String): SlotCapability? =
     }
 
 /**
- * Whether this row survives the insert panel's search.
- *
- * Everything the row shows is matchable — the name, the catalog id, the kind and family headings it
- * sits under, and its variant labels — because those are what a person reads off the panel and so
- * what they type at it. "outlined" finds the Card whose outlined variant it names; "selection"
- * finds the shelf.
+ * Whether this row survives the insert panel's search: name, catalog id, kind and family headings,
+ * and variant labels are all matchable.
  */
 internal fun EditorCatalogItem.matches(needle: String): Boolean =
   needle.isEmpty() ||
@@ -232,11 +222,8 @@ internal fun EditorCatalogItem.searchRank(needle: String): Int =
   }
 
 /**
- * A catalog enum value as a person reads it: `filledTonal` → "Filled tonal".
- *
- * Derived rather than authored. A second table of display names beside the catalog's own values is
- * a table that goes stale silently — a renamed value keeps its old label and nothing says so —
- * whereas splitting the camel case is wrong in the same visible way for every value or for none.
+ * A catalog enum value as a person reads it: `filledTonal` → "Filled tonal". Derived, so it cannot
+ * go stale.
  */
 internal fun variantLabel(value: String): String =
   value
@@ -292,19 +279,12 @@ internal const val FRAME_SLOT = "children"
 internal val FRAME_PREFERRED = setOf("box", "column")
 
 /**
- * A frame for a component the default one squeezes.
- *
- * A date picker, a clock dial or a dialog is designed for a phone's width and more height than the
- * default frame has. Laid out in 176 × 128 dp it does not shrink, it crops: the calendar loses its
- * grid, the dial its numbers. So a thumbnail whose component filled the default frame is drawn
- * again in this one, at the size Material designs these for, and scaled down as a miniature.
+ * A larger thumbnail frame for components the default one crops (date pickers, clock dials,
+ * dialogs), at Material's design size, then scaled down.
  */
 internal val PREVIEW_ROOMY_FRAME = PreviewFrameSize(widthDp = 360, heightDp = 640)
 
-/**
- * The roomy frame for a watch: a large round screen, which is what a Wear picker or dialog fills. A
- * phone-sized frame would draw a Wear picker stretched across 360 dp it never has on a watch.
- */
+/** The roomy frame for a watch: a large round screen, which Wear pickers and dialogs fill. */
 internal val PREVIEW_ROOMY_WEAR_FRAME = PreviewFrameSize(widthDp = 240, heightDp = 240)
 
 /** The size a thumbnail's component is laid out in, before it is scaled down to its tile. */
@@ -316,9 +296,8 @@ internal data class PreviewFrameSize(val widthDp: Int, val heightDp: Int) {
 }
 
 /**
- * This thumbnail document with its frame resized: the environment's window and the frame cell's
- * `size` modifier both, since the cell is what bounds the component and the window is what a
- * component that reads the screen size — a Wear picker — asks.
+ * This thumbnail document with its frame resized: both the environment window (read by
+ * screen-size-aware components) and the frame cell's `size` modifier.
  */
 internal fun UiBuilderDocument.inPreviewFrame(frame: PreviewFrameSize): UiBuilderDocument {
   val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
@@ -374,19 +353,16 @@ private fun ComponentCapability.defaultNode(
   )
 
 /**
- * A neutral literal for this property: the first allowed value, or an empty one of its own type.
- *
- * Typed rather than always the empty string, because `""` is not a boolean and a validator that
- * refuses it would make unbinding a boolean impossible.
+ * A neutral literal for this property: the first allowed value, or an empty one of its own type
+ * (`""` is not a boolean).
  */
 internal fun PropertyCapability.literalDefault(): JsonObject {
   allowedValues.firstOrNull()?.let {
     return it.asLiteral(this)
   }
   val types = typeNames() - "null"
-  // Membership, not equality. A property declared ["boolean", "string"] — which is how the catalog
-  // spells "a flag or the name of a state variable" — would otherwise unbind to `""`, and an empty
-  // string on such a property reads as a variable name rather than as off.
+  // Membership, not equality: ["boolean", "string"] means "a flag or a state variable name", and
+  // `""` there would read as a variable name.
   return when {
     "boolean" in types -> literal("bool", JsonPrimitive(false))
     "number" in types || "integer" in types -> literal("float", JsonPrimitive(0))
@@ -445,25 +421,16 @@ private fun PropertyCapability.defaultEncodedValue(
         )
       )
     "scrollStateKey" -> literal("string", JsonPrimitive("$nodeId-scroll"))
-    // Three rows, each a dictionary with one key, because a loop inserted with no data is a loop
-    // that draws nothing — and a designer's first question of one is what a row looks like. The
-    // key is what the starter template binds, so the insert draws three cells rather than three
-    // copies of a default.
-    //
-    // Matched on the component as well as the name: this defaulting serves every catalog and every
-    // enabled pack, and a pack declaring a required scalar `data` would otherwise be inserted with
-    // a list of dictionaries in it — a node `CapabilityValidator` rejects, from a palette action
-    // that simply fails.
+    // Three one-key rows so an inserted loop draws something; the key is what the starter template
+    // binds. Matched on component too, since another pack's scalar `data` would reject a list.
     "data" ->
       if (componentId == FOR_EACH_COMPONENT_ID) starterRows() else JsonPrimitive("").asLiteral(this)
     "itemWidthDp" -> literal("float", JsonPrimitive(128.0))
     "expanded",
     "selected",
     "visible" -> literal("bool", JsonPrimitive(false))
-    // A picker inserted with no date is a picker showing epoch zero or, worse, today — and "today"
-    // is a render that changes overnight. The same fixed day the renderer falls back to, so the
-    // node carries the value the canvas draws rather than leaving the inspector empty and the two
-    // to agree by accident.
+    // A fixed day (the renderer's fallback), not today, so the render is stable and inspector and
+    // canvas agree.
     "selectedDate" -> literal("string", JsonPrimitive(DEFAULT_SELECTED_DATE))
     "hour" -> literal("float", JsonPrimitive(DEFAULT_PICKED_HOUR))
     "minute" -> literal("float", JsonPrimitive(DEFAULT_PICKED_MINUTE))
@@ -487,25 +454,18 @@ private fun PropertyCapability.defaultEncodedValue(
 }
 
 /**
- * Append the operations that insert this component and everything it arrives holding.
+ * Append the operations that insert this component and its children.
  *
- * Two kinds of child come out of here and the difference matters. A **required-slot fill** is what
- * keeps the document valid: a slot with a minimum has to have children or the validator refuses the
- * whole batch, so one is picked from the slot's accepted traits. **Starter content** is what makes
- * the insert look like something somebody designed — see [StarterContent] for why an empty
- * container is the wrong thing to hand an operator. Starter content is checked against the catalog
- * here and dropped when it does not check out, so it can improve an insert and can never break one.
+ * A **required-slot fill** keeps the document valid (picked from the slot's accepted traits).
+ * **Starter content** (see [StarterContent]) makes the insert look designed; it is checked against
+ * the catalog and dropped if invalid, so it can never break an insert.
  *
- * @param starter the authored seed for *this* node, when it is itself a piece of starter content.
- *   Its properties are set over the component's defaults and the slots it names are authored
- *   exactly; slots it does not name expand the ordinary way.
- * @param seedStarterContent false to fill required slots and nothing more. Wrapping a selection
- *   passes false: the container is about to be handed the real children, and starter content there
- *   is a subtree that has to be deleted again in the same batch.
- * @param presetProperties values chosen at the moment of insertion — today, the variant picked off
- *   the palette row. They are written over this node's starter content rather than instead of it,
- *   so an outlined Card still arrives holding the two lines of text a Card arrives holding, and
- *   they reach only this node: a variant is a fact about what was inserted, not about its children.
+ * @param starter the authored seed for this node when it is itself starter content: its properties
+ *   override defaults and the slots it names are exact.
+ * @param seedStarterContent false to only fill required slots (wrapping a selection, whose real
+ *   children are about to arrive).
+ * @param presetProperties values chosen at insertion (the palette variant), written over this
+ *   node's starter content only.
  */
 internal fun ComponentCapability.appendDefaultSubtree(
   catalog: CapabilityCatalog,
@@ -525,9 +485,7 @@ internal fun ComponentCapability.appendDefaultSubtree(
   if (componentId in componentPath) {
     return "required-slot default cycle: ${(componentPath + componentId).joinToString(" -> ")}"
   }
-  // A seeded node takes the authored values when it came from the table, and a node inserted
-  // straight from the palette takes the component's own — which is the same mechanism reaching the
-  // root of the insert rather than only its children.
+  // Seeded nodes take the authored values; a palette insert takes the component's own.
   val seededProperties =
     (starter
         ?: if (seedStarterContent)
@@ -576,11 +534,8 @@ internal fun ComponentCapability.appendDefaultSubtree(
 }
 
 /**
- * This seed with [presets] written over it, or a seed made of the presets when there was none.
- *
- * Over rather than under: the preset is the choice just made on the palette row, and the starter
- * table is a default from months ago. Null in and no presets stays null, which is what keeps a
- * plain insert on exactly the path it was on before variants existed.
+ * This seed with [presets] written over it, or a seed of the presets alone. Null with no presets
+ * stays null, keeping plain inserts on the original path.
  */
 private fun StarterNode?.withPresets(
   componentId: String,
@@ -592,10 +547,9 @@ private fun StarterNode?.withPresets(
 }
 
 /**
- * What goes in [slot]: the authored seed, this component's starter content, or the required fill.
- *
- * Null means the slot has a minimum and nothing in the catalog can satisfy it — the one case that
- * refuses the insert. An empty list is the ordinary answer for an optional slot nobody seeded.
+ * What goes in [slot]: the authored seed, starter content, or the required fill. Null means a
+ * required slot nothing can satisfy (refusing the insert); empty is normal for an unseeded optional
+ * slot.
  */
 private fun ComponentCapability.plannedChildren(
   slot: SlotCapability,
@@ -603,9 +557,8 @@ private fun ComponentCapability.plannedChildren(
   seedStarterContent: Boolean,
   catalog: CapabilityCatalog,
 ): List<Pair<ComponentCapability, StarterNode?>>? {
-  // A node that came from the table has already said what its slots hold, so its answer is used
-  // even when it is deliberately empty — that is how an item card opts out of the two-line starter
-  // `m3/card` would otherwise seed into it.
+  // An authored seed's answer is used even when empty, which is how an item card opts out of
+  // `m3/card`'s starter.
   starter?.slots?.get(slot.name)?.let { authored ->
     resolveStarterChildren(authored, slot, catalog)?.let {
       return it
@@ -629,12 +582,9 @@ private fun ComponentCapability.plannedChildren(
 }
 
 /**
- * [children] resolved against the catalog, or null when the seed does not fit the slot.
- *
- * Null degrades to the required-slot fill rather than refusing, because a stale table entry — a
- * component that left the catalog, a slot whose accepted traits narrowed — must not be able to make
- * a component uninsertable. `StarterContentTest` is what turns that silent degradation into a
- * failing test.
+ * [children] resolved against the catalog, or null when the seed does not fit. Null degrades to the
+ * required fill so a stale table entry can never make a component uninsertable;
+ * `StarterContentTest` catches that.
  */
 private fun resolveStarterChildren(
   children: List<StarterNode>,
@@ -651,11 +601,8 @@ private fun resolveStarterChildren(
 }
 
 /**
- * This node with the seed's property values written over the component's own defaults.
- *
- * Values the component does not declare, and values outside a property's allowed set, are dropped
- * rather than written: they would fail catalog validation, and validation failure rejects the whole
- * insert — the one outcome starter content is never allowed to cause.
+ * This node with the seed's property values over the component's defaults. Undeclared or disallowed
+ * values are dropped, since a validation failure would reject the insert.
  */
 private fun UiBuilderNode.withStarterProperties(
   capability: ComponentCapability,
@@ -684,11 +631,8 @@ private fun defaultChildFor(
 ): ComponentCapability? {
   val preferredName =
     when {
-      // Text before icon, for a slot that accepts both. `m3/button` is such a slot, and with the
-      // icon branch first every button inserted from the palette arrived holding an icon rather
-      // than a label. A slot that means an icon says `IconContent` and not `TextContent`.
-      // An A2UI slot takes A2UI components and nothing else, and a text is what an agent puts
-      // in a button, a card or a modal first. Its own id, since A2UI names are not lower-case.
+      // Text before icon for slots accepting both, so buttons arrive with a label. A2UI slots take
+      // only A2UI components, with their own (non-lower-case) ids.
       A2UI_COMPONENT_TRAIT in slot.acceptedTraits ->
         return catalog.textComponentFor(slot, ownerId)
           ?: catalog.componentsById[A2UI_TEXT]?.takeIf(slot::accepts)
@@ -704,37 +648,22 @@ private fun defaultChildFor(
         } ?: "text"
       else -> return catalog.componentsById["layout/box"]?.takeIf(slot::accepts)
     }
-  // The owner's own namespace first: a Wear slot is filled with `wear-m3/text`, which is the only
-  // text that catalog has. Asking for `m3/text` alone refused every Wear component whose required
-  // slot had no starter seed.
+  // The owner's namespace first, e.g. `wear-m3/text` for Wear slots.
   return listOf("${ownerId.substringBefore('/')}/$preferredName", "m3/$preferredName")
     .firstNotNullOfOrNull { id -> catalog.componentsById[id]?.takeIf(slot::accepts) }
 }
 
 /**
- * Every node reachable from [nodeId], detached from this document.
- *
- * A map rather than a node, because a subtree's children live in the document's flat `nodes` and
- * would be lost by copying the root alone.
+ * Every node reachable from [nodeId], detached from this document. A map because children live in
+ * the document's flat `nodes`.
  */
 /**
- * What this node says, for a layer row — or null when it says nothing.
+ * What this node says, for a layer row, or null.
  *
- * A panel of twelve rows all reading "Text" cannot be scanned, which is why every design tool names
- * a text layer after its content. The property is found **through the catalog** rather than from a
- * list of names this file guesses at.
- *
- * The signal is `required`. A component's required free-text property is the thing it exists to
- * carry — `m3/text` requires `text` — while its optional ones are configuration and plumbing that
- * happen to be strings: `m3/card` declares `shape` and `stableKey`, and a card named after its
- * stable key is worse than one named "Card". That distinction is the catalog's own, which is why
- * this reads it rather than keeping a list of blessed property names.
- *
- * `contentDescription` is the one name-by-name exception, and it earns it: it is defined as the
- * node's human-readable name, so an image that has one is better named by it than by "Image".
- *
- * Free-text means a lone `string` with no `allowedValues` — an enum is a setting, and a colour is
- * not something anyone recognises a layer by.
+ * Found through the catalog: a component's required free-text property (a lone `string` with no
+ * `allowedValues`) is what it exists to carry, e.g. `m3/text.text`. Optional strings are
+ * configuration. `contentDescription` is the one by-name exception, as the node's human-readable
+ * name.
  */
 private val IDENTITY_PROPERTY_SUFFIXES = listOf("Key", "Id", "Base64", "Url")
 
@@ -743,21 +672,9 @@ internal fun UiBuilderNode.contentLabel(capability: ComponentCapability): String
     property.allowedValues.isEmpty() &&
       property.typeNames() - "null" == setOf("string") &&
       !property.name.endsWith("Color", ignoreCase = true) &&
-      // `required` is necessary and not sufficient, which the first cut of this got wrong twice.
-      // A component can require a string it needs in order to work rather than one a person would
-      // recognise it by, and in this catalog most do: `asset/image` requires `assetKey` and the
-      // three lazy containers require `scrollStateKey` — so the layers panel offered an asset key
-      // and a scroll key as layer names. Only `m3/text.text` was content.
-      //
-      // `remote-compose/document` used to require `documentBase64` and be the worst of them, a
-      // base64 blob as a layer name. It now requires neither of its two sources — a node carries
-      // bytes or a URL — so it no longer reaches this at all; both suffixes stay listed because
-      // the rule is about the kind of string, not about which component happens to require one.
-      //
-      // The name carries the kind, the same way it does for a `…Dp` dimension: a key, an id or a
-      // payload is plumbing whatever its type. Excluding them by suffix leaves `text` and any
-      // future genuine content property alone, and an image falls through to its
-      // `contentDescription`, which is the thing that was always the better name for it.
+      // `required` is not sufficient: required plumbing strings (`assetKey`, `scrollStateKey`,
+      // `documentBase64`) are excluded by suffix, letting images fall through to
+      // `contentDescription`.
       IDENTITY_PROPERTY_SUFFIXES.none { property.name.endsWith(it, ignoreCase = true) }
 
   fun valueOf(name: String) =
@@ -779,12 +696,8 @@ internal fun UiBuilderNode.contentLabel(capability: ComponentCapability): String
 }
 
 /**
- * The selected nodes that are not inside another selected node, in selection order.
- *
- * An ancestor carries its descendants, whether it is being deleted or copied, so a descendant
- * selected alongside its ancestor is not a separate target. Emitting one for a delete would target
- * a node that no longer exists and would over-count what its slot loses; copying one would put the
- * same subtree on the clipboard twice and paste it twice.
+ * The selected nodes not inside another selected node, in selection order. A descendant selected
+ * with its ancestor is not a separate target for delete or copy.
  */
 internal fun UiBuilderEditorState.selectionRoots(): List<String> {
   val present = selection.filter(document.nodes::containsKey)
@@ -808,21 +721,15 @@ internal fun UiBuilderDocument.clip(nodeIds: List<String>): EditorClipboard {
       if (declarations.put(key, declaration) == null) componentRootOf(declaration)?.let(::visit)
     }
   }
-  // Tree order, not the order they were clicked. `paste` walks `rootNodeIds` and lays them down
-  // in sequence, so a selection built by shift-clicking D and then B would arrive as C, D, B and
-  // silently reorder what was copied.
+  // Tree order, not click order, so a paste does not reorder what was copied.
   val ordered = nodeIds.sortedBy(treeIndex())
   ordered.forEach(::visit)
   return EditorClipboard(rootNodeIds = ordered, nodes = collected, components = declarations)
 }
 
 /**
- * The same clipboard, told where the cut took its roots from.
- *
- * Read before the delete is applied, off the document the subtrees are still in. The run's first
- * root in tree order carries the position, and the sibling behind it has to be one nothing is
- * cutting — cutting `B, C` out of `A, B, C` puts the run back after `A`, not after the `B` that
- * left with it.
+ * The same clipboard, told where the cut came from. Read before the delete: the first root in tree
+ * order carries the position, anchored after a sibling that is not also being cut.
  */
 internal fun EditorClipboard.withOriginOf(
   document: UiBuilderDocument,
@@ -847,22 +754,12 @@ internal fun UiBuilderDocument.treeIndex(): (String) -> Int {
 }
 
 /**
- * An id [preferred] that this document does not already hold.
+ * An id near [preferred] that this document does not already hold, so repeated pastes do not
+ * collide.
  *
- * Pasting twice from one clipboard would otherwise produce the same id twice, and the second insert
- * would be rejected as a duplicate — so the paste that looks identical to the first silently fails.
- *
- * [client] because the sequence is *local*. Two people wrapping a selection in a Row as their own
- * first operation both reach sequence 1 and both propose `editor-layout-row-001`, for different
- * selections. Operation ids are already qualified; node ids were not, so the server accepted one
- * and rejected the other as a duplicate insertion — losing that person's edit, in the one situation
- * this editor exists to handle well.
- *
- * The qualifier is the **operation id prefix**, not `clientId`. `clientId` defaults to a constant
- * and the live host reads it from configuration, so two browsers can carry the same one; the
- * operation prefix is `clientId` plus a per-page nonce, which is precisely what already makes
- * operation ids unique between clients. Long ids are the price, and they are generated names shown
- * beside a human label rather than read on their own.
+ * Qualified by [client], the operation id prefix (`clientId` plus a per-page nonce): sequences are
+ * local, so two clients' first wraps would otherwise propose the same node id and one edit would be
+ * rejected. `clientId` alone is not unique across browsers.
  */
 internal fun UiBuilderDocument.freshNodeId(
   preferred: String,
@@ -878,25 +775,16 @@ internal fun UiBuilderDocument.freshNodeId(
 }
 
 /**
- * The properties that identify an *instance* rather than name content.
- *
- * Taken from what the Compose exporter does with them: `stableKey`, falling back to
- * `scrollStateKey`, becomes a lazy item's `key(…)`, and two siblings sharing one is a runtime
- * failure in Compose rather than a cosmetic clash. `assetKey` and `iconKey` look similar and are
- * the opposite — they name catalog content that every copy should keep — which is why this is the
- * exporter's list and not a suffix rule.
+ * Properties identifying an instance rather than content: the exporter turns
+ * `stableKey`/`scrollStateKey` into a lazy item `key(…)`, which must be unique.
+ * `assetKey`/`iconKey` name content and must be kept.
  */
 private val INSTANCE_IDENTITY_PROPERTIES = setOf("stableKey", "scrollStateKey")
 
 /**
- * Every string a copy's identity must not collide with: the node ids, and the identity keys already
- * in use.
- *
- * The ids alone are not enough. A copy takes its own node id as its `stableKey`, and that key is an
- * arbitrary string a sibling may already hold — duplicating `card` next to a node keyed
- * `card-copy-001` produced two siblings under one key, which the exporter turns into two
- * `key("card-copy-001")` groups and Compose rejects at runtime. The values are read with a safe
- * cast because a document arriving over the wire may hold anything here.
+ * Every string a copy's identity must not collide with: node ids and identity keys already in use
+ * (a copy's `stableKey` is its node id, which a sibling's key may already equal). Read with a safe
+ * cast since wire data may hold anything.
  */
 internal fun UiBuilderDocument.takenIdentities(): MutableSet<String> =
   (nodes.keys +
@@ -936,9 +824,8 @@ internal fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
       node =
         source.copy(
           id = copyNodeId,
-          // A copy is a new instance, so it gets a new identity. Cloning `stableKey` put two
-          // children in one lazy slot under the same `key(…)`, which Compose refuses at runtime,
-          // and cloning `scrollStateKey` made two scroll containers share a position.
+          // A copy is a new instance: cloned `stableKey`s collide in Compose `key(…)` and cloned
+          // `scrollStateKey`s share scroll position.
           properties =
             JsonObject(
               source.properties.withFreshInstanceIdentity(copyNodeId) -
@@ -952,10 +839,7 @@ internal fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
   source.slots.forEach { (slot, children) ->
     var previousCopyId: String? = null
     children.forEach { childId ->
-      // Allocated, not concatenated. A subtree holding a sibling `x-y` and a grandchild `y` under
-      // `x` produced one id twice, and a concatenation can land on an existing node even when the
-      // root it hangs from is fresh — either way the collaboration reducer rejects the whole paste
-      // as a duplicate.
+      // Allocated, not concatenated, since concatenation can collide with existing ids.
       val childCopyId = freshCopyId("$copyNodeId-${childId.replace('/', '-')}", taken)
       childCopies[childId] = childCopyId
       appendDuplicateSubtree(
@@ -1000,18 +884,10 @@ private fun JsonObject.withFreshInstanceIdentity(copyNodeId: String): JsonObject
 }
 
 /**
- * The wrapper a write to this property should carry, given the one the node already holds.
- *
- * Every node keeps its own encoded type, because two nodes can hold one property as a literal and
- * as a token and rewriting either to the other's shape changes more than was asked. The one
- * exception is a **plain `string` on a property whose values the catalog enumerates**: `enum` is
- * the canonical wrapper there (see `CapabilityValidator.writeWrapperIssue`), `string` is the
- * spelling that used to be written for the same intent, and the two exported down unrelated paths.
- * Preserving it would mean a legacy design's `textAlign` could no longer be edited at all, so the
- * next edit rewrites it instead — which is what migrates such a design without a migration.
- *
- * A semantic token — `typographyToken` on a `style` — is a different claim about the same value and
- * is kept as it is.
+ * The wrapper a write to this property should carry, given the node's existing one. Each node keeps
+ * its encoded type, except a plain `string` on an enumerated property, which is rewritten to the
+ * canonical `enum` (see `CapabilityValidator.writeWrapperIssue`), migrating legacy designs on edit.
+ * Semantic tokens like `typographyToken` are kept.
  */
 internal fun PropertyCapability.canonicalWrapper(existingType: String?): String? =
   if (allowedValues.isEmpty()) existingType else existingType?.takeUnless { it == "string" }
@@ -1049,11 +925,8 @@ internal data class EditorObjectEdge(
 )
 
 /**
- * The object-valued shapes the inspector can author, and the numeric edges each is made of.
- *
- * Closed on purpose. A property the catalog declares as `"object"` and this map does not name stays
- * unsupported, which is the safe answer: `itemSpans` is an arbitrary map of child id to span and
- * there is no honest four-field control for it.
+ * Object-valued shapes the inspector can author and their numeric edges. Closed on purpose: other
+ * `"object"` properties (e.g. `itemSpans`) stay unsupported.
  */
 internal val EDITOR_OBJECT_VALUE_EDGES: Map<String, List<EditorObjectEdge>> =
   mapOf(
@@ -1073,12 +946,8 @@ internal val EDITOR_OBJECT_VALUE_EDGES: Map<String, List<EditorObjectEdge>> =
 private const val MAXIMUM_AUTHORED_EDGE_DP = 4096.0
 
 /**
- * The whole object value with one edge replaced, or null when the shape is not one this editor
- * authors.
- *
- * Every edge is written, not just the one that changed: the wire carries a `padding` as four
- * numbers and a value missing one of them is a different value, so an edge absent from the document
- * takes its own minimum rather than disappearing.
+ * The whole object value with one edge replaced, or null when the shape is not authored here. Every
+ * edge is written (missing edges take their minimum), since the wire carries the whole value.
  */
 internal fun objectValueWithEdge(
   kind: String,
@@ -1148,8 +1017,7 @@ internal fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
 }
 
 /**
- * `color` for a literal (or nothing), `colorToken` for a theme role — the wrappers the export
- * reads.
+ * `color` for a literal (or nothing), `colorToken` for a theme role: the wrappers the export reads.
  */
 internal fun colourWrapper(value: JsonElement): String {
   val content = (value as? JsonPrimitive)?.contentOrNull.orEmpty()
@@ -1173,18 +1041,9 @@ internal fun PropertyCapability.typeNames(): Set<String> =
   }
 
 /**
- * The types a *person* authors, which is the declaration minus the shape a binding takes.
- *
- * `["number", "object"]` is how the catalog spells "a number, or a read of a state variable" —
- * `["string", "object"]` the same for text — and the object half is written by
- * `BindPropertyToState`, never typed into a field. Judging the control by the whole declaration
- * made every such property `Unsupported`: a text field's `value` and a slider's whole range were
- * uneditable for exactly the reason `["boolean", "string"]` once made `m3/filter-chip.selected`
- * uneditable, which is the comment above the boolean branch.
- *
- * A property declared *only* `"object"` still has nothing to offer — `contentPadding`, a search
- * input's `value` — and correctly falls through to `Unsupported` here, because removing the object
- * leaves nothing behind.
+ * The types a person authors: the declaration minus `"object"`, which is the shape a state binding
+ * takes (`["number", "object"]` means a number or a state read). A property declared only
+ * `"object"` stays `Unsupported`.
  */
 internal fun Set<String>.authoredTypes(): Set<String> = this - "object"
 
@@ -1215,21 +1074,14 @@ internal fun UiBuilderDocument.location(nodeId: String): ParentSlot? {
 }
 
 /**
- * The primitive a wire value holds, or null where it holds an array or an object.
- *
- * `jsonPrimitive` throws on anything else, and everything read through these accessors came off the
- * wire: a property encoded as `{"type": "string", "value": []}` is exactly what
- * `INVALID_PROPERTY_TYPE` reports, so the inspector must be able to draw the document that holds
- * one rather than take the editor down before the Issues panel can name it.
+ * The primitive a wire value holds, or null for an array or object. `jsonPrimitive` would throw,
+ * and the inspector must still draw a document with `INVALID_PROPERTY_TYPE`.
  */
 internal fun JsonElement?.primitiveOrNull(): JsonPrimitive? = this as? JsonPrimitive
 
 /**
- * [nodeId] and everything under it.
- *
- * Guarded against a cycle in the document rather than trusting it not to hold one: this is asked
- * about a document that is being edited, and a cycle is one of the things the inspector reports
- * rather than one the editor may assume away.
+ * [nodeId] and everything under it, guarded against cycles since the edited document may contain
+ * one.
  */
 internal fun UiBuilderDocument.subtreeOf(nodeId: String): Set<String> {
   val collected = mutableSetOf<String>()
@@ -1246,12 +1098,8 @@ internal fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =
   if (parent == null) roots else nodes.getValue(parent.nodeId).slots[parent.slot].orEmpty()
 
 /**
- * The layout modifiers worth a menu row, in the order they are offered.
- *
- * A deliberate subset of what the wire carries: these are the ones whose whole value is their
- * presence, so a press says everything there is to say. `size` and `clip` need a number and a
- * shape, which is a form rather than a row, and `padding` is offered at one typical value the
- * inspector can then change — the same bargain the catalog's default content makes.
+ * The layout modifiers worth a menu row, in order: those whose value is mostly their presence.
+ * `size` and `clip` need a form; `padding` is offered at a typical value the inspector can change.
  */
 internal val MENU_MODIFIERS: List<MenuModifier> by lazy {
   listOf(
@@ -1344,13 +1192,8 @@ internal val MENU_MODIFIERS: List<MenuModifier> by lazy {
 }
 
 /**
- * The scope a node's parent puts it in, which is what decides whether an alignment or a weight
- * means anything.
- *
- * `Modifier.align` and `Modifier.weight` are not properties of the child: they are receivers the
- * parent supplies, and Compose refuses them at compile time outside one. The renderer applies them
- * from the parent's call site for exactly that reason, so the menu has to read the parent too —
- * otherwise it offers a row a weight that nothing would ever apply.
+ * The scope a node's parent puts it in, deciding whether alignment or weight means anything:
+ * `align`/`weight` are parent-supplied receivers, so offering them elsewhere would apply nothing.
  */
 internal enum class EditorLayoutScope {
   Box,
@@ -1406,11 +1249,8 @@ private val MOTION_MODIFIER_FIELDS: List<ModifierField> =
   )
 
 /**
- * The values each modifier carries, and what to call them.
- *
- * Closed, like [EDITOR_OBJECT_VALUE_EDGES] and for the same reason: a modifier whose value is a
- * shape or a colour has no honest one-line control, and offering an empty one is worse than
- * offering none. An alignment does — it is a closed list — so it is here as a choice.
+ * The values each modifier carries and their labels. Closed, like [EDITOR_OBJECT_VALUE_EDGES]:
+ * shapes and colours have no one-line control, while alignments are a choice.
  */
 internal val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
   mapOf(
@@ -1459,8 +1299,8 @@ internal class MenuModifier(
   /** The scopes this modifier is offered in, or none where any parent will do. */
   vararg val scopes: EditorLayoutScope,
   /**
-   * What toggles and fields address it by: the type, except for a `remoteCall`, where many calls
-   * share one type and the key is `remoteCall:<name>` (see [modifierKey]).
+   * The key toggles and fields use: the type, or `remoteCall:<name>` for a remote call (see
+   * [modifierKey]).
    */
   val key: String = type,
   val build: () -> JsonObject,
@@ -1489,10 +1329,8 @@ internal fun modifierKey(modifier: JsonObject): String? {
 internal const val REMOTE_CALL_KEY_PREFIX: String = "remoteCall:"
 
 /**
- * One menu entry per `RemoteModifier` call in the generated vocabulary that no typed modifier
- * already writes: the released API decides what is offered, and a new alpha's calls appear by
- * regenerating the vocabulary. A call is added with its simplest overload and a starting value for
- * each required argument.
+ * One menu entry per generated `RemoteModifier` call no typed modifier writes, added with its
+ * simplest overload and starting values for required arguments.
  */
 private fun remoteCallMenuModifiers(typed: Set<String>): List<MenuModifier> {
   // Calls that only mean something with context a single node does not have (a lazy list's
@@ -1558,9 +1396,8 @@ private fun remoteCallStartingValue(parameter: RemoteModifierVocabulary.Paramete
   }
 
 /**
- * The editable arguments of a `remoteCall`, from the overload its arguments resolve to: numbers and
- * dp as numeric fields, booleans as a choice. Colours and strings have no honest one-line control
- * here (as [MODIFIER_FIELDS] says of shapes), so they keep their starting value.
+ * The editable arguments of a `remoteCall` from its resolved overload: numbers and dp as numeric
+ * fields, booleans as a choice. Colours and strings keep their starting value.
  */
 internal fun remoteCallFields(modifier: JsonObject): List<ModifierField> {
   val name = modifier.optionalStringValue("name") ?: return emptyList()
@@ -1601,11 +1438,8 @@ internal fun JsonObject.optionalStringValue(key: String): String? =
   (this[key] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.contentOrNull
 
 /**
- * The node an operation is about, for selecting it from the history.
- *
- * The first one it names, which is the only honest answer for a batch that touched several: a list
- * row selects one node, and the summary beside it already says how many things moved. Null for a
- * command that only wrote the environment, which belongs to no node.
+ * The node an operation is about, for selecting it from the history: the first it names, or null
+ * for an environment-only command.
  */
 internal fun AcceptedCommand.subjectNodeId(): String? =
   command.operations.firstNotNullOfOrNull { operation ->
@@ -1628,12 +1462,8 @@ internal fun AcceptedCommand.subjectNodeId(): String? =
   }
 
 /**
- * Everything this command moved, as before/after pairs.
- *
- * Structure last, and named by what it did rather than by a position: "added", "moved", "deleted"
- * is what somebody reading a history wants, and a stable position key is not something to show
- * anyone. The values either side come from the change records, which is the only place the *old*
- * value survives at all — the document holds the new one.
+ * Everything this command moved, as before/after pairs from the change records (the only place old
+ * values survive). Structure changes last, named "added"/"moved"/"deleted".
  */
 internal fun AcceptedCommand.describeChanges(): List<EditorOperationChange> =
   propertyChanges.map {
@@ -1680,24 +1510,14 @@ internal fun AcceptedCommand.describeChanges(): List<EditorOperationChange> =
 
 private fun ParentSlot.readable(): String = "$nodeId.$slot"
 
-/**
- * A typed property value as the value alone.
- *
- * Properties are `{"type": …, "value": …}` and a history that showed the wrapper would be showing
- * the storage rather than the change. Anything that is not that shape is printed as it stands,
- * because guessing is worse than being literal about an unfamiliar value.
- */
+/** A typed property value as the value alone; unfamiliar shapes are printed literally. */
 internal fun JsonElement.displayValue(): String {
   val value = (this as? JsonObject)?.get("value") ?: this
   return value.primitiveOrNull()?.content ?: value.toString()
 }
 
 /**
- * A modifier chain as the short line the layout panel would show for it.
- *
- * Type plus its own values, because a chain named by type alone cannot distinguish the padding
- * somebody just changed from the padding they had. Empty is stated rather than left blank: "no
- * layout modifiers" is a real end of a change and an empty cell reads as missing information.
+ * A modifier chain as a short line: types with their values, or an explicit "no layout modifiers".
  */
 internal fun JsonArray.modifierSummary(): String {
   if (isEmpty()) return "none"

@@ -37,11 +37,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * The asset lane: bytes in, a pinned `assets` entry out, and every other lane seeing it.
- *
- * This is the requirement in yschimke/compose-preview-server#478 — a design could not contain a
- * picture from any direction — and the safety half of #484: what a design names has to be something
- * the service knows about, and what it does not know about must not fail a render.
+ * The asset lane: bytes in, a pinned `assets` entry out, visible to every other lane. Asset keys
+ * must be known to the service, and unknown ones must not fail a render.
  */
 class UiBuilderAssetLaneTest {
   @TempDir lateinit var directory: Path

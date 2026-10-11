@@ -18,12 +18,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * What a re-skinned Wear screen exports: its layout, its painted surfaces and its theme.
- *
- * Each case here is something the canvas drew and the Wear screen generator either dropped with no
- * diagnostic or refused outright, found re-skinning one design (`petty-rascal2`):
+ * What a re-skinned Wear screen exports: its layout, its painted surfaces and its theme. Each case
+ * is something the canvas drew and the Wear screen generator dropped or refused:
  * yschimke/wear-m3-catalog#680 (row and column arrangement), #681 (`background` and `border` on a
- * card or box) and #682 (a screen theme, and colours for the components that had none).
+ * card or box) and #682 (a screen theme, and colours for components that had none).
  */
 class WearLayoutAndColourExportTest {
   private val pin = JsonObject(emptyMap())
@@ -80,9 +78,8 @@ class WearLayoutAndColourExportTest {
     assertIs<WearScreenCodeExporter.Result.Refused>(WearScreenCodeExporter.export(document)).reasons
 
   /**
-   * A text's role is written against Wear's own type scale: Wear's numerals pass through, and the
-   * Material 3 `headline*` roles Wear has no counterpart for write the matching title role, as the
-   * canvas draws them — `MaterialTheme.typography.headlineLarge` does not compile against Wear's.
+   * A text's role is written against Wear's own type scale: Material 3 `headline*` roles (absent in
+   * Wear) map to the matching title role, as the canvas draws them.
    */
   @Test
   fun `a text's role is written against Wear's type scale`() {
@@ -435,7 +432,7 @@ class WearLayoutAndColourExportTest {
 
   /**
    * The screen's typefaces (yschimke/wear-m3-catalog#684): the theme gains a typography with each
-   * named role re-pointed at a Google Fonts family the file declares, alongside the colours.
+   * named role re-pointed at a declared Google Fonts family.
    */
   @Test
   fun `a screen's typefaces are written into its theme as Google Fonts families`() {
@@ -486,8 +483,8 @@ class WearLayoutAndColourExportTest {
   }
 
   /**
-   * Every case above in one screen, written where a compile check can pick it up: the assertions
-   * here read text, and only a compiler against the real AndroidX library can say it builds.
+   * Every case above in one screen, written out for a compile check against the real AndroidX
+   * library.
    */
   @Test
   fun `one screen carrying all of it is written out for a compiler`() {

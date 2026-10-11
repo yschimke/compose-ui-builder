@@ -21,11 +21,8 @@ public data class UiBuilderAdminDesignSummary(
 )
 
 /**
- * The operator's view of a UI-builder host, reached only through an admin-token route. Separate
- * from [UiBuilderServicePort] because nothing here is an actor operation: no ACL, capability or
- * protocol shape.
- *
- * New methods are added with defaults rather than as data class fields, so the published ABI stays
+ * The operator's view of a UI-builder host, reached only through an admin-token route; not an actor
+ * operation, so no ACL, capability or protocol shape. New methods get defaults to stay
  * binary-compatible.
  */
 public interface UiBuilderAdminPort {

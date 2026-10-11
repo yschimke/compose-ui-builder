@@ -25,22 +25,15 @@ private const val INK = "#FF1A1D17"
 private const val WHITE = "#FFFFFFFF"
 
 /**
- * A replica of the classic resin LCD digital watch — the F-91W — for looking at only: drawn from a
- * front-on reference photograph, never offered as a template.
- *
- * What makes it read as the real thing rather than a picture of a clock:
- * - the case is matt black resin whose moulded edge catches a thin line of light, and whose step
- *   down to the face is a second, darker bevel;
- * - the face carries its printing where the watch does — the top line, LIGHT and ALARM CHRONOGRAPH
- *   above the display, MODE and ALARM ON·OFF/24HR beneath it, WATER, a red WR box and RESIST along
- *   the bottom — inside a thin blue keyline;
- * - the display is a seven-segment LCD: every segment of every digit is drawn, the unlit ones as a
- *   faint ghost, the lit ones in ink, from formulas over the clock. The hour is twelve-hour with no
- *   leading zero, the colon blinks once a second, PM lights after noon, as module 593 does;
- * - the crystal throws two reflections, a soft wide band and a sharp thin one, and the steel
- *   buttons are lit from above.
- *
- * It carries no maker's wordmark: the top line, where the name sits, reads only the model line.
+ * A replica of the classic resin LCD digital watch (the F-91W), drawn from a front-on reference
+ * photograph, for looking at only: never offered as a template, and carrying no maker's wordmark
+ * (the top line reads only the model line).
+ * - matt black resin case with a lit moulded edge and a darker bevel down to the face;
+ * - the face's printing where the watch has it (LIGHT, ALARM CHRONOGRAPH, MODE, ALARM ON·OFF/24HR,
+ *   WATER, a red WR box, RESIST) inside a blue keyline;
+ * - a seven-segment LCD with ghosted unlit segments; twelve-hour time without a leading zero, a
+ *   blinking colon and PM after noon, as module 593 does;
+ * - two crystal reflections and top-lit steel buttons.
  */
 internal fun lcdWatchReplica(
   designId: String,

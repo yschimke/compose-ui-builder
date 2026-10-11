@@ -17,44 +17,28 @@ import kotlinx.serialization.json.Json
 /**
  * The browser half of [UiBuilderExportHost]: the clipboard, the download, the page's own origin.
  *
- * ## One address for everything
+ * Saved artifacts use the design's **live export URL**
+ * (`/api/ui-builder/v1/designs/<id>/export.svg` or `.png`), so a copied link fetches the same bytes
+ * the Copy and Download rows did for the same revision. Current drafts are submitted to
+ * `/api/ui-builder/v1/documents/export.png`, `.json` or `.rc`, captured once per action. Local
+ * designs have no Copy link row.
  *
- * Saved artifacts use the design's **live export URL** —
- * `/api/ui-builder/v1/designs/<id>/export.svg` or `.png`. Current drafts are submitted to
- * `/api/ui-builder/v1/documents/export.png`, `.json` or `.rc`; the document is captured once per
- * action. A local design has no Copy link row. Saved links retain the existing guarantee: the link
- * a person copies is the very URL the Copy and Download rows fetched, so what they pasted into
- * Figma and what a colleague opens from the link are the same bytes for the same revision. The
- * route renders the current committed revision on each request, so the address is live.
+ * Clipboard shapes, as the catalog viewer writes them:
+ * - SVG as **text** (what Figma pastes as editable layers; `image/svg+xml` items aren't accepted).
+ * - PNG as an **image** `ClipboardItem` whose blob is a promise, built synchronously in the click
+ *   (Safari refuses items built after an `await`).
+ * - Links as plain text with `?token=` stripped; this host's own fetches carry it via
+ *   [sameOriginRequestUrl].
  *
- * ## What lands on the clipboard
- *
- * The same shapes the catalog viewer's preview page writes, for the same consumers:
- * - SVG goes on as **text**, because that is what Figma pastes as editable layers — a
- *   `ClipboardItem` of `image/svg+xml` is not something browsers or Figma accept today.
- * - PNG goes on as an **image** (`ClipboardItem` of `image/png`), and the blob is handed over as a
- *   promise so the item is built synchronously inside the click — Safari refuses one built after an
- *   `await`.
- * - A link goes on as text, and it is the plain URL: the page's `?token=` is stripped, because a
- *   shared link is an address and never a credential. The fetches this host makes for itself do
- *   carry it, through [sameOriginRequestUrl], the way every other UI-builder request does.
- *
- * ## Why the answers are sentences
- *
- * The toolbar shows what the host says, so a refused clipboard write ("the browser refused the
- * clipboard") is reported where the button is, rather than swallowed. Nothing here throws to the
- * editor: a failure is a sentence too.
+ * Nothing here throws to the editor: every outcome, including failures, is a sentence shown by the
+ * toolbar.
  */
 internal class BrowserExportHost(
   private val designId: String,
   override val formats: List<EditorExportFormat>,
   /**
-   * The committed revision every route this host builds is pinned to, or null for the head.
-   *
-   * Set only where the editor itself is pinned. The export routes render on request, so a host left
-   * unpinned answers a historical page with the picture of the current design; a reader who copied
-   * that link, or pasted that PNG into a review, would be showing the wrong revision under a banner
-   * naming the right one.
+   * The committed revision every route this host builds is pinned to, or null for the head. Set
+   * only when the editor is pinned, so exports from a historical page show that revision.
    */
   private val revision: Long? = null,
   override val supportsLinks: Boolean = true,
@@ -144,11 +128,8 @@ internal class BrowserExportHost(
     "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.${format.extension}"
 
   /**
-   * The export route for one format, relative to the page; see [UI_BUILDER_LIVE_EXPORT_PATH].
-   *
-   * The query is assembled from a list rather than concatenated, because there are now two things
-   * that can go in it and `?download=1` written twice — once as the first parameter and once after
-   * a revision — is how that becomes a broken URL.
+   * The export route for one format, relative to the page; see [UI_BUILDER_LIVE_EXPORT_PATH]. The
+   * query is built from a list since it may hold both a revision and `download=1`.
    */
   internal fun livePath(format: EditorExportFormat, download: Boolean = false): String {
     val path =
@@ -167,17 +148,9 @@ internal const val UI_BUILDER_LIVE_EXPORT_PATH = "/api/ui-builder/v1/designs"
 internal const val UI_BUILDER_DOCUMENT_EXPORT_PATH = "/api/ui-builder/v1/documents"
 
 /**
- * Copies one design link — a node, a thread, a revision — and answers with a sentence.
- *
- * Beside the export host rather than inside it, because it is not an export: the address it copies
- * names a place in the *editor*, not a rendered picture, and it is offered from a layer's menu and
- * a thread's card rather than from the Export menu. What it shares with that host is the two rules
- * that matter — the link goes through [shareableUrl], so the page's `?token=` never rides along,
- * and a browser that refuses the clipboard is reported in a sentence rather than thrown.
- *
- * The address is shown as well as copied. A link is the one thing on this page whose value a person
- * checks before pasting it into a pull request, and a bare "Copied" makes them paste it somewhere
- * to find out what they have.
+ * Copies one design link (a node, a thread, a revision) and answers with a sentence. Not an export:
+ * it names a place in the editor. Like the export host, it goes through [shareableUrl] (no
+ * `?token=`) and reports clipboard refusals. The address is shown as well as copied.
  */
 internal suspend fun copyDesignLink(path: String): String {
   val link = shareableUrl(path)
@@ -200,12 +173,8 @@ internal suspend fun copyAiPrompt(prompt: String): String =
   }
 
 /**
- * An absolute URL for sharing: resolved against the page, with no credential on it.
- *
- * The opposite of [sameOriginRequestUrl] in the one respect that matters — that one *adds* the
- * page's `?token=` so the request authenticates; this one makes sure it is absent, so a link pasted
- * into a chat does not carry the operator token with it. Whoever opens the link presents their own
- * credential, the way they would for the editor's own URL.
+ * An absolute URL for sharing: resolved against the page, with no credential on it. The opposite of
+ * [sameOriginRequestUrl], which adds `?token=`; recipients present their own credential.
  */
 @JsFun(
   """(path) => {
@@ -231,11 +200,8 @@ internal external fun shareableUrl(path: String): String
 private external fun copyTextPromise(text: String): Promise<JsString>
 
 /**
- * Fetches the SVG and puts its markup on the clipboard as text.
- *
- * `fetch` first and `writeText` after: Chrome and Firefox keep the click's activation alive across
- * the fetch, and this is exactly what the catalog viewer's Copy SVG does. Resolves empty on
- * success.
+ * Fetches the SVG and puts its markup on the clipboard as text. Chrome and Firefox keep the click's
+ * activation across the fetch. Resolves empty on success.
  */
 @JsFun(
   """(url, document) => {
@@ -260,12 +226,9 @@ private external fun copyTextPromise(text: String): Promise<JsString>
 private external fun copySvgTextPromise(url: String, document: String?): Promise<JsString>
 
 /**
- * Fetches the PNG and puts it on the clipboard as an image.
- *
- * The blob is a promise inside the `ClipboardItem`, built synchronously in the click: Safari only
- * honours a write whose item existed before the first `await`, and Chrome accepts the promise form
- * too. Where `ClipboardItem` is missing altogether the answer says so rather than falling back to a
- * data URL nobody can paste as a picture. Resolves empty on success.
+ * Fetches the PNG and puts it on the clipboard as an image. The blob is a promise inside a
+ * `ClipboardItem` built synchronously in the click (Safari's requirement). Without `ClipboardItem`,
+ * says so. Resolves empty on success.
  */
 @JsFun(
   """(url, document) => {
@@ -293,11 +256,8 @@ private external fun copySvgTextPromise(url: String, document: String?): Promise
 private external fun copyPngImagePromise(url: String, document: String?): Promise<JsString>
 
 /**
- * Saves the file through an anchor click.
- *
- * The route answers `Content-Disposition: attachment` for `?download=1`, so the anchor's own
- * `download` attribute is belt and braces: same-origin, either alone would do. Resolves empty; a
- * navigation cannot report whether the save dialog was accepted.
+ * Saves the file through an anchor click (`?download=1` answers `Content-Disposition: attachment`,
+ * plus the anchor's `download` attribute). Resolves empty; a navigation can't report the outcome.
  */
 @JsFun(
   """(url, filename, content) => {
@@ -330,12 +290,8 @@ private external fun downloadPromise(
 
 /**
  * Fetches the rendered file and hands it to the share sheet, downloading it instead where the sheet
- * will not take it.
- *
- * The fetch comes first, so this spends some of the tap's user activation before `share` — fine on
- * Chrome, whose activation outlives a render, and the reason a refusal (`NotAllowedError`) falls
- * back to a download rather than failing. A person closing the sheet (`AbortError`) is told so and
- * nothing is saved. Resolves empty when the sheet took the file.
+ * won't take it. The fetch spends some of the tap's activation, so `NotAllowedError` falls back to
+ * a download; `AbortError` (closed sheet) saves nothing. Resolves empty when shared.
  */
 @JsFun(
   """(url, filename, type, content) => {

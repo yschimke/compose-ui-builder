@@ -17,12 +17,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * A property can be unset again (yschimke/compose-preview-server#480).
- *
- * `setProperty` had no inverse: an author who tried a property and found it wrong could change its
- * value but not the shape of the node. `RemoveNodeProperty` takes an optional property off the node
- * so the component's own default applies, refuses a required one by name, and is undone and redone
- * like any other scalar write.
+ * A property can be unset again (yschimke/compose-preview-server#480): `RemoveNodeProperty` takes
+ * an optional property off the node so the component default applies, refuses a required one by
+ * name, and undoes and redoes like any scalar write.
  */
 class RemoveNodePropertyTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

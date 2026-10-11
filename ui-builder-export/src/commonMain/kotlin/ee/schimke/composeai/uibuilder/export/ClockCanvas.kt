@@ -5,15 +5,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Builds a design whose content is one square `draw/canvas`: the shape every clock template is.
- *
- * Plain Remote Compose content rather than a Wear widget — the root is a `layout/box` holding the
- * canvas, not a widget container — so it exports as the `@RemoteComposable` body an application
- * captures and plays itself, and opens on a square frame rather than a host.
- *
- * The builder only spells the document: operations are added in draw order, a container's block
- * fills its `ops` slot, and every value is one of the property wrappers below. Formulas are parsed
- * by [UiExpressions.parseFormula], so a template reads as the text the inspector shows.
+ * Builds a design whose content is one square `draw/canvas`, the shape of every clock template:
+ * plain Remote Compose content (a `layout/box` root, not a widget container), exported as a
+ * `@RemoteComposable` body. Operations are added in draw order; formulas are parsed by
+ * [UiExpressions.parseFormula].
  */
 class ClockCanvas private constructor(private val sizeDp: Int) {
   private val nodes = mutableListOf<UiBuilderNode>()

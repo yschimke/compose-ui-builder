@@ -16,13 +16,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The Issues panel on a `wear-m3` design, judged by the generator that actually writes it.
- *
- * Reported from the deployed builder: a Wear screen holding one `wear-m3/button` showed "1 blocking
- * root cause · Missing code capability · No Kotlin symbol/import mapping exists" against the
- * button, while the Code pane beside it showed the screen's Kotlin. `wear-m3` leaves every
- * component's `code` null on purpose — `WearScreenCodeExporter` writes these designs, not
- * `CapabilityComposeCodeExporter` — so that diagnostic was the wrong exporter describing itself.
+ * The Issues panel on a `wear-m3` design, judged by the generator that actually writes it
+ * (`WearScreenCodeExporter`). `wear-m3` leaves every component's `code` null on purpose, so
+ * `CapabilityComposeCodeExporter`'s "No Kotlin symbol/import mapping exists" must not be reported.
  */
 class WearEditorProblemsTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
@@ -114,12 +110,8 @@ class WearEditorProblemsTest {
   }
 
   /**
-   * A bare `wear-m3/button` as the design's only root is neither a Wear screen nor a widget, so
-   * neither Wear emitter writes it and the export refuses. That refusal is real and the panel keeps
-   * it — but as its cause, which is the root, and with what to do about it. It used to be the
-   * record-driven generator's "no component `wear-m3/button` in this catalog" once per component,
-   * beside the capability exporter's "No Kotlin symbol/import mapping exists" on the node: three
-   * symptoms, none of them saying to wrap the button in a screen.
+   * A bare `wear-m3/button` as the only root is neither a Wear screen nor a widget, so the export
+   * really refuses; the panel reports it once, at the root cause, saying to wrap it in a screen.
    */
   @Test
   fun `a bare wear button at the root is refused by the real export, and the panel says why`() {

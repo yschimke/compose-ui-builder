@@ -19,11 +19,8 @@ import org.jetbrains.skia.Bitmap
 
 /**
  * A root `m3/surface`'s `containerColor` reaches the frame's ground exactly when the root fills the
- * frame, and [RootSurfaceGround] says so exactly when it does not.
- *
- * Both halves are pinned together on purpose (compose-preview-server #485): the notice describes
- * what the renderer does, so a change to either without the other is the disagreement this test
- * exists to catch.
+ * frame, and [RootSurfaceGround] says so exactly when it doesn't. Pinned together (see
+ * compose-preview-server#485) so renderer and notice can't diverge.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class RootSurfaceGroundTest {

@@ -12,23 +12,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import kotlin.io.encoding.Base64
 
 /**
- * Bake the whole reference stack — base picture, placed pieces, every mark — into one PNG, and hand
- * it back as the picture to build against next.
+ * Bake the whole reference stack (base picture, placed pieces, every mark) into one PNG, and hand
+ * it back as the next base picture, so each round is measured against what was just agreed.
  *
- * This is what makes the loop close. Snapshot the design, circle what is wrong, drop the component
- * that should be there into place, and then *flatten*: the annotated composite becomes the new
- * base, the pieces and marks are gone, and the next round of adjustment is measured against what
- * was just agreed rather than against the mock from three rounds ago.
- *
- * It draws through [drawReferenceStack], the same code the live overlay draws through, so the
- * flattened picture is the picture the operator was looking at. Two differences, both deliberate:
- * the base goes in at full strength (an overlay at 50% flattened at 50% would fade a little more
- * every round until there was nothing left), and the split divider — a piece of editor furniture
- * rather than content — is left out.
- *
- * Transparent where nothing was drawn, so the flattened reference still lets the design show
- * through underneath it. Null when the platform cannot encode a PNG, or when there is nothing to
- * flatten.
+ * Draws through [drawReferenceStack], like the live overlay, with two deliberate differences: the
+ * base at full strength (so repeated flattens don't fade it) and no split divider (editor
+ * furniture). Transparent where nothing was drawn. Null when the platform can't encode a PNG or
+ * there's nothing to flatten.
  */
 internal fun flattenReference(
   reference: ReferenceOverlayState,
@@ -49,9 +39,8 @@ internal fun flattenReference(
   val bitmap = ImageBitmap(width, height)
   val baseBitmap = reference.image?.let(::decodeReferenceImage)
   val pieceBitmaps = reference.pieces.associate { it.id to decodeReferenceImage(it.image) }
-  // Density 1, so a dp of stroke width is a pixel of stroke width in the flattened picture at the
-  // size it was authored against. The result is then fitted like any other import, which puts the
-  // strokes back where they were drawn.
+  // Density 1, so a dp of stroke is a pixel at the authored size; the result is fitted like any
+  // import.
   CanvasDrawScope().draw(
     Density(1f),
     LayoutDirection.Ltr,
@@ -82,21 +71,14 @@ internal fun flattenReference(
 }
 
 /**
- * The ceiling on a flattened picture's edge.
- *
- * 4096 because that is a comfortable frame at 2× on the largest screen the builder offers (3840 dp
- * wide), and because the result is stored: a flatten that produced a 30-megapixel PNG would push
- * the design's reference past the store's byte limit and the operator would learn about it as a
- * refusal after the work rather than before it.
+ * The ceiling on a flattened picture's edge: a comfortable 2× frame on the largest screen offered
+ * (3840dp), and small enough to stay under the reference store's byte limit.
  */
 private const val MAX_FLATTEN_PX = 4096
 
 /**
- * A sub-rectangle of [this], as its own bitmap.
- *
- * Drawn rather than copied pixel by pixel: the draw path is the one the platform has accelerated,
- * and a hand-rolled row copy would have to know the bitmap's configuration to be correct. Used by
- * the component capture, which composes into a generous frame and then trims what it did not fill.
+ * A sub-rectangle of [this], as its own bitmap, drawn (accelerated, config-agnostic) rather than
+ * copied. Used by the component capture to trim.
  */
 internal fun ImageBitmap.cropped(left: Int, top: Int, width: Int, height: Int): ImageBitmap {
   if (width <= 0 || height <= 0) return this

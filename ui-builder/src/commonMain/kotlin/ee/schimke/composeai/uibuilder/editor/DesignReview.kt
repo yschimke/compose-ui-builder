@@ -1,13 +1,9 @@
 package ee.schimke.composeai.uibuilder.editor
 
 /**
- * The review side of a design, as the host reports it: who approved or rejected which revision.
- *
- * Kept beside the design by the host and never part of it, the same way the discussion is
- * ([DesignCommentBoard]): recording a verdict does not move the revision it is about. An agent
- * waiting through `ui_builder_await_decision` is woken by a decision recorded here, so the button
- * in the comments tab is how a person answers an agent that asked "is this right?" without leaving
- * the editor (compose-preview-server#1255).
+ * The review side of a design as the host reports it: who approved or rejected which revision. Kept
+ * beside the design like [DesignCommentBoard], so a verdict does not move the revision. A verdict
+ * here wakes an agent waiting in `ui_builder_await_decision`.
  */
 data class DesignReview(
   /** Oldest first, as the host keeps them. */

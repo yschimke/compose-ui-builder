@@ -14,11 +14,9 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A saved revision as Figma should build it: `compose-ui-builder-figma-scene/v1`.
- *
- * The tree is snapshot-shaped on purpose — a [FigmaSnapshotNode] per builder node, its `id` the
- * builder id and its [FigmaSnapshotNode.stamp] set — so a plugin builds exactly what it will later
- * read back, and export followed by import is checkable without Figma in the loop. See
+ * A saved revision as Figma should build it: `compose-ui-builder-figma-scene/v1`. Snapshot-shaped
+ * (a [FigmaSnapshotNode] per builder node, `id` the builder id, [FigmaSnapshotNode.stamp] set), so
+ * export followed by import is checkable without Figma. See
  * `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md` § Export.
  */
 @OptIn(ExperimentalSerializationApi::class)
@@ -53,8 +51,8 @@ data class FigmaSceneDiagnostic(val code: String, val nodeId: String, val messag
     /** A catalog component the map has no Figma counterpart for: a labelled frame stands in. */
     const val UNMAPPED_COMPONENT: String = "unmapped-component"
     /**
-     * A mapped component whose slot content the kit instance cannot hold — an icon where the kit
-     * has a label property, or more than one child. A frame stands in, so nothing is dropped.
+     * A mapped component whose slot content the kit instance can't hold (an icon where the kit has
+     * a label property, or several children); a frame stands in so nothing is dropped.
      */
     const val NOT_REPRESENTABLE: String = "not-representable"
   }
@@ -64,16 +62,11 @@ data class FigmaSceneDiagnostic(val code: String, val nodeId: String, val messag
 data class FigmaBounds(val x: Double, val y: Double, val width: Double, val height: Double)
 
 /**
- * Builder document → Figma scene: [FigmaSnapshotImporter] run backwards over the same map.
- *
- * Row and Column become auto-layout frames with the spacing, arrangement and alignment the importer
- * reads. A component the map names becomes an instance of the kit component with the variant
- * properties its rule implies — constants and value tables inverted — and a single text child
- * becomes the kit's label property. A component the map does not name becomes a frame named for it,
- * holding its children, so a designer sees what goes there rather than a gap.
- *
- * Sizes come from the document where it states them (`size`, `width`, `height`) and otherwise from
- * [bounds], the measured layout, when the caller has one.
+ * Builder document → Figma scene: [FigmaSnapshotImporter] run backwards over the same map. Row and
+ * Column become auto-layout frames; a mapped component becomes a kit instance with its rule's
+ * variant properties (inverted) and a single text child as the label property; an unmapped one
+ * becomes a named frame holding its children. Sizes come from the document (`size`, `width`,
+ * `height`), else the measured [bounds].
  */
 class FigmaSceneExporter(private val map: FigmaComponentMap) {
   fun export(
@@ -316,10 +309,9 @@ class FigmaSceneExporter(private val map: FigmaComponentMap) {
         node.modifier("fillMaxHeight") != null ||
           node.modifier("fillMaxSize") != null ||
           (weighted && parentMode == FigmaAutoLayout.VERTICAL)
-      // Where the node sits in its parent frame: measured when there is a layout, since an offset
-      // is only a delta from wherever the parent's alignment put the node. Without one, the offset
-      // plus the Box's padding — Figma has no padding on a frame without auto layout, so the
-      // padding travels in the child's position instead.
+      // Measured position when there's a layout (an offset is only a delta from the parent's
+      // alignment); otherwise offset plus the Box's padding, since Figma frames without auto layout
+      // have no padding.
       val offset = node.modifier("offset")
       val inset = parent?.takeIf { it.componentId == "layout/box" }?.padding() ?: FigmaPadding()
       return copy(

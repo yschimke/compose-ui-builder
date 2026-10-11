@@ -23,13 +23,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A catalog's pinned renderer draws the editing canvas and nothing else.
- *
- * In the browser that renderer is a sandboxed iframe booting its own Wasm runtime. It used to be
- * reachable from every surface that draws a design, so the component list started one per tile —
- * dozens of runtimes for one list, each polling and each a DOM layer re-placed by hand on scroll —
- * and a drag started another for its ghost. This counts live renderer instances with the list open
- * and a component in the air: one, the canvas.
+ * A catalog's pinned renderer (in the browser, a sandboxed iframe booting its own Wasm runtime)
+ * draws the editing canvas and nothing else: with the component list open and a component in the
+ * air, exactly one renderer instance is live.
  */
 @OptIn(ExperimentalTestApi::class)
 class PinnedRendererScopeTest {

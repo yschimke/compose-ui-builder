@@ -25,16 +25,11 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The server's copy of the slot rule, [slotAccepts], held to the same committed table as the
- * editor's `SlotCapability.accepts` — `docs/design/fixtures/ui-builder/slot-acceptance-v1.json`,
- * which `:ui-builder`'s `CatalogGrammarTest` checks its half of. The two modules cannot reach each
- * other, so this table is the only thing keeping a document the editor accepts from being one the
- * server refuses, or the other way round.
+ * editor's `SlotCapability.accepts` (`docs/design/fixtures/ui-builder/slot-acceptance-v1.json`,
+ * checked by `:ui-builder`'s `CatalogGrammarTest`), so editor and server agree. Grammar checks run
+ * over every enabled catalog.
  *
- * The grammar checks run over every enabled catalog, since `remote-m3` and `wear-m3` are built in
- * code rather than read from the fixture and the editor's test never sees them.
- *
- * Regenerate the table after a deliberate catalog change, then read the diff — a slot gaining or
- * losing components is the whole point of reviewing it:
+ * Regenerate the table after a deliberate catalog change, then read the diff:
  * ```
  * ./gradlew :ui-builder-runtime:test --tests '*SlotAcceptanceTest*' \
  *   -PuiBuilderSlotAcceptanceUpdate=true --rerun
@@ -117,14 +112,8 @@ class SlotAcceptanceTest {
   }
 
   /**
-   * A slot naming a trait no component in its catalog carries is a slot the palette can never fill.
-   *
-   * There are none left. The last two were `remote-m3`'s widget backgrounds, which take `DrawLayer`
-   * and `ImageContent` brushes the reviewed subset had no component for; that subset now carries
-   * `shape/linear-gradient`, which `RemoteContentEmitter` writes as a `WearWidgetBrush` chain, and
-   * `asset/image`, whose export refusal names the bitmap to supply by hand
-   * (yschimke/compose-preview-server#428). `shape/radial-gradient` stays out, and the reason is in
-   * `remoteM3Catalog`.
+   * A slot naming a trait no component in its catalog carries can never be filled from the palette.
+   * None remain; `shape/radial-gradient` stays out (see `remoteM3Catalog`).
    */
   @Test
   fun `every trait a slot names is carried by some component`() {
@@ -194,9 +183,8 @@ class SlotAcceptanceTest {
   }
 
   /**
-   * `remote-m3`'s widget background is declared `Leaf` + `DrawLayer`/`ImageContent` precisely so
-   * that a text cannot be dropped in as a "background" — the declaration's own comment says so.
-   * Under the old rule the `Leaf` matched and the text went in.
+   * `remote-m3`'s widget background is `Leaf` + `DrawLayer`/`ImageContent`, so a text must not be
+   * accepted as a background.
    */
   @Test
   fun `the server refuses a text as a widget background`() {

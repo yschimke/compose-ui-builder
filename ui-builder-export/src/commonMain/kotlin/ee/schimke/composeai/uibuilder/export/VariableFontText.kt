@@ -4,12 +4,9 @@ package ee.schimke.composeai.uibuilder.export
  * Text drawn from a variable font's own outlines, with its axes free to move: the flexpress
  * `VariableFontText` (Compose UI) and `RemoteVariableFontText` (Remote Compose).
  *
- * A design names the font, the text and a value per axis; an axis bound to state or computed is
- * *animated*, every other one is held at its value. Export writes the text as Kotlin through
- * flexpress's code generator, which works the outline out ahead of time, so the app carries an
- * encoded string rather than the font. That generator runs on the JVM alone, so this file is the
- * shared half — what a request is, what it is called, and how its source joins the screen's — and
- * [VariableFontSourceGenerator] is the seam the JVM side (`FlexpressVariableFontSources`) fills.
+ * State-bound or computed axes animate; others are held. Export writes the outline ahead of time
+ * through flexpress's JVM-only code generator. This is the shared half; the JVM side
+ * (`FlexpressVariableFontSources`) implements [VariableFontSourceGenerator].
  */
 object VariableFontText {
   /** The Material 3 catalog's component, drawn with Compose UI. */
@@ -31,10 +28,8 @@ object VariableFontText {
   }
 
   /**
-   * The fonts a design can draw variable text in: the vendored variable files the canvas draws its
-   * stand-in with, by [file] in `assets/rc-fonts`. [axes] are those a design may set; the files
-   * have more (Roboto Flex's parametric axes, Google Sans Flex's `opsz` and `GRAD`), held at their
-   * defaults.
+   * The fonts a design can draw variable text in, by [file] in `assets/rc-fonts`. [axes] are those
+   * a design may set; other axes in the files stay at their defaults.
    */
   enum class Font(val wire: String, val family: String, val file: String, val axes: List<Axis>) {
     RobotoFlex(
@@ -71,9 +66,8 @@ object VariableFontText {
   }
 
   /**
-   * The axis properties any [Font] has, in the order a catalog lists them. Spelled out rather than
-   * derived from [Font.axes], because they are catalog property names that the Wear lane's
-   * readership check looks for by name; `VariableFontTextTest` holds the two equal.
+   * The axis properties any [Font] has, in catalog order. Spelled out because the Wear lane checks
+   * them by name; `VariableFontTextTest` keeps them equal to [Font.axes].
    */
   val AXIS_PROPERTIES: List<String> = listOf("wght", "wdth", "slnt", "rond")
 
@@ -102,9 +96,8 @@ object VariableFontText {
   data class Request(val functionName: String, val spec: Spec)
 
   /**
-   * Why [spec] cannot be generated, or empty. Codegen fixes the text when it runs, so it must be
-   * literal and non-empty; an axis must be one [Spec.font] lets a design set, and appear once.
-   * Whether the font has a glyph for every character is the generator's to say: it has the font.
+   * Why [spec] cannot be generated, or empty: text must be literal and non-empty; axes must be ones
+   * [Spec.font] allows, each once. Glyph coverage is the generator's to check.
    */
   fun problems(spec: Spec): List<String> = buildList {
     if (spec.text.isEmpty()) add("variable font text needs some text")
@@ -181,24 +174,20 @@ enum class VariableFontExportMode {
 }
 
 /**
- * How an export writes variable font text: [generator] for the declarations, in [mode]. A single
- * value so each export entry point takes one more parameter rather than two, in an overload of its
- * own beside the published one.
+ * How an export writes variable font text: [generator] for the declarations, in [mode]. One value
+ * so each export entry point gains one parameter.
  */
 data class VariableFontExport(
   val generator: VariableFontSourceGenerator,
   val mode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
 ) {
   /**
-   * [source], a screen's generated file in [packageName], with the declarations its variable font
-   * texts call joined in after it, or the refusals of any [requests] [generator] could not write.
+   * [source], a screen's generated file in [packageName], with its variable font text declarations
+   * joined after it, or the refusals of any [requests] [generator] could not write.
    *
-   * [requests] are the projection's
-   * (`ScreenDocumentProjection.Outcome.Projected.variableFontTexts`). A request [generator] has no
-   * answer for keeps its call, with a note that the declaration is written at export;
-   * [LIBRARY][VariableFontExportMode.LIBRARY] output names the flexpress dependency it draws
-   * through. Public so a host that runs the projection and the generator itself, rather than
-   * through [ScreenExportGate], writes the same file.
+   * [requests] come from `ScreenDocumentProjection.Outcome.Projected.variableFontTexts`. Requests
+   * with no generator answer keep their call with an export-time note. Public so a host running the
+   * projection and generator itself writes the same file as [ScreenExportGate].
    */
   fun join(
     source: String,
@@ -275,13 +264,9 @@ fun interface VariableFontSourceGenerator {
 }
 
 /**
- * Joins Kotlin files that share a package into one: [main]'s header and package, every file's
- * imports once and in order, then each file's declarations after [main]'s.
- *
- * For an export lane that carries one file. Every declaration flexpress generates is named after
- * its function (`internal val <fn>Outline`, `private object <Fn>Outline`), so declarations from
- * several requests cannot collide. Each other file's leading comment (codegen's "Generated by"
- * note) is kept above its declarations.
+ * Joins Kotlin files sharing a package into one: [main]'s header and package, every file's imports
+ * once, then each file's declarations. flexpress names declarations after their function, so they
+ * cannot collide; each file's leading comment is kept.
  */
 fun joinKotlinFiles(main: String, others: List<String>): String {
   if (others.isEmpty()) return main

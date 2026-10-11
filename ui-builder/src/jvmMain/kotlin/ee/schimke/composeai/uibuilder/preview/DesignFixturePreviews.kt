@@ -21,24 +21,14 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The editor's own screens, drawn as designs in the editor's own catalog.
+ * The editor's own screens, drawn as designs in the editor's own catalog. Each preview replays one
+ * operations fixture from `docs/design/fixtures/ui-builder/designs/` through [UiBuilderReducer] and
+ * renders it with [UiBuilderSurface]; `DesignFixturesTest` keeps the files valid and exportable.
  *
- * Each preview replays one operations fixture from `docs/design/fixtures/ui-builder/designs/`
- * through [UiBuilderReducer] and renders it with [UiBuilderSurface] — the renderer the Wasm canvas
- * and the production export use — so a committed design is rendered by the pipeline, diffed by the
- * preview workflow, and can be opened on a live server unchanged. `DesignFixturesTest` keeps the
- * same files valid against the catalog they pin and exportable as Compose.
- *
- * One function per fixture, because a `@Preview` is discovered by name. Each frame is declared as a
- * device spec restating that fixture's own `environment` — its dp size and, as `dpi`, its density
- * times 160 — because the annotation cannot read the document.
- *
- * The `dpi` is the load-bearing half. `UiBuilderRenderer` composes a document at the density the
- * document names and falls back to the surrounding platform's only when it names none, so a design
- * pinning `density: 1.0` inside the renderer's default 2.625x frame draws its 1600dp of chrome into
- * the top-left 1600px of a 4200px capture and leaves the rest empty — the same pixels, most of the
- * image wasted, and most of the visual diff's area with it. Declaring the frame at the design's own
- * density makes the two agree by construction. `DesignFixturesTest` holds them together.
+ * One function per fixture (previews are discovered by name), each with a device spec restating the
+ * fixture's `environment`. The `dpi` (density × 160) matters: the renderer composes at the
+ * document's density, so a mismatched frame would waste most of the capture. `DesignFixturesTest`
+ * holds them together.
  */
 @Preview(device = "spec:width=1280dp,height=900dp,dpi=160")
 @Composable
@@ -153,14 +143,9 @@ private fun DesignFixture(designId: String) {
 
 /**
  * [content] under the canvas adapters, frame geometry and platform of the catalog [document] pins,
- * the way the editor provides them from the catalog it serves.
- *
- * A preview is the host here, and a host that declares nothing gets nothing: a `wear-m3` screen
- * root has no drawing of its own — its catalog names `frame/round-screen` for it — so every Wear
- * fixture rendered as the red "Unsupported component: wear-m3/screen-scaffold" box and a black
- * frame, while the tests that compose the same documents (`WearCatalogAdapters`) drew them
- * correctly. Limited to catalogs that are not mobile: the phone and tablet fixtures have always
- * rendered without their catalog's adapters, and those renders are the visual-diff baseline.
+ * as the editor provides them. Without them a `wear-m3` root (drawn via `frame/round-screen`)
+ * renders as "Unsupported component". Limited to non-mobile catalogs, whose renders are the
+ * visual-diff baseline without adapters.
  */
 @Composable
 internal fun PinnedCatalog(document: UiBuilderDocument, content: @Composable () -> Unit) {

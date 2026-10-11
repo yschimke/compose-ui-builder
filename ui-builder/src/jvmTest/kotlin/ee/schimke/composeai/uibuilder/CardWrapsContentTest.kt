@@ -22,17 +22,10 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A `m3/card` with no height wraps its content, the way `Card` does.
- *
- * It did not (compose-preview-server #483): the card drew its content slot in a
- * `Box(Modifier.fillMaxSize())`, a Column child's height constraint is bounded by what the column
- * has left, and a fill against a bounded constraint is a fill — so the first card in a column took
- * the rest of the frame and every sibling after it was never measured. The six-node repro from the
- * report is the first test, laid out at the frame it was reported on.
- *
- * Measured through the inspection bounds rather than probed, because "how tall did this get" is the
- * question, and the second test needs the same bounds to show that a card *with* a height still
- * lets its children align inside it — which is what the fill was for.
+ * A `m3/card` with no height wraps its content, as `Card` does, rather than filling the column's
+ * remaining height (see compose-preview-server#483); the first test is the report's six-node repro.
+ * Measured via inspection bounds; the second test checks a card *with* a height still lets children
+ * align inside it.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class CardWrapsContentTest {
@@ -80,9 +73,8 @@ class CardWrapsContentTest {
   }
 
   /**
-   * A card's content is a box: two children with no alignment land on top of each other at the
-   * card's origin, not one under the other. The record-driven export composes them in a `Box` for
-   * the same reason (`ScreenDocumentProjection.cardContentBox`), so the native render agrees.
+   * A card's content is a box: unaligned children overlap at the origin. The record-driven export
+   * composes them in a `Box` too (`ScreenDocumentProjection.cardContentBox`).
    */
   @Test
   fun `two children of a card overlap, as a box's children do`() {
@@ -102,9 +94,8 @@ class CardWrapsContentTest {
         checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
       )
 
-    // The screen alone: the compatibility helpers appended after it hold a
-    // `Box(Modifier.fillMaxSize())`
-    // of their own, whatever the card emitter wrote.
+    // The screen alone: the appended compatibility helpers contain their own
+    // `Box(Modifier.fillMaxSize())`.
     fun screen(document: UiBuilderDocument) =
       CapabilityComposeCodeExporter.export(document, catalog)
         .requireSource()
@@ -129,9 +120,9 @@ class CardWrapsContentTest {
   }
 
   /**
-   * The report's six nodes: a surface, a padded full-width column, two full-width cards holding one
-   * line each, and a text after them. [cardHeightDp] pins card A the way the workaround did;
-   * [dotAlignment] swaps card A's text for an 8dp dot aligned inside it.
+   * The report's six nodes: a surface, a padded full-width column, two full-width cards with one
+   * line each, and a trailing text. [cardHeightDp] pins card A's height; [dotAlignment] swaps card
+   * A's text for an aligned 8dp dot.
    */
   private fun document(
     cardHeightDp: Float? = null,

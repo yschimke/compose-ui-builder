@@ -9,11 +9,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The single-file state the per-design store replaced, still readable.
- *
- * It is kept for two reasons and no others: the one-shot migration in [FileUiBuilderDesignStore]
- * reads it, and [LegacyStateStorageDesignStore] is what an in-memory or test host still uses. No
- * new deployment writes this format.
+ * The single-file state the per-design store replaced, still readable for the one-shot migration in
+ * [FileUiBuilderDesignStore] and for [LegacyStateStorageDesignStore] (in-memory/test hosts). No new
+ * deployment writes this format.
  */
 internal object LegacyUiBuilderState {
   enum class Format(val wire: String) {
@@ -42,17 +40,10 @@ internal object LegacyUiBuilderState {
     val format =
       (root["format"] as? JsonPrimitive)?.takeIf { it.isString }?.content
         ?: throw UiBuilderPersistenceException("UI-builder persistence format is missing")
-    // The checksum covers the payload AS STORED — this parsed tree — and never a re-encode of the
-    // decoded value. Re-encoding checksums the CURRENT model rather than the bytes on disk, which
-    // gets both halves of the job wrong. It cannot see corruption that still decodes (the whole
-    // point of the checksum), and it fails on a file that is perfectly intact whenever the model
-    // has merely grown: `encodeDefaults = true` emits every field a data class declares, so one new
-    // property with a default re-encodes to a JSON tree the stored checksum was never taken over.
-    // That is not hypothetical — `DesignEnvironmentV1.typeface` (compose-ai-contracts 2.8.0, server
-    // 3.4.0) turned every existing deployment's state file into an unreadable one, and the server
-    // exits at construction when persistence fails to load, so the release crash-looped instead of
-    // starting. The stored tree, by contrast, is exactly what the writer checksummed: a field the
-    // model gained since is simply absent from it, and the decode fills the default in afterwards.
+    // The checksum covers the payload as stored, never a re-encode: re-encoding would miss
+    // corruption that still decodes, and would fail on intact files whenever the model gains a
+    // defaulted field (`encodeDefaults = true` emits it). New fields are absent from the stored
+    // tree and defaulted on decode.
     val storedPayload =
       root["payload"]
         ?: throw UiBuilderPersistenceException("UI-builder persistence payload is missing")
@@ -145,12 +136,9 @@ internal data class PersistencePayloadV2(
 )
 
 /**
- * The single-file store, behind the per-design port.
- *
- * Every commit re-encodes every design, which is the cost the v3 store exists to remove — so this
- * is for the hosts that keep nothing on disk: an in-memory storage, a test, and the process of
- * reading a v2 file before it is migrated. A production host opens [UiBuilderDesignStateStore]
- * instead.
+ * The single-file store behind the per-design port. Every commit re-encodes every design, so it is
+ * only for hosts without disk state (in-memory, tests, pre-migration reads); production uses
+ * [UiBuilderDesignStateStore].
  */
 internal class LegacyStateStorageDesignStore(private val storage: UiBuilderStateStorage) :
   UiBuilderDesignStore {
@@ -174,12 +162,8 @@ internal class LegacyStateStorageDesignStore(private val storage: UiBuilderState
   }
 
   /**
-   * One write for the whole batch, which is the difference between O(1) and O(n) full re-encodes.
-   *
-   * This store has no per-design granularity: [commit] rebuilds and rewrites the entire state every
-   * time. Letting the interface default loop over it would have the startup re-pin write the whole
-   * file once per design — 41 designs against a 28 MB state is over a gigabyte of writes before the
-   * server answers anything.
+   * One write for the whole batch: each [commit] rewrites the entire state, so the default
+   * per-design loop would make a startup re-pin O(n) full re-encodes.
    */
   override fun commitAll(changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>) {
     if (changed.isEmpty()) return
@@ -217,13 +201,9 @@ internal class LegacyStateStorageDesignStore(private val storage: UiBuilderState
         ?: throw UiBuilderPersistenceException(
           "persistence migration requires recoverable migration storage"
         )
-    // Deliberately not gated on every stored design being servable. This rewrites the envelope
-    // format and does not reinterpret a single document, so a design the current catalog cannot
-    // serve is no reason to refuse — and refusing would put back, in an operator's one recovery
-    // path, exactly the trap that moving validation off startup removed: one design pinned to a
-    // withdrawn catalog and the migration can never be run. What this step does need is proved
-    // below and is about the bytes: the preflight round trip, the durable readback, and the
-    // rollback if either disagrees.
+    // Not gated on every design being servable: this rewrites the envelope, not documents, and an
+    // unservable design must not block an operator's recovery path. What matters is the bytes: the
+    // preflight round trip, durable readback, and rollback on disagreement.
     val migratedBytes = LegacyUiBuilderState.encode(value, LegacyUiBuilderState.Format.V2)
     val preflight = LegacyUiBuilderState.decode(migratedBytes)
     check(preflight.format == LegacyUiBuilderState.Format.V2 && preflight.value == value) {

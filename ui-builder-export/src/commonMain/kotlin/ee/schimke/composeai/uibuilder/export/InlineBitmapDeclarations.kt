@@ -1,24 +1,13 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * The top-level `val`s an inlined picture becomes: its bytes, and the decode that turns them into
- * one.
+ * The top-level `val`s an inlined picture becomes: its bytes, and the decode into a bitmap. Shared
+ * by [WearWidgetCodeExporter] (backgrounds, drawn by a host without the app's resources) and
+ * [WearWidgetNativePreviewExporter] (content pictures, since nothing can pass an argument).
  *
- * Shared by the two widget emitters rather than owned by either, because the reason to inline is
- * the same shape twice. [WearWidgetCodeExporter] inlines a **background**: a widget is drawn by the
- * system host, out of the app's process and without its resources, so a name resolved at draw time
- * is not there to resolve and the pixels have to travel inside the document
- * (yschimke/compose-preview-server#523). [WearWidgetNativePreviewExporter] inlines the content
- * pictures too, because nothing downstream of the native lane can pass an argument.
- *
- * Chunked into a list of literals joined at runtime rather than one long `const val`, because a JVM
- * string constant is capped at 65535 **bytes** of modified UTF-8 and a photograph passes that
- * easily. Concatenating literals with `+` would not help — the compiler folds those into the single
- * constant the cap applies to — so the chunks are joined by code instead, and a picture of any size
- * compiles.
- *
- * One decoder per file, not per picture, and `NO_WRAP` because the encoder above emits no line
- * breaks.
+ * Chunked literals joined at runtime, because a JVM string constant is capped at 65535 bytes of
+ * modified UTF-8 (and `+` of literals is folded into one constant). One decoder per file; `NO_WRAP`
+ * because the encoder emits no line breaks.
  */
 internal fun inlineBitmapDeclarations(
   assets: List<RemoteContentEmitter.InlineAsset>

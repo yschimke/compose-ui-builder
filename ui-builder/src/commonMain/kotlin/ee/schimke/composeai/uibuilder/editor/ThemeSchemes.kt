@@ -11,14 +11,12 @@ import ee.schimke.composeai.uibuilder.capability.DesignTokenKind
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 
 /**
- * Colour schemes for the Theme panel: generated from a seed colour, or read from a Material Theme
- * Builder export, and then written onto whatever the design's theme host and design tokens can
- * hold.
+ * Colour schemes for the Theme panel, generated from a seed colour or read from a Material Theme
+ * Builder export, then written onto whatever the design's theme host and tokens can hold.
  *
- * A scheme here is Material 3's role names (`primary`, `onSurface`, `surfaceContainerHigh`, …) to
- * `#RRGGBB` literals — the spelling Material Theme Builder exports, the `color.<role>` token ids a
- * Material catalog declares, and the `theme<Role>Color` properties a Wear theme host carries. Pure,
- * so every mapping is pinned by a JVM test rather than by looking at the panel.
+ * A scheme maps Material 3 role names (`primary`, `onSurface`, …) to `#RRGGBB`, matching Theme
+ * Builder's export, Material catalogs' `color.<role>` tokens and Wear hosts' `theme<Role>Color`
+ * properties. Pure, so mappings are pinned by JVM tests.
  */
 object ThemeSchemes {
   /** The scheme styles the generator offers, TonalSpot (Material You's own) first. */
@@ -30,8 +28,8 @@ object ThemeSchemes {
     listOf(Contrast.Default, Contrast.Medium, Contrast.High, Contrast.Reduced)
 
   /**
-   * The light or dark scheme a design starts on: a watch face is dark, a phone light. The same
-   * choice the Material Theme Builder import makes.
+   * The scheme a design starts on: dark for a watch, light for a phone (as the Theme Builder import
+   * chooses).
    */
   fun preferredScheme(platform: UiBuilderCatalogPlatform): String =
     if (platform == UiBuilderCatalogPlatform.WEAR) "dark" else "light"
@@ -116,12 +114,9 @@ object ThemeSchemes {
     )
 
   /**
-   * Which of a theme host's colour properties each Material role sets, given the properties its
-   * component declares.
-   *
-   * An `m3/surface` carries four colours, and its content colour is the text drawn on its surface:
-   * `onSurface`. A Wear screen scaffold carries one property per role, spelled `theme<Role>Color`.
-   * A role the host has no property for is absent: the host cannot hold it.
+   * Which of a theme host's colour properties each Material role sets, given its declared
+   * properties: an `m3/surface`'s four colours (content colour is `onSurface`), or a Wear
+   * scaffold's `theme<Role>Color` per role. Unholdable roles are absent.
    */
   fun hostColorProperties(declared: Set<String>): Map<String, String> = buildMap {
     declared.forEach { property ->

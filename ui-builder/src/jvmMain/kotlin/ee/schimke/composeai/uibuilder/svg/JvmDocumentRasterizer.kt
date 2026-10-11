@@ -31,21 +31,16 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Surface
 
 /**
- * Draws a design to PNG in this process, the way [JvmSkiaStructuredSvgRecorder] draws it to SVG.
- *
- * The same surface, environment and fixed frame as the SVG recorder, onto a raster instead of an
- * SVG canvas, so a PNG and an SVG exported from one document agree about layout. It is for hosts
- * that have no server to render through — the desktop app and the IntelliJ plugin. The server's PNG
- * route stays the one a shared link points at.
+ * Draws a design to PNG in this process, with the same surface, environment and fixed frame as
+ * [JvmSkiaStructuredSvgRecorder], so PNG and SVG exports agree on layout. For hosts without a
+ * server (desktop app, IntelliJ plugin); shared links still use the server's PNG route.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 object JvmDocumentRasterizer {
   /**
-   * The document's screen at its own size, density and font scale, PNG-encoded.
-   *
-   * [catalog] is what the editor's canvas is drawn with. A scene inherits no composition locals, so
-   * without it a Wear or Remote Compose design would rasterize as the default catalog — another
-   * platform, another frame — and the PNG would not be the design on screen.
+   * The document's screen at its own size, density and font scale, PNG-encoded. [catalog] is what
+   * the editor canvas draws with; a scene inherits no composition locals, so without it Wear or
+   * Remote Compose designs would rasterize as the default catalog.
    */
   fun renderPng(document: UiBuilderDocument, catalog: CapabilityCatalog? = null): ByteArray {
     val density = document.environmentNumber("density")
@@ -114,9 +109,8 @@ internal fun ByteArray.withDocumentMetadata(document: UiBuilderDocument): ByteAr
     document.home?.let { append(";home=").append(it.description()) }
   }
     .encodeToByteArray()
-  // iTXt: keyword, compression flag/method, language tag, translated keyword, then UTF-8 text.
-  // The two optional strings are empty and the text is uncompressed. Unlike tEXt, this represents
-  // arbitrary Unicode in design ids, server URLs and repository paths without mojibake.
+  // iTXt: keyword, compression flag/method, language tag, translated keyword, then UTF-8 text
+  // (uncompressed, empty optional strings), so arbitrary Unicode survives.
   val payload = "compose-ui-builder\u0000".encodeToByteArray() + byteArrayOf(0, 0, 0, 0) + text
   val type = "iTXt".encodeToByteArray()
   val output = ByteArrayOutputStream(size + payload.size + 12)

@@ -6,33 +6,13 @@ import kotlinx.serialization.json.JsonObject
  * Which font API a generated screen sets a theme's [ThemeTypefaces] with — a fact about the
  * classpath the file will be compiled against, not about the design.
  *
- * ## Why there are two
+ * [ANDROID] (the default) uses `GoogleFont`, an Android-only AAR. [DESKTOP] writes
+ * `androidx.compose.ui.text.platform.SystemFont("Lobster", FontWeight.Bold)` for Compose
+ * Multiplatform Desktop bundles (e.g. `m3-catalog`'s native lane); uninstalled families fall back
+ * to the default face, reported via [SystemFontLookups].
  *
- * A typeface is a Google Fonts family name, and the API that fetches one by name —
- * `androidx.compose.ui.text.googlefonts.GoogleFont` — is
- * `androidx.compose.ui:ui-text-google-fonts`, an Android AAR. Compose Multiplatform has no
- * counterpart. So a file written with it compiles in an Android module and nowhere else, and the
- * native lane for `m3-catalog` compiles against that catalog's bundle, which is Compose
- * Multiplatform **Desktop** (`kotlin.jvm`): every themed design with a typeface failed there at
- * `Unresolved reference 'GoogleFont'`, and the dependency cannot be added to a desktop catalog.
- *
- * [DESKTOP] writes the desktop lookup by family name instead —
- * `androidx.compose.ui.text.platform.SystemFont("Lobster", FontWeight.Bold)`, Compose
- * Multiplatform's `ui-text` on Skiko. It compiles on every desktop classpath, and it resolves the
- * family through the machine's font manager: a family that is installed draws, one that is not
- * falls back to the platform's default face rather than failing. A Google family is normally not
- * installed on a render host, so a desktop render shows the fallback face. That is the trade the
- * desktop form makes, and [SystemFontLookups] is how it is said out loud rather than discovered in
- * a picture.
- *
- * ## Who picks
- *
- * The caller, because only it knows what the file will be compiled against. [ANDROID] is the
- * default and what every surface wrote before this — the code pane, the export artifact, and the
- * Wear and Remote emitters (which never read this at all: Wear compiles on Android, Remote names a
- * font as `RemoteFontFamily.Named`). A native lane that compiles against a desktop bundle asks for
- * [DESKTOP]; [forNativeBackend] and [forCatalog] read that from the bundle's declared backend or
- * the catalog's `previewSurfaces`.
+ * The caller picks; [forNativeBackend] and [forCatalog] derive it from a bundle's backend or a
+ * catalog's `previewSurfaces`. Wear and Remote emitters never read it.
  */
 enum class TypefaceTarget {
   /** `Font(GoogleFont("Lobster"), provider, weight)`: downloadable fonts on Android. */
@@ -68,12 +48,9 @@ enum class TypefaceTarget {
 }
 
 /**
- * The export warning for a typeface written in the [TypefaceTarget.DESKTOP] form.
- *
- * A warning and not a refusal: the file compiles and the screen renders, in the platform's default
- * face wherever the family is not installed — which, for a Google Fonts family on a render host, is
- * almost always. Reported beside the source the way `ASSET_PLACEHOLDER` is, so a person reading a
- * desktop render that shows a plain sans-serif knows it is the font and not the theme.
+ * The export warning for a typeface written in the [TypefaceTarget.DESKTOP] form: the file
+ * compiles, but an uninstalled family (usual for Google Fonts on a render host) draws in the
+ * default face. Reported beside the source like `ASSET_PLACEHOLDER`.
  */
 object SystemFontLookups {
   const val CODE: String = "TYPEFACE_SYSTEM_FONT_LOOKUP"

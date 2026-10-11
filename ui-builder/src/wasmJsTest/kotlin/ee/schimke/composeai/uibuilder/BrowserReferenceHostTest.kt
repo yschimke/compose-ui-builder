@@ -19,13 +19,9 @@ import kotlinx.coroutines.promise
 import kotlinx.coroutines.yield
 
 /**
- * The paste wait, cancelled.
- *
- * `LiveSessionApp` keeps one paste listener for the life of a design, as `while (true)` around
- * [BrowserReferenceHost.awaitPaste]. That is only a wait while the call suspends. It used to answer
- * its own cancellation with `Refused`, so once the effect was cancelled the loop went round again
- * at once, forever, without yielding — and the tab froze the moment the home page's session made
- * way for a design somebody had just created.
+ * The paste wait, cancelled. `LiveSessionApp` loops `while (true)` around
+ * [BrowserReferenceHost.awaitPaste], so cancellation must propagate rather than return `Refused`,
+ * or the loop spins without yielding and freezes the tab.
  */
 class BrowserReferenceHostTest {
 

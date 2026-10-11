@@ -20,11 +20,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The editor can author `toggle` and `set`; the exporter could not emit them.
- *
- * A control built with either exported to `TODO("Unsupported action …")`, which throws the moment
- * anyone presses it. The preview ran the action and the export did not, which is the worst shape
- * for a builder whose whole claim is that what you see is the Compose you get.
+ * The editor can author `toggle` and `set`, and the exporter must emit them rather than a
+ * `TODO("Unsupported action …")` that throws when pressed.
  */
 class ComposeExportActionTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -140,10 +137,8 @@ class ComposeExportActionTest {
 
   @Test
   fun `an assignment a declared type cannot hold is refused rather than emitted`() {
-    // The editor refuses these, and the editor is not the only author: `eventBindings` arrives on
-    // the wire from other clients and future versions of this one. `expanded` is declared `bool`,
-    // and this used to emit `expanded = "yes"` — source nobody can compile, with no diagnostic,
-    // because export validation does not read `stateVariables`.
+    // `eventBindings` arrives from other clients too; `expanded` is declared `bool`, and values it
+    // can't hold must be refused (export validation doesn't read `stateVariables`).
     listOf(JsonPrimitive("yes"), JsonPrimitive(3), JsonNull).forEach { bad ->
       val source =
         exportOf(
@@ -167,9 +162,7 @@ class ComposeExportActionTest {
 
   @Test
   fun `a quoted flag is not a flag`() {
-    // `booleanOrNull` parses a `JsonPrimitive` whether or not it was quoted, so the check has to
-    // read the quoting rather than the content — otherwise `"true"` passes and emits
-    // `expanded = "true"`.
+    // `booleanOrNull` ignores quoting, so the check must read the quoting: `"true"` is not a flag.
     val source =
       exportOf(
         listOf(
@@ -188,9 +181,8 @@ class ComposeExportActionTest {
 
   @Test
   fun `every action in a handler is emitted, not just the first`() {
-    // `eventBindings` is a list because a handler runs its actions in order and as a unit, which
-    // is how the renderer dispatches it. Exporting only the head shipped a button that did less
-    // than the preview showed.
+    // A handler runs its actions in order as a unit, as the renderer dispatches it; export must
+    // emit all of them.
     val source =
       exportOf(
         listOf(
@@ -252,9 +244,7 @@ class ComposeExportActionTest {
 
   @Test
   fun `a text variable holding the word true is still a String`() {
-    // `booleanOrNull` on a `JsonPrimitive` parses the content whether or not it was quoted, so
-    // every classifier that asked it without checking `isString` read this as a flag: the export
-    // declared `var caption` as a Boolean and a `set` wrote an unquoted `true` into it.
+    // `booleanOrNull` ignores quoting, so a quoted `"true"` must not make `caption` a Boolean.
     val document =
       documentDeclaring(
         "caption",
@@ -351,9 +341,7 @@ class ComposeExportActionTest {
 
   @Test
   fun `an unsupported action is reported wherever it sits in the handler`() {
-    // The diagnostic used to read only the first action, so an unsupported second one reached the
-    // generated source as a bare TODO with nothing warning about it — and every multi-action
-    // handler drew a PARTIAL_EVENT saying only the head was emitted, which stopped being true.
+    // The diagnostic covers every action, not just the first.
     val result =
       CapabilityComposeCodeExporter.export(
         documentWith(
@@ -381,9 +369,7 @@ class ComposeExportActionTest {
 
   @Test
   fun `toggling a nullable flag matches what the preview does with null`() {
-    // The declared type is `Boolean?` and `!` does not apply to one. The renderer reads a missing
-    // value as not-true, so null toggles to true; the export says the same rather than emitting
-    // `!flag` against a nullable.
+    // `!` doesn't apply to `Boolean?`; like the renderer, null toggles to true.
     val document =
       documentDeclaring(
         "flag",
@@ -408,9 +394,8 @@ class ComposeExportActionTest {
 
   @Test
   fun `a malformed later action is a diagnostic rather than an exception`() {
-    // Emitting every action means a malformed entry behind a valid first one now reaches the
-    // emitter. It used to sit unread; an unchecked `jsonObject` on it would throw out of export()
-    // instead of producing the diagnostic that already covers it.
+    // A malformed entry behind a valid first action must produce the diagnostic, not throw out of
+    // export().
     val result =
       CapabilityComposeCodeExporter.export(
         documentWith(
@@ -434,9 +419,7 @@ class ComposeExportActionTest {
 
   @Test
   fun `an integer state and the values compared against it are the same Kotlin type`() {
-    // `kotlinLiteral` emits a JSON number verbatim, so every integer this exporter writes is an
-    // unsuffixed `Int` literal. Declaring the variable `Long` made both the initial value and a
-    // comparison operand mismatch against it.
+    // Integer literals are unsuffixed `Int`s, so variables must be declared `Int`, not `Long`.
     val document =
       documentDeclaring(
         "selectedDay",
@@ -490,10 +473,7 @@ class ComposeExportActionTest {
 
   @Test
   fun `a float variable keeps the value it was declared with`() {
-    // The literal used to be spelled through `toLong()`, which saturates: `1e20` came out as
-    // `9223372036854775807.0`, so the preview started from one value and the exported screen from
-    // another. Spelling it from the authored JSON text has neither that problem nor the one the
-    // `.0` exists to stop.
+    // Literals are spelled from the authored JSON text, not `toLong()` (which saturates `1e20`).
     listOf(
         JsonPrimitive(1e20) to "1.0E20",
         JsonPrimitive(0.5) to "0.5",
@@ -526,9 +506,8 @@ class ComposeExportActionTest {
 
   @Test
   fun `a malformed declaration is a diagnostic rather than an exception`() {
-    // Export validation never reads `stateVariables`, so a document carrying `"nullable": {}` or
-    // `"valueType": []` reached the declaration parser. An accessor that throws on a non-primitive
-    // turned that into an exception out of export() instead of source plus diagnostics.
+    // `stateVariables` is unvalidated, so malformed `nullable`/`valueType` must yield diagnostics,
+    // not exceptions.
     val document =
       documentDeclaring(
         "odd",
@@ -577,10 +556,8 @@ class ComposeExportActionTest {
 
   @Test
   fun `only components whose click the exporter emits are offered for action insertion`() {
-    // `click` is universal in the renderer, so this used to offer every component the destination
-    // accepted. The exporter emits a handler only where the component's emitter takes an onClick;
-    // everything else reported UNEMITTED_EVENT and generated nothing, so the control worked in the
-    // preview and lost its interaction on export.
+    // Click wiring is offered only for components whose emitter takes an onClick; others would lose
+    // the interaction on export (UNEMITTED_EVENT).
     val reducer = UiBuilderEditorReducer(catalog)
     val withState =
       fixture.copy(

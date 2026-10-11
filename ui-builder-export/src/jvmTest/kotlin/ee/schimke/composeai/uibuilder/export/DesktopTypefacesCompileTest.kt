@@ -19,16 +19,10 @@ import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 
 /**
- * A theme's typefaces in the [TypefaceTarget.DESKTOP] form, put through a real Kotlin compiler
- * against Compose Multiplatform Desktop — the classpath an m3-catalog design is rendered on, which
- * has no `androidx.compose.ui.text.googlefonts` and failed every typeface at `Unresolved reference
- * 'GoogleFont'`.
- *
- * The whole generated screen is compiled, not a fragment: `SystemFont` is `@ExperimentalTextApi`,
- * an error-level opt-in, so the test that matters is that the generator wrote the `@OptIn` where
- * the lookups are built, against the library's own marker. The compile classpath is CMP's
- * `material3` for the desktop target and everything it brings (`ui-text` among it), and nothing
- * Android; the build hands it over as `-DdesktopCompose.classpath`.
+ * A theme's typefaces in the [TypefaceTarget.DESKTOP] form, compiled for real against Compose
+ * Multiplatform Desktop (no `googlefonts`). The whole screen is compiled so the `@OptIn` for
+ * `@ExperimentalTextApi` `SystemFont` is checked. Classpath: CMP desktop `material3` and its
+ * dependencies, via `-DdesktopCompose.classpath`.
  */
 class DesktopTypefacesCompileTest {
   private val json = Json { ignoreUnknownKeys = true }
@@ -111,9 +105,8 @@ class DesktopTypefacesCompileTest {
   }
 
   /**
-   * The failure the desktop form exists for, reproduced: the Android form, compiled the same way,
-   * fails exactly as the m3 design lane did. It is still the default, so a caller compiling on
-   * desktop has to ask for [TypefaceTarget.DESKTOP].
+   * The Android form, compiled the same way, fails on `GoogleFont`; it remains the default, so
+   * desktop callers must ask for [TypefaceTarget.DESKTOP].
    */
   @Test
   fun `the Android form does not compile against CMP desktop`() {

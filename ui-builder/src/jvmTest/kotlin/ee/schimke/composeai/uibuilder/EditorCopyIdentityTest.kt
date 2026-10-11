@@ -15,11 +15,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * What a copy may and may not inherit.
- *
- * Cloning a subtree verbatim is wrong in two ways that only show up later: the ids it invents by
- * concatenation can collide, and the properties it carries include the ones that identify the
- * instance rather than describe it.
+ * What a copy may and may not inherit: concatenated ids can collide, and identity properties must
+ * not be copied.
  */
 class EditorCopyIdentityTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -61,9 +58,8 @@ class EditorCopyIdentityTest {
 
   @Test
   fun `content keys are not instance keys and are carried across`() {
-    // `iconKey` and `assetKey` look like identity and are the opposite: they name catalog content
-    // that every copy should keep. This is why the rule is the exporter's short list of what it
-    // turns into a lazy `key(…)`, and not a suffix.
+    // `iconKey` and `assetKey` name catalog content every copy keeps; the rule is the exporter's
+    // short list of what becomes a `key(…)`, not a name suffix.
     val duplicated =
       reducer.reduce(
         reducer.initial(document, selectedNodeId = "main-episode-card"),
@@ -84,9 +80,8 @@ class EditorCopyIdentityTest {
 
   @Test
   fun `every copied id is allocated rather than concatenated`() {
-    // A subtree holding a sibling `x-y` and a grandchild `y` under `x` produced one id twice, and
-    // the collaboration reducer rejects the whole batch as a duplicate. The ids are allocated
-    // against the document and against everything the batch has already taken.
+    // Ids are allocated against the document and everything the batch already took, so `x-y` plus
+    // `y` under `x` can't yield one id twice (the reducer rejects duplicate batches).
     val duplicated =
       reducer.reduce(
         reducer.initial(document, selectedNodeId = "main-episode-card"),

@@ -20,11 +20,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A component the project publishes, placed from the palette's "Project library" shelf.
- *
- * The first placement imports it — the body, and a `source` naming the project, the symbol and the
- * digest it was read at — which is what lets the drift report say later that the library moved.
- * Every later placement places the version the design already holds.
+ * A component the project publishes, placed from the palette's "Project library" shelf. The first
+ * placement imports it (body plus a `source` naming project, symbol and digest, for later drift
+ * reports); later placements use the version the design holds.
  */
 class LocalComponentsLibraryTest {
   private val catalog =

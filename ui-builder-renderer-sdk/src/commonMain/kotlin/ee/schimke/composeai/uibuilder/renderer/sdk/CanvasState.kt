@@ -40,11 +40,9 @@ fun reconcileCanvasState(
 }
 
 /**
- * The state write one protocol action performs, or null when it performs none.
- *
- * A value or amount may be a formula (`expr`/`system`), evaluated against [state] as it stands when
- * the action runs — after the writes before it — and [clock]. That needs [scope], the document's
- * state kinds; without one a formula writes nothing, as a value the canvas cannot read always has.
+ * The state write one protocol action performs, or null. Formula values are evaluated against
+ * [state] as it stands (after earlier writes) and [clock]; without a [scope] a formula writes
+ * nothing.
  */
 fun canvasStateWrite(
   action: JsonObject,
@@ -98,11 +96,9 @@ private fun evaluated(
 }
 
 /**
- * [held] plus [amount] (1 when absent), in the spelling the variable already uses: integers stay
- * `Int`s, wrapping at the bounds as the exported `Int` does — `"3"` and `1` make `"4"`, which
- * `stateEquals 4` and an `Int` index still read — and anything fractional on either side is added
- * as a decimal. A missing value counts from 0, as the export's `(x ?: 0) + 1` does for a nullable
- * number; a value that is not a number writes nothing.
+ * [held] plus [amount] (1 when absent), keeping the variable's spelling: integers stay `Int`s
+ * (wrapping like the exported `Int`), fractions add as decimals, a missing value counts from 0, and
+ * a non-number writes nothing.
  */
 private fun canvasIncrement(
   held: String?,

@@ -22,12 +22,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The project's shared component library, as the palette reads it.
- *
- * `GET /api/ui-builder/v1/component-library` lists what the projects this host serves publish, and
- * `…/{system}/{componentId}` answers one symbol with its body and digest; both authenticate like
- * every other builder call. A host that serves no library answers an error, and the palette then
- * simply has no shelf for it — the reason [loadComponentDrift] tolerates failure too.
+ * The project's shared component library, as the palette reads it: `GET
+ * /api/ui-builder/v1/component-library` lists what this host's projects publish,
+ * `…/{system}/{componentId}` answers one symbol with body and digest. A host without a library
+ * answers an error and the palette just has no shelf for it.
  */
 internal suspend fun loadComponentLibrary(): List<EditorLibraryComponent> =
   try {
@@ -78,13 +76,10 @@ internal suspend fun loadLibrarySymbol(component: EditorLibraryComponent): Edito
   }
 
 /**
- * Publishes one of a design's components to this host's project library.
- *
- * `PUT …/{system}/{componentId}` with the one-component document a project would commit, plus the
- * digest of the version it replaces when there is one. The server keeps it beside its design state
- * in the same `ui-builder/components/` layout a repository holds, and answers the symbol it now
- * serves — whose digest the design then records — or a refusal worth showing as it is: a `409` when
- * somebody published in between, or when the project has committed that component itself.
+ * Publishes one of a design's components to this host's project library: `PUT
+ * …/{system}/{componentId}` with the one-component document, plus the replaced version's digest if
+ * any. Answers the symbol now served (whose digest the design records), or a refusal to show as is
+ * (`409` when someone published in between or the project committed it).
  */
 internal suspend fun publishLibraryComponent(
   publication: EditorLibraryPublication

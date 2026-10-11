@@ -12,17 +12,10 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The six Google-app sample designs, drawn at three window sizes each.
- *
- * `DesignFixturePreviews.kt` frames every fixture at the environment the design pins, which is what
- * keeps a capture from landing in a corner of its image. These are the other question: what the
- * *same document* does when the window is not the one it was authored in. The frame is the window —
- * `AdaptiveSupportingPaneScaffold` computes its size class from the frame's own constraints — so a
- * tablet design collapsing here is `androidx.compose.material3.adaptive`'s answer rather than this
- * repository's.
- *
- * Expanded, medium and compact, named after the width size class each one lands in, and matching
- * the device presets the designs carry in `environment.exportDevices`.
+ * The six Google-app sample designs, drawn at three window sizes each (expanded, medium, compact,
+ * matching their `environment.exportDevices`). Unlike `DesignFixturePreviews.kt`, which uses each
+ * design's own environment, these show the same document in other windows;
+ * `AdaptiveSupportingPaneScaffold` computes its size class from the frame.
  */
 @Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
 @Composable
@@ -91,18 +84,9 @@ internal fun SizedDesignFixture(designId: String, watchDp: Int? = null) {
 }
 
 /**
- * The design's whole extent, measured the way the editor's canvas measures it: against an unbounded
- * height, so the stadium is as tall as its content — never shorter than one screenful, which the
- * round frame enforces itself — rather than stretched to the preview's frame.
- *
- * The extent previews used [SizedDesignFixture], which hands the surface the frame's full 760dp. A
- * scaffold fills the height it is given, so a one-item screen came out as a 760dp stadium with its
- * edge button pinned to the bottom: a picture of the preview frame, not of the design. Here the
- * frame only bounds the capture; what is below the content is the preview's background.
- *
- * And `unrolled`, which [SizedDesignFixture] never asked for: those previews were the lazy device
- * mode drawn into a tall frame — scroll indicator, rows scaling at the bottom edge — rather than
- * the canvas's unrolled stadium they were named after.
+ * The design's whole extent, measured as the editor canvas does: against unbounded height (at least
+ * one screenful for a round frame) and `unrolled`, rather than stretched to the preview frame. The
+ * frame only bounds the capture.
  */
 @Composable
 internal fun ExtentDesignFixture(designId: String, watchDp: Int? = null) {
@@ -119,13 +103,9 @@ internal fun ExtentDesignFixture(designId: String, watchDp: Int? = null) {
 }
 
 /**
- * This design on a round watch of [watchDp], the way the editor's device strip puts it on one.
- *
- * A Wear screen is drawn at the diameter the DOCUMENT names, not at the preview's frame — the frame
- * only bounds the capture. Every Wear fixture pins `widthDp: 192`, so the 240dp previews drew a
- * 192dp watch in a 240dp frame and checked nothing the small one had not. The editor's
- * `variantPanes` answers this by writing the device's size over the environment; this is the same
- * override, so a preview and a device pane cannot disagree about the watch.
+ * This design on a round watch of [watchDp], as the editor's device strip shows it: the document's
+ * frame width is overridden (as `variantPanes` does), since Wear screens draw at the document's
+ * diameter.
  */
 private fun UiBuilderDocument.onWatch(watchDp: Int?): UiBuilderDocument =
   if (watchDp == null) this
@@ -135,11 +115,9 @@ private fun UiBuilderDocument.onWatch(watchDp: Int?): UiBuilderDocument =
     )
 
 /**
- * The Wear screen at the two round sizes it is checked on, matching its own `exportDevices`.
- *
- * A Wear list's hard question is where it wraps, and 48dp is a quarter of the small round's width —
- * so a row that fits one and not the other is the common case rather than a corner one. These are
- * the device frames, drawn by the Wear Compose port's real `ScreenScaffold`.
+ * The Wear screen at its two checked round sizes (matching its `exportDevices`), drawn by the
+ * port's real `ScreenScaffold`; 48dp is a quarter of the small width, so wrap differences are
+ * common.
  */
 @WearPreviewSmallRound
 @Composable
@@ -150,16 +128,11 @@ fun GoogleHomeWearSmallPreview() = SizedDesignFixture("google-home-wear", watchD
 fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear", watchDp = 240)
 
 /**
- * The same screen as a long screenshot, which is the only way to see a Wear list's whole extent.
+ * The same screen as a long screenshot, the only way to see a Wear list's whole extent: the frame
+ * is taller than any watch so `UiBuilderSurface` draws the full stadium.
  *
- * A round frame shows one screenful; this design is roughly five. The frame is taller than any
- * watch on purpose — `UiBuilderSurface` draws the design's full extent when given the room, which
- * is the stadium the editor's canvas uses — so scrolling is a thing you read rather than a thing
- * you have to operate.
- *
- * The dashed boxes are honest: `UiBuilderRenderer` draws six of this catalog's components and the
- * rest fall through to the undrawn-component placeholder, while its capability fixture declares
- * twenty-three of them `supported` (#907). The generated Kotlin is the half that is complete.
+ * Dashed boxes mark components the renderer doesn't draw though the capability fixture declares
+ * them `supported` (see #907); the generated Kotlin is complete.
  */
 @WearPreviewSmallRoundExtent
 @Composable

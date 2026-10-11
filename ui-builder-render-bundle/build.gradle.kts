@@ -10,69 +10,36 @@ plugins {
 /**
  * The packaged UI-builder render bundle, as an artifact of its own.
  *
- * ## Why this is not a resource in `:ui-builder-runtime`
+ * Not a resource in `:ui-builder-runtime`: the bundle is a frontend build output (a polyglot PNG
+ * whose ZIP carries `:ui-builder`'s compiled JVM previews), and embedding it would make the
+ * published server jar depend on `:ui-builder`'s build and pin the frontend's JVM target. This
+ * module sits on the frontend side, like `:ui-builder-web`, reached through a coordinate.
  *
- * It was one, and the edge pointed the wrong way. `:ui-builder-runtime` is server-side and
- * published; the bundle is a *frontend* build output — a polyglot PNG whose embedded ZIP carries
- * `:ui-builder`'s compiled JVM previews and their minimal classpath. A published server jar
- * carrying the frontend's class files had two costs. It made `:ui-builder-runtime` depend on
- * `:ui-builder`'s build, which a repository split cannot carry across a boundary
- * ([#346](https://github.com/yschimke/compose-preview-server/issues/346)); and it pinned the
- * frontend's JVM target to the server's, because those class files ship inside the server's
- * artifact and every consumer of it has to be able to load them.
- *
- * This module owns the packaging instead. It sits on the frontend side of that line, exactly as
- * `:ui-builder-web` does for `wasmDist`, so `:ui-builder-runtime` reaches the bundle through a
- * coordinate — the one thing that survives a repository boundary.
- *
- * ## Why a jar and not a distribution archive
- *
- * `:ui-builder-web` publishes a Zip with distribution attributes because its consumer unpacks it
- * into a served directory. This one's consumer is `PackagedUiBuilderRenderBundle.copyTo`, which
- * reads `getResourceAsStream`. A classpath lookup does not care *which* jar answers it, so
- * shipping the bundle as an ordinary resource in a sibling jar leaves that public API — and every
- * caller of it — byte-for-byte unchanged, while moving the bytes out of the runtime's own artifact.
- *
- * ## Why there is no source set
- *
- * Deliberately none, and it is the point: a module that compiles nothing has no class-file floor to
- * inherit or impose. Gradle still publishes a target-JVM attribute for the Java variant, so that
- * metadata is pinned to the server floor below; the opaque frontend can move its own toolchain
- * without making this resource-only jar unresolvable by the server.
+ * A jar rather than a distribution archive because the consumer,
+ * `PackagedUiBuilderRenderBundle.copyTo`, uses `getResourceAsStream`, which does not care which jar
+ * answers. No source set, so there is no class-file floor; the target-JVM attribute is pinned to
+ * the server floor below.
  */
 
 base { archivesName.set("compose-preview-" + project.name) }
 
-// This jar contains resources only, so it is loadable on every JVM supported by the server. The
-// Java plugin otherwise advertises the JVM running Gradle (21 on the UI-builder toolchain), which
-// makes the Java 17 runtime correctly reject an artifact that in fact contains no class files.
+// Resources only, so loadable on every server JVM; otherwise Gradle advertises its own JVM and a
+// Java 17 runtime would reject the artifact.
 java { targetCompatibility = JavaVersion.toVersion(libs.versions.java.server.get()) }
 
 /**
- * The resource path is the contract.
- *
- * `PackagedUiBuilderRenderBundle.RESOURCE` names this exact path and is public API of
- * `compose-preview-ui-builder-runtime`. Moving the bytes between artifacts is invisible to a
- * consumer precisely as long as the path does not move with them, so the two are pinned together
- * by `UiBuilderRenderBundleResourcePathTest` in that module rather than by hope.
+ * The resource path is the contract: `PackagedUiBuilderRenderBundle.RESOURCE` is public API, pinned
+ * to this path by `UiBuilderRenderBundleResourcePathTest`.
  */
 val bundleResourceDirectory = "ee/schimke/composeai/uibuilder/renderer"
 
 val bundleResourceName = "ui-builder-renderer.bundle.png"
 
 /**
- * The bundle's Java floor, shipped beside the bundle as data.
- *
- * The polyglot carries `:ui-builder`'s compiled JVM previews, and `:ui-builder` compiles at
- * `java-ui-builder` — above the floor of every artifact that reaches a consumer. That is legal
- * precisely because these bytes are opaque until a render daemon unpacks them, but the daemon runs
- * under the *server's* JVM (`java.home`), so a host below the floor gets an
- * `UnsupportedClassVersionError` from a process it did not know existed
- * ([#344](https://github.com/yschimke/compose-preview-server/issues/344)).
- *
- * The number is written here rather than duplicated in the server because this module is the one
- * that knows it: it is the same catalog entry `:ui-builder`'s toolchain reads, so raising that
- * toolchain moves the preflight with it and cannot leave it behind.
+ * The bundle's Java floor, shipped beside it as data. The previews compile at `java-ui-builder`,
+ * above other artifacts' floors, but the render daemon runs under the server's JVM; this lets the
+ * server fail early with a clear message instead of an `UnsupportedClassVersionError`. Read from
+ * the same catalog entry as `:ui-builder`'s toolchain, so they cannot drift.
  */
 val bundleManifestResourceName = "ui-builder-renderer.bundle.properties"
 
@@ -101,14 +68,11 @@ val writeBundleManifest =
     }
   }
 
-// The same shape `:ui-builder-runtime` used when it owned these bytes, moved rather than rewritten:
-// a `processResources` copy out of `:ui-builder`'s build directory, which this build already proves
-// works under the configuration cache. This module has no other resource and no source at all, so
-// the copy is the whole of its jar.
+// Copies the bundle out of `:ui-builder`'s build directory (configuration-cache safe); the copy is
+// the whole jar.
 tasks.processResources {
-  // Locals, not the script properties directly: a `rename` transformer is serialized into the
-  // configuration cache, and a lambda reading a script-level `val` captures the whole script object
-  // with it — which the cache refuses. Copying the two strings here captures two strings.
+  // Locals, not script properties: a lambda reading a script-level `val` captures the whole script
+  // object, which the configuration cache refuses.
   val resourceDirectory = bundleResourceDirectory
   val resourceName = bundleResourceName
   dependsOn(project(":ui-builder").tasks.named("composePreviewBundle"))
@@ -120,11 +84,8 @@ tasks.processResources {
 }
 
 /**
- * A jar that silently lost its only reason to exist is worse than a build failure.
- *
- * `composePreviewBundle` is a render-producing task in another module; a configuration change that
- * left it out, or a rename of the file it writes, would otherwise publish an empty artifact and
- * fail at a consumer's runtime with "packaged UI-builder renderer bundle is missing".
+ * Fails the build if the jar would ship without the bundle, rather than failing at a consumer's
+ * runtime with "packaged UI-builder renderer bundle is missing".
  */
 val verifyRenderBundlePackaged =
   tasks.register("verifyRenderBundlePackaged") {
@@ -134,29 +95,17 @@ val verifyRenderBundlePackaged =
     // Locals for the same reason the copy above takes them: a `doLast` action is cached, and
     // reading the artifact id straight from the script would drag the script into the cache.
     val entry = "$bundleResourceDirectory/$bundleResourceName"
-    // The manifest is checked beside the bundle rather than separately: a jar carrying the preview
-    // without its Java floor turns the server's preflight into a hard failure on a host that could
-    // have run it, which is a worse outcome than the missing diagnostic it was added to replace.
+    // The manifest is checked beside the bundle: without it the server's preflight fails hard on a
+    // host that could have run the render.
     val manifestEntry = "$bundleResourceDirectory/$bundleManifestResourceName"
     val artifactId = "compose-preview-" + project.name
-    // A local, so the `doLast` lambda captures a List<String>. Reading a script-level `val` from
-    // inside it captures the whole script object, which the configuration cache refuses -- the
-    // same trap the `processResources` block above takes locals to avoid, which I walked into
-    // anyway.
+    // A local, so the `doLast` lambda captures a List<String> (see the configuration-cache note
+    // above).
     //
-    // Coordinates the RENDERER needs that no packed preview reaches.
-    // `androidx.window.core.layout.WindowSizeClass` is imported by `CanvasScaffolds.kt` and
-    // called from `AdaptiveSupportingPaneScaffold`, which the node renderer enters for a
-    // `layout/supporting-pane-scaffold` node -- needed by the *document*, never by the one preview
-    // the bundle packs (#788 introduced the call, #812 is the 500 it produced).
-    //
-    // Matched against the KMP variant suffixes too: a multiplatform module publishes a root
-    // coordinate that redirects (`available-at`) to a per-platform artifact, so the resolved JVM
-    // dependency is recorded as `window-core-desktop`, never `window-core`. An exact match here
-    // failed on a bundle that carried the class perfectly well.
-    //
-    // `NavigationSuiteScaffold` is the same case: the node renderer enters it only for an
-    // `m3/navigation-suite-scaffold` node, which no packed preview draws.
+    // Coordinates the renderer needs that no packed preview reaches: `WindowSizeClass` (used by
+    // `AdaptiveSupportingPaneScaffold` for `layout/supporting-pane-scaffold`) and
+    // `NavigationSuiteScaffold` (for `m3/navigation-suite-scaffold`). Matched with KMP variant
+    // suffixes, since the resolved JVM artifact is e.g. `window-core-desktop`.
     val required =
       listOf(
         "org.jetbrains.androidx.window:window-core",
@@ -176,13 +125,9 @@ val verifyRenderBundlePackaged =
           }
         checkNotNull(javaMin?.toIntOrNull()) { "$manifestEntry has no numeric javaMin" }
 
-        // The bundle's own classpath, checked for the render-only coordinates below.
-        //
-        // `composePreviewBundle` minimizes: a dependency with no class reachable from the packed
-        // preview is dropped, and `bundle.json` lists only what survived. That is correct for a
-        // library the previews never touch and silent for one the RENDERER reaches only when a
-        // rendered document asks for it -- nothing fails until a design uses the component, and
-        // then it is a 500 from `exportDesign` naming a bare class, a long way from this build.
+        // `composePreviewBundle` minimizes away dependencies the packed preview does not reach,
+        // which is silent for ones only the renderer needs for some documents; check those
+        // coordinates here.
         val bundleFile = File.createTempFile("ui-builder-renderer", ".bundle")
         try {
           jar.getInputStream(packaged).use { source ->
@@ -201,10 +146,8 @@ val verifyRenderBundlePackaged =
               @Suppress("UNCHECKED_CAST")
               val classpath =
                 ((parsed as Map<String, Any?>)["classpath"] as? List<Map<String, Any?>>).orEmpty()
-              // `kind`, not `type`. `BundlePreviewTask` serializes these with
-              // `classDiscriminator = "kind"`, and a Maven entry carries its OWN `type` field
-              // holding the packaging -- so filtering on `type` matches "jar", never "maven",
-              // and the set comes back empty.
+              // Filter on `kind`, not `type`: `BundlePreviewTask` uses `classDiscriminator =
+              // "kind"`, and a Maven entry's own `type` holds the packaging.
               classpath
                 .filter { it["kind"] == "maven" }
                 .map { "${it["group"]}:${it["artifact"]}" }

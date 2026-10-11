@@ -9,12 +9,8 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * What the MCP App host shows: the design, whether it is saved, and anything the person must
- * decide.
- *
- * [generation] moves only when the file is (re)loaded — a first open, a reload after a conflict, an
- * external edit adopted. The editor is keyed on it, so a reload starts a fresh undo history and a
- * save does not: undo stays in memory across saves, as the local store keeps it, while the file
- * holds only the document.
+ * decide. [generation] moves only when the file is (re)loaded; the editor is keyed on it, so
+ * reloads reset undo history but saves don't.
  */
 data class McpAppDesignState(
   val file: McpAppFile,
@@ -55,21 +51,17 @@ sealed interface McpAppNotice {
 }
 
 /**
- * One opened `.uid` file, edited in an MCP App host.
- *
- * The host owns the file; this owns the rules for keeping the editor and the file honest with each
- * other, through an [McpAppBridge]:
+ * One opened `.uid` file, edited in an MCP App host. The host owns the file; this keeps editor and
+ * file consistent through an [McpAppBridge]:
  * - **load** reads the host's `resourceUri` as text and parses `DesignDocumentV1`;
- * - **save** writes the whole document with `ifMatch` set to the last etag, and never when the host
- *   did not say `writable: true`, or when nothing changed — opening and closing a design writes
- *   nothing;
- * - **conflict** keeps the local design and asks: reload (discard) or overwrite (write again naming
- *   the etag the host reported);
+ * - **save** writes the whole document with `ifMatch` set to the last etag, never when the host
+ *   didn't say `writable: true` or when nothing changed;
+ * - **conflict** keeps the local design and asks: reload (discard) or overwrite (with the host's
+ *   reported etag);
  * - **external change** (`notifications/resources/updated`) reloads a clean design and asks about a
- *   dirty one; the echo of this editor's own save is recognised by its etag and ignored.
+ *   dirty one; the echo of our own save is recognised by its etag.
  *
- * Operations are serialized, because the browser calls them from UI events and a notification can
- * land while a save is waiting on the host.
+ * Operations are serialized: UI events and notifications can interleave with a pending save.
  */
 class McpAppDesignSession(
   private val bridge: McpAppBridge,
@@ -113,9 +105,8 @@ class McpAppDesignSession(
   }
 
   /**
-   * The editor reported its document: after an edit, an undo, or a state change that is not an edit
-   * at all (a selection, a panel). Returns whether it is a different document from the last one
-   * reported, which is what a host debounces autosave on.
+   * The editor reported its document (after an edit, undo, or a non-edit state change). Returns
+   * whether it differs from the last one, which the host debounces autosave on.
    */
   fun edited(document: UiBuilderDocument): Boolean {
     if (document === current) return false
@@ -138,9 +129,9 @@ class McpAppDesignSession(
   }
 
   /**
-   * Makes [id] the file's active design: writes the file with it active — carrying any unsaved edit
-   * to the design that was active — and opens it. Refused, as a save is, by a read-only file or an
-   * unresolved conflict; a switch that meets a conflict is remembered, so [overwrite] retries it.
+   * Makes [id] the file's active design: writes the file with it active (carrying unsaved edits to
+   * the previous one) and opens it. Refused like a save by a read-only file or unresolved conflict;
+   * a switch that meets a conflict is remembered so [overwrite] retries it.
    */
   suspend fun selectDesign(id: String) = lock.withLock {
     val opened = openedFile ?: return@withLock
@@ -176,9 +167,8 @@ class McpAppDesignSession(
         }
       when (outcome) {
         is McpAppWriteOutcome.Saved -> {
-          // The editor stays live while the host writes, so an edit to the design being left can
-          // land in the meantime. It goes into that design's entry before the switch opens the
-          // next one; otherwise opening it would throw the edit away.
+          // An edit to the design being left may land while the host writes; store it in that
+          // design's entry before opening the next.
           val latest = current
           if (latest != null && latest != carried && latest.id == carried.id) {
             val written = text
@@ -280,12 +270,9 @@ class McpAppDesignSession(
   }
 
   /**
-   * A comment on [nodeId], from the node's menu: the model context first — the node's picture and
-   * detail — then one `ui/message` with the words and the node's titled block. In that order
-   * because a message sent at once starts a turn, and the turn reads the context attached when it
-   * starts; the other order would hand the picture to the turn after.
-   *
-   * Blank text, or a node the design no longer has, sends nothing and returns false.
+   * A comment on [nodeId], from the node's menu: model context first (the node's picture and
+   * detail), then one `ui/message`, because the message starts a turn that reads context attached
+   * at its start. Blank text, or a missing node, sends nothing and returns false.
    */
   suspend fun comment(nodeId: String, text: String, image: McpAppImage? = null): Boolean {
     val document = current ?: return false

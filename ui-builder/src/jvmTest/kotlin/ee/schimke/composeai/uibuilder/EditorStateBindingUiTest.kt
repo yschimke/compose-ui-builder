@@ -17,11 +17,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * What the inspector may offer for a state binding.
- *
- * The reducer has been able to bind and unbind since the events were added; the panel could not see
- * either, so a bound property drew a control the reducer refuses and an unbound one offered
- * nothing. The question this pins is the one the menu asks before drawing itself.
+ * What the inspector may offer for a state binding: a bound property shows its binding and unbind,
+ * an unbound one offers to bind.
  */
 class EditorStateBindingUiTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

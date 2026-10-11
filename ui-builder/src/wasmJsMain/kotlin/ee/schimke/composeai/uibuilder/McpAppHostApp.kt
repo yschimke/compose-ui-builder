@@ -52,19 +52,16 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * The editor as an **MCP App** over a `.uid` file a host opened: ChatGPT or Codex desktop's OpenAI
- * file-extension entrypoint (compose-ui-builder#364, compose-preview-server#1235).
+ * The editor as an **MCP App** over a `.uid` file a host opened (ChatGPT or Codex desktop's
+ * file-extension entrypoint).
  *
- * The same idea as [HostBridgeApp] — the design is the host's file, not this page's — over the MCP
- * Apps JSON-RPC dialect instead of a bespoke `postMessage` protocol, and with the file rules the
- * host does not own itself: saving with `ifMatch`, conflicts, read-only files and external edits.
- * Those rules are [McpAppDesignSession]'s, in common code and tested against a fake host; this file
- * is the browser transport and the few controls a person needs to act on them.
+ * Like [HostBridgeApp] the design is the host's file, but over the MCP Apps JSON-RPC dialect, with
+ * the file rules (saving with `ifMatch`, conflicts, read-only files, external edits) in
+ * [McpAppDesignSession]; this file is the browser transport and controls.
  *
- * Selected when the page defines `globalThis.composeUiBuilderMcpApp` before the module loads, which
- * the MCP App shell (`ui-builder-web/src/mcp-app/ui-builder-mcp-app.html`) does. The shell points
- * `<base href>` at the origin serving this archive, so the modules, the Wasm and the catalogs load
- * from there; see `docs/design/UI_BUILDER_MCP_APP_HOST.md`.
+ * Selected when the page defines `globalThis.composeUiBuilderMcpApp` before the module loads, as
+ * the MCP App shell (`ui-builder-web/src/mcp-app/ui-builder-mcp-app.html`) does; its `<base href>`
+ * points at the origin serving this archive. See `docs/design/UI_BUILDER_MCP_APP_HOST.md`.
  */
 @Composable
 internal fun McpAppHostApp() {
@@ -196,12 +193,9 @@ private fun McpAppMessage(message: String) {
 }
 
 /**
- * JSON-RPC 2.0 over `window.parent.postMessage`, as MCP Apps specifies it.
- *
- * Only messages whose source is the parent frame are read; a page opened on its own (no parent)
- * gets a clear failure from [McpAppJsonRpcBridge.initialize] instead of waiting forever. The host's
- * requests to the app are answered here: `ping`, and `ui/resource-teardown`, which stops following
- * the file.
+ * JSON-RPC 2.0 over `window.parent.postMessage`, as MCP Apps specifies it. Only parent-frame
+ * messages are read; without a parent, [McpAppJsonRpcBridge.initialize] fails clearly. Answers the
+ * host's `ping` and `ui/resource-teardown` (stop following the file).
  */
 internal class BrowserMcpAppTransport(
   private val onNotification: (String, JsonObject) -> Unit,
@@ -297,9 +291,8 @@ internal class BrowserMcpAppTransport(
 }
 
 /**
- * Whether the embedding page declared this an MCP App by defining
- * `globalThis.composeUiBuilderMcpApp`. Checked before [hostBridgeEnabled]: the two are different
- * hosts, and a page is one or the other.
+ * Whether the embedding page declared this an MCP App (`globalThis.composeUiBuilderMcpApp`).
+ * Checked before [hostBridgeEnabled]; a page is one or the other.
  */
 @JsFun(
   """() => {
@@ -313,9 +306,8 @@ internal external fun mcpAppEnabled(): Boolean
 private external fun mcpAppVersion(): String
 
 /**
- * The shell's `layout`: `focused` or `full`, as compose-preview-server fills in
- * `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__` from its `uiBuilderMcpAppLayout` setting. A page URL's
- * `?layout=` wins, for a person or a harness opening the shell by hand.
+ * The shell's `layout`: `focused` or `full` (compose-preview-server fills
+ * `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__` from `uiBuilderMcpAppLayout`). A URL `?layout=` wins.
  */
 @JsFun(
   """() => {
@@ -330,9 +322,8 @@ private external fun mcpAppLayout(): String
 private external fun publishMcpAppLayout(layout: String)
 
 /**
- * The shell's `devicePresets`: a URL answering in the shape of a host's
- * `/api/ui-builder/v1/device-presets`, or null when the shell leaves its placeholder unfilled. A
- * server fills it with its own route; a static host can serve a copy of one.
+ * The shell's `devicePresets`: a URL answering like `/api/ui-builder/v1/device-presets`, or null
+ * when the placeholder is unfilled.
  */
 internal fun mcpAppDevicePresetsUrl(): String? =
   mcpAppDevicePresets().takeIf { it.isNotBlank() && !it.startsWith("__") }
@@ -361,9 +352,8 @@ private external fun listenForMcpAppMessages(onMessage: (String) -> Unit)
 private external fun postToMcpAppHost(json: String)
 
 /**
- * An asset of this archive — a capability catalog — resolved against the document's base, which the
- * MCP App shell points at the origin serving the archive (the host's own origin serves none of it).
- * [sameOriginRequestUrl] keeps it under that base.
+ * An archive asset (a capability catalog) resolved against the document's base, which the shell
+ * points at the archive's origin; [sameOriginRequestUrl] keeps it there.
  */
 private suspend fun fetchMcpAppAsset(path: String): String =
   suspendCancellableCoroutine { continuation ->

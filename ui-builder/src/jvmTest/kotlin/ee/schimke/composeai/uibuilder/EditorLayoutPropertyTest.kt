@@ -16,12 +16,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Layout is authored through catalog properties, and most of them were unreachable.
- *
- * A numeric property with no bounds is `Unsupported`, so every spacing, size, elevation and
- * thickness in the catalog refused to be edited while `m3/text` had six working number fields. A
- * property the catalog declares as `"object"` was refused outright, which covered every
- * `contentPadding`. These are the tests for both.
+ * Layout is authored through catalog properties: numeric `…Dp` properties get ranges from their
+ * unit, and `"object"` properties like `contentPadding` get typed editors.
  */
 class EditorLayoutPropertyTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -39,8 +35,7 @@ class EditorLayoutPropertyTest {
 
   @Test
   fun `a dimension named in dp is a number field rather than unsupported`() {
-    // The unit is in the name, which is enough for a range, and without a range the inspector
-    // refused to edit the spacing of every container in the catalog.
+    // The unit in the name is enough for a range.
     val spacing = assertNotNull(field("discover-grid", "verticalSpacingDp"))
 
     assertEquals(EditorPropertyControl.Number, spacing.control)
@@ -50,11 +45,7 @@ class EditorLayoutPropertyTest {
 
   @Test
   fun `a search bar's corner is offered now that everything reads it`() {
-    // `m3/search-bar.shapeDp` used to be read by nothing but the screen projection: the renderer
-    // pinned a search bar to `CircleShape` and the Compose emitter took no shape, so it was —
-    // rightly
-    // — not offered, since every value would have been discarded. The renderer and the emitter both
-    // draw it now, and it is offered like any other dimension.
+    // `m3/search-bar.shapeDp` is offered because both renderer and emitter now draw it.
     val shape = assertNotNull(field("search-bar", "shapeDp"))
     assertEquals(EditorPropertyControl.Number, shape.control)
 
@@ -64,9 +55,8 @@ class EditorLayoutPropertyTest {
 
   @Test
   fun `arrangement spacing may be negative, padding may not`() {
-    // Negative spacing is how children are made to overlap, and `Arrangement.spacedBy` and the
-    // exporter both take the signed value. One blanket floor of zero refused a value both
-    // projections round trip.
+    // Negative spacing (overlap) is allowed: `Arrangement.spacedBy` and the exporter take signed
+    // values.
     val spacing = assertNotNull(field("discover-grid", "verticalSpacingDp"))
     assertTrue(assertNotNull(spacing.numberBounds).minimum < 0.0)
 

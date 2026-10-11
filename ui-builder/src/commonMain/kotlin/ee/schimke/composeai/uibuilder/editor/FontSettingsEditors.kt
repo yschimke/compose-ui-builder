@@ -32,13 +32,9 @@ import ee.schimke.composeai.uibuilder.TypefaceInfo
 import ee.schimke.composeai.uibuilder.export.FontSettings
 
 /**
- * What the face a text is set in offers its [FontSettings] property, above the property's own text
- * field: one slider per variation axis over the axis's real range, or a chip per layout feature.
- *
- * The face is read from its file ([TypefaceInfo]), so the list is the face's and not a guess:
- * Roboto Flex shows its thirteen axes, Lobster Two shows none and says it is static, and a text in
- * the platform's own face says that face cannot be inspected. A setting the face does not have is
- * listed as ignored rather than hidden, so nothing the design carries is invisible here.
+ * The [FontSettings] a text's face offers, above the property's own text field: a slider per
+ * variation axis over its real range, or a chip per layout feature. Read from the face's file
+ * ([TypefaceInfo]); settings the face lacks are listed as ignored, not hidden.
  */
 @Composable
 internal fun FontSettingsEditor(

@@ -19,11 +19,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * Something the import could not carry across exactly, named so a person can act on it.
- *
- * [figmaNodeId] is the Figma node it is about and [nodeId] the builder node it became, if any: an
- * `unmapped-instance` or `unsupported-node` becomes a sized placeholder box, so the builder id is
- * where to build the real thing.
+ * Something the import couldn't carry across exactly, named so a person can act on it.
+ * [figmaNodeId] is the Figma node; [nodeId] is the builder node it became, if any (an
+ * `unmapped-instance` or `unsupported-node` becomes a sized placeholder box).
  */
 data class FigmaImportDiagnostic(
   val code: String,
@@ -58,11 +56,10 @@ data class FigmaImportResult(
 /**
  * Figma frame → builder operations. See `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md` § Import.
  *
- * One walk, depth first. An instance the [map] names becomes that catalog component; one it does
- * not becomes a placeholder box of the instance's size and an [FigmaImportDiagnostic] — never a
- * component the map did not name, for the reason the reference overlay refuses to promote a piece
- * with no provenance. Frames become Row, Column or Box by their auto layout. Every value written is
- * checked against the [catalog] first, so the result replays and validates or says why not.
+ * One depth-first walk. A mapped instance becomes its catalog component; an unmapped one a sized
+ * placeholder box plus a [FigmaImportDiagnostic] (never a guessed component). Frames become Row,
+ * Column or Box by auto layout. Every value is checked against [catalog] so the result replays and
+ * validates or says why not.
  */
 class FigmaSnapshotImporter(
   private val catalog: CapabilityCatalog,
@@ -93,9 +90,8 @@ class FigmaSnapshotImporter(
     private val usedIds = mutableSetOf<String>()
 
     /**
-     * The export this frame came from, read off its root. A stamp from anywhere else — a subtree
-     * pasted in from another design, or from another export of this one — is not this design's
-     * identity, and trusting it would land a new layer on an unrelated node of the same id.
+     * The export this frame came from, read off its root only; stamps elsewhere (pasted subtrees)
+     * aren't this design's identity.
      */
     private val origin = snapshot.root.stamp?.let { it.designId to it.revision }
 
@@ -447,9 +443,9 @@ class FigmaSnapshotImporter(
     }
 
     /**
-     * Sizing and position, first in the chain because Compose measures outside in. [intrinsic] is
-     * for a component with its own size — a Button, a Text — where a fixed Figma size is the kit's
-     * drawing of that size rather than a constraint the design adds.
+     * Sizing and position, first in the chain because Compose measures outside in. [intrinsic]
+     * marks components with their own size (Button, Text), where a fixed Figma size is the kit's
+     * drawing, not a constraint.
      */
     private fun placementModifiers(
       node: FigmaSnapshotNode,
@@ -594,8 +590,8 @@ class FigmaSnapshotImporter(
     }
 
     /**
-     * A stamp from this export keeps its builder id — once. A designer's duplicate carries the same
-     * stamp, and the second node to claim it is new, so it takes its Figma id like any other.
+     * A stamp from this export keeps its builder id once; a designer's duplicate carries the same
+     * stamp, so later claimants get their Figma id.
      */
     private fun idFor(node: FigmaSnapshotNode): String {
       val stamp = node.stamp?.takeIf { (it.designId to it.revision) == origin }

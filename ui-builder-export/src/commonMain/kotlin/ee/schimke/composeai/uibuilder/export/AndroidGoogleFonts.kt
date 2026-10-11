@@ -2,19 +2,12 @@ package ee.schimke.composeai.uibuilder.export
 
 /**
  * Generated Android code that sets a theme's [ThemeTypefaces] as Google Fonts families:
- * `FontFamily(Font(GoogleFont("Michroma"), GoogleFontsProvider, …))` on each role of the theme's
- * typography.
+ * `FontFamily(Font(GoogleFont("Michroma"), GoogleFontsProvider, …))` on each typography role.
  *
- * A downloadable font needs a provider, and the provider needs Google Play services' signing
- * certificates. Android Studio's wizard writes those into the app as `res/values/font_certs.xml`,
- * which a generated screen cannot rely on — its module may have none, and the native lane compiles
- * it against a catalog bundle that has none. So the generated file declares the provider itself,
- * with the two published certificates inlined (Play services' development and production keys, as
- * Android's downloadable-fonts sample ships them). A design that names no typeface writes none of
- * this.
- *
- * One instance per generated file: it collects the families [typography] is asked for, and the file
- * writes [declarations] once below the screen and [imports] with the rest.
+ * The generated file declares the provider itself with Play services' two published certificates
+ * inlined, since its module (or the native lane's catalog bundle) may have no
+ * `res/values/font_certs.xml`. One instance per file: it collects families for [typography], and
+ * the file writes [declarations] and [imports] once.
  */
 class AndroidGoogleFonts(private val indent: String = "    ") {
   /** Family name to the identifier of its generated `FontFamily` val, in first-use order. */
@@ -65,13 +58,8 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
         )
 
   /**
-   * The provider and one `FontFamily` per family, as top-level declarations. Each family carries
-   * the weights a type scale uses — regular, medium and bold — and the provider fetches each from
-   * Google Fonts on first use; until it arrives the role draws in the platform face.
-   *
-   * The provider comes first. Top-level properties in one file initialise in declaration order, so
-   * a family declared above the provider it reads is `Variable 'GoogleFontsProvider' must be
-   * initialized` to Kotlin 2 — every generated file with a typeface failed to compile that way.
+   * The provider and one `FontFamily` per family (regular, medium and bold), as top-level
+   * declarations. The provider comes first: top-level properties initialise in declaration order.
    */
   val declarations: List<String>
     get() {
@@ -121,10 +109,9 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
 
   internal companion object {
     /**
-     * Play services' development and production font-provider certificates, base64, in chunks a
-     * generated file can write one per line. Decoded with `kotlin.io.encoding.Base64` rather than
-     * `android.util.Base64`, so the declaration compiles on any Kotlin target and names only the
-     * standard library.
+     * Play services' development and production font-provider certificates, base64, chunked one per
+     * line. Decoded with `kotlin.io.encoding.Base64` so the declaration names only the standard
+     * library.
      */
     val GMS_FONTS_CERTIFICATES: List<List<String>> =
       listOf(

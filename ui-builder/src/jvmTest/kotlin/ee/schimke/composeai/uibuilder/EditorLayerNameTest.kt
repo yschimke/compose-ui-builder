@@ -11,11 +11,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A layer is named after what its node says, and `required` alone does not find that.
- *
- * A component can require a string it needs in order to work rather than one a person would
- * recognise it by. In this catalog five of the six required free-text properties are exactly that,
- * so the panel offered an asset key, a scroll key and a base64 blob as layer names.
+ * A layer is named after what its node says; `required` alone doesn't find that, since most
+ * required free-text properties here are asset keys, scroll keys or base64.
  */
 class EditorLayerNameTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

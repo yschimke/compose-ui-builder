@@ -9,16 +9,11 @@ plugins {
 ktfmt { googleStyle() }
 
 /**
- * The JVM hosting layer for the editor: offline and remote sessions, the packaged catalogs, design
- * files, in-process export and the device-grant flow.
+ * The JVM hosting layer for the editor: offline and remote sessions, packaged catalogs, design
+ * files, in-process export and the device-grant flow, shared by the desktop app and the IntelliJ
+ * plugin.
  *
- * It lived inside `:ui-builder-desktop`, the desktop *application*, so the IntelliJ plugin had to
- * depend on an app module — `main()`, window code and packaging configuration included — to get at
- * a session. The desktop app and the plugin now both depend on this library, and each keeps only
- * what is its own: a window and a File menu, or a tool window and an editor provider.
- *
- * No `compose.desktop.currentOs` here: the IntelliJ plugin runs on the IDE's own Skiko, and a
- * native runtime on this library's classpath is one the plugin would have to exclude again.
+ * No `compose.desktop.currentOs`: the plugin runs on the IDE's own Skiko.
  */
 kotlin {
   jvmToolchain(libs.versions.java.ui.builder.get().toInt())
