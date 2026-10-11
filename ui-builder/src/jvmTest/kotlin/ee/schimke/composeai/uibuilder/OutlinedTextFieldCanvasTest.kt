@@ -7,10 +7,10 @@ import androidx.compose.ui.test.runDesktopComposeUiTest
 import kotlin.test.Test
 
 /**
- * The published m3-catalog serves the outlined field as its own component, `m3/outlined-text-field`,
- * where the packaged catalog spells it `m3/text-field` with `variant: outlined`. The canvas draws
- * both as a real `OutlinedTextField`: a design built against the served catalog drew "Unsupported
- * component" in `ui_builder_view`'s PNG.
+ * The published m3-catalog serves the outlined field as its own component,
+ * `m3/outlined-text-field`, where the packaged catalog spells it `m3/text-field` with `variant:
+ * outlined`. The canvas draws both as a real `OutlinedTextField`: a design built against the served
+ * catalog drew "Unsupported component" in `ui_builder_view`'s PNG.
  */
 @OptIn(ExperimentalTestApi::class)
 class OutlinedTextFieldCanvasTest {

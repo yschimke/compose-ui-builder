@@ -1717,7 +1717,9 @@ private fun RenderNode(
           modifier = measured,
           enabled = enabled,
         )
-      "m3/text-field" -> {
+      // The m3-catalog publishes the outlined field as its own component; older documents spell it
+      // as `m3/text-field` with `variant: outlined`. Both draw the same field.
+      "m3/text-field", "m3/outlined-text-field" -> {
         // The variable the field writes (not a local `remember`), so typing in the canvas changes
         // the design; same seam as `m3/search-input-field`.
         val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
@@ -1745,7 +1747,7 @@ private fun RenderNode(
         val onValueChange: (String) -> Unit = { next ->
           if (variable != null) host.setState(variable, next)
         }
-        if (node.string("variant") == "outlined") {
+        if (node.componentId == "m3/outlined-text-field" || node.string("variant") == "outlined") {
           OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
