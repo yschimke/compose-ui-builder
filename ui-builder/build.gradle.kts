@@ -204,29 +204,26 @@ tasks
     )
   }
 
-if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
-  kotlin.sourceSets.named("jvmTest") {
-    kotlin.srcDir(rootProject.file("experiments/typed-catalog/ui-builder/src/jvmTest/kotlin"))
-  }
-  tasks.named<Test>("jvmTest") {
-    // Keep the prototype's native validation reproducible on hosts with a read-only home.
+// The typed catalog bridge's compiled-canvas proof; the external bundle end-to-end test runs only
+// when a catalog's packaged bundle is named.
+tasks.named<Test>("jvmTest") {
+  // Keep the typed canvas's native validation reproducible on hosts with a read-only home.
+  systemProperty(
+    "skiko.data.path",
+    layout.buildDirectory.dir("typed-catalog/skiko").get().asFile.absolutePath,
+  )
+  val bundle =
+    providers.gradleProperty("typedCatalogJvmBundle").orNull?.let { rootProject.file(it) }
+  if (bundle != null) {
+    inputs.dir(bundle)
+    systemProperty("typedCatalogJvmBundle", bundle.absolutePath)
+    outputs.dir(layout.buildDirectory.dir("typed-catalog/e2e"))
     systemProperty(
-      "skiko.data.path",
-      layout.buildDirectory.dir("typed-catalog/skiko").get().asFile.absolutePath,
+      "typedCatalogJvmEvidence",
+      layout.buildDirectory.dir("typed-catalog/e2e").get().asFile.absolutePath,
     )
-    val bundle =
-      providers.gradleProperty("typedCatalogJvmBundle").orNull?.let { rootProject.file(it) }
-    if (bundle != null) {
-      inputs.dir(bundle)
-      systemProperty("typedCatalogJvmBundle", bundle.absolutePath)
-      outputs.dir(layout.buildDirectory.dir("typed-catalog/e2e"))
-      systemProperty(
-        "typedCatalogJvmEvidence",
-        layout.buildDirectory.dir("typed-catalog/e2e").get().asFile.absolutePath,
-      )
-    } else {
-      exclude("**/ExternalJvmCatalogEndToEndTest*")
-    }
+  } else {
+    exclude("**/ExternalJvmCatalogEndToEndTest*")
   }
 }
 

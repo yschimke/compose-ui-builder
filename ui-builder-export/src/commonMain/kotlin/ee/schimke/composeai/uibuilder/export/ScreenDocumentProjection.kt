@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ChainLink
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.discovery.ExportProjection
 import ee.schimke.composeai.discovery.ScreenAction
 import ee.schimke.composeai.discovery.ScreenDocument
 import ee.schimke.composeai.discovery.ScreenNode
@@ -192,6 +193,35 @@ object ScreenDocumentProjection {
     projectInternal(document, screenName, tagNodes, false, emptyMap(), typefaces = typefaces)
 
   /**
+   * [project], lowering every component [exportProjections] names through its catalog's published
+   * projection rather than this file's tables, so the call is the real library composable the
+   * catalog says it is. An overload to keep the published JVM descriptor above.
+   */
+  fun project(
+    document: DesignDocumentV1,
+    exportProjections: Map<String, ExportProjection>,
+    screenName: String = screenNameFor(document),
+    tagNodes: Boolean = false,
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    /**
+     * Each projected record's slot receivers (`record canonical id` → `slot parameter` → receiver
+     * type), so a projected child keeps the scope its slot gives it: `Modifier.weight` inside Wear
+     * `Button`'s `RowScope` label. [ScreenExportGate] reads them off the component record.
+     */
+    slotReceivers: Map<String, Map<String, String>> = emptyMap(),
+  ): Outcome =
+    projectInternal(
+      document,
+      screenName,
+      tagNodes,
+      false,
+      emptyMap(),
+      typefaces = typefaces,
+      exportProjections = exportProjections,
+      slotReceivers = slotReceivers,
+    )
+
+  /**
    * Opt-in projection for build generation, with declared input reads and checked component calls.
    */
   fun projectProduction(
@@ -222,9 +252,21 @@ object ScreenDocumentProjection {
     nodeOverrides: Map<String, ScreenNode>,
     callbackArguments: Map<String, Map<String, ScreenValue>> = emptyMap(),
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    exportProjections: Map<String, ExportProjection> = emptyMap(),
+    slotReceivers: Map<String, Map<String, String>> = emptyMap(),
   ): Outcome {
     // No component record parameter: type-checking against the record is `ScreenGenerator`'s job.
-    val pass = Pass(document, tagNodes, rootBindings, nodeOverrides, callbackArguments, typefaces)
+    val pass =
+      Pass(
+        document,
+        tagNodes,
+        rootBindings,
+        nodeOverrides,
+        callbackArguments,
+        typefaces,
+        exportProjections,
+        slotReceivers,
+      )
     val roots = document.roots
     if (roots.size != 1) {
       // A single root is what a `@Composable fun Screen()` body is; wrapping several would be a
@@ -325,6 +367,8 @@ object ScreenDocumentProjection {
     val nodeOverrides: Map<String, ScreenNode> = emptyMap(),
     val productionCallbacks: Map<String, Map<String, ScreenValue>> = emptyMap(),
     val typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    val exportProjections: Map<String, ExportProjection> = emptyMap(),
+    val slotReceivers: Map<String, Map<String, String>> = emptyMap(),
   ) {
     val reasons = mutableListOf<String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
@@ -896,6 +940,9 @@ object ScreenDocumentProjection {
         if (node.component != null) return placementNode(node, scope)
         if (node.componentId == "layout/for-each") return repetitionNode(node, scope)
         if (SHOW_BY_STATE in node.properties) return selectionNode(node, scope)
+        exportProjections[node.componentId]?.let {
+          return projectedNode(node, it, scope)
+        }
         val variant = variantOf(node)
         return ScreenNode(
           // A variant names a different component (`m3/card` + `elevated` is `ElevatedCard`), so it
@@ -936,6 +983,112 @@ object ScreenDocumentProjection {
       } finally {
         visiting.remove(id)
       }
+    }
+
+    /**
+     * A node of a component whose catalog publishes an [ExportProjection]: the projection picks the
+     * real record and writes its literal properties, and this pass adds what only it knows — state
+     * reads, modifiers, handlers and child slots, renamed onto the record's own parameters.
+     *
+     * Nothing the projection does not read is dropped silently: a property outside
+     * [ExportProjection.properties] is refused, as is a bound value the projection would have to
+     * reshape (one that reaches the call only inside a factory such as `…Defaults.buttonColors`).
+     */
+    private fun projectedNode(
+      node: DesignNodeV1,
+      projection: ExportProjection,
+      scope: String?,
+    ): ScreenNode? {
+      val where = "node `${node.id}`"
+      // Predicates, accessibility, asset and token bindings: the same refusals the table path
+      // makes.
+      unexpressible(node)
+      val readable = projection.properties
+      val literal = mutableMapOf<String, JsonElement>()
+      val bound = mutableMapOf<String, UiValueV1>()
+      val fromProperties = mutableListOf<ChainLink>()
+      var refused = false
+      for ((property, value) in node.properties) {
+        if (property in IDENTITY_PROPERTIES) continue
+        if (property == WEIGHT) {
+          weightLink(value, node, scope)?.let { fromProperties += it }
+          continue
+        }
+        if (property !in readable) {
+          refuse("$where.`$property` is not written by `${node.componentId}`'s export projection")
+          refused = true
+          continue
+        }
+        when (value) {
+          is StateValueV1,
+          is StateEqualsValueV1,
+          is ExpressionValueV1,
+          is BindingValueV1 -> bound[property] = value
+          else -> literal[property] = Json.encodeToJsonElement(UiValueV1.serializer(), value)
+        }
+      }
+      projection.variantProperty
+        ?.takeIf { it in bound }
+        ?.let {
+          refuse("$where.`$it` chooses the component, so it is a literal rather than a bound value")
+          refused = true
+        }
+      val lowered =
+        when (val outcome = projection.lower(literal)) {
+          is ExportProjection.Lowered.Refused -> {
+            outcome.reasons.forEach { reasons += "$where: $it" }
+            return null
+          }
+          is ExportProjection.Lowered.Node -> outcome
+        }
+      val arguments = lowered.arguments.toMutableMap()
+      for ((property, value) in bound) {
+        if (property == projection.variantProperty) continue
+        val parameter = projection.directParameter(lowered.record, property)
+        if (parameter == null) {
+          refuse(
+            "$where.`$property` is bound, and `${node.componentId}` writes it only inside a " +
+              "factory call, which a bound value cannot be passed through"
+          )
+          refused = true
+          continue
+        }
+        value(value, node, property)?.let { arguments[parameter] = it } ?: run { refused = true }
+      }
+      val leading = listOfNotNull(scaffoldPaddings.remove(node.id))
+      if (
+        node.modifiers.isNotEmpty() ||
+          leading.isNotEmpty() ||
+          fromProperties.isNotEmpty() ||
+          tagNodes
+      ) {
+        modifiers(node, fromProperties, scope, leading)?.let { arguments["modifier"] = it }
+          ?: run { refused = true }
+      }
+      callbackArguments(node).forEach { (parameter, callback) ->
+        arguments[renamedEvent(parameter, lowered.events)] = callback
+      }
+      if (refused) return null
+      return ScreenNode(
+        componentId = lowered.record,
+        arguments = arguments,
+        handlers =
+          handlers(node).mapKeys { (parameter, _) -> renamedEvent(parameter, lowered.events) },
+        slots =
+          node.slots.entries.associate { (slot, children) ->
+            val parameter = lowered.slots[slot] ?: slot
+            val childScope = slotReceivers[lowered.record]?.get(parameter)
+            parameter to children.mapNotNull { child -> node(child, childScope) }
+          },
+      )
+    }
+
+    /**
+     * `onClick` for the wire event `click`, renamed when the projection says the record differs.
+     */
+    private fun renamedEvent(parameter: String, events: Map<String, String>): String {
+      val event = parameter.removePrefix("on").replaceFirstChar { it.lowercaseChar() }
+      return events[event] ?: parameter
     }
 
     /**

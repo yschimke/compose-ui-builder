@@ -10,36 +10,6 @@ plugins {
 // only the catalog's verified renderer ZIP crosses into delivery.
 group = "ee.schimke.composeai"
 
-// The prototype uses an unreleased tools API. Keep it out of normal/release builds until that
-// API ships and the tools pin moves; no source or dependency is copied into this repository.
-if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
-  require(
-    providers.gradleProperty("localBuilds").orNull?.split(",")?.any {
-      it == "tools" || it == "all"
-    } == true
-  ) {
-    "typedAdapterCatalog requires -PlocalBuilds=tools until the typed tools API is released"
-  }
-  kotlin.sourceSets.named("commonMain") {
-    kotlin.srcDir(
-      rootProject.file("experiments/typed-catalog/ui-builder-renderer-sdk/src/commonMain/kotlin")
-    )
-  }
-  kotlin.sourceSets.named("commonTest") {
-    kotlin.srcDir(
-      rootProject.file("experiments/typed-catalog/ui-builder-renderer-sdk/src/commonTest/kotlin")
-    )
-  }
-  kotlin.sourceSets
-    .matching { it.name == "jvmMain" }
-    .configureEach {
-      kotlin.srcDir(
-        rootProject.file("experiments/typed-catalog/ui-builder-renderer-sdk/src/jvmMain/kotlin")
-      )
-      dependencies { implementation(libs.compose.components.resources) }
-    }
-}
-
 ktfmt { googleStyle() }
 
 kotlin {
@@ -67,7 +37,11 @@ kotlin {
       rootProject.tasks.named<GenerateMaterialIconUiSources>("generateMaterialIconUiSources")
     commonMain { kotlin.srcDir(iconSources.flatMap { it.outputDirectory }) }
     jvmMain { kotlin.srcDir(iconSources.flatMap { it.vectorOutputDirectory }) }
-    jvmMain.dependencies { @Suppress("DEPRECATION") implementation(compose.materialIconsExtended) }
+    jvmMain.dependencies {
+      @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
+      // `JvmCanvasAdapterProvider` loads a catalog bundle's compiled resources.
+      implementation(libs.compose.components.resources)
+    }
     commonTest.dependencies { implementation(kotlin("test")) }
   }
 }
