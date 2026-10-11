@@ -24,7 +24,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class CapabilityComposeCodeExporterTest {
   private val document by lazy {
@@ -346,7 +348,7 @@ class CapabilityComposeCodeExporterTest {
                 "column",
                 "layout/column",
                 slots =
-                  mapOf("content" to listOf("outlined", "elevated", "legacy", "plain", "tonal")),
+                  mapOf("children" to listOf("outlined", "elevated", "legacy", "plain", "tonal")),
               ),
             "outlined" to
               node(
@@ -384,7 +386,10 @@ class CapabilityComposeCodeExporterTest {
             "d" to text("d"),
           ),
       )
-    val result = CapabilityComposeCodeExporter.export(styled, catalog)
+    // The frozen fixture predates `style`; a catalog that declares it alongside `variant` is what
+    // an
+    // m3-catalog release carrying the collapse publishes.
+    val result = CapabilityComposeCodeExporter.export(styled, styledCatalog())
     val source = assertNotNull(result.source, result.diagnostics.toString())
     assertEquals(2, Regex("""\bOutlinedCard\(""").findAll(source).count(), source)
     assertTrue(Regex("""\bElevatedCard\(""").containsMatchIn(source), source)
@@ -1056,6 +1061,29 @@ class CapabilityComposeCodeExporterTest {
     assertFalse(quoted, "unterminated generated string")
     assertTrue(stack.isEmpty(), "unclosed generated delimiter(s): $stack")
   }
+
+  /** The frozen catalog with `style` declared beside `variant` on the card and icon button. */
+  private fun styledCatalog() =
+    CapabilityCatalogParser.parse(
+      Json.encodeToString(
+        JsonObject.serializer(),
+        resourceJson("/m3-catalog-capabilities-v1.json").let { root ->
+          val components =
+            root.getValue("components").jsonArray.map { component ->
+              val entry = component.jsonObject
+              val id = entry["componentId"]?.jsonPrimitive?.content
+              if (id != "m3/card" && id != "m3/icon-button") return@map entry
+              val properties = entry.getValue("properties").jsonArray
+              val variant = properties.first {
+                it.jsonObject["name"]?.jsonPrimitive?.content == "variant"
+              }
+              val style = JsonObject(variant.jsonObject + ("name" to JsonPrimitive("style")))
+              JsonObject(entry + ("properties" to JsonArray(properties + style)))
+            }
+          JsonObject(root + ("components" to JsonArray(components)))
+        },
+      )
+    )
 
   private fun resource(path: String): String =
     checkNotNull(javaClass.getResource(path)) { "missing resource $path" }.readText()
