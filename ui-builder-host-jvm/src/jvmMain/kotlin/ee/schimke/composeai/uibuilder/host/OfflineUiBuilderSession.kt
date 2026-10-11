@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -25,6 +26,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderFileDesigns
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.agentChatContext
+import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
@@ -89,6 +91,23 @@ fun OfflineUiBuilderApp(
   availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
   openDefaultPreview: Boolean = true,
 ) {
+  // The catalog is read from where it publishes (or this machine's cache of it) before a session
+  // exists, off the UI thread; until then, and when it cannot be read, the host says so.
+  val load by
+    produceState<PublishedCatalogStore.Load?>(null, catalogSystemId) {
+      value = withContext(Dispatchers.IO) { OfflineCatalog.forSystem(catalogSystemId).load() }
+    }
+  when (val current = load) {
+    null -> {
+      Text("Fetching the $catalogSystemId catalog from where it publishes…")
+      return
+    }
+    is PublishedCatalogStore.Load.Unavailable -> {
+      Text(current.reason)
+      return
+    }
+    is PublishedCatalogStore.Load.Loaded -> Unit
+  }
   val session =
     remember(storagePath, catalogSystemId, remoteServer, templateId) {
       OfflineUiBuilderSession(storagePath, catalogSystemId, remoteServer, templateId)
@@ -187,8 +206,7 @@ private constructor(
 
   internal val offlineCatalog = OfflineCatalog.forSystem(catalogSystemId)
   private val appliedOverride = catalogOverride?.takeIf { it.systemId == catalogSystemId }
-  private val catalogText =
-    appliedOverride?.text ?: resourceText(offlineCatalog.capabilitiesResource)
+  private val catalogText = appliedOverride?.text ?: offlineCatalog.capabilityJson()
   override val catalog = CapabilityCatalogParser.parse(catalogText)
   private val store = LocalDesignStore(storage)
   private val catalogCapability = Json {
@@ -263,28 +281,27 @@ private constructor(
   ): UiBuilderNativeRender? = remotePreview?.render(document, hostShape)
 
   private suspend fun openOrCreate() {
-    // A catalog read from disk is usually a regenerated packaged one with a new revision; the
-    // design follows it so exports do not fail on CATALOG_PIN_MISMATCH.
-    if (appliedOverride != null) {
-      // A store that cannot be rewritten (read-only, full) still opens the design, at its old pin,
-      // and says why exports may refuse it, rather than leaving the editor blank.
-      runCatching {
-        store.read(designId)?.let { record ->
-          val repinned = record.seed.pinnedTo(catalog)
-          if (repinned != record.seed) store.write(record.copy(seed = repinned))
-        }
+    // A catalog read from disk or fetched again may have a new revision; the design follows it,
+    // as a stored record and as a project document, so exports do not fail on
+    // CATALOG_PIN_MISMATCH.
+    // A store that cannot be rewritten (read-only, full) still opens the design, at its old pin,
+    // and says why exports may refuse it, rather than leaving the editor blank.
+    runCatching {
+      store.read(designId)?.let { record ->
+        val repinned = record.seed.pinnedTo(catalog)
+        if (repinned != record.seed) store.write(record.copy(seed = repinned))
       }
-        .onFailure {
-          mutableFailure.value =
-            "could not re-pin the design to ${catalog.benchmark.catalogRevision}: " +
-              (it.message ?: it::class.simpleName)
-        }
     }
+      .onFailure {
+        mutableFailure.value =
+          "could not re-pin the design to ${catalog.benchmark.catalogRevision}: " +
+            (it.message ?: it::class.simpleName)
+      }
     when (val open = service.execute(OpenDesignRequestV1(designId))) {
       is SnapshotResponseV1 -> mutableSnapshot.value = open
       is ErrorResponseV1 -> {
         val seed =
-          initialDocument?.let { if (appliedOverride != null) it.pinnedTo(catalog) else it }
+          initialDocument?.pinnedTo(catalog)
             ?: offlineCatalog.seed(
               designId = designId,
               catalogRevision = catalog.benchmark.catalogRevision,
@@ -292,7 +309,12 @@ private constructor(
               templateId = templateId,
             )
         when (val created = service.create(seed)) {
-          is SnapshotResponseV1 -> mutableSnapshot.value = created
+          is SnapshotResponseV1 -> {
+            // Publish the first snapshot after the new pin is saved, so queued edits cannot
+            // race this initial write and be overwritten by it.
+            if (initialDocument != null && seed != initialDocument) persistThroughHost(created)
+            mutableSnapshot.value = created
+          }
           is ErrorResponseV1 -> mutableFailure.value = created.error.message
           else -> mutableFailure.value = "unexpected response while creating the desktop design"
         }
@@ -305,19 +327,21 @@ private constructor(
     when (val result = service.execute(OpenDesignRequestV1(designId))) {
       is SnapshotResponseV1 -> {
         mutableSnapshot.value = result
-        if (persist) {
-          try {
-            onDocumentCommitted(result.snapshot.state.document)
-            mutableFailure.value = null
-          } catch (failure: Exception) {
-            mutableFailure.value =
-              "the design changed in memory but could not be written: " +
-                (failure.message ?: failure::class.simpleName)
-          }
-        }
+        if (persist) persistThroughHost(result)
       }
       is ErrorResponseV1 -> mutableFailure.value = result.error.message
       else -> mutableFailure.value = "unexpected response while opening the desktop design"
+    }
+  }
+
+  private suspend fun persistThroughHost(snapshot: SnapshotResponseV1) {
+    try {
+      onDocumentCommitted(snapshot.snapshot.state.document)
+      mutableFailure.value = null
+    } catch (failure: Exception) {
+      mutableFailure.value =
+        "the design changed in memory but could not be written: " +
+          (failure.message ?: failure::class.simpleName)
     }
   }
 
@@ -352,6 +376,8 @@ private const val CLOSE_DRAIN_TIMEOUT_MILLIS = 2_000L
  */
 internal fun UiBuilderDocument.pinnedTo(catalog: CapabilityCatalog): UiBuilderDocument {
   val benchmark = catalog.benchmark
+  // A different catalog is not a republication of this design's catalog.
+  if (catalogPin["systemId"]?.jsonPrimitive?.contentOrNull != benchmark.catalogSystemId) return this
   val previousRevision = catalogPin["catalogRevision"]?.jsonPrimitive?.contentOrNull
   val pin =
     catalogPin.toMutableMap().apply {
@@ -497,23 +523,63 @@ private fun fixtureDocument(): UiBuilderDocument =
     )
     .document
 
-/** A packaged catalog that the offline hosts can author against without a server. */
+/**
+ * A catalog the offline hosts can author against.
+ *
+ * The host carries no definition of any of these: each is read from where the catalog publishes it
+ * ([PublishedCatalogStore]) and composed in this process, exactly as a preview server owning the
+ * catalog composes it, and new designs seed from the template documents the catalog publishes. What
+ * lives here is only an id and the starter a fresh desktop workspace opens on.
+ */
 public enum class OfflineCatalog(
   val systemId: String,
-  val capabilitiesResource: String,
   /** What a new workspace in this catalog starts as when no template is asked for. */
-  val defaultTemplateId: String,
+  val defaultTemplateId: String?,
 ) {
-  // The desktop's own workspace is the Jetcaster benchmark, which is no longer a template the web
-  // host's New design form offers (it does not export, and the published m3-catalog lacks its
-  // `m3/snackbar-host`); [seed] answers it from the fixture before the offered set is consulted.
-  M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE),
-  WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE),
-  REMOTE_M3("remote-m3", "remote-m3-capabilities-v1.json", "wear-widget-small");
+  // The desktop's own workspace is the Jetcaster benchmark — the builder's own fixture design, not
+  // a
+  // catalog — so [seed] answers it from the fixture before the published templates are consulted.
+  M3("m3-catalog", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE),
+  WEAR_M3("wear-m3", "wear-list"),
+  REMOTE_M3("remote-m3", "wear-widget-small"),
+  REMOTE_WIDGETS("remote-widgets", null),
+  GLIMMER("glimmer-catalog", null),
+  A2UI("a2ui-catalog", null);
 
-  /** Every template [seed] accepts, from the same seed the web host's New design form offers. */
+  /** This catalog as it publishes it, or why it cannot be opened (unreachable, never fetched). */
+  fun load(): PublishedCatalogStore.Load = PublishedCatalogStore.shared.load(systemId)
+
+  private fun loaded(): PublishedCatalogStore.Load.Loaded =
+    when (val load = load()) {
+      is PublishedCatalogStore.Load.Loaded -> load
+      is PublishedCatalogStore.Load.Unavailable -> throw CatalogUnavailableException(load.reason)
+    }
+
+  /** The composed capability, as the JSON the editor parses. */
+  fun capabilityJson(): String = loaded().capabilityJson
+
+  /** Every template [seed] accepts: what the catalog publishes (blank when it publishes none). */
   val templateIds: Set<String>
-    get() = UiBuilderNewDesignSeed.templateIds(systemId)
+    get() =
+      loaded().templates.ids.toSet().ifEmpty { setOf(UiBuilderNewDesignSeed.BLANK_TEMPLATE) } +
+        listOfNotNull(defaultTemplateId?.takeIf { this == M3 })
+
+  /**
+   * [templateIds] when this catalog has already been opened, else empty — for a menu built while
+   * composing, which must neither wait on the network nor fail.
+   */
+  val openedTemplateIds: Set<String>
+    get() =
+      if (PublishedCatalogStore.shared.peek(systemId) is PublishedCatalogStore.Load.Loaded)
+        templateIds
+      else emptySet()
+
+  /** [defaultTemplateId] when the catalog still publishes it, else the first it does publish. */
+  private val startTemplateId: String
+    get() =
+      defaultTemplateId?.takeIf { it in templateIds }
+        ?: loaded().templates.ids.firstOrNull()
+        ?: UiBuilderNewDesignSeed.BLANK_TEMPLATE
 
   fun seed(
     designId: String,
@@ -522,32 +588,53 @@ public enum class OfflineCatalog(
     templateId: String? = null,
   ): UiBuilderDocument =
     if (this == M3 && (templateId == null || templateId == defaultTemplateId)) {
-      fixtureDocument().copy(id = designId, title = "Desktop workspace")
+      // The benchmark design, pinned to the catalog it is opened against: the catalog is read from
+      // where it publishes, so its revision is whatever it published last.
+      fixtureDocument().let { fixture ->
+        fixture.copy(
+          id = designId,
+          title = "Desktop workspace",
+          catalogPin =
+            JsonObject(
+              fixture.catalogPin +
+                mapOf(
+                  "catalogRevision" to JsonPrimitive(catalogRevision),
+                  "nativeRuntimeId" to JsonPrimitive(nativeRuntimeId),
+                )
+            ),
+        )
+      }
     } else {
       UiBuilderNewDesignSeed.document(
         designId = designId,
         catalogSystemId = systemId,
         templateId =
-          (templateId ?: defaultTemplateId).also {
+          (templateId ?: startTemplateId).also {
             require(it in templateIds) { "catalog '$systemId' has no template '$it'" }
           },
         catalogRevision = catalogRevision,
         nativeRuntimeId = nativeRuntimeId,
         fixture =
           Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
+        ownership = CatalogOwnership.of(setOf(systemId)),
+        published = loaded().templates,
       )
     }
 
-  /** The packaged capability used while a remote session loads its authoritative snapshot. */
-  fun capabilityCatalog(): CapabilityCatalog =
-    CapabilityCatalogParser.parse(resourceText(capabilitiesResource))
+  /** The capability used while a remote session loads its authoritative snapshot. */
+  fun capabilityCatalog(): CapabilityCatalog = CapabilityCatalogParser.parse(capabilityJson())
 
   companion object {
     fun forSystem(systemId: String): OfflineCatalog =
       entries.firstOrNull { it.systemId == systemId }
-        ?: error("offline UI Builder has no packaged catalog '$systemId'")
+        ?: error("offline UI Builder has no catalog '$systemId'")
   }
 }
+
+/**
+ * A catalog that could not be read from where it publishes; the message says why and what to do.
+ */
+public class CatalogUnavailableException(message: String) : IllegalStateException(message)
 
 private fun resourceText(name: String): String =
   checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }

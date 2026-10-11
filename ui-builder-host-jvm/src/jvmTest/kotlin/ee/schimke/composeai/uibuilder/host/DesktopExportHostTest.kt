@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import java.awt.Image
 import java.nio.file.Files
@@ -12,7 +13,13 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
 class DesktopExportHostTest {
-  private val catalog = OfflineCatalog.M3.capabilityCatalog()
+  // The export mechanics, against the m3 golden this build still synthesises. A catalog read from
+  // where it publishes declares no per-component SVG capability, so the in-process SVG export
+  // refuses it — a gap to close before that golden is deleted (UI_BUILDER_CATALOG_CUTOVER.md).
+  private val catalog =
+    CapabilityCatalogParser.parse(
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+    )
   private val document =
     OfflineCatalog.M3.seed(
       designId = "export-test",

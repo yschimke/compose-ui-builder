@@ -87,6 +87,40 @@ class LocalComponentsParametersTest {
   }
 
   @Test
+  fun `a colour passed to a placement is a recent colour like any other`() {
+    val placed = twoPlaced().let { it.copy(selection = listOf("email-1-avatar")) }
+    val expose = reducer.componentActions(placed).single { it.label.startsWith("Make") }
+    val exposed = reducer.reduce(placed, expose.event)
+    val placement = placements(exposed).first().id
+    // The inspector draws a placement's colour argument with the same control as a node's own
+    // colour, so a colour picked there must come back on the recent row too.
+    val coloured =
+      reducer.reduce(
+        exposed,
+        UiBuilderEditorEvent.CommitProperty(placement, "containerColor", "#FF1A73E8"),
+      )
+
+    assertIs<CommandOutcome.Accepted>(coloured.lastOutcome, "${coloured.lastOutcome}")
+    assertEquals(listOf("#FF1A73E8"), coloured.recentColours)
+    // A text argument is not a colour.
+    val renamed =
+      reducer.reduce(
+        coloured,
+        UiBuilderEditorEvent.CommitProperty(placement, "sender", "Grace Hopper"),
+      )
+    assertIs<CommandOutcome.Accepted>(renamed.lastOutcome, "${renamed.lastOutcome}")
+    assertEquals(listOf("#FF1A73E8"), renamed.recentColours)
+    // And a refused argument records nothing.
+    val refused =
+      reducer.reduce(
+        renamed,
+        UiBuilderEditorEvent.CommitProperty(placement, "containerColor", "not-a-colour"),
+      )
+    assertIs<CommandOutcome.Rejected>(refused.lastOutcome, "${refused.lastOutcome}")
+    assertEquals(listOf("#FF1A73E8"), refused.recentColours)
+  }
+
+  @Test
   fun `a detached instance is ordinary layers holding what it passed`() {
     val placed = twoPlaced()
     val second = placed.selection.single()

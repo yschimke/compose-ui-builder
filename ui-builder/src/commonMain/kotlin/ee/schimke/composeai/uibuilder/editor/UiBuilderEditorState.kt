@@ -183,6 +183,8 @@ class UiBuilderEditorReducer(
       pinnedComponents = state.pinnedComponents,
       // Carried: an insert is answered by an authoritative document that would otherwise empty it.
       recentComponents = state.recentComponents,
+      // Carried for the same reason: every colour edit is answered by a rebuild.
+      recentColours = state.recentColours,
       // Drop only rows this document has answered: every edit rebuilds the state, so dropping all
       // would lose drift rows, and keeping all would report drift the edit just fixed.
       componentDrift = state.componentDrift.stillDescribing(document),
@@ -1063,14 +1065,7 @@ class UiBuilderEditorReducer(
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
-    val items =
-      catalog.paletteComponents
-        .map { it.editorCatalogItem() }
-        // A disabled pack is hidden from search too; otherwise the switch would not hide anything.
-        .filter { it.pack == null || it.pack in state.enabledPacks }
-        .filter { !placeableNowhere(state, it.componentId) }
-        .filter { it.matches(needle) }
-        .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
+    val items = searchedCatalogItems(state, needle)
     // Declared shelves, then kind-label fallbacks in kind order. `distinct` because the lists
     // overlap ("Scaffolds") and the later entry would push the shelf to the end.
     val order =
@@ -1151,6 +1146,47 @@ class UiBuilderEditorReducer(
         }
       }
     return rows
+  }
+
+  /**
+   * The components the insert panel offers, narrowed to [needle] (already trimmed and lowercased)
+   * and in search order. Shared by the panel and quick insert, so the two cannot rank differently.
+   */
+  private fun searchedCatalogItems(
+    state: UiBuilderEditorState,
+    needle: String,
+  ): List<EditorCatalogItem> =
+    catalog.paletteComponents
+      .map { it.editorCatalogItem() }
+      // A disabled pack is hidden from search too; otherwise the switch would not hide anything.
+      .filter { it.pack == null || it.pack in state.enabledPacks }
+      .filter { !placeableNowhere(state, it.componentId) }
+      .filter { it.matches(needle) }
+      .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
+
+  /**
+   * What the `/` quick insert lists for [query]: the insert panel's matches in the panel's order,
+   * less anything the selection has no slot for, so Enter on any row inserts. A component found by
+   * its name is a component row; each variant the query names is a row of its own, as the panel's
+   * opened variant rows are, so typing "outlined" offers the outlined Card rather than a Card that
+   * inserts as filled. With no query the "Recently used" shelf leads, most recent first, because
+   * the component wanted next is most often one just placed; everything else follows in the panel's
+   * browsing order.
+   */
+  fun quickInsertItems(state: UiBuilderEditorState, query: String): List<QuickInsertEntry> {
+    val needle = query.trim().lowercase()
+    val items =
+      searchedCatalogItems(state, needle).filter { dropTarget(state, it.componentId) != null }
+    if (needle.isNotEmpty()) {
+      return items.flatMap { item ->
+        val component =
+          if (item.matchesOwnName(needle)) listOf(QuickInsertEntry(item)) else listOf()
+        component + item.variants.filter { it.matches(needle) }.map { QuickInsertEntry(item, it) }
+      }
+    }
+    val byId = items.associateBy(EditorCatalogItem::componentId)
+    val recent = state.recentComponents.mapNotNull(byId::get)
+    return (recent + (items - recent.toSet())).map(::QuickInsertEntry)
   }
 
   private fun ComponentCapability.editorCatalogItem(): EditorCatalogItem {
@@ -2835,6 +2871,29 @@ class UiBuilderEditorReducer(
       .let { edited ->
         if (targets.size > 1) edited.copy(selection = targets.map(UiBuilderNode::id)) else edited
       }
+      .withCommittedColour(state, field, value)
+  }
+
+  /**
+   * This state with [value] at the front of [UiBuilderEditorState.recentColours] when [field] is a
+   * colour and the commit made from [before] was accepted. Shared by a node's own property and a
+   * component placement's argument, which draw the same colour control, so a colour picked on
+   * either is recent on both. Only a colour the document took: a refused one is not on the canvas,
+   * and the sequence check keeps a stale Accepted from an earlier command from counting.
+   */
+  private fun UiBuilderEditorState.withCommittedColour(
+    before: UiBuilderEditorState,
+    field: EditorPropertyField,
+    value: JsonElement,
+  ): UiBuilderEditorState {
+    val colour = (value as? JsonPrimitive)?.contentOrNull
+    val accepted =
+      operationSequence != before.operationSequence && lastOutcome is CommandOutcome.Accepted
+    return if (field.control == EditorPropertyControl.Color && colour != null && accepted) {
+      copy(recentColours = recentColours.withRecentColour(colour))
+    } else {
+      this
+    }
   }
 
   /**
@@ -5398,6 +5457,7 @@ class UiBuilderEditorReducer(
           )
         else edited
       }
+      .withCommittedColour(state, field, value)
   }
 
   /**

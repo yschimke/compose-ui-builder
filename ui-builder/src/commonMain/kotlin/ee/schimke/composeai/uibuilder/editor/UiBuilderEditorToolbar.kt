@@ -1941,6 +1941,8 @@ internal fun editorShortcutFor(
         // compact layout may be showing a preview tab. Taken then, they would rescale a canvas
         // nobody can see from a stale drawn scale, and keep the browser's page zoom from answering.
         it.view is EditorViewCommand.Zoom -> canvasShown
+        // Quick insert opens on the canvas, beside the selection, so it needs one on screen too.
+        it.view == EditorViewCommand.QuickInsert -> canvasShown
         else ->
           editing ||
             it.event is UiBuilderEditorEvent.TogglePane ||
@@ -1982,6 +1984,12 @@ internal sealed interface EditorViewCommand {
 
   /** Opens the panel these rows are drawn in. */
   data object ShowShortcuts : EditorViewCommand
+
+  /**
+   * Opens the quick insert search beside the selection. A window like the shortcuts dialog: what it
+   * inserts goes through the palette's own insert events, so it needs no reducer of its own.
+   */
+  data object QuickInsert : EditorViewCommand
 }
 
 /**
@@ -2154,6 +2162,17 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       command = true,
       shift = false,
     ),
+    // Bare `/`, the slash command of every editor that has one. The table is only consulted while
+    // no text field has the caret, so a `/` typed into a property stays a slash. Unshifted, so `?`
+    // below keeps its own chord whichever order the two are in.
+    EditorShortcut(
+      chord = "/",
+      description = "Quick insert a component into the selection",
+      view = EditorViewCommand.QuickInsert,
+      keys = setOf(Key.Slash),
+      command = false,
+      shift = false,
+    ),
     // Shift+/ is `?` on the layouts this is spelled for. Bare, like E, because the table is only
     // consulted while no text field has the caret — and it is live with the canvas closed too,
     // since a list of what the keys do is most wanted by someone who has just lost the canvas.
@@ -2186,6 +2205,7 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
     "Drag a catalog component" to "Insert it where it is dropped",
     "Hold a node, then drag" to "Move it into the slot and seam it is dropped at",
     "Click a rung above the canvas" to "Select that layer — the path is a way back up",
+    "Alt/Option + hover a node" to "Measure its distance in dp from the selection",
   )
 
 /**
