@@ -310,7 +310,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: scripts/ui-builder-web-smoke
       # The same regression seen from the browser: open a Material 3 design and fail when one Wasm
-      # TurboFan compile holds over 128 MB (86 MB today, 312 MB before the inlining rules). Like the
+      # TurboFan compile holds over 128 MB (48 MB today, 312 MB before the inlining rules). Like the
       # check above, it can only fail on `main`'s Binaryen-optimised module. On `main` it also
       # measures the designs screen, three runs each, against the memory budgets in `budgets.json`
       # (settled renderer PSS and JS heap); a pull request keeps the one quick run.
