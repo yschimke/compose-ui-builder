@@ -59,7 +59,7 @@ object PropertyValueKinds {
    * Every wrapper type a property value may carry (`{"type": <wrapper>, …}`), a closed set split
    * across two enforcers:
    *
-   * - `CollaborationReducer`'s `propertyWrapperIssue` owns sixteen and their shapes, on
+   * - `CollaborationReducer`'s `propertyWrapperIssue` owns seventeen and their shapes, on
    *   `SetProperty` only.
    * - `list` and `binding` (repetition rows and row fields) arrive on inserts and are checked by
    *   `inspectUiBuilderArgumentBindings`.
@@ -87,6 +87,9 @@ object PropertyValueKinds {
       "stateEquals",
       "padding",
       "adaptiveGrid",
+      // A catalog string resource, `{"type": "resource", "resourceKey": …}`; exported through the
+      // catalog's declared accessor (`CatalogScreenStructure.stringResources`).
+      "resource",
       // The repetition pair, checked by `inspectUiBuilderArgumentBindings`.
       "list",
       "binding",

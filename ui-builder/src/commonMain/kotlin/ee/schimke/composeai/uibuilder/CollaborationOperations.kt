@@ -787,6 +787,15 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
       )
         null
       else "adaptiveGrid wrapper must contain exactly type and numeric minimumCellWidthDp"
+    // A catalog string resource. `contentDigest` is optional, as `ResourceValueV1` declares it.
+    "resource" ->
+      if (
+        encodedValue.nonEmptyString("resourceKey") != null &&
+          encodedValue.keys.all { it in setOf("type", "resourceKey", "contentDigest") }
+      )
+        null
+      else
+        "resource wrapper must contain type, a non-empty resourceKey and optionally contentDigest"
     // A computed value: its tree's shape here, its types against the document's state at the
     // catalog check, which is where the declarations are.
     UiExpressions.EXPR,

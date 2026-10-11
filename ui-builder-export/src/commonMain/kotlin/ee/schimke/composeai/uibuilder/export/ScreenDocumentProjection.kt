@@ -2981,7 +2981,8 @@ object ScreenDocumentProjection {
     /**
      * A `resource` value as `stringResource(Res.string.<key>)`, through the accessor the catalog
      * declares ([ProjectedStructure.stringResources]). `Res.string.<key>` is a generated extension
-     * property in the accessor's package, so it is a chain link the generator imports, like `16.dp`.
+     * property in the accessor's package, so it is a chain link the generator imports, like
+     * `16.dp`.
      */
     private fun stringResource(key: String, where: String): ScreenValue? {
       val res =

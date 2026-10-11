@@ -27,8 +27,8 @@ class WrapperVocabularyTest {
   fun `every wrapper the reducer accepts is named in the shared set`() {
     val acceptedByReducer = PropertyValueKinds.WRAPPER_TYPES.filterNot(::rejectsOutright)
     assertTrue(
-      acceptedByReducer.toSet().size >= 16,
-      "expected the reducer's own sixteen, found ${acceptedByReducer.size}: $acceptedByReducer",
+      acceptedByReducer.toSet().size >= 17,
+      "expected the reducer's own seventeen, found ${acceptedByReducer.size}: $acceptedByReducer",
     )
   }
 
@@ -48,6 +48,23 @@ class WrapperVocabularyTest {
   fun `an invented wrapper is refused by the reducer with a message naming it`() {
     val issue = propertyWrapperIssue("fixedGrid", wrapper("fixedGrid"))
     assertEquals("uses unsupported wrapper type fixedGrid", issue)
+  }
+
+  /** A catalog string resource is admitted by its shape, and a keyless one is refused. */
+  @Test
+  fun `a resource wrapper is accepted and a keyless one refused`() {
+    assertNull(
+      propertyWrapperIssue(
+        "resource",
+        JsonObject(
+          mapOf("type" to JsonPrimitive("resource"), "resourceKey" to JsonPrimitive("card_title"))
+        ),
+      )
+    )
+    assertTrue(
+      propertyWrapperIssue("resource", JsonObject(mapOf("type" to JsonPrimitive("resource"))))
+        ?.startsWith("resource wrapper") == true
+    )
   }
 
   /** A well-formed literal still passes, so the pin above is not just rejecting everything. */
