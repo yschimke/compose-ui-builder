@@ -111,10 +111,15 @@ object ScreenExportGate {
       )
     }
     val resolvable = record.callableAliases()
+    val framed =
+      when (val unwrapped = ScreenRootFrame.unwrap(document, structure)) {
+        is ScreenRootFrame.Unwrapped.Refused -> return Outcome.Refused(unwrapped.reasons)
+        is ScreenRootFrame.Unwrapped.Document -> unwrapped.document
+      }
     return when (
       val projected =
         ScreenDocumentProjection.project(
-          document,
+          framed,
           exportProjections,
           tagNodes = tagNodes,
           typefaces = typefaces,
@@ -126,7 +131,7 @@ object ScreenExportGate {
       // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
       // sequencing them hid the second list until the first was empty.
       is ScreenDocumentProjection.Outcome.Refused ->
-        Outcome.Refused((projected.reasons + unprovenComponents(document, record)).distinct())
+        Outcome.Refused((projected.reasons + unprovenComponents(framed, record)).distinct())
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
           val generated =
