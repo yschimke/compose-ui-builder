@@ -236,6 +236,33 @@ internal fun variantLabel(value: String): String =
 internal fun <T> Set<T>.toggled(value: T): Set<T> =
   if (value in this) this - value else this + value
 
+/**
+ * How many components the insert panel's "Recently used" shelf keeps. A handful: enough for the
+ * three or four a screen is being built from, few enough that the shelf stays a shortcut rather
+ * than a second catalog pushing the real shelves below the fold.
+ */
+internal const val RECENT_COMPONENT_LIMIT = 6
+
+/** The heading of that shelf. */
+internal const val RECENT_SHELF = "Recently used"
+
+/**
+ * That shelf's identity: its lazy key and the entry its collapsed state is remembered under. Not
+ * [RECENT_SHELF], because a catalog may name a shelf of its own "Recently used"; a catalog's shelf
+ * names are labels a person reads, and none starts with a NUL.
+ */
+internal const val RECENT_SHELF_ID = "\u0000editor/recently-used"
+
+/**
+ * [componentId] moved to the front of a most-recently-used list, each id at most once, trimmed to
+ * [limit]. Inserting the same Text five times is one entry, not five — the shelf answers "what was
+ * I just using", and a run of one component would otherwise push everything else off it.
+ */
+internal fun List<String>.withRecentComponent(
+  componentId: String,
+  limit: Int = RECENT_COMPONENT_LIMIT,
+): List<String> = (listOf(componentId) + filter { it != componentId }).take(limit)
+
 /** The frame a catalog thumbnail's component is inserted into, and drawn at before scaling. */
 internal const val PREVIEW_FRAME_WIDTH_DP = 176
 

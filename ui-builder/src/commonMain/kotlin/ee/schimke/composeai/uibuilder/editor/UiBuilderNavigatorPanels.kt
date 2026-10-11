@@ -419,7 +419,7 @@ private fun InsertPanel(
               name = row.name,
               count = row.count,
               expanded = row.expanded,
-              onToggle = { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.name)) },
+              onToggle = { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.id)) },
             )
           is EditorCatalogRow.Component ->
             CatalogComponentTile(
@@ -1585,15 +1585,24 @@ private suspend fun AwaitPointerEventScope.awaitCatalogPickUp(
  * A stable `LazyColumn` key per row. The row kind is part of it, since groups, components and
  * variants can share names or ids.
  */
-private fun EditorCatalogRow.catalogRowKey(): String =
+internal fun EditorCatalogRow.catalogRowKey(): String =
   when (this) {
-    is EditorCatalogRow.Group -> "group:$name"
-    // The pinned copy is the same component twice, so which copy is part of the key: a list that
-    // saw two rows with one key would drop one of them rather than draw the component twice.
+    is EditorCatalogRow.Group -> "group:$id"
+    // The pinned and recent copies are the same component two or three times, so which copy is
+    // part of the key: a list that saw two rows with one key would drop one of them rather than
+    // draw the component twice.
     is EditorCatalogRow.Component ->
-      if (pinned) "pinned:${item.componentId}" else "component:${item.componentId}"
+      when {
+        recent -> "recent:${item.componentId}"
+        pinned -> "pinned:${item.componentId}"
+        else -> "component:${item.componentId}"
+      }
     is EditorCatalogRow.Variant ->
-      (if (pinned) "pinned-variant:" else "variant:") + "${variant.componentId}#${variant.value}"
+      when {
+        recent -> "recent-variant:"
+        pinned -> "pinned-variant:"
+        else -> "variant:"
+      } + "${variant.componentId}#${variant.value}"
   }
 
 /**
