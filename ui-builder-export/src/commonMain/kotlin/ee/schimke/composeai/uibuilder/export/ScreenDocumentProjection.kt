@@ -2956,8 +2956,7 @@ object ScreenDocumentProjection {
           refuse(
             "$where is a value the Remote Compose player computes; export it as a Remote widget"
           )
-        is ResourceValueV1 ->
-          refuse("$where is a resource reference, which needs an Android resource context")
+        is ResourceValueV1 -> stringResource(value.resourceKey, where)
         is AssetKeyValueV1 -> refuse("$where is an asset key, which needs an artwork adapter")
         is AdaptiveGridValueV1 -> {
           // `LazyVerticalGrid(columns = …)` takes this as a value; absent or non-`Dp` widths
@@ -2977,6 +2976,44 @@ object ScreenDocumentProjection {
           )
         }
       }
+    }
+
+    /**
+     * A `resource` value as `stringResource(Res.string.<key>)`, through the accessor the catalog
+     * declares ([ProjectedStructure.stringResources]). `Res.string.<key>` is a generated extension
+     * property in the accessor's package, so it is a chain link the generator imports, like `16.dp`.
+     */
+    private fun stringResource(key: String, where: String): ScreenValue? {
+      val res =
+        structure.stringResources
+          ?: return refuse(
+            "$where is the resource `$key`, and this catalog declares no string resources " +
+              "(`code.stringResources`)"
+          )
+      if (!RESOURCE_KEY.matches(key)) {
+        return refuse("$where is the resource `$key`, which is not a Kotlin identifier")
+      }
+      val owner = res.substringBeforeLast('.', "")
+      if (owner.isEmpty()) {
+        return refuse("the catalog's string resource accessor `$res` has no package")
+      }
+      return ScreenValue.Construct(
+        callableFqn = STRING_RESOURCE,
+        positional =
+          listOf(
+            ScreenValue.Chain(
+              receiver =
+                ScreenValue.Reference(
+                  rootFqn = res,
+                  members = listOf("string"),
+                  typeFqn = "$res.string",
+                ),
+              links = listOf(ChainLink("$owner.$key", property = true)),
+              typeFqn = STRING_RESOURCE_TYPE,
+            )
+          ),
+        typeFqn = "kotlin.String",
+      )
     }
 
     /**
@@ -3489,6 +3526,10 @@ object ScreenDocumentProjection {
    */
   private const val TEST_TAG = "androidx.compose.ui.platform.testTag"
   private const val COLOR = "androidx.compose.ui.graphics.Color"
+  private const val STRING_RESOURCE = "org.jetbrains.compose.resources.stringResource"
+  private const val STRING_RESOURCE_TYPE = "org.jetbrains.compose.resources.StringResource"
+  /** A generated `Res.string` member name: a plain Kotlin identifier. */
+  private val RESOURCE_KEY = Regex("[A-Za-z_][A-Za-z0-9_]*")
   private const val DP = "androidx.compose.ui.unit.Dp"
   private const val SHAPE = "androidx.compose.ui.graphics.Shape"
 
