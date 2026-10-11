@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.uibuilder.export.CatalogExportProjections
 import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
@@ -218,7 +219,14 @@ public object CatalogCutoverShadow {
       is RecordFreeExport.Generated.Emitted -> null
       is RecordFreeExport.Generated.Refused -> recordFree.reasons.take(3)
       null ->
-        when (val generic = ScreenExportGate.export(document, exportRecord)) {
+        when (
+          val generic =
+            ScreenExportGate.export(
+              document,
+              exportRecord,
+              CatalogExportProjections.from(catalog.statusSemantics),
+            )
+        ) {
           is ScreenExportGate.Outcome.Emitted -> null
           is ScreenExportGate.Outcome.Refused -> generic.reasons.take(3)
         }

@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.discovery.ExportProjection
 import ee.schimke.composeai.discovery.ScreenGenerator
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 
@@ -70,6 +71,22 @@ object ScreenExportGate {
     tagNodes: Boolean = false,
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
     variableFonts: VariableFontExport,
+  ): Outcome = export(document, record, emptyMap(), tagNodes, typefaces, variableFonts)
+
+  /**
+   * [export], lowering each component [exportProjections] names through the projection its catalog
+   * publishes (`exportProjection` on the component's policy). The packages the generated source may
+   * name widen by exactly the owners those projections print, and only by owners in a package the
+   * catalog's own [record] already calls into: a projection can name `ButtonDefaults` beside
+   * `Button`, never an arbitrary class. An overload to keep the published JVM descriptors above.
+   */
+  fun export(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    exportProjections: Map<String, ExportProjection>,
+    tagNodes: Boolean = false,
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    variableFonts: VariableFontExport = VariableFontExport.None,
   ): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
@@ -81,7 +98,12 @@ object ScreenExportGate {
     val resolvable = record.callableAliases()
     return when (
       val projected =
-        ScreenDocumentProjection.project(document, tagNodes = tagNodes, typefaces = typefaces)
+        ScreenDocumentProjection.project(
+          document,
+          exportProjections,
+          tagNodes = tagNodes,
+          typefaces = typefaces,
+        )
     ) {
       // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
       // sequencing them hid the second list until the first was empty.
@@ -94,7 +116,7 @@ object ScreenExportGate {
               projected.document,
               projected.resolvable(resolvable),
               PACKAGE_NAME,
-              EXPRESSION_PACKAGES,
+              EXPRESSION_PACKAGES + projectedOwners(exportProjections, record),
             )
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
@@ -108,6 +130,23 @@ object ScreenExportGate {
             }
         }
     }
+  }
+
+  /**
+   * The owners [exportProjections] print that sit in a package some component of [record] is
+   * declared in. Anything else stays outside the allowlist, so the generator refuses it by name.
+   */
+  internal fun projectedOwners(
+    exportProjections: Map<String, ExportProjection>,
+    record: ComponentRecordFile,
+  ): Set<String> {
+    if (exportProjections.isEmpty()) return emptySet()
+    val packages =
+      record.components.map { it.symbol.callable.substringBeforeLast('.', "") }.toSet() - ""
+    return exportProjections.values
+      .flatMap { it.qualifiedOwners }
+      .filter { owner -> owner.substringBeforeLast('.', "") in packages }
+      .toSet()
   }
 
   /**
