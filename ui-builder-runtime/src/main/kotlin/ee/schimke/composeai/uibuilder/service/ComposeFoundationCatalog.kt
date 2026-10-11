@@ -97,8 +97,8 @@ private val FOUNDATION_CURATIONS =
         },
         menu = { wearComponentMenu() },
       ),
-    // A2UI is a closed vocabulary and neither A2UI exporter handles `layout/`, `shape/` or `asset/`,
-    // so offer nothing rather than components that cannot be exported.
+    // A2UI is a closed vocabulary and neither A2UI exporter handles `layout/`, `shape/` or
+    // `asset/`, so offer nothing rather than components that cannot be exported.
     "a2ui" to FoundationCuration(ids = emptyList(), menu = { JsonObject(emptyMap()) }),
     // A Remote Compose document body. No `shape/radial-gradient`: the emitter only writes linear
     // gradient chains.
