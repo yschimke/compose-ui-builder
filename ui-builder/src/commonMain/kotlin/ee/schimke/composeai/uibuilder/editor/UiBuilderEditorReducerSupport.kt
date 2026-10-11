@@ -269,6 +269,26 @@ internal fun List<String>.withRecentComponent(
   limit: Int = RECENT_COMPONENT_LIMIT,
 ): List<String> = (listOf(componentId) + filter { it != componentId }).take(limit)
 
+/**
+ * How many colours the inspector's "Recent colours" row keeps: one row of swatches beside the
+ * inspector's narrow width, and about as many as a screen's palette has distinct accents.
+ */
+internal const val RECENT_COLOUR_LIMIT = 6
+
+/**
+ * [colour] moved to the front of the recently committed colours, each at most once, trimmed to
+ * [limit]. A literal is compared without case, so `#ff1a73e8` typed into the field and `#FF1A73E8`
+ * pressed on a swatch are one colour, kept as last spelled. A blank value is the component's
+ * default, not a colour anyone chose, so it leaves the list as it was.
+ */
+internal fun List<String>.withRecentColour(
+  colour: String,
+  limit: Int = RECENT_COLOUR_LIMIT,
+): List<String> {
+  if (colour.isBlank()) return this
+  return (listOf(colour) + filterNot { it.equals(colour, ignoreCase = true) }).take(limit)
+}
+
 /** The frame a catalog thumbnail's component is inserted into, and drawn at before scaling. */
 internal const val PREVIEW_FRAME_WIDTH_DP = 176
 

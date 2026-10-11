@@ -183,6 +183,8 @@ class UiBuilderEditorReducer(
       pinnedComponents = state.pinnedComponents,
       // Carried: an insert is answered by an authoritative document that would otherwise empty it.
       recentComponents = state.recentComponents,
+      // Carried for the same reason: every colour edit is answered by a rebuild.
+      recentColours = state.recentColours,
       // Drop only rows this document has answered: every edit rebuilds the state, so dropping all
       // would lose drift rows, and keeping all would report drift the edit just fixed.
       componentDrift = state.componentDrift.stillDescribing(document),
@@ -2820,6 +2822,20 @@ class UiBuilderEditorReducer(
       // typed in, or the next edit would silently apply to one node.
       .let { edited ->
         if (targets.size > 1) edited.copy(selection = targets.map(UiBuilderNode::id)) else edited
+      }
+      .let { edited ->
+        // Only a colour the document took: a refused one is not on the canvas, so offering it
+        // again as "recent" would offer a value that was never used.
+        val colour = (value as? JsonPrimitive)?.contentOrNull
+        if (
+          field.control == EditorPropertyControl.Color &&
+            colour != null &&
+            edited.lastOutcome is CommandOutcome.Accepted
+        ) {
+          edited.copy(recentColours = edited.recentColours.withRecentColour(colour))
+        } else {
+          edited
+        }
       }
   }
 
