@@ -563,11 +563,11 @@ internal fun EditorToolbar(
   // The row does not wrap, so up to the Expanded width class the session actions (New, Fork,
   // Sharing) and the viewer list move into More rather than pushing the agent control and More
   // itself off the end; from Large up they are on the toolbar. Below 840dp the editor shows
-  // MobileEditorToolbar instead. window-core 1.4 has no WIDTH_DP_LARGE_LOWER_BOUND, so "Large or
-  // wider" is a size class whose lower bound is above Expanded's.
+  // MobileEditorToolbar instead.
   val foldToMore =
-    currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true).windowSizeClass.minWidthDp <=
-      WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+    !currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true)
+      .windowSizeClass
+      .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND)
   val showPresence = collaborators.isNotEmpty() || agentHost != null
   if (showShortcuts) {
     EditorShortcutsDialog(onDismiss = { showShortcuts = false })

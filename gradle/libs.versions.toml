@@ -45,17 +45,19 @@ compose-material3-adaptive = "1.2.0"
 # `1.7.0-beta02-cmp09` for `:catalog-desktop`, and the two drifting would mean the canvas and the
 # kit rendition disagreeing about a component for a reason no render could explain.
 wearcmp-port = "1.7.0-beta02-cmp09"
-# `androidx.window`, as the JetBrains multiplatform port publishes it. Nothing in this build depends
-# on it directly — it arrives transitively under the adaptive artifacts above — and this ref exists
-# so the server's RENDERER SIDECAR can carry the same library onto the daemon's parent class loader.
+# `androidx.window`, as the JetBrains multiplatform port publishes it. `:ui-builder` depends on it
+# directly, above the 1.4.0 the adaptive artifacts ask for, because 1.5 is the first with the Large
+# and Extra-large width constants (`WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND`) the editor toolbar
+# folds on. This ref also exists so the server's RENDERER SIDECAR can carry the same library onto
+# the daemon's parent class loader.
 # `server/build.gradle.kts` says why that is necessary; it is the fix for
 # yschimke/compose-preview-server#812.
 #
-# So the number to hold it at is whatever the adaptive artifacts resolve, NOT the newest published:
+# So the number to hold it at is whatever this module resolves, NOT the newest published:
 # the sidecar copy is the one the render links against, so a higher one here would silently swap the
 # library out from under the bundle. `:ui-builder:checkWindowSidecarVersion` fails the build if the
 # two ever disagree rather than leaving it to a `NoSuchMethodError` mid-render.
-androidx-window = "1.4.0"
+androidx-window = "1.5.1"
 material-icons-extended = "1.7.3"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
