@@ -596,7 +596,8 @@ class ProjectedComposeExportTest {
               "templates": { "screen-root":
                 "val listState = rememberTransformingLazyColumnState()\nval spec = rememberTransformationSpec()\nScreenScaffold(scrollState = listState) { contentPadding ->\n  ${'$'}{content}\n}" },
               "locals": { "listState": "$listState", "spec": "$spec" },
-              "scopes": { "list-item": "$itemScope" } } }
+              "scopes": { "list-item": "$itemScope" } },
+            "builtins": { "wear-m3/screen-scaffold": { "role": "screen-root" } } }
           """
         )
         .jsonObject
@@ -652,6 +653,83 @@ class ProjectedComposeExportTest {
       )
     val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
     assertTrue(reasons.any { itemScope in it }, reasons.toString())
+  }
+
+  private fun scaffolded(
+    vararg properties: Pair<String, UiValueV1>,
+    slots: Map<String, List<String>> = mapOf("content" to listOf("list")),
+  ): DesignDocumentV1 {
+    val base = listDocument()
+    val scaffold =
+      DesignNodeV1(
+        "screen",
+        "wear-m3/screen-scaffold",
+        properties = properties.toMap(),
+        slots = slots,
+      )
+    return base.copy(roots = listOf("screen"), nodes = base.nodes + ("screen" to scaffold))
+  }
+
+  private fun exportList(document: DesignDocumentV1) =
+    ScreenExportGate.export(
+      document,
+      listRecords,
+      projections +
+        mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+      wearStructure,
+    )
+
+  @Test
+  fun `the catalog's screen-root builtin is read from its builtins`() {
+    assertEquals("wear-m3/screen-scaffold", wearStructure.rootComponent)
+  }
+
+  @Test
+  fun `a design rooted on the screen-root builtin exports its content inside the frame`() {
+    val outcome =
+      exportList(
+        scaffolded(
+          "timeText" to StringValueV1("10:10"),
+          "scrollIndicator" to BooleanValueV1(true),
+        )
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertEquals(
+      source,
+      assertIs<ScreenExportGate.Outcome.Emitted>(exportList(listDocument())).source,
+    )
+    assertContains(source, "ScreenScaffold(scrollState = listState) { contentPadding ->")
+    assertFalse("screen-scaffold" in source, source)
+  }
+
+  @Test
+  fun `what the screen-root frame cannot write is refused by name`() {
+    val reasons =
+      assertIs<ScreenExportGate.Outcome.Refused>(
+          exportList(
+            scaffolded(
+              "scrollIndicator" to BooleanValueV1(false),
+              "background" to StringValueV1("#000000"),
+              slots = mapOf("content" to listOf("list"), "edgeButton" to listOf("go")),
+            )
+          )
+        )
+        .reasons
+    assertTrue(reasons.any { "`scrollIndicator`" in it }, reasons.toString())
+    assertTrue(reasons.any { "`background`" in it }, reasons.toString())
+    assertTrue(reasons.any { "`edgeButton` slot" in it }, reasons.toString())
+    val empty =
+      assertIs<ScreenExportGate.Outcome.Refused>(exportList(scaffolded(slots = emptyMap())))
+    assertTrue(empty.reasons.any { "no content" in it }, empty.reasons.toString())
+  }
+
+  @Test
+  fun `without a frame the screen-root builtin is left to the record path`() {
+    val document = scaffolded()
+    assertIs<ScreenRootFrame.Unwrapped.Document>(
+        ScreenRootFrame.unwrap(document, wearStructure.copy(frame = null))
+      )
+      .let { assertEquals(document, it.document) }
   }
 
   private companion object {
