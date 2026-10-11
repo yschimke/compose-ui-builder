@@ -16,7 +16,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorShortcutsPanel
  * The shortcuts panel on its own, rendering [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] (the key
  * handler's own lists), so changes to what the editor advertises are diffed.
  */
-@Preview(widthDp = 560, heightDp = 1120)
+@Preview(widthDp = 560, heightDp = 1320)
 @Composable
 fun UiBuilderShortcutsPreview() {
   MaterialTheme(colorScheme = darkColorScheme()) {
