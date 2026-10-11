@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -129,9 +133,11 @@ import ee.schimke.composeai.uibuilder.uploadedAssets
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -623,8 +629,22 @@ fun UiBuilderEditor(
           )
       )
     }
+  // The undo offer after a delete, cut or unwrap. One at a time: the job is the offer, so
+  // cancelling it takes the snackbar down with it, and a newer destructive edit replaces the
+  // pending one rather than queueing behind it the way SnackbarHostState would.
+  //
+  // Both are per design. The coroutine scope that runs the offer is not, so opening another design
+  // in the same editor cancels the old offer explicitly: left up, it would name a node in a design
+  // that is no longer on screen, and its action would undo through the old design's state.
+  val undoSnackbarHost = remember(document.id) { SnackbarHostState() }
+  var undoSnackbarJob by remember(document.id) { mutableStateOf<Job?>(null) }
+  DisposableEffect(document.id) { onDispose { undoSnackbarJob?.cancel() } }
   LaunchedEffect(document.revision, authoritativeGeneration) {
     if (state.document != document) {
+      // A rebuilt state carries none of the commands that built it, so there is nothing left for
+      // the offer's action to undo: a collaborator's edit, a reconnect or an authoritative answer
+      // takes it down like any other change to the document.
+      undoSnackbarJob?.cancel()
       state = reducer.reconciled(state, document, initialSelectedNodeId)
     }
   }
@@ -869,6 +889,44 @@ fun UiBuilderEditor(
       else -> "No compatible slot"
     }
   /**
+   * Put up, replace or take down the undo offer for an edit that just landed; [undo] is what its
+   * action does.
+   *
+   * Called from [reduceAndSubmit] rather than [dispatch] because that is where every edit lands — a
+   * paste from the system clipboard arrives there asynchronously — so no edit can slip past and
+   * leave an offer up whose action would now undo something else.
+   */
+  fun offerUndo(
+    event: UiBuilderEditorEvent,
+    previous: UiBuilderEditorState,
+    current: UiBuilderEditorState,
+    undo: () -> Unit,
+  ) {
+    val message =
+      undoSnackbarMessage(event, previous, current) { reducer.nodeKindLabel(previous, it) }
+    if (message == null) {
+      // Ctrl/⌘-Z, the toolbar's undo and any other edit all end the offer: what it named has been
+      // undone already, or its action would now undo the newer edit instead.
+      if (undoSnackbarInvalidatedBy(previous, current)) undoSnackbarJob?.cancel()
+      return
+    }
+    undoSnackbarJob?.cancel()
+    undoSnackbarJob = editorScope.launch {
+      // Indefinite inside a timeout rather than SnackbarDuration.Short: Short is 4s and, with an
+      // action, an accessibility service may stretch it without limit, while the offer has to end
+      // before it is likely to be stale.
+      val result =
+        withTimeoutOrNull(UNDO_SNACKBAR_MILLIS) {
+          undoSnackbarHost.showSnackbar(
+            message = message,
+            actionLabel = "Undo",
+            duration = SnackbarDuration.Indefinite,
+          )
+        }
+      if (result == SnackbarResult.ActionPerformed) undo()
+    }
+  }
+  /**
    * One editor event, and the one place a pinned revision stops being editable.
    *
    * The guard is the operation sequence, which the reducer bumps for every command (accepted or
@@ -884,6 +942,8 @@ fun UiBuilderEditor(
     }
     state = current
     reducer.acceptedSubmission(previous, current)?.let { onSubmission?.invoke(it) }
+    // The action undoes through here like a keypress would, pinned-revision guard and all.
+    offerUndo(event, previous, current) { reduceAndSubmit(UiBuilderEditorEvent.Undo) }
   }
   fun dispatch(event: UiBuilderEditorEvent) {
     when (event) {
@@ -2877,6 +2937,17 @@ fun UiBuilderEditor(
             }
           }
         }
+        // Over everything rather than in a Scaffold slot: the editor's chrome is its own Column and
+        // a Scaffold around it would own insets it already handles. Lifted clear of the status bar,
+        // and of the dock on a phone, so the offer never covers the control it would compete with.
+        SnackbarHost(
+          undoSnackbarHost,
+          Modifier.align(Alignment.BottomCenter)
+            .padding(horizontal = 12.dp)
+            .padding(
+              bottom = viewportInsets.bottom + if (compact) MOBILE_DOCK_HEIGHT + 8.dp else 40.dp
+            ),
+        )
         if (showPacks) {
           ComponentPacksDialog(
             packs = catalog.componentPacks,
