@@ -9,35 +9,15 @@ import kotlin.test.assertTrue
 /**
  * Every property the Wear catalog declares is read by something that draws or writes it.
  *
- * ## The drift this exists to stop
+ * `wear-m3` is synthesised (`wearOwn` copies and renames mobile components), so it can inherit
+ * properties (e.g. `containerColor`, `shape`, `elevationDp` on a card) that neither the canvas nor
+ * the exporter read. This crude check requires each declared name to appear in one of the three
+ * sources that draw or emit Wear components.
  *
- * `wear-m3` is a *synthesised* catalog: `wearOwn` copies a mobile component and renames it, so a
- * Wear card inherited `containerColor`, `shape`, `elevationDp`, `stableKey` and `onClickAction`
- * from `m3/card` without anybody asking whether Wear's `TitleCard` takes them. It takes none of the
- * first three, and the canvas and the exporter read none of them either — so an author could move a
- * control that moved nothing, on both lanes, and only a person comparing the catalog against the
- * renderer would notice. The same was true of the screen template's `shape = "large"`, whose
- * comment explained which theme radius it reached when it reached nothing at all.
- *
- * Nothing failed, because nothing compared a *declaration* against the code that consumes it. This
- * does, in the crudest way that still catches the case: a declared property name has to appear
- * somewhere in the three sources that draw or emit a Wear component.
- *
- * ## What it deliberately does not catch
- *
- * A name read *for another component* passes. `maxLines` appears in the renderer for `m3/text`, so
- * a Wear component declaring it and ignoring it would slip through — that gap is why the check is
- * paired with [the exemptions below] rather than trusted on its own. Closing it properly means
- * parsing each dispatch branch, which is a larger machine than this drift justifies; what is worth
- * catching is the property *nothing* reads, and that is what it catches.
- *
- * ## Why the exemptions fail in both directions
- *
- * An entry here is a claim that a property is deliberately not drawn. When the drawing arrives the
- * entry is stale, and the same failure that would have caught the original gap is the one that
- * announces the fix — the pattern `StickerBakeCoverageTest.knownBlank` and
- * `RemoteRenderTest.knownDuplicate` already use. `UI_BUILDER_CATALOG_AUDIT.md` records the
- * clickable-node model that `onClickAction` waits on.
+ * A name read for another component still passes; parsing each dispatch branch isn't worth it.
+ * Exemptions fail in both directions, so a stale entry is flagged once the drawing arrives (as
+ * `StickerBakeCoverageTest.knownBlank` and `RemoteRenderTest.knownDuplicate` do).
+ * `UI_BUILDER_CATALOG_AUDIT.md` records the clickable-node model `onClickAction` waits on.
  */
 class WearPropertyReadershipTest {
 
@@ -114,10 +94,7 @@ class WearPropertyReadershipTest {
     File("$module/$path").let { if (it.isFile) it else File("../$module/$path") }
 
   private companion object {
-    /**
-     * Properties that are declared and deliberately not drawn, each with the reason. Empty is the
-     * goal: an entry is a known gap, not a licence.
-     */
+    /** Properties declared and deliberately not drawn, each with the reason. Empty is the goal. */
     val EXEMPTIONS: Map<String, String> =
       mapOf(
         "wear-m3/button.onClickAction" to

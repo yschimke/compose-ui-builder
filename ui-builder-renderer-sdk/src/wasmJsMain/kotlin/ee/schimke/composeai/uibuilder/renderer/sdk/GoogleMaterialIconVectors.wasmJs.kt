@@ -8,12 +8,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.await
 
 /**
- * [MaterialIconData] files fetched from `icons/` beside the bundle, one file per first use.
- *
- * A loaded file is kept as path text; an icon becomes an `ImageVector` only when something draws
- * it, so a picker page that loads a whole file builds 80 vectors, not 180. Concurrent requests for
- * icons in the same file share one fetch. A failed fetch (offline, a host that does not serve the
- * directory) answers null and is forgotten, so the next request retries.
+ * [MaterialIconData] files fetched from `icons/` beside the bundle, one file per first use. Files
+ * are kept as path text and vectors built on draw; concurrent requests share a fetch; a failed
+ * fetch answers null and is retried next time.
  */
 actual object GoogleMaterialIconVectors {
   private val vectors = HashMap<String, ImageVector>()
@@ -63,9 +60,8 @@ actual object GoogleMaterialIconVectors {
 private external fun fetchIconShard(url: String): Promise<JsString>
 
 /**
- * `icons/` beside the bundle's own module, as the fonts are found: a host may serve the page at
- * `/ui-builder/<design>` and the bundle under an immutable prefix, and the renderer runtime is a
- * different module in a different directory. A page with neither resolves against itself.
+ * `icons/` beside the bundle's own module (as fonts are found), since the page and bundle may be
+ * served from different paths. Falls back to the page's own location.
  */
 @JsFun(
   """() => {

@@ -18,44 +18,23 @@ import kotlinx.serialization.json.contentOrNull
 
 /**
  * This browser's storage, as the local design mode's store: IndexedDB where the browser has it,
- * `localStorage` where it does not.
+ * `localStorage` where it does not (~5 MB per origin, shared).
  *
- * ## Why IndexedDB, and the seam that costs
+ * IndexedDB is async while [LocalDesignStorage] is synchronous, so the seam sits at two edges:
+ * * **Open.** [BrowserLocalStorageBackend.hydrate] runs before the editor composes: opens the
+ *   database, migrates `localStorage` once, and loads every `ui-builder.local.*` entry into memory,
+ *   so reads are map lookups.
+ * * **Write.** Writes land in memory immediately (so `Stored` / `Compacted` / `Refused` still
+ *   answer synchronously) and are written behind to IndexedDB in order. Later refusals (quota, full
+ *   disk) go to [BrowserLocalStorageBackend.onWriteFailure].
  *
- * `localStorage` is about five megabytes per origin, shared with everything else this host keeps,
- * and a cached catalog is a good fraction of that on its own. IndexedDB is limited by the disk
- * instead. What it costs is an **async seam**: every IndexedDB call answers later, while
- * [LocalDesignStorage] — and the reducer's front door above it — is synchronous.
+ * Schema: database `ui-builder-local` v1, store `entries` (out-of-line keys; same keys and text
+ * values `localStorage` held) and store `meta`, whose `migratedFromLocalStorage` records the
+ * one-time copy. Copied `localStorage` keys are then removed so there's one source of truth.
  *
- * The seam is put at the two edges where waiting is already natural, rather than threaded through
- * the reducer:
- * * **Open.** [BrowserLocalStorageBackend.hydrate] runs before the editor composes: it opens the
- *   database, migrates `localStorage` into it once, and reads every `ui-builder.local.*` entry into
- *   memory. From then on a read is a map lookup, exactly as synchronous as `localStorage` was.
- * * **Write.** A write lands in memory at once — so the session's `Stored` / `Compacted` /
- *   `Refused` answer still comes back in the same call — and is then written behind to IndexedDB,
- *   in order (readwrite transactions on one store commit in the order they were opened). A write
- *   the database later refuses (its quota, a full disk) is reported through
- *   [BrowserLocalStorageBackend.onWriteFailure], because by then the call that made it has
- *   returned.
- *
- * ## Schema
- *
- * Database `ui-builder-local`, version 1: store `entries` (out-of-line keys: the same
- * `ui-builder.local.*` key and the same text value `localStorage` held, so the record format did
- * not change at all) and store `meta`, whose `migratedFromLocalStorage` entry records the one-time
- * copy. After that copy commits, the copied `localStorage` keys are removed: two places holding a
- * design is two answers to "which one is current".
- *
- * ## Other tabs
- *
- * Every write and delete is announced on the `ui-builder.local` `BroadcastChannel`. A tab that
- * hears one re-reads that key into memory and tells [BrowserLocalStorageBackend.onExternalChange],
- * which is how a tab editing the same design learns it should stop writing (see
- * `LocalDesignSession.changedElsewhere`).
- *
- * Every instance of this class shares the one backend, so the many `BrowserLocalDesignStorage()`
- * call sites in the page all see the same memory.
+ * Every write and delete is announced on the `ui-builder.local` `BroadcastChannel`; other tabs
+ * re-read the key and notify [BrowserLocalStorageBackend.onExternalChange] (see
+ * `LocalDesignSession.changedElsewhere`). All instances share one backend.
  */
 class BrowserLocalDesignStorage : LocalDesignStorage {
   override fun read(key: String): String? = BrowserLocalStorageBackend.read(key)
@@ -82,17 +61,15 @@ internal object BrowserLocalStorageBackend {
     get() = mirror != null
 
   /**
-   * Why IndexedDB could not be opened, when this browser has it but refused — null when it was
-   * opened, or never existed. Worth saying: designs migrated into it on an earlier visit are then
-   * not visible from this one.
+   * Why IndexedDB could not be opened when the browser has it, or null. Designs migrated into it
+   * earlier are then not visible.
    */
   var unavailableReason: String? = null
     private set
 
   /**
-   * Opens IndexedDB, migrates, and reads everything into memory. Safe to call more than once; a
-   * browser without IndexedDB, or one that does not answer within a few seconds, stays on
-   * `localStorage`.
+   * Opens IndexedDB, migrates, and reads everything into memory. Idempotent; without IndexedDB, or
+   * if it doesn't answer within a few seconds, stays on `localStorage`.
    */
   suspend fun hydrate() {
     installHooks()
@@ -185,9 +162,8 @@ internal object BrowserLocalStorageBackend {
   }
 
   /**
-   * Asks the browser to keep this origin's storage when it is short of space, once a design is
-   * first saved. Without it, designs kept here are "best effort" and a browser under storage
-   * pressure — or Safari after a week without a visit — may clear them.
+   * Asks the browser to persist this origin's storage once a design is first saved; otherwise it is
+   * best-effort and may be cleared under pressure (or by Safari after a week).
    */
   private fun requestPersistenceOnce() {
     if (persistenceRequested) return
@@ -223,11 +199,8 @@ internal object BrowserLocalStorageBackend {
 external fun localDesignStorageRequested(): Boolean
 
 /**
- * A sentinel rather than `null`, because a `null` crossing the wasmJs boundary as a `String?` and
- * an empty stored value are the same answer here, and an empty value is one this store writes.
- *
- * Written as the `\u0000` escape rather than the byte itself: a raw NUL in a source file makes git
- * read the whole file as binary, so it stops being reviewable in a diff.
+ * A sentinel rather than `null`, since null and an empty stored value are indistinguishable across
+ * the wasmJs boundary. Written as `\u0000` because a raw NUL makes git treat the file as binary.
  */
 private const val MISSING = "\u0000ui-builder-missing"
 
@@ -287,7 +260,7 @@ private external fun installLocalStorageHooks(
 
 /**
  * Opens `ui-builder-local`, copies `localStorage` into it the first time, and answers `{"entries":
- * {key: value}}` with everything under [prefix] — or `{"error": …}`.
+ * {key: value}}` with everything under [prefix], or `{"error": …}`.
  */
 @JsFun(
   """(prefix) => new Promise((resolve) => {

@@ -17,12 +17,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The pin, driven through the real palette: the star pins, the shelf appears at the top with the
- * component drawn twice — once under Pinned, once on its shelf — the star flips, and taking it off
- * takes the shelf away with it.
- *
- * The star is found in the unmerged tree: a row is one merged semantics node by design, so the
- * star's own node is what a press aimed at the star — or a screen reader — must be able to reach.
+ * The pin, driven through the real palette: the star pins, a Pinned shelf appears at the top (the
+ * component listed twice), the star flips, and unpinning removes the shelf. The star is found in
+ * the unmerged tree, since a row is one merged node and the star must still be reachable.
  */
 @OptIn(ExperimentalTestApi::class)
 class PalettePinUiTest {

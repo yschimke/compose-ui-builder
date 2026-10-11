@@ -53,12 +53,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * The body fills the widget frame, as the container lays it out on the canvas.
-   *
-   * Host frames differ in size across watches, and the get-started guide makes
-   * `RemoteModifier.fillMaxSize()` on the root the one layout rule a widget must not skip. The
-   * canvas already hands the body `fillMaxSize` before its own chain, so a root the author left
-   * unsized drew filling the widget and exported wrapping its content.
+   * The body fills the widget frame, as the container lays it out on the canvas:
+   * `RemoteModifier.fillMaxSize()` on the root is the layout rule a widget must not skip.
    */
   @Test
   fun `the widget body fills the frame whether or not the author said so`() {
@@ -85,8 +81,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A fill *later* in the chain is not the frame's fill: `size(48).fillMaxSize()` fills the 48dp.
-   * The canvas still applies the container's fill ahead of the chain, so the export has to as well.
+   * A fill later in the chain is not the frame's fill (`size(48).fillMaxSize()` fills the 48dp), so
+   * the container's fill still comes first.
    */
   @Test
   fun `a fill after a size in the body's chain still gets the frame's fill ahead of it`() {
@@ -142,15 +138,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * The empty host frame — a container whose content slot holds nothing — is a template this
-   * catalog publishes (`wear-widget-small` / `wear-widget-large`), and its body is the one call the
-   * exporter writes itself rather than through a node.
-   *
-   * That line was composed in `WearWidgetCodeExporter` and never registered its imports, so the
-   * published templates' generated Kotlin named `RemoteBox`, `RemoteModifier` and `fillMaxSize`
-   * without importing any of them. Nothing here compiled it — the samples are both non-empty — and
-   * wear-m3-catalog's template round trip found it, which is the first thing that ever compiled the
-   * templates' generated source.
+   * The empty host frame (`wear-widget-small` / `wear-widget-large` templates) is written by the
+   * exporter itself, and must register its imports (`RemoteBox`, `RemoteModifier`, `fillMaxSize`).
    */
   @Test
   fun `an empty host frame imports the box it fills the frame with`() {
@@ -184,13 +173,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A gradient in the background slot becomes the `WearWidgetBrush` chain the container takes.
-   *
-   * `RemoteContentEmitter` has written this since the slot existed, but nothing could author it:
-   * the reviewed `remote-m3` subset carried no component with a `DrawLayer` trait, so the slot was
-   * unfillable from the palette and from any document the catalog validator would accept
-   * (yschimke/compose-preview-server#428). `shape/linear-gradient` is in that subset now, and this
-   * is the export end of it.
+   * A gradient in the background slot becomes the `WearWidgetBrush` chain the container takes;
+   * `shape/linear-gradient` is authorable in the `remote-m3` subset.
    */
   @Test
   fun `a linear gradient in the background slot is written as a brush chain`() {
@@ -236,12 +220,9 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A Lottie element compiles into the document, and the animation lands in a constant.
-   *
-   * The three assertions are the three halves of the promise (the call, the import, the bytes): the
-   * body calls Horologist's `LottieAnimation`, the file imports it from the module
-   * `yschimke/rc-players` vendors, and the animation itself is a top-level constant rather than a
-   * few thousand columns inside the design.
+   * A Lottie element compiles into the document: the body calls Horologist's `LottieAnimation`, the
+   * file imports it from the module `yschimke/rc-players` vendors, and the animation is a top-level
+   * constant.
    */
   @Test
   fun `a lottie element is compiled into the widget's document`() {
@@ -290,9 +271,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A URL alone is refused, because the generated widget has no network at the moment it needs the
-   * animation. The builder resolves a URL into the JSON while the design is open; an element that
-   * arrived here without one is unfinished, and saying so beats writing a file that cannot fetch.
+   * A URL alone is refused: the generated widget has no network when it needs the animation, and
+   * the builder resolves URLs into JSON while the design is open.
    */
   @Test
   fun `a lottie element carrying only a url is refused by name`() {
@@ -382,12 +362,7 @@ class WearWidgetCodeExporterTest {
     assertTrue("layout/scaffold" in refused.reasons.single(), refused.reasons.single())
   }
 
-  /**
-   * The Code pane routes a widget design here rather than to the Compose gate.
-   *
-   * Without the branch a widget shows the gate's refusal — "no component record for remote-m3" —
-   * which is true and useless: the design has generated code, just not that generator's.
-   */
+  /** The Code pane routes a widget design here rather than to the Compose gate. */
   @Test
   fun `the editor's code pane generates the widget, not a compose refusal`() {
     val catalog =
@@ -409,15 +384,9 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A picture in the background slot is **inlined**, not named.
-   *
-   * What a widget rules out is a name the drawing side resolves: the launcher draws the document
-   * out of the app's process and without its resources, so an `R.drawable` in the brush chain is
-   * not there to resolve. The pixels travel inside the document — and source that has to stand
-   * alone has nowhere to load them from, so it carries them (yschimke/compose-preview-server#523).
-   * Before this, every widget with an image background refused outright and told the author to
-   * write `WearWidgetBrush.image(bitmap)` by hand. The bundle lane below is the other way to answer
-   * the same question.
+   * A picture in the background slot is **inlined**, not named: the launcher draws the document
+   * outside the app's process, where `R.drawable` can't resolve. The bundle lane below is the
+   * alternative.
    */
   @Test
   fun `an image background inlines its bytes and builds the brush`() {
@@ -448,13 +417,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A background is a fill, not a child, so an authored modifier on one is refused by name.
-   *
-   * `asset/image` carries the base catalog's whole `modifierCapabilities` list — `alpha`, `offset`,
-   * `rotate`, `size` and the rest — and the canvas draws a background node through the ordinary
-   * child path, so it applies them. `WearWidgetBrush` chains a fill across the entire frame and has
-   * nowhere to put any of it, and this read only the image's properties: the picture on the canvas
-   * and the picture the widget draws disagreed, and the export said it had succeeded.
+   * A background is a fill, not a child, so an authored modifier on one is refused by name:
+   * `WearWidgetBrush` has nowhere to apply it, though the canvas would.
    */
   @Test
   fun `a background carrying a drawing modifier is refused rather than silently flattened`() {
@@ -480,10 +444,7 @@ class WearWidgetCodeExporterTest {
     assertTrue("no geometry" in reason, reason)
   }
 
-  /**
-   * `testTag` is the exception: a semantics label draws nothing, so dropping it moves no pixels and
-   * refusing the export over one would be noise.
-   */
+  /** `testTag` is the exception: it draws nothing. */
   @Test
   fun `a background's testTag is not a refusal`() {
     val source =
@@ -523,11 +484,9 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * The same background, as a **bundle**: a file beside the source, and a path the source opens.
-   *
-   * The design is `docs/design/UI_BUILDER_EXPORT_BUNDLE.md`. What this pins is the shape of the
-   * answer — the picture is opened where the `Context` is, the archive carries it under a path
-   * scoped by design, and none of the base64 machinery the inlining lane needs appears at all.
+   * The same background, as a **bundle**: a file beside the source, opened where the `Context` is,
+   * under a design-scoped path, with no base64 machinery. See
+   * `docs/design/UI_BUILDER_EXPORT_BUNDLE.md`.
    */
   @Test
   fun `a bundled image background opens the file the archive carries`() {
@@ -565,12 +524,8 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A **content** picture keeps its parameter and gains the design's artwork as its default.
-   *
-   * The parameter is what #508 settled and a bundle does not take it back — an application's album
-   * art is not the design's. What changes is the default: nullable, resolved in `provideWidgetData`
-   * where the `Context` is, so the generated `@Preview` draws the design instead of the
-   * `ImageBitmap(1, 1)` hole the inlining lane has to leave.
+   * A **content** picture keeps its parameter and gains the design's artwork as its default:
+   * nullable, resolved in `provideWidgetData`, so the generated `@Preview` draws the design.
    */
   @Test
   fun `a bundled content picture defaults its parameter to the design's artwork`() {
@@ -602,11 +557,9 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
-   * A content picture the archive cannot carry keeps the blank default rather than failing.
-   *
-   * The asymmetry with a background is deliberate and is the lanes' shared rule: a background is
-   * the design's own picture, so a key nothing can answer is a refusal; a content picture is the
-   * application's, so the parameter stands on its own and the fallback is the hole.
+   * A content picture the archive cannot carry keeps the blank default rather than failing. Unlike
+   * a background (the design's own picture, so a missing key is a refusal), a content picture is
+   * the application's.
    */
   @Test
   fun `a content picture with no bytes still exports as a parameter`() {

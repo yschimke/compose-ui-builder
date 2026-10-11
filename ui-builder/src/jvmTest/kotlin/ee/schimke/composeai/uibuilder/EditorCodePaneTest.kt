@@ -23,18 +23,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The code pane: the Kotlin an export would write, beside the canvas that produced it.
- *
- * ## What this is really asserting
- *
- * That the builder's proposition — a design *is* code — is visible while designing. Before this the
- * only way to read the source a design produced was to run an export and open the artifact, and the
- * pane that could have shown it lived in the other repository's builder, driven by a second
- * generator. This drives the **same** [ScreenExportGate] the server's export runs, so the pane
- * cannot show Kotlin the export would not write.
- *
- * The interesting case is the one that changes: a document is edited and the source follows. A test
- * that only asserted a snapshot of a fixed document would pass against a pane wired to a constant.
+ * The code pane: the Kotlin an export would write, beside the canvas that produced it, driven by
+ * the same [ScreenExportGate] as the server's export. The key case is an edit the source then
+ * follows (a fixed snapshot would pass against a constant).
  */
 class EditorCodePaneTest {
 
@@ -127,9 +118,7 @@ class EditorCodePaneTest {
   fun `a new design shows the Kotlin its export would write`() {
     val code = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(blank()))
 
-    // The package the export emits into, not one this pane picked: a pane showing a different
-    // package than the export uses would disagree on exactly the shadowing cases the generator
-    // refuses.
+    // The export's own package, so shadowing cases agree with the generator.
     assertTrue(code.kotlin.contains("package ${ScreenExportGate.PACKAGE_NAME}"), code.kotlin)
     assertTrue(code.kotlin.contains("Scaffold("), code.kotlin)
     // The body sits below the bars: Scaffold hands its content the padding they occupy, and the
@@ -178,9 +167,8 @@ class EditorCodePaneTest {
 
     val after = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(withText))
     assertTrue(after.kotlin.contains("""Text(text = "Discover""""), after.kotlin)
-    // The catalog spells the slot `children`; `Box` names the parameter `content`. The pane reads
-    // the export's own projection, so it prints what compiles rather than what the catalog says —
-    // and `content` is the one slot written as a trailing lambda.
+    // The pane prints the export's projection (`Box`'s `content`, as a trailing lambda), not the
+    // catalog's slot name `children`.
     assertTrue(
       after.kotlin.contains("Box(modifier = Modifier.padding(contentPadding)) {"),
       after.kotlin,
@@ -188,10 +176,7 @@ class EditorCodePaneTest {
     assertFalse(after.kotlin.contains("children ="), after.kotlin)
   }
 
-  /**
-   * `increment` is refused by name in the screen export until the shared generator can lower it,
-   * rather than by the generic "needs a shared action lowering" catch-all.
-   */
+  /** `increment` is refused by name until the shared generator can lower it. */
   @Test
   fun `a counter button names the missing increment lowering in the screen export`() {
     org.junit.Assume.assumeTrue(
@@ -230,9 +215,9 @@ class EditorCodePaneTest {
 
   @Test
   fun `a design the export refuses shows the reasons where the source would be`() {
-    // The flagship fixture does not export — enum values with no Kotlin member, a text callback
-    // needing its event value, an adaptive grid specification. A pane that went blank here
-    // would hide the actionable half of the answer behind a different tab.
+    // The flagship fixture doesn't export (enum values without Kotlin members, a text callback
+    // needing its event value, an adaptive grid spec); the pane shows the reasons rather than going
+    // blank.
     val code = assertIs<EditorGeneratedCode.Refused>(reducer.generatedCode(jetcaster))
 
     assertTrue(code.reasons.isNotEmpty())

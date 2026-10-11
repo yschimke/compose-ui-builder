@@ -99,12 +99,8 @@ private fun rememberNewDesignFormState(
   }
 
 /**
- * The New design form's fields, hoisted out of the dialog that used to own them.
- *
- * The form is asked for in two places now — the dialog the editor opens, and the panel the home
- * screen leads with — and two copies of nine interdependent fields is two forms that can disagree
- * about what a valid design id is. A holder rather than parameters and setters for the same reason:
- * every one of these fields is only meaningful next to the others.
+ * The New design form's fields, shared by the editor's dialog and the home screen panel so both
+ * validate alike. A holder because the fields depend on each other.
  */
 private class NewDesignFormState(
   val catalogs: List<UiBuilderNewDesignCatalog>,
@@ -507,18 +503,9 @@ internal fun NewDesignDialog(
 }
 
 /**
- * Why a design could not be opened, when the editor has nothing to draw instead.
- *
- * This exists because the alternative was a white page. The editor's body is guarded by `if
- * (loadedDocument != null && loadedCatalog != null)`, and that guard had no `else`: a refused open
- * left the composable emitting nothing at all, forever, while the reason sat in a status string
- * that is only read from inside the guarded branch. The server said `catalog unavailable for stored
- * design <id>`, the client parsed it, and the page showed white. The whole fix is having somewhere
- * to put the sentence the service already sent.
- *
- * [code] is the service's own, and decides the second paragraph. The distinction worth drawing is
- * whether the reader can do anything: a design pinned to a catalog source this deployment stopped
- * serving is an operator's problem, and telling that reader to try again wastes their time.
+ * Why a design could not be opened, shown when the editor has nothing to draw (otherwise the page
+ * would be blank). [code] is the service's own and decides whether the reader can act or it is an
+ * operator's problem.
  */
 @Composable
 fun UiBuilderUnavailableScreen(
@@ -675,10 +662,8 @@ private fun CatalogRecoveryPanel(recovery: UiBuilderCatalogRecoveryUi) {
 }
 
 /**
- * The one sentence that says whether the reader can act, keyed on the service's code.
- *
- * Separate from the composable so it can be asserted without rendering, and so the mapping lives in
- * one place rather than being spelled out per call site.
+ * The sentence saying whether the reader can act, keyed on the service's code. Separate so it is
+ * testable without rendering.
  */
 internal fun unopenableDesignGuidance(code: ServiceErrorCodeV1?): String =
   when (code) {
@@ -701,11 +686,8 @@ internal fun unopenableDesignGuidance(code: ServiceErrorCodeV1?): String =
   }
 
 /**
- * One design on [UiBuilderNewDesignScreen], as the home screen needs it.
- *
- * Deliberately not the protocol's `DesignListItemV1`: this module draws screens and the home screen
- * needs four strings, so the host does the flattening — including turning an epoch millisecond into
- * whatever "yesterday" is in the reader's locale, which is a browser question.
+ * One design on [UiBuilderNewDesignScreen]. Not the protocol's `DesignListItemV1`: the host
+ * flattens it, including locale-aware relative times.
  */
 data class UiBuilderHomeDesign(
   val designId: String,
@@ -720,8 +702,8 @@ data class UiBuilderHomeDesign(
 )
 
 /**
- * One design kept in this browser rather than on the server, as the home screen's **In this
- * browser** panel lists it.
+ * One design kept in this browser rather than on the server, for the home screen's **In this
+ * browser** panel.
  */
 data class UiBuilderBrowserDesign(
   val designId: String,
@@ -732,8 +714,7 @@ data class UiBuilderBrowserDesign(
   /** The server design this is a copy of, when it is one. */
   val copiedFrom: String? = null,
   /**
-   * A record this builder cannot read — a newer builder's, or damaged. Listed so it can be
-   * downloaded and deleted, since it holds this browser's storage either way; it cannot be opened.
+   * A record this builder cannot read (newer or damaged). Listed for download and deletion only.
    */
   val unreadable: Boolean = false,
 )
@@ -742,22 +723,11 @@ data class UiBuilderBrowserDesign(
 data class UiBuilderReleaseNote(val version: String, val date: String, val items: List<String>)
 
 /**
- * The builder's **home page**: what `/ui-builder/` draws when no design is named.
+ * The builder's **home page**, drawn at `/ui-builder/` when no design is named.
  *
- * It used to be the New design dialog on an empty background, which made the front door of the
- * whole product a modal with one way through it: make something new. Anyone whose work was already
- * on the host — which, after the first day, is everyone — arrived at a create form and had no way
- * from here to the thing they were working on yesterday short of a URL they had to remember.
- *
- * So the page answers both questions a person actually arrives with. **Start something new** is the
- * same form as before, now a panel rather than a modal. **Your designs** is what is already here:
- * open one, or start a new design *from* one, which is the option that was missing entirely — most
- * designs begin as a variation of a design that exists, and the only way to have one was to build
- * it again by hand. [onBrowseDesigns] leads to the server-rendered index, which is where a design
- * is renamed, shared, deleted, and seen as a picture rather than a row.
- *
- * Every callback is nullable and the panel for it is simply absent when the host cannot do it: a
- * design kept in this browser has no server index to browse and nothing to copy on one.
+ * **Start something new** is the create form as a panel; **Your designs** opens an existing design
+ * or starts a new one from it. [onBrowseDesigns] leads to the server's full index. Every callback
+ * is nullable, and its panel is absent when the host cannot do it.
  */
 @Composable
 fun UiBuilderNewDesignScreen(
@@ -776,8 +746,8 @@ fun UiBuilderNewDesignScreen(
   /** A design's picture at a revision, as the designs page shows it; null draws no pictures. */
   loadThumbnail: (suspend (designId: String, revision: Long) -> ImageBitmap?)? = null,
   /**
-   * The designs this browser keeps, newest first — its own designs and copies of server designs a
-   * caller could read but not write. Empty hides the panel that lists them.
+   * The designs this browser keeps, newest first (its own and copies of read-only server designs).
+   * Empty hides the panel.
    */
   browserDesigns: List<UiBuilderBrowserDesign> = emptyList(),
   /** Opens one of [browserDesigns] in the editor. */
@@ -785,8 +755,8 @@ fun UiBuilderNewDesignScreen(
   /** Saves one of [browserDesigns] as a file: the only copy that outlives this browser's data. */
   onDownloadBrowserDesign: ((designId: String) -> Unit)? = null,
   /**
-   * What [onDownloadBrowserDesign]'s button says: "Download", or "Share" where the host hands the
-   * file to a phone's share sheet instead (which offers saving it too).
+   * [onDownloadBrowserDesign]'s button label: "Download", or "Share" where the host uses a share
+   * sheet.
    */
   browserDesignSaveLabel: String = "Download",
   /** Removes one of [browserDesigns] from this browser, after the person has confirmed it. */
@@ -794,17 +764,14 @@ fun UiBuilderNewDesignScreen(
   /** Why this browser may soon refuse to keep more, or null while there is room. */
   browserStorageNotice: String? = null,
   /**
-   * Said above the create panel, with an action beside it — "sign in to save designs here" — or
-   * null for nothing. The host's, because only it knows who the server thinks this page is.
+   * A notice above the create panel with an action (e.g. "sign in to save designs here"), or null.
+   * Only the host knows the account state.
    */
   accountNotice: String? = null,
   accountNoticeAction: EditorNoticeAction? = null,
   /** What changed in the builder lately; empty hides the panel. */
   releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
-  /**
-   * The pre-filled design name. Null, the app's case, rolls a random one; a preview passes a fixed
-   * name so its render does not change every time it is drawn.
-   */
+  /** The pre-filled design name; null rolls a random one, while previews pass a fixed name. */
   initialDesignId: String? = null,
   onCreatePublic: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
   onCreate:
@@ -997,10 +964,8 @@ internal fun ExistingDesignsPanel(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       } else {
-        // The most recent handful, not the lot: this is a way back into today's work, and the
-        // full index — with its previews, its sharing and its delete — is one press away. Filed
-        // designs sit under their folder, as they do in that index; until anything is filed the
-        // list stays flat, because a "No folder" heading over everything says nothing.
+        // The most recent few, not the full index. Filed designs sit under their folder; until
+        // anything is filed the list stays flat.
         val recent = designs.take(HOME_DESIGN_LIMIT)
         val grouped = recent.any { it.folder != null }
         val folders = designs.mapNotNull { it.folder }.distinct().sorted()
@@ -1141,11 +1106,8 @@ private fun AccountNotice(message: String, action: EditorNoticeAction?) {
 }
 
 /**
- * **In this browser**: the designs kept here rather than on the server.
- *
- * Said plainly, because it is the one fact about these designs a person must not learn late: they
- * go when this browser's site data goes. So **Download** is on every row, one press, and **Delete**
- * asks first — a browser copy has no server history to restore it from.
+ * **In this browser**: designs kept here, which go when the site data goes. **Download** is on
+ * every row, and **Delete** confirms since there is no server copy.
  */
 @Composable
 private fun BrowserDesignsPanel(
@@ -1426,8 +1388,8 @@ private fun FolderMoveMenu(
 private const val HOME_DESIGN_LIMIT = 6
 
 /**
- * [designs] under their folders: folders in name order, ignoring case, and the unfiled last. Within
- * a folder the designs keep the order they came in, which is newest first.
+ * [designs] grouped by folder: folders by case-insensitive name, unfiled last, keeping incoming
+ * (newest-first) order within each.
  */
 internal fun homeDesignFolders(
   designs: List<UiBuilderHomeDesign>

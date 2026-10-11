@@ -17,13 +17,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * `revealNode`: the editor's selection, scrolled into a runtime's device frame.
- *
- * The editor's device view draws the design at its frame, where a list's later rows are scrolled
- * away and — lazily — not composed at all. Selecting one from the layers panel has to bring it on
- * screen, and the runtime is the only thing that can scroll its own lists. So the action names the
- * node and nothing else: the runtime walks the document for the containers holding it and the index
- * of each, because the node itself has no box and no entry to be found by.
+ * `revealNode`: the editor's selection scrolled into a runtime's device frame. The action names
+ * only the node; the runtime walks the document for the containers and indices, since a lazy item
+ * may not be composed.
  */
 class RevealNodeActionTest {
   @Test

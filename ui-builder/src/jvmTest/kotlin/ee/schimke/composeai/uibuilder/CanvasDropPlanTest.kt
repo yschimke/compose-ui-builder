@@ -19,9 +19,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A canvas drag answers two questions the slot tint never could: *which* slot, and where **inside**
- * it. These tests pin the seam to the pointer against measured geometry, the land to the seam that
- * was shown, and the refusal rules a move drag inherits from the layers panel.
+ * A canvas drag answers *which* slot and where **inside** it. Pins the seam to the pointer against
+ * measured geometry, the drop to the seam shown, and the move-drag refusal rules inherited from the
+ * layers panel.
  */
 class CanvasDropPlanTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -50,11 +50,10 @@ class CanvasDropPlanTest {
   private fun Rect.toPixelBounds() = UiBuilderPixelBounds(left, top, right - left, bottom - top)
 
   /**
-   * The slot geometry the tests read: a scaffold above, a column in its content, and a box with one
-   * child inside the column. The content and the column deliberately do not share their union's
-   * area — a tie would make the smallest-slot answer depend on map order — and the column's
-   * children are narrower than the column, leaving a sparse strip the container rule must answer
-   * for.
+   * The slot geometry the tests read: a scaffold, a column in its content, and a box with one child
+   * inside the column. Content and column areas differ (a tie would make the smallest-slot answer
+   * map-order dependent), and the column's children are narrower than it, leaving a strip for the
+   * container rule.
    */
   private val nodeBounds =
     bounds(
@@ -96,9 +95,8 @@ class CanvasDropPlanTest {
 
   @Test
   fun `a sparse single-slot container is hit anywhere in itself`() {
-    // plan-column holds three children in its left half; the point is in the right half — inside
-    // the container, outside every child. The drop is into the column, at the seam the pointer's
-    // own coordinate picks.
+    // Inside the column but outside every child: the drop goes into the column at the seam the
+    // pointer picks.
     val plan = dropPlan(250f, 250f)
 
     assertEquals("plan-column", plan?.target?.nodeId)
@@ -220,9 +218,8 @@ class CanvasDropPlanTest {
   }
 
   /**
-   * A screen in the shape the tests above read geometry from: a scaffold whose top bar and content
-   * are filled, a column of three children in the content, and a box with one child inside the
-   * column.
+   * A screen in the shape the tests above read geometry from: a scaffold with filled top bar and
+   * content, a column of three children, and a box with one child in the column.
    */
   private companion object {
     private val FIXTURE =

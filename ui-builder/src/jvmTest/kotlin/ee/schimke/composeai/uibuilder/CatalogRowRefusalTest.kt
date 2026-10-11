@@ -16,12 +16,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * What the insert panel *says* when an Add beside is refused.
- *
- * These are the two questions the render-and-compare lane could not ask. A committed PNG proves the
- * picture has not changed; it cannot say whether a sentence appears once or on every row, and both
- * regressions #619 fixes were exactly that. The second test here fails against the code that
- * shipped in #607.
+ * What the insert panel *says* when an Add beside is refused: whether a sentence appears once or on
+ * every row, which a PNG diff can't tell.
  */
 @OptIn(ExperimentalTestApi::class)
 class CatalogRowRefusalTest {
@@ -32,12 +28,8 @@ class CatalogRowRefusalTest {
     "A Wear screen or widget is exported as itself, so it cannot become one item of a board"
 
   /**
-   * A root-only component on a design that already has a root is not offered at all.
-   *
-   * It used to be listed with a disabled Add and the reason beside it. Better than a silent
-   * refusal, but it was still a row for a component that could not go anywhere in the design — a
-   * widget design's list opened on three more widget containers. Now there is no row, and so no
-   * refusal to explain.
+   * A root-only component on a design that already has a root is not offered at all, rather than
+   * listed with a disabled Add.
    */
   @Test
   fun `a root-only component is not offered where it cannot land`() = runWideEditor {
@@ -58,12 +50,9 @@ class CatalogRowRefusalTest {
   }
 
   /**
-   * The regression #607 shipped: `besideRefusal(state, componentId)` falls through to the
-   * document's own answer, so asking it per row put the wrap refusal on every component in the
-   * catalog.
-   *
-   * Pinned by *count*, which is the whole point — the sentence is correct, and belongs on the
-   * destination line. What was wrong was how many times it appeared.
+   * `besideRefusal(state, componentId)` falls through to the document's answer, so asking it per
+   * row repeated the wrap refusal on every component. Pinned by count: the sentence belongs once,
+   * on the destination line.
    */
   @Test
   fun `the document's refusal appears once, not on every component row`() = runWideEditor {
@@ -147,11 +136,8 @@ class CatalogRowRefusalTest {
     )
 
   /**
-   * A scene wide enough for the editor's desktop layout.
-   *
-   * Below 840 dp it draws a different chrome — the insert panel becomes a sheet — so a test about
-   * the panel has to say which layout it is about rather than inherit whatever the default scene
-   * size happens to be.
+   * A scene wide enough for the editor's desktop layout (below 840dp the insert panel becomes a
+   * sheet).
    */
   private fun runWideEditor(block: androidx.compose.ui.test.ComposeUiTest.() -> Unit) =
     runDesktopComposeUiTest(width = 1600, height = 900) { block() }

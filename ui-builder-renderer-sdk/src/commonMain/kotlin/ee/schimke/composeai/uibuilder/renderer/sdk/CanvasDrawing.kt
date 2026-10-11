@@ -43,15 +43,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 
 /**
- * A `draw/canvas` on the editing canvas: its operations drawn by Compose's `Canvas`, with the same
- * geometry rules the Remote emitter writes — dp from the top-left, an absent box is the whole
- * canvas, a stroked shape with a defaulted box is inset by half its stroke, angles clockwise from
- * three o'clock.
- *
- * The operations arrive resolved: [CanvasRenderTree] has already evaluated computed values and
- * state reads into literals, so this reads plain numbers. Colours are resolved here, in
- * composition, by the host's [resolveColor] — a theme role means what the host's theme says —
- * because the draw lambda that follows is not composable.
+ * A `draw/canvas` on the editing canvas, with the Remote emitter's geometry rules: dp from the
+ * top-left, an absent box is the whole canvas, a defaulted stroked box is inset by half the stroke,
+ * angles clockwise from three o'clock. Operations arrive resolved by [CanvasRenderTree]; colours
+ * are resolved here by [resolveColor] because the draw lambda is not composable.
  */
 @Composable
 fun UiBuilderDrawCanvas(
@@ -445,11 +440,9 @@ private fun glyphs(measurer: TextMeasurer, text: String, style: TextStyle): List
   clusters(text).map { measurer.measure(it, style) }
 
 /**
- * [text] split where a reader sees a new character: a surrogate pair stays whole, and combining
- * marks, variation selectors, emoji skin-tone modifiers and tags, a zero-width joiner with what it
- * joins, and a flag's second regional indicator stay on the character before them. Not full
- * UAX #29, and a script shaped across characters (Arabic) still draws its isolated forms; the
- * player shapes the whole string.
+ * [text] split into user-perceived characters: surrogate pairs, combining marks, variation
+ * selectors, skin-tone modifiers, tags, ZWJ sequences and flag pairs stay whole. Not full UAX #29;
+ * the player shapes the whole string.
  */
 internal fun clusters(text: String): List<String> {
   fun width(at: Int): Int =

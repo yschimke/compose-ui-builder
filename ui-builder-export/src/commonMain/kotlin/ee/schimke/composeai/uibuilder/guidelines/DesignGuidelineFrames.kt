@@ -9,11 +9,8 @@ import ee.schimke.composeai.uibuilder.export.isWearWidget
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * One picture a guidelines request attaches, before anything has drawn it: what kind it is, the
- * frame it is drawn in, and the environment keys the renderer is given to draw it there.
- *
- * The host draws each frame with its own renderer — compose-preview-server natively — so the plan
- * is shared and the pixels are not: the editor and the server ask about the same frames.
+ * One picture a guidelines request attaches, before anything draws it: its kind, frame, and the
+ * environment keys the renderer gets. The plan is shared; each host draws with its own renderer.
  */
 data class DesignGuidelineFrame(
   val kind: String,
@@ -96,13 +93,11 @@ object DesignGuidelineFrames {
   /**
    * The frames for [document] on [platform].
    *
-   * - A Wear widget is drawn in the two launcher containers that frame it differently: Samsung's
-   *   stadium and the Pixel Watch's rounded rectangle, at the widget's size (an adaptive widget at
-   *   Large, where every slot shows).
-   * - A Wear screen is drawn on its device and, when [scrolls], unrolled.
-   * - A phone or tablet design is drawn at a phone and a tablet size, whatever size it was authored
-   *   at, because the adaptive rules are about what changes between the two.
-   * - Anything else is drawn on its own device.
+   * - A Wear widget: the two launcher containers (Samsung's stadium, Pixel Watch's rounded
+   *   rectangle) at the widget's size (an adaptive widget at Large).
+   * - A Wear screen: its device and, when [scrolls], unrolled.
+   * - A phone or tablet design: a phone and a tablet size, whatever it was authored at.
+   * - Anything else: its own device.
    */
   fun plan(
     document: UiBuilderDocument,
@@ -166,9 +161,8 @@ object DesignGuidelineFrames {
     )
 
   /**
-   * The unrolled frame: the measured content height when the host knows it (so the picture does
-   * show the whole list), otherwise [factor] screens, whose description then says a longer list is
-   * cut by the canvas.
+   * The unrolled frame: the measured content height when known, otherwise [factor] screens (and the
+   * description says a longer list is cut).
    */
   internal fun unrolled(
     width: Int,

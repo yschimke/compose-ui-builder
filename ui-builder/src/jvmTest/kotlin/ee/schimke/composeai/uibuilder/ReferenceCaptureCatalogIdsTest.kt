@@ -12,7 +12,6 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
-import ee.schimke.composeai.uibuilder.reference.ReferenceComponentCapture
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import kotlin.test.Test
 import kotlinx.serialization.json.Json
@@ -25,26 +24,14 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 /**
- * What the *capture* draws for a component the canvas has no case for.
+ * What the *capture* draws for a component the canvas has no case for: a named placeholder, as on
+ * the canvas ([UndrawnCatalogComponentTest]), so the capture's surface must be mounted inside the
+ * provider that supplies the catalog's ids.
  *
- * [UndrawnCatalogComponentTest] is this test's neighbour and covers the canvas: a component the
- * catalog offers and this renderer cannot draw is a named placeholder, not an error. The capture
- * that photographs a component for the reference layer composes a `UiBuilderSurface` of its own,
- * and it was mounted *beside* the provider that hands the canvas the catalog's ids rather than
- * inside it — so the specimen composed with both sets empty, every such component fell to the error
- * branch, and placing one on the reference photographed "Unsupported component: …" while the canvas
- * beside it drew the placeholder for the same id in the same session.
- *
- * Driven through `UiBuilderEditor`'s own Component… menu rather than by composing
- * [ReferenceComponentCapture] directly, for the reason its neighbour gives: the defect is in what
- * the capture's surface inherits from where it is mounted, so a test that mounts it itself would
- * pass against the broken build.
- *
- * Asserted on the specimen *while the capture is in flight* rather than on the pixels it produces.
- * The capture reads its graphics layer from a `LaunchedEffect`, which this harness runs before the
- * frame that records the layer has been drawn — so `toImageBitmap` has nothing to hand back here,
- * whatever the specimen composed. The frame the specimen is composed in is the thing under test
- * anyway: what that surface draws is exactly what the photograph would be of.
+ * Driven through `UiBuilderEditor`'s Component… menu, since the defect is in what the capture
+ * inherits from where it's mounted. Asserted on the specimen while the capture is in flight: this
+ * harness runs the `LaunchedEffect` before the layer is drawn, so `toImageBitmap` returns nothing
+ * here.
  */
 @OptIn(ExperimentalTestApi::class)
 class ReferenceCaptureCatalogIdsTest {
@@ -76,9 +63,7 @@ class ReferenceCaptureCatalogIdsTest {
       val item = onNodeWithText(DISPLAY_NAME)
       item.fetchSemanticsNode()
 
-      // Frame by frame from here: the capture composes its specimen, reads its layer and takes
-      // itself back out of the tree, and the composed specimen is what this is about. One frame
-      // after the pick is the frame it is in.
+      // Advance frame by frame: one frame after the pick, the specimen is composed.
       mainClock.autoAdvance = false
       item.performSemanticsAction(SemanticsActions.OnClick)
       mainClock.advanceTimeByFrame()
@@ -127,9 +112,8 @@ class ReferenceCaptureCatalogIdsTest {
 
   private companion object {
     /**
-     * A real component of the published m3 shelf that this renderer has no case for — one of the
-     * eighty-three. Not in a pack, deliberately: a pack's ids are caught by an earlier branch, and
-     * the gap this is about is a component the catalog adds directly.
+     * A real published m3 component this renderer has no case for, not in a pack (packs are caught
+     * by an earlier branch).
      */
     const val UNDRAWN = "m3/badge"
 

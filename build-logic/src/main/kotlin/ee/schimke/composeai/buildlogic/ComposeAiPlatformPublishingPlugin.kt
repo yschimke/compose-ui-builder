@@ -23,13 +23,9 @@ abstract class ComposeAiPlatformPublishingExtension @Inject constructor(objects:
 }
 
 /**
- * The BOM's own plugin. Separate from [ComposeAiMavenPublishingPlugin] because a platform is not a
- * library — `java-platform` rather than a Kotlin target, no sources, no ABI — and because the
- * derived release set is defined as "modules applying the library plugin", which the BOM must not
- * be a member of. It publishes alongside them, and it names them.
- *
- * Its artifact id is explicit for the same reason: `:bom` would derive to
- * `compose-preview-bom`, which claims a name far wider than this repository.
+ * The BOM's own plugin, separate from [ComposeAiMavenPublishingPlugin] because a platform has no
+ * sources or ABI and must not be in the derived library release set. Its artifact id is explicit:
+ * `:bom` would derive to the over-broad `compose-preview-bom`.
  */
 class ComposeAiPlatformPublishingPlugin : Plugin<Project> {
   override fun apply(project: Project) {

@@ -36,15 +36,11 @@ import kotlinx.coroutines.launch
 
 /**
  * What the MCP App shows once a design is open: the slim file bar, and the editor under it in the
- * [layout] the host or the person chose.
+ * [layout] the host or person chose. Common code so it's testable on the JVM against a fake host;
+ * `McpAppHostApp` adds the `postMessage` transport, autosave and selection model context.
  *
- * Common code rather than the browser's, so the layout switch and the comment path are tested on
- * the JVM against a fake host; `McpAppHostApp` adds the `postMessage` transport, autosave and the
- * selection's model context around it.
- *
- * The focused layout is a chrome ([FocusedCanvasUiBuilderChrome]) handed to the same
- * [UiBuilderEditor] call, so switching layouts keeps the editor's state — selection, zoom, undo
- * history — where it is. A reload of the file is still a new editor
+ * The focused layout is a chrome ([FocusedCanvasUiBuilderChrome]) on the same [UiBuilderEditor]
+ * call, so switching layouts keeps selection, zoom and undo. A file reload is a new editor
  * ([McpAppDesignState.generation]).
  */
 @Composable
@@ -84,9 +80,8 @@ fun McpAppEditorScreen(
       onDismiss = session::dismissNotice,
     )
     Box(Modifier.weight(1f).fillMaxWidth()) {
-      // A reload is a new design to the editor, as an `open` is to the host bridge: its undo
-      // history was made against the version that was replaced. A save is not a reload, so the
-      // history outlives every save. The layout is not in the key: switching it is a chrome.
+      // A reload is a new design to the editor (its undo history belongs to the replaced version);
+      // saves aren't reloads, and layout isn't in the key.
       key(state.generation) {
         UiBuilderEditor(
           document = document,
@@ -124,8 +119,8 @@ fun McpAppEditorScreen(
 }
 
 /**
- * The file's name, whether it is saved, the switch between the focused and the full editor, and the
- * decisions a notice asks for. It is all the chrome the focused layout has.
+ * The focused layout's whole chrome: the file's name and saved state, the layout switch, and any
+ * decisions a notice asks for.
  */
 @Composable
 internal fun McpAppFileBar(

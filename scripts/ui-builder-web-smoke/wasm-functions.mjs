@@ -3,12 +3,10 @@
 //
 //   node wasm-functions.mjs ../../ui-builder/build/wasmDist/uiBuilder.wasm [maxBytes]
 //
-// Binaryen inlines a function with one caller whatever its size, so generated tables (Material 3's
-// locale strings, the Material icon builders) folded into single functions of 328 KB and 686 KB.
-// V8 tiers a hot one up to TurboFan, which held 312 MB for six seconds on `getTranslation` alone
-// and took the editor near 500 MB on opening a Material 3 design. `ui-builder/build.gradle.kts`
-// keeps those tables out of line with `--no-inline` patterns; this is the check that they still
-// match. The largest function today is ~146 KB (Wear's resource initialiser, run once).
+// Binaryen inlines single-caller functions regardless of size, folding generated tables into huge
+// functions that cost hundreds of MB when V8 tiers them up to TurboFan.
+// `ui-builder/build.gradle.kts` keeps them out of line with `--no-inline` patterns; this checks
+// those patterns still match.
 
 import { readFile } from 'node:fs/promises';
 

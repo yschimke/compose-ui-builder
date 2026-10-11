@@ -29,17 +29,15 @@ typealias CatalogRuntimeMessage = UiBuilderRendererMessageV1
 const val CATALOG_RUNTIME_CAPABILITY_REVEAL_NODE = "revealNode"
 
 /**
- * Every runtime built on this SDK keeps reporting a completed render's layout as
- * `inspectionUpdated` messages carrying the render's request id, whenever it changes after the
- * `rendered` reply: a font that arrives after the first frame reflows the text, and an editor that
- * sized the frame from the first reply alone cut off whatever the reflow pushed down.
+ * Runtimes on this SDK keep reporting a completed render's layout as `inspectionUpdated` messages
+ * (with the request id) whenever it changes after `rendered`, e.g. when a late font reflows text.
  */
 const val CATALOG_RUNTIME_CAPABILITY_INSPECTION_UPDATES = "inspectionUpdates"
 
 /**
- * The catalog draws a horizontal scroller whole when the document says so — see
- * [UI_BUILDER_UNROLLED_AXIS_KEY]. Declared by the catalog, never assumed: a lazy row that ignores
- * the signal is measured against an unbounded width, and the runtime's surface fails.
+ * The catalog draws a horizontal scroller whole when the document asks
+ * ([UI_BUILDER_UNROLLED_AXIS_KEY]). Declared by the catalog, never assumed: a lazy row ignoring it
+ * fails against an unbounded width.
  */
 const val CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL = "horizontalUnroll"
 
@@ -74,11 +72,9 @@ sealed interface UiBuilderSemanticActionResult {
 private data class DocumentRef(val id: String, val revision: Int)
 
 /**
- * Security and compatibility gate for a renderer frame.
- *
- * The browser adapter first verifies `MessageEvent.source === parent`; this state machine then
- * locks the first valid initialize request's exact origin. Messages from another source/origin are
- * ignored rather than reflected. Every accepted request is correlated by its caller-supplied id.
+ * Security and compatibility gate for a renderer frame. The browser adapter verifies
+ * `MessageEvent.source === parent`; this then locks the first valid initialize request's exact
+ * origin and ignores other sources. Requests are correlated by their caller-supplied id.
  */
 class CatalogRuntimeProtocolEndpoint(
   private val runtimeId: String,
@@ -618,13 +614,8 @@ internal val RUNTIME_PROTOCOL_JSON = Json {
 }
 
 /**
- * The document inside a `renderDocument`, read leniently where the envelope is not.
- *
- * A runtime is built once and pinned by designs for as long as they exist, while the editor and the
- * server that hand it documents keep moving. A top-level field added after the runtime was built —
- * `home`, which the server stamps on every design it creates — made a strict decode refuse every
- * new design with `INVALID_DOCUMENT`, and the editor drew nothing. What the runtime draws is the
- * nodes it knows; a field it has never heard of is not one of them.
+ * The document inside a `renderDocument`, decoded leniently (unlike the envelope): a pinned runtime
+ * outlives editor and server changes, so unknown top-level fields (e.g. `home`) must not refuse it.
  */
 internal val RUNTIME_DOCUMENT_JSON = Json(RUNTIME_PROTOCOL_JSON) { ignoreUnknownKeys = true }
 

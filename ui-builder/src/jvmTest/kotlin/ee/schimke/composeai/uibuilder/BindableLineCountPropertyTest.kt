@@ -17,14 +17,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * `minLines` / `maxLines` read as a stated number, and are simply not compared when they are not
- * one.
- *
- * The validator used to reach for `.jsonPrimitive` on whatever those properties held. A property
- * **bound to state** is an object with no `value` key, so that threw — out of the validator, which
- * runs on every write and, through `canBindToState`, on every composition of the inspector. Since
- * `m3/text` declares both properties, selecting any text node in a document that has a state
- * variable took the whole editor down.
+ * `minLines` / `maxLines` are compared only when they are stated numbers. A property bound to state
+ * is an object without `value`, and the validator (run on every write and every inspector
+ * composition via `canBindToState`) must not throw on it.
  */
 class BindableLineCountPropertyTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

@@ -3,14 +3,9 @@ package ee.schimke.composeai.uibuilder.reference
 import ee.schimke.composeai.uibuilder.svg.parseStrictSvg
 
 /**
- * Whether these bytes may be attached to a design as a reference, and why not when they may not.
- *
- * Runs in the editor so a bad paste says what is wrong the moment it happens rather than after a
- * round trip. It is **not** the authority: the serve host applies the same rules again before it
- * stores anything, because this half runs in a browser the host does not control. The two are
- * deliberately separate implementations of one rule — `:server` cannot depend on this Compose
- * module — so keep them in step, and keep this one no *stricter* than the host's, or the editor
- * will refuse imports the host would have kept.
+ * Whether these bytes may be attached to a design as a reference, and why not. Runs in the editor
+ * for immediate feedback, but the serve host re-applies the same rules before storing; `:server`
+ * can't depend on this module, so keep the two in step, and never make this one stricter.
  */
 fun referenceImportRefusal(mediaType: String, byteCount: Int, decodedText: String?): String? {
   if (mediaType !in ReferenceImage.SUPPORTED_MEDIA_TYPES) {
@@ -29,14 +24,9 @@ fun referenceImportRefusal(mediaType: String, byteCount: Int, decodedText: Strin
 }
 
 /**
- * Why an SVG may not be attached, or null when it may.
- *
- * An SVG is a document, not a picture, and this one is going to be drawn into the operator's own
- * editor and stored under their design. So the accepted subset is: markup this repository's own
- * parser can read, no active content, and **no reference that leaves the file**. The renderer
- * (Skia's `SVGDOM`) executes no script and is given no resource provider, so an external `href`
- * would fetch nothing anyway — it is refused at the door regardless, because "it happens not to
- * work today" is not a boundary.
+ * Why an SVG may not be attached, or null when it may: markup our own parser can read, no active
+ * content, and **no reference that leaves the file** (refused even though Skia's `SVGDOM` has no
+ * resource provider and wouldn't fetch it).
  */
 fun referenceSvgRefusal(svg: String): String? {
   if (svg.length > MAX_REFERENCE_BYTES) return "The SVG is too large to attach."
@@ -64,20 +54,12 @@ private fun String.isSelfContainedSvgReference(): Boolean {
   return value.startsWith("#") || value.startsWith("data:image/", ignoreCase = true)
 }
 
-/**
- * Active content and embedding elements. `<animate>` and friends are not here on purpose: they move
- * pixels, which is all a reference does, and Skia ignores them.
- */
+/** Active content and embedding elements. `<animate>` is allowed: Skia ignores it. */
 private val UNSAFE_REFERENCE_SVG_ELEMENTS =
   setOf("script", "foreignobject", "iframe", "object", "embed", "audio", "video", "handler")
 
 /**
- * The ceiling on one attached reference.
- *
- * 8 MB rather than the 6 MB the document's own embedded-asset quota allows, because this is not a
- * document asset and does not share that budget: it never crosses the collaboration wire, never
- * enters an export, and is stored per design in its own file. It is large enough for a full-frame
- * PNG at 3× and small enough that a design's reference cannot quietly become the largest thing the
- * serve host holds.
+ * The ceiling on one attached reference: 8 MB (a full-frame PNG at 3×). Separate from the 6 MB
+ * embedded-asset quota, since references never cross the collaboration wire or enter an export.
  */
 const val MAX_REFERENCE_BYTES: Int = 8 * 1024 * 1024

@@ -4,11 +4,9 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComposeSourceExportCapabilityV1
 
 /**
- * A source-export interpreter the builder ships and a catalog may select by a versioned id.
- *
- * A catalog declares a name, never Kotlin. The host resolves that name here, then supplies the
- * catalog's published component records to the selected strategy. This keeps source export a
- * catalog contract without turning a published JSON artifact into executable code.
+ * A source-export interpreter the builder ships and a catalog may select by a versioned id. A
+ * catalog declares a name, never Kotlin; the host supplies the catalog's component records to the
+ * selected strategy.
  */
 public data class CatalogComposeSourceExportAdapter(
   public val id: String,
@@ -23,10 +21,8 @@ public data class CatalogComposeSourceExportAdapter(
 }
 
 /**
- * The shipped source-export adapters, keyed only by catalog-declared adapter id and version.
- *
- * This is intentionally not an extension registry. Hosts must not load executable adapters from a
- * catalog artifact: an unknown declaration is an explicit unsupported result, not code to run.
+ * The shipped source-export adapters, keyed by adapter id and version. Not an extension registry:
+ * an unknown declaration is an unsupported result, never code to load.
  */
 public object CatalogComposeSourceExportAdapters {
   /** Adapter for AndroidX Compose Material 3 catalogs. */
@@ -45,10 +41,8 @@ public object CatalogComposeSourceExportAdapters {
     )
 
   /**
-   * Resolves [catalog]'s published declaration to an interpreter this build understands.
-   *
-   * The catalog system id deliberately plays no part in this lookup: two catalogs can select the
-   * same adapter, and a renamed delivery system continues to export through its pinned declaration.
+   * Resolves [catalog]'s published declaration to an interpreter this build understands. The system
+   * id plays no part, so catalogs can share an adapter and renames keep exporting.
    */
   public fun resolve(catalog: CatalogCapabilityV1): Resolution =
     resolve(catalog.composeSourceExport)

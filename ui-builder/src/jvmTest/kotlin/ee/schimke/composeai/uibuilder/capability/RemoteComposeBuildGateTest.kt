@@ -10,14 +10,10 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 
 /**
- * A widget palette offers a repetition only in a build that can export one — and a design that
- * already holds one still opens in every build.
- *
- * `RemoteContentEmitter` refuses `layout/for-each` unless the build enables Remote Compose
- * authoring, and the default build — the one `:ui-builder-desktop:run` and the released desktop app
- * are — does not. So the insert panel hides it there. The catalog keeps it: removing the capability
- * made a design saved by an enabled build fail validation as an unknown component, and every
- * unrelated edit to it with it.
+ * A widget palette offers a repetition only in a build that can export one, and a design already
+ * holding one still opens in every build. `RemoteContentEmitter` refuses `layout/for-each` unless
+ * Remote Compose authoring is enabled (not in the default `:ui-builder-desktop:run` build), so the
+ * insert panel hides it; the catalog keeps it so saved designs still validate.
  */
 class RemoteComposeBuildGateTest {
   private val remote = catalog("/remote-m3-capabilities-v1.json")

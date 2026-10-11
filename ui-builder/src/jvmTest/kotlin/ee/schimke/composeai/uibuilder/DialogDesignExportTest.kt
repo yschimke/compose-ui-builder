@@ -10,11 +10,7 @@ import kotlin.test.assertTrue
 
 /**
  * The editor's own dialog mocks, through the gate the server's Compose export and the design render
- * ask.
- *
- * `m3/dialog` had no entry in the component record, so every design holding one was refused with
- * `UNPROVEN_CALL_SITE: no component m3/dialog in this catalog` — the four dialog mocks were the
- * only m3 fixtures the Design Renders lane could not draw.
+ * ask; `m3/dialog` needs a component record entry or they're refused with `UNPROVEN_CALL_SITE`.
  */
 class DialogDesignExportTest {
 

@@ -13,17 +13,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The dialog, and the four faces of the two pickers, as the palette actually inserts them.
+ * The dialog, and the four faces of the two pickers, as the palette actually inserts them: each
+ * cell is an `InsertComponent` plus the inspector edits an operator would make, built by the
+ * reducer like [StarterContentInsertPreview].
  *
- * Built by the reducer rather than authored, for the reason [StarterContentInsertPreview] is: a
- * fixture kept in step by hand stops being evidence the first time nobody remembers to update it.
- * Each cell is one `InsertComponent` followed by the property edits an operator would make in the
- * inspector — which is how the two typed modes get here without a second component id.
- *
- * It is also the determinism check with a picture attached. Both pickers default to the clock —
- * `rememberDatePickerState` opens on the current month, `rememberTimePickerState` starts at the
- * current time — so if the pinning ever came out, this render would start changing on its own and
- * the visual diff would say so on the next pull request that touched anything.
+ * Also a determinism check: both pickers default to the clock, so if their pinning broke this
+ * render would change on its own.
  */
 // Material 3 pickers animate their initial content; publish the completed still.
 @SettledPreview
@@ -45,9 +40,8 @@ private val PREVIEWED_CELLS =
       heightDp = 620,
       properties = listOf("mode" to "input"),
     ),
-    // A row of its own each: `TimePicker` lays its hour and minute fields out *beside* the clock
-    // when it has the width for it, so the dial is about 500dp wide and the two pickers sharing a
-    // row overflowed the frame and drew over each other.
+    // Each picker gets its own row: `TimePicker` lays its fields beside the ~500dp dial when wide
+    // enough.
     PreviewCell("m3/time-picker", row = 1, widthDp = 520, heightDp = 340),
     PreviewCell(
       "m3/time-picker",
@@ -69,10 +63,8 @@ private data class PreviewCell(
 internal val dialogAndPickerPreviewDocument: UiBuilderDocument by lazy {
   val reducer =
     UiBuilderEditorReducer(editorChromePreviewCatalog, actorId = "preview", clientId = "preview")
-  // One editor state across every cell, moving the selection between them. Re-initialising per
-  // cell looked equivalent and was not: a fresh state restarts the operation sequence, the sequence
-  // names the inserted node, and the second date picker asked for an id the first one already had.
-  // The reducer rejected it, correctly, and the cell rendered empty.
+  // One editor state across every cell: a fresh state per cell restarts the operation sequence and
+  // reuses node ids, which the reducer rejects.
   PREVIEWED_CELLS.foldIndexed(
       reducer.initial(dialogAndPickerPreviewBase, selectedNodeId = pickerPreviewCellId(0))
     ) { index, state, cell ->

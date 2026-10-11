@@ -5,9 +5,8 @@ data class UiBuilderSemanticActionEntry(
   val activate: (() -> Unit)? = null,
   val scrollBy: ((Float) -> Float)? = null,
   /**
-   * Brings the item at an index of this lazy container into its viewport — the half of `revealNode`
-   * a container answers. By index, because the item being revealed is usually one the container has
-   * not composed, and so has no bounds or entry of its own to be found by.
+   * Brings the item at an index into this lazy container's viewport — the container's half of
+   * `revealNode`. By index, since the item is usually not composed yet.
    */
   val scrollToItem: ((Int) -> Unit)? = null,
 )

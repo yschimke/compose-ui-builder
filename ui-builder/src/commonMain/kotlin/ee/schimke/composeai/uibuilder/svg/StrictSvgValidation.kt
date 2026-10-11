@@ -39,17 +39,12 @@ internal data class StrictSvgParseResult(
   val document: ParsedSvgDocument?,
   val blockers: List<DocumentSvgExportBlocker>,
   /**
-   * The same tree whenever the XML itself parsed, regardless of export policy.
+   * The same tree whenever the XML parsed, regardless of export policy. The export lane asks
+   * whether bytes may be published (unsafe elements or unvouched rasters refuse); a geometry reader
+   * like [extractSvgLayoutBoxes] only needs the markup to be readable.
    *
-   * Separate from [document] because two different questions are being asked of one parse. The
-   * export lane asks "may these bytes be published as our own artefact", and one unsafe element or
-   * one unvouched raster reference is a no. A reader that only wants the *geometry* of a file the
-   * operator supplied — [extractSvgLayoutBoxes] — asks whether the markup could be read at all, and
-   * has no business refusing a mock because its `<image>` lacks a source digest.
-   *
-   * Null when the markup is malformed, has no single `<svg>` root, or carries a construct the
-   * parser refuses to interpret (a DOCTYPE, an unknown entity) — cases where the tree that came
-   * back would not be the tree the author wrote.
+   * Null when the markup is malformed, has no single `<svg>` root, or uses a construct the parser
+   * won't interpret (a DOCTYPE, an unknown entity).
    */
   val structure: ParsedSvgDocument? = null,
 )

@@ -27,12 +27,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
 /**
- * A label with its catalog notes behind a small info button, collapsed until asked for.
- *
- * The notes a catalog writes for a property or a token are written for an agent: the wire spelling,
- * the codes a bad value is refused with, what the generated Kotlin calls. Printed in full under
- * every control they were most of the panel; behind the button they are one press away for the
- * person who wants them, and the catalog and MCP keep the full text.
+ * A label with its catalog notes behind a small info button, collapsed until asked for. The notes
+ * are written for agents (wire spelling, refusal codes, generated names) and would otherwise
+ * dominate the panel.
  */
 @Composable
 internal fun LabelWithNotes(

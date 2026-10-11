@@ -16,26 +16,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `layout/flow-row`: the one layout primitive that responds to a narrow window on its own.
+ * `layout/flow-row`: the one layout primitive that responds to a narrow window on its own
+ * (`docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md`, gap 3: chip groups must wrap rather than
+ * squeeze). In the foundation rather than m3-catalog, since `FlowRow` is
+ * `androidx.compose.foundation.layout`.
  *
- * ## What it is for
- *
- * `docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md`, gap 3: *"Material chip groups wrap. `layout/row`
- * does not, and there is no `FlowRow`. At 411 dp Gmail's four filter chips and Photos' five squeeze
- * until 'Attachments' is one letter per line — the single worst thing in the compact renders, and
- * there is no way to author around it short of branching on width, which is what an adaptive layout
- * exists to avoid."*
- *
- * That is the whole argument for the component, and it is why this lives in the **foundation**
- * rather than in m3-catalog: `FlowRow` is `androidx.compose.foundation.layout`, one declaration
- * shared by every platform, exactly like `layout/row` beside it. Nothing about it is Material.
- *
- * ## What is asserted
- *
- * The wrap itself, at a width narrow enough to force it, and then the generated Kotlin. The first
- * is the point; the second is what makes the point survive the export, which is where gap 3 would
- * otherwise reappear — a canvas that wraps and a generated screen that does not is the
- * "wrong-picture-that-compiles" failure this repository keeps naming.
+ * Asserts the wrap at a forcing width, then the generated Kotlin, so canvas and export agree.
  */
 @OptIn(ExperimentalTestApi::class)
 class FlowRowResponsiveTest {
@@ -48,8 +34,8 @@ class FlowRowResponsiveTest {
   private fun string(value: String) =
     JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value)))
 
-  // The wrapper vocabulary the reducer actually knows — `number` is not one of its types, which
-  // is the whole of yschimke/compose-preview-server#901.
+  // The wrapper vocabulary the reducer knows (`number` isn't one; see
+  // yschimke/compose-preview-server#901).
   private fun float(value: Number) =
     JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(value)))
 
@@ -115,11 +101,8 @@ class FlowRowResponsiveTest {
   }
 
   /**
-   * The top of each label, in the order the labels were declared.
-   *
-   * Both containers are aligned to the top of their line, because the renderer centres a row's
-   * children by default and four labels of different heights would then have four different tops
-   * for reasons that have nothing to do with wrapping.
+   * The top of each label, in declaration order. Both containers top-align so differing label
+   * heights don't affect the comparison.
    */
   private fun labelTops(componentId: String): List<Float> {
     val alignment =
@@ -144,9 +127,8 @@ class FlowRowResponsiveTest {
 
   @Test
   fun `a flow row puts what does not fit on the next line, and a row does not`() {
-    // The comparison is the assertion. A single-line row and a wrapping one draw the same four
-    // children at the same width, and the only difference that matters is how many lines they
-    // took — so this cannot pass by the labels having been laid out some other way.
+    // The same four children at the same width in a row and a flow row; only the line count
+    // differs.
     val rowTops = labelTops("layout/row")
     val flowTops = labelTops("layout/flow-row")
 
@@ -187,9 +169,8 @@ class FlowRowResponsiveTest {
     assertTrue("horizontalArrangement = Arrangement.spacedBy(8.dp)" in source, source)
     assertTrue("verticalArrangement = Arrangement.spacedBy(4.dp)" in source, source)
     assertTrue("maxItemsInEachRow = 3" in source, source)
-    // No import to assert: `androidx.compose.foundation.layout.*` is unconditional and carries
-    // both `FlowRow` and its annotation. The opt-in is the part that is conditional, and without
-    // it the file does not compile in the project that receives it.
+    // No import to assert (`androidx.compose.foundation.layout.*` is unconditional); the opt-in is
+    // conditional and required to compile.
     assertTrue("ExperimentalLayoutApi::class" in source, source)
   }
 

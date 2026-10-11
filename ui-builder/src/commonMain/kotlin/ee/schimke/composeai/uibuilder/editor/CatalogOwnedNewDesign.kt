@@ -12,16 +12,13 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The new-design chooser's card for a catalog that answers for itself, built from nothing but what
- * the served catalog says.
+ * The new-design chooser's card for a catalog that answers for itself, built only from the served
+ * catalog.
  *
- * The card's label is the catalog's `newDesign.label`, then its `platformLabel`, then its own name.
- * Its templates are the ones `templates` names, in the catalog's order, each carded from the
- * matching `newDesign.templates` entry (label, supporting text, heading) and ordered by its `order`
- * where the catalog gives one. A catalog that publishes no `newDesign` block — every catalog built
- * before the policy could say what its cards read — has its templates named after their files and
- * said to come from the catalog, rather than from a table here keyed by catalog id, which is the
- * coupling this card exists to remove.
+ * Label: `newDesign.label`, then `platformLabel`, then the catalog's name. Templates: those
+ * `templates` names, carded from matching `newDesign.templates` entries and sorted by their
+ * `order`. Without a `newDesign` block, templates are named after their files rather than from a
+ * table keyed by catalog id.
  */
 fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCatalog {
   val systemId = catalog.benchmark.catalogSystemId
@@ -50,8 +47,8 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
     templates =
       ids
         .withIndex()
-        // Every ordered entry before every unordered one, then by its order, then where the
-        // catalog listed it: no order value, however large, can sort after an entry with none.
+        // Ordered entries first (by order), then unordered, each keeping the catalog's listing
+        // order.
         .sortedWith(
           compareBy(
             { cards[it.value]?.int("order") == null },
@@ -86,13 +83,12 @@ private fun JsonObject.string(key: String): String? =
 private fun JsonObject.int(key: String): Int? = (get(key) as? JsonPrimitive)?.intOrNull
 
 /**
- * The chooser's cards in order. A catalog [ownership] names takes its card from
- * [catalogOwnedNewDesignCatalog]; every other catalog keeps its built-in card from [builtIn].
+ * The chooser's cards in order: catalogs [ownership] names use [catalogOwnedNewDesignCatalog],
+ * others their built-in card from [builtIn].
  *
- * Order: once every served catalog is owned, the order the host served them in, so no list of names
- * is consulted at all. While only some are, [builtInOrder] still decides, with any catalog it does
- * not name after the ones it does, in served order — a partly-moved chooser must not reshuffle the
- * cards nobody moved. With the flag off this is exactly the chooser the editor shipped with.
+ * Once all are owned, served order is used. Until then [builtInOrder] decides, with unnamed
+ * catalogs after in served order, so unmoved cards keep their place. With the flag off this is the
+ * original chooser.
  */
 fun newDesignCatalogs(
   catalogs: List<CatalogCapabilityV1>,
@@ -128,10 +124,9 @@ fun newDesignCatalogs(
 }
 
 /**
- * Whether the chooser lists this card among the primary types rather than folded under "other
- * types". A built-in card keeps its three-id answer; a catalog-owned card is primary when the
- * platform it declares is one a person authors screens for, which is a fact the catalog states
- * rather than a list of names this build keeps.
+ * Whether the chooser lists this card among the primary types rather than under "other types":
+ * built-in cards by their id list, catalog-owned cards by whether their declared platform is a
+ * screen-authoring one.
  */
 val UiBuilderNewDesignCatalog.isPrimary: Boolean
   get() =

@@ -126,12 +126,8 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   /**
-   * A design may place its own components against the real packaged catalog.
-   *
-   * `design/component-instance` is a document construct — no catalog declares it — so looking it up
-   * as a catalog component refused every design that placed one, which made `declareComponent`
-   * unusable: nothing could instantiate what it declared. The editor's `CapabilityValidator` has
-   * always drawn this distinction; this is the writing side holding the same line.
+   * A design may place its own components against the real packaged catalog:
+   * `design/component-instance` is a document construct, not a catalog component.
    */
   @Test
   fun `a placement of the design's own component validates against the body, not the catalog`() {
@@ -167,11 +163,7 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   /**
-   * A placement carries no capability of its own, so it is held to the body's.
-   *
-   * Skipping the check let a direct `ApplyOperation` persist a modifier
-   * `CapabilityComposeCodeExporter.modifierExpression` throws on — a design the server accepted and
-   * the export then refused.
+   * A placement is held to its body's capability, so an unexportable modifier is refused at write.
    */
   @Test
   fun `a placement's modifiers are judged by the body it draws`() {
@@ -200,11 +192,8 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   /**
-   * Children hung on a placement are drawn by nobody.
-   *
-   * The renderer's component-instance path and the exporter's `emitPlacement` both draw the
-   * declared body and never traverse the placement's own slots, so accepting these commits nodes
-   * that vanish from preview and generated output while the operation reports success.
+   * Children hung on a placement are drawn by nobody (renderer and exporter draw only the body), so
+   * they are refused.
    */
   @Test
   fun `a placement may not hold children of its own`() {
@@ -234,11 +223,8 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   /**
-   * A body root that is itself a placement is an ordinary composition.
-   *
-   * Resolving only one hop asked the catalog for `design/component-instance`, got null, and
-   * rejected every nested component placed in a slot — a shape the renderer and exporter both
-   * support, cycle diagnostics included.
+   * A body root that is itself a placement is an ordinary composition, resolved through nested
+   * placements.
    */
   @Test
   fun `a component whose body places another component still resolves in a slot`() {
@@ -505,16 +491,9 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `an export request is revision pinned and changes with saved content`() {
-    // This used to assert the *source* a projection in this module emitted — `Text(`, the design's
-    // text, a `// Document SHA-256:` comment. That projection is gone, and the assertions went with
-    // it rather than being ported: which Kotlin a document becomes is `ScreenGenerator`'s answer,
-    // reached from `:server`, and `checkUiBuilderRuntimeBoundary` keeps it off this module's
-    // classpath on purpose.
-    //
-    // What is this module's is the *request*: that one saved revision always produces the same
-    // pinned export, and that editing the document changes it. Asserted against an executor that
-    // echoes what it was handed, so a passing test means the pinning held rather than that some
-    // emitter happened to be deterministic.
+    // Which Kotlin a document becomes is `ScreenGenerator`'s answer (off this module's classpath).
+    // This module owns the request: a saved revision always produces the same pinned export, and an
+    // edit changes it, asserted against an echoing executor.
     val catalog = CurrentM3UiBuilderCatalogExecutor().listCatalogs().single()
     val exporter = EchoingComposeExportExecutor()
     val first = exporter.export(pinned(document(), catalog))
@@ -867,13 +846,8 @@ private fun executeProduction(
 }
 
 /**
- * A Compose executor that echoes its request, for tests about *pinning* rather than about source.
- *
- * Deliberately not a generator. This module may not depend on `preview-discovery`
- * (`checkUiBuilderRuntimeBoundary`), so anything here claiming to emit Compose would be a fourth
- * emitter of exactly the kind the production default was removed for. Echoing the pinned document
- * hash and the node text keeps every property these tests actually assert — determinism, digest
- * agreement, sensitivity to an edit — without asserting a single line of Kotlin.
+ * A Compose executor that echoes its request, for tests about pinning rather than source. Not a
+ * generator: `checkUiBuilderRuntimeBoundary` keeps `preview-discovery` off this module.
  */
 private class EchoingComposeExportExecutor : UiBuilderExportExecutor {
   override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 {

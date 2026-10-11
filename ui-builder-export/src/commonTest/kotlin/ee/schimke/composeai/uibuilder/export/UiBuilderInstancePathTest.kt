@@ -6,11 +6,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * What a path claims, stated as the cases that would break a consumer.
- *
- * The load-bearing one is the first: with no repetition in the document — which is every document
- * the format can express today — a path is spelled exactly like the node id it names, so every
- * bounds key, `testTag` and comment anchor is the one that was there before.
+ * What a path claims, as the cases that would break a consumer. Most important: with no repetition,
+ * a path is spelled exactly like its node id, so existing keys are unchanged.
  */
 class UiBuilderInstancePathTest {
   @Test
@@ -56,9 +53,8 @@ class UiBuilderInstancePathTest {
   }
 
   /**
-   * A repeat inside a repeat carries both copies, because both are needed to say which box this is.
-   * What is never carried is the way down from the root to the outermost repeat: above every
-   * repeat, a node id is already unique.
+   * A repeat inside a repeat carries both copies; the way down to the outermost repeat is never
+   * carried.
    */
   @Test
   fun `a nested repeat carries every copy above it, and nothing above those`() {
@@ -76,12 +72,8 @@ class UiBuilderInstancePathTest {
   }
 
   /**
-   * A node id is whatever the document says it is.
-   *
-   * `InsertNode` rejects a blank id and an already-used one, and nothing else, so an id carrying
-   * the punctuation a path renders with is legitimate. Read back out of a joined string these
-   * answered `title` and `foo` — a node the renderer would then fail to find, having published its
-   * bounds under a name no consumer could match.
+   * A node id may contain the punctuation a path renders with, so ids must round-trip through the
+   * segments, not a joined string.
    */
   @Test
   fun `an id carrying path punctuation survives, and is still one box`() {

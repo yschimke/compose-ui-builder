@@ -25,13 +25,10 @@ internal constructor(
 }
 
 /**
- * Apply the generic behavior around a resolved node before an adapter or compatibility renderer
- * draws it.
- *
- * The SDK owns modifier ordering, bounds correlation, event execution and semantic activation.
- * [applyModifier] remains injected because resolving theme colors and shapes belongs to the catalog
- * runtime. [handlesClick] keeps a real interactive component from receiving a second clickable
- * wrapper around the callback its adapter already supplies.
+ * Apply the generic behavior around a resolved node before an adapter draws it. The SDK owns
+ * modifier ordering, bounds correlation, events and semantic activation; [applyModifier] is
+ * injected because theme resolution belongs to the catalog runtime. [handlesClick] avoids a second
+ * clickable wrapper.
  */
 @Composable
 fun CanvasRenderNode.prepare(

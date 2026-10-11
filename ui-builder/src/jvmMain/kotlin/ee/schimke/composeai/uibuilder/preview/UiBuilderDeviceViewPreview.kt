@@ -11,12 +11,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The canvas in its device view, with a row far down a long list selected.
- *
- * Three things only this state shows, and all of them are the feature: the frame stays the phone's
- * height and its list has been scrolled to the selected row; the list comes out beside the frame
- * whole, every row of it drawn and selectable; and the connectors run from the few rows the device
- * shows to the whole list, so the eye reads the two as one thing.
+ * The canvas in its device view, with a row far down a long list selected: the phone-height frame
+ * scrolled to the selection, the whole list popped out beside it, and connectors linking the
+ * visible rows to the pop-out.
  */
 // Settled: the frame scrolls to the selection and the pop-out measures its length a frame or two
 // after the first composition, and the first frame shows neither.

@@ -10,16 +10,11 @@ interface GuidelineKeyValueStore {
 }
 
 /**
- * Where a person's own OpenRouter key is kept: in [session] (this tab, gone when it closes) unless
- * they chose "Remember on this device", which keeps it in [device] instead.
+ * Where a person's own OpenRouter key is kept: [session] (this tab) unless they opt into "Remember
+ * on this device", which uses [device]. The device store is shared by every app on the origin, so
+ * it's opt-in only, and the key lives in exactly one place.
  *
- * The device store is shared by every page on the editor's origin, and that origin may serve other
- * apps, so the key only goes there on an explicit opt-in, and turning the opt-in off removes it. A
- * key only ever lives in one of the two places.
- *
- * A key a previous version left in [device] without the opt-in is moved into [session] the first
- * time it is read, so an existing user keeps working in this tab and the copy every other page on
- * the origin could read is gone.
+ * A key left in [device] without the opt-in is moved into [session] on first read.
  */
 class GuidelineKeyStore(
   private val device: GuidelineKeyValueStore,
@@ -57,8 +52,8 @@ class GuidelineKeyStore(
   }
 
   /**
-   * Turns "Remember on this device" on or off, moving the current key with it: on copies it to the
-   * device store, off removes it from there and keeps it for this tab only.
+   * Turns "Remember on this device" on or off, moving the current key: on copies it to the device
+   * store, off removes it there and keeps it for this tab.
    */
   fun setRemembered(remember: Boolean) {
     val current = key()

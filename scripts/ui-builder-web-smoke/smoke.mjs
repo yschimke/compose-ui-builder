@@ -1,11 +1,6 @@
-// Loads the built Wasm editor in a real browser and fails if it does not come up.
-//
-// Everything else in this repository's CI proves the editor on the JVM. The browser that ships it
-// — Skiko on WebGL, the Wasm module, the page's own bridges — was only exercised by
-// compose-preview-server's Playwright harness, so a change here that broke the page went red in
-// the other repository or nowhere. This is the smallest check that closes that: serve the
-// `wasmFrontendDist` output as it ships, open each capture mode that needs no server, and require
-// the page to signal ready (`data-ui-builder-ready`) with no page error.
+// Loads the built Wasm editor in a real browser and fails if it does not come up: serves
+// `wasmFrontendDist` as shipped, opens each server-free capture mode, and requires
+// `data-ui-builder-ready` with no page error.
 //
 // Usage: node smoke.mjs <wasmDist directory> [screenshot directory]
 //
@@ -16,7 +11,8 @@
 //              the viewport meta and the safe-area/keyboard measurement all run.
 // - `offline`: the phone again with `?offline=1`, which registers the service worker; once it
 //              controls the page, a reload with the network cut must still come up ready.
-// - `cache`:    restart Chromium twice with the same disk profile; require compiled-Wasm cache hits.
+// - `cache`:    restart Chromium twice with the same disk profile; require compiled-Wasm cache
+//              hits.
 // - `live`:     render a saved snapshot before fetching optional catalogs; tolerate their failure.
 
 import { createServer } from 'node:http';
@@ -44,8 +40,8 @@ const PHONE = {
 const RUNS = [
   { lane: 'desktop', mode: 'mode=reference', languages: null, device: DESKTOP },
   { lane: 'desktop', mode: 'mode=interactive-editor', languages: null, device: DESKTOP },
-  // What Chromium reports when it starts under `LANG=C.UTF-8`, as in an agent sandbox: a tag that is
-  // not BCP 47, which Compose's `Intl.Locale` call used to reject before the first frame. Forced
+  // What Chromium reports when it starts under `LANG=C.UTF-8`, as in an agent sandbox: a tag that
+  // is not BCP 47, which Compose's `Intl.Locale` call used to reject before the first frame. Forced
   // through an init script so the run does not depend on the runner's own locale.
   { lane: 'desktop', mode: 'mode=interactive-editor', languages: ['en-US@posix'], device: DESKTOP },
   { lane: 'mobile', mode: 'mode=interactive-editor', languages: null, device: PHONE },

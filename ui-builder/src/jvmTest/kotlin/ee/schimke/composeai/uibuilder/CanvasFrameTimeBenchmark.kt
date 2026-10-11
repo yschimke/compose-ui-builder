@@ -26,22 +26,15 @@ import org.junit.Assume
 
 /**
  * How long one editor edit takes to reach the canvas: the reducer, then recomposition, layout and
- * draw of the Jetcaster fixture, for a scripted sequence — select, drag a property through twenty
- * values, insert, undo.
+ * draw of the Jetcaster fixture, for a scripted sequence (select, drag a property through twenty
+ * values, insert, undo).
  *
- * **This is the JVM desktop backend, not the Wasm canvas.** The product spec's 39.5ms p95 against a
- * 16.67ms frame (#193) was taken in the browser, where Wasm compilation, browser scheduling and
- * browser rendering all add to it; none of those are here, so these numbers are their own series,
- * not comparable to that baseline. What they do catch is the shared part — the reducer and the
- * canvas composition both backends run — getting slower. The browser measurement belongs with the
- * headless-Chromium smoke (#185).
+ * **JVM desktop backend, not the Wasm canvas**: not comparable to the browser's 39.5ms p95 spec
+ * figure (see #193), but catches regressions in the shared reducer and canvas composition. Browser
+ * measurement belongs with the headless-Chromium smoke (see #185).
  *
- * It writes the numbers; it does not judge them. A shared runner is too noisy for an absolute line
- * to be a stable pass/fail, so a gate, when it comes, compares against the base branch's number
- * from the same runner class.
- *
- * Off in the ordinary test run, where a timing loop would only slow `check` down. Run it with
- * `./gradlew :ui-builder:canvasFrameBenchmark`, which writes
+ * Records numbers without judging them (shared runners are too noisy for an absolute threshold).
+ * Off in ordinary test runs; run `./gradlew :ui-builder:canvasFrameBenchmark`, which writes
  * `build/reports/ui-builder/canvas-frame-times.json`.
  */
 @OptIn(ExperimentalTestApi::class)
@@ -97,12 +90,9 @@ class CanvasFrameTimeBenchmark {
     }
 
   /**
-   * One pass of the edit sequence, as named steps. The drag commits the same text property twenty
-   * times, the way a slider or a typed value arrives a frame at a time; the insert lands in the
-   * Discover grid and the undo takes it back out, so every pass starts from the same tree.
-   *
-   * The select alternates between two nodes by [pass]. Undo restores the selection from before the
-   * insert, so selecting the same node every pass would time a no-op instead of the overlay moving.
+   * One pass of the edit sequence, as named steps: twenty commits of one text property (as a slider
+   * or typing arrives), an insert into the Discover grid and its undo, so each pass starts from the
+   * same tree. The selected node alternates by [pass], since undo restores the previous selection.
    */
   private fun script(
     state: UiBuilderEditorState,

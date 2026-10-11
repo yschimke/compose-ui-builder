@@ -50,16 +50,9 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
-// The strip of revision thumbnails under the canvas, and the read-only surfaces it opens.
-//
-// Why a strip of pictures beside a panel of words: the History panel answers "what has been done"
-// and cannot answer "which one looked like what". The viewer's render-history menu made that
-// argument for published renders and drew thumbnails on its rows because of it; this is the same
-// answer for the design's own revisions. [EditorRevisionEntry] carries how the two timelines differ
-// and why they stay separate surfaces.
-//
-// The panel and the strip are one control, not two: the History rail opens both. They are the same
-// history, and a second switch would only let somebody have half of it.
+// The strip of revision thumbnails under the canvas, and the read-only surfaces it opens. It
+// answers "which one looked like what", which the History panel's words cannot; see
+// [EditorRevisionEntry]. The History rail opens both together.
 
 // Big enough that two revisions of the same screen can be told apart, small enough that a dozen of
 // them fit above the status bar without the strip becoming a second canvas.
@@ -67,12 +60,8 @@ private val THUMBNAIL_WIDTH = 92.dp
 private val THUMBNAIL_HEIGHT = 64.dp
 
 /**
- * One row per revision, oldest on the left, the design as it is now on the right.
- *
- * Left to right in time, unlike the History panel's newest-first list, because a strip is read as a
- * timeline and a timeline that runs backwards has to be relabelled in the reader's head. The newest
- * entry is the one on the canvas and it is scrolled to, so the end that matters is the end that
- * shows.
+ * One row per revision, oldest left, the current design right (read as a timeline). Scrolled to the
+ * newest entry.
  */
 @Composable
 internal fun RevisionHistoryBar(
@@ -141,17 +130,9 @@ internal fun RevisionHistoryBar(
 }
 
 /**
- * One revision as a picture of itself, with what happened under it.
- *
- * **Rendered, not baked**, exactly as the component palette's rows are: the document rebuilt for
- * this revision is drawn through the renderer that is drawing the canvas, laid out at the frame's
- * own size and shrunk by a draw-time transform. So no PNG is stored per revision, the picture
- * cannot disagree with what going back would show, and a revision of a design nobody has baked
- * artwork for still has a picture.
- *
- * A row whose document could not be rebuilt keeps its words and loses its picture. That is the
- * fail-closed half of [CollaborationState.documentsBackTo]: a thumbnail that is not what that
- * revision looked like is worse than a blank one.
+ * One revision as a picture, with what happened under it. **Rendered, not baked**, like palette
+ * thumbnails, so it cannot disagree with the revision. A row whose document could not be rebuilt
+ * keeps its words and drops its picture (fail-closed; see [CollaborationState.documentsBackTo]).
  */
 @Composable
 private fun RevisionThumbnail(
@@ -250,17 +231,9 @@ private fun RevisionThumbnail(
 }
 
 /**
- * A design drawn at whatever size it is given: laid out at its own frame, shrunk to fit.
- *
- * The same technique as the palette's thumbnail, at whatever scale the caller has room for —
- * `graphicsLayer` over a subtree that laid itself out at a sensible size, rather than a layout
- * squeezed until its text wraps to nothing. The design's own density is divided back out for the
- * reason the canvas does it: a design measured at 2.625 and a workspace measured at 1.0 do not
- * agree about what a dp is, and sizing the frame in the workspace's clamps everything authored
- * wider than the number.
- *
- * Semantics are cleared. A picture of a Switch is not a Switch, and a strip of forty revisions
- * would otherwise publish forty screens' worth of controls to a screen reader.
+ * A design laid out at its own frame and shrunk to the given size with `graphicsLayer`. The design
+ * density is divided out as on the canvas. Semantics are cleared so pictures do not expose controls
+ * to screen readers.
  */
 @Composable
 internal fun RevisionPicture(document: UiBuilderDocument, modifier: Modifier = Modifier) {
@@ -287,12 +260,8 @@ internal fun RevisionPicture(document: UiBuilderDocument, modifier: Modifier = M
 }
 
 /**
- * The canvas's stand-in while an old revision is being looked at, or two are being compared.
- *
- * It **replaces** the editing canvas rather than drawing over it. A canvas that took a drop at
- * revision 12 of a design that is at revision 40 would be editing a picture, and hiding that behind
- * a disabled overlay is a rule somebody eventually finds a way around. Not composing the editing
- * surface at all is the rule holding itself.
+ * The canvas's stand-in while an old revision is viewed or two are compared. It replaces the
+ * editing canvas rather than overlaying it, so nothing can edit a picture.
  */
 @Composable
 internal fun RevisionReviewPane(
@@ -326,8 +295,7 @@ internal fun RevisionReviewPane(
             color = MaterialTheme.colorScheme.onSecondaryContainer,
           )
           Text(
-            // What a reader has to know before they trust anything on this pane: it is a picture,
-            // their edits are still landing on the design, and the design has not moved.
+            // Make clear this is a picture and the design is unchanged.
             diff?.summaryLine() ?: "${peeked.summary} · read-only, the design is unchanged",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -379,11 +347,8 @@ private fun RevisionPane(entry: EditorRevisionEntry, label: String, modifier: Mo
 }
 
 /**
- * The change list beside the two pictures: what moved, node by node.
- *
- * Computed from the two documents rather than from the operations between them — see
- * [EditorRevisionDiff]. Two pictures say *that* something changed; a list of the properties, the
- * layouts and the nodes says what, and is the half somebody can act on.
+ * The change list beside the two pictures, node by node, computed from the two documents; see
+ * [EditorRevisionDiff].
  */
 @Composable
 internal fun RevisionDiffList(diff: EditorRevisionDiff, modifier: Modifier) {
@@ -455,8 +420,7 @@ private fun RevisionDiffRow(
     }
     changes.forEach { change ->
       Text(
-        // The same before → after line the History panel writes, so one account of a change reads
-        // the same wherever it is met. An absent end is stated rather than left blank.
+        // The History panel's before → after format; a missing end says "none".
         "${change.label}: ${change.before ?: "none"} → ${change.after ?: "none"}",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

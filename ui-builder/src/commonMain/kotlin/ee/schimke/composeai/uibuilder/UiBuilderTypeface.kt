@@ -4,12 +4,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.FontFamily
 
 /**
- * Apply [family] to every role of [base].
- *
- * All fifteen roles, not the text ones a design happens to use today: the exported code references
- * roles by name (`MaterialTheme.typography.bodyMedium`), so a role left on the default face would
- * render one way in the builder and another in the consuming app — the divergence a theme typeface
- * exists to remove.
+ * Apply [family] to every role of [base]: all fifteen, since exported code references roles by name
+ * and a role left on the default face would differ between builder and app.
  */
 fun Typography.withFontFamily(family: FontFamily): Typography =
   copy(

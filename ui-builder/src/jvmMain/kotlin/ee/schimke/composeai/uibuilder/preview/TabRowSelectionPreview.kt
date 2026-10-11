@@ -10,13 +10,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A tab row whose selection is a state variable, drawn at the value that variable holds.
- *
- * Wired into the preview lane so the next change to how a bound selection is read is diffed rather
- * than noticed: the variable starts at `1`, so this frame is `Discover` selected and its indicator
- * under `Discover`. Before the row and the tab read state, both drew the literal the design was
- * saved with — the indicator sat under `Home` however the variable moved, which is what a tab row
- * exists not to do.
+ * A tab row whose selection is a state variable, drawn at the value that variable holds: the
+ * variable starts at `1`, so `Discover` is selected with its indicator under it.
  */
 @Preview(widthDp = 360, heightDp = 96)
 @Composable

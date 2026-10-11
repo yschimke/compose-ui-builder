@@ -1,22 +1,20 @@
 package ee.schimke.composeai.uibuilder
 
 /**
- * Where the editor's PAGES live on this host: `/ui-builder/` everywhere by default, and `/` on a
- * builder host serving the editor at its root (compose-preview-server's `--ui-builder-host-root`,
- * which says so in a `<meta name="ui-builder-base-path">` on the editor page).
+ * Where the editor's PAGES live on this host: `/ui-builder/` by default, `/` on a builder host
+ * serving the editor at its root (compose-preview-server's `--ui-builder-host-root`, signalled by
+ * `<meta name="ui-builder-base-path">`).
  *
- * Only pages move. The versioned bundle, the renderer runtimes, the service worker, the
- * `/api/ui-builder/…` API and the form POSTs (`/ui-builder/designs`, `/ui-builder/designs/copy`)
- * stay under `/ui-builder/` on every host, which the server keeps serving there — so this is the
- * one value navigations and shared links are built from, and nothing else reads it.
+ * Only pages move: the versioned bundle, renderer runtimes, service worker, `/api/ui-builder/…` and
+ * the form POSTs (`/ui-builder/designs`, `/ui-builder/designs/copy`) stay under `/ui-builder/`.
+ * Only navigations and shared links read this.
  */
 const val DEFAULT_UI_BUILDER_BASE_PATH: String = "/ui-builder/"
 
 /**
- * [raw] (the meta's content, or null when the page has none) as a path with exactly one leading and
- * one trailing slash. Anything that is not a plain path — empty, a full URL, a protocol-relative
- * `//host` — falls back to [DEFAULT_UI_BUILDER_BASE_PATH], so a malformed meta can never send a
- * navigation off this origin.
+ * [raw] (the meta's content, or null) as a path with exactly one leading and trailing slash.
+ * Anything else (empty, a full URL, a protocol-relative `//host`) falls back to
+ * [DEFAULT_UI_BUILDER_BASE_PATH], so navigation never leaves the origin.
  */
 fun normalizeUiBuilderBasePath(raw: String?): String {
   val value = raw?.trim().orEmpty()

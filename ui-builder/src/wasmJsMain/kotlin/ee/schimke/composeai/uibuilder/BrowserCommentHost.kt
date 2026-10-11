@@ -19,19 +19,11 @@ import kotlinx.serialization.json.Json
 
 /**
  * The browser half of the comments panel: read the discussion, post into it, and watch it change.
+ * The common editor only takes a [DesignCommentBoard].
  *
- * Everything unportable lives here, the way [BrowserReferenceHost] holds the file picker and the
- * paste listener: `:ui-builder`'s editor is common Compose with no `fetch` and no `WebSocket`, and
- * it takes a [DesignCommentBoard] and asks no further questions.
- *
- * ### Why there is a socket and not a poll
- *
- * The point of comments on a design is that two people — or a person and an agent — are not looking
- * at the page at the same moment. A panel that refreshed every few seconds would be a panel that is
- * usually wrong and always asking; [watch] holds one socket and the host pushes. The server's
- * comment feed is the same one an agent waits on through `ui_builder_await_comments`, so a reply
- * typed in the browser reaches a waiting agent, and an agent's answer appears in the panel, without
- * either of them polling for the other.
+ * [watch] holds one socket and the host pushes, rather than polling. It is the same feed an agent
+ * waits on through `ui_builder_await_comments`, so browser replies reach waiting agents and vice
+ * versa.
  */
 internal class BrowserCommentHost(private val designId: String) {
   /** What has been said, or null when the host would not say — a refusal, a dropped connection. */
@@ -42,11 +34,8 @@ internal class BrowserCommentHost(private val designId: String) {
   }
 
   /**
-   * Say something. Returns null on success, or a sentence for the panel.
-   *
-   * The board that comes back is deliberately dropped: the socket delivers it to every watcher
-   * including this one, and taking the reply here as well would show a comment twice on the way in
-   * and let the panel drift from what the server told everybody else.
+   * Say something. Returns null on success, or a sentence for the panel. The returned board is
+   * dropped: the socket delivers it to every watcher, including this one.
    */
   suspend fun post(draft: DesignCommentDraft, displayName: String): String? {
     val response =
@@ -81,10 +70,8 @@ internal class BrowserCommentHost(private val designId: String) {
   }
 
   /**
-   * Every change to this design's discussion, until the returned handle is closed.
-   *
-   * The socket sends the current board on connect, so a caller does not fetch and subscribe and
-   * then reconcile the two — which is the shape that loses a comment posted in between.
+   * Every change to this design's discussion, until the returned handle is closed. The socket sends
+   * the current board on connect, so there's no fetch to reconcile.
    */
   fun watch(onBoard: (DesignCommentBoard) -> Unit, onDropped: () -> Unit): CommentWatch {
     val url =
@@ -183,10 +170,7 @@ private fun CommentAnchorWire.isEmpty() = markId == null && nodeId == null && x 
 private fun CommentAnchorWire.toAnchor() =
   DesignCommentAnchor(markId = markId, nodeId = nodeId, x = x, y = y)
 
-/**
- * Tolerant on the way in, for the reason the reference payload is: a host that learns a new comment
- * field must not blank somebody's panel.
- */
+/** Lenient decoding, so a new comment field on the host doesn't blank the panel. */
 private val commentJson = Json {
   ignoreUnknownKeys = true
   encodeDefaults = true
@@ -258,11 +242,7 @@ internal suspend fun awaitCommentString(promise: Promise<JsString>): String =
   }
 
 /**
- * One `fetch` with a method of our choosing, cookie-bearing like every other call this app makes.
- *
- * The same-origin check and the page token used to live inline here, and this was the only helper
- * of the three that had them. They are [sameOriginRequestUrl] now, applied by the caller, so the
- * reference and asset lanes get the same treatment instead of quietly going without.
+ * One cookie-bearing `fetch` with a method of our choosing; callers apply [sameOriginRequestUrl].
  */
 @JsFun(
   """(method, url, body, hasBody) => {

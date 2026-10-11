@@ -5,22 +5,13 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * The catalog, from the server when it answers and from this browser when it does not.
+ * The catalog, from the server when it answers and from this browser when it doesn't: the first
+ * successful load is remembered, and later opens try the network first and fall back to it. This is
+ * what makes the editor work offline.
  *
- * This is the whole of what "mostly offline" rests on. A design is a list of component ids and
- * property values; what those *mean* — which components exist, what each one accepts, which of them
- * the Wasm canvas can draw — is the catalog, and the browser has no way to derive it. So the first
- * successful load of a catalog is remembered, and every later open prefers the network and falls
- * back to what was remembered. Online, that is a cache. Offline, it is the difference between an
- * editor and a blank page.
- *
- * Network-first rather than cache-first on purpose: a catalog is pinned by revision in the document
- * and a stale one would quietly disagree with the server the next time the design is opened live.
- * The stored copy is a fallback, never the preferred answer.
- *
- * A write that the browser refuses is not an error here. It means the next offline open will not
- * find a catalog, which is worth saying in the status line and not worth failing an online session
- * over.
+ * Network-first because a catalog is pinned by revision and a stale one could disagree with the
+ * server. A refused write isn't an error: the next offline open just won't find a catalog, which is
+ * reported in the status line.
  */
 class CachingLocalCatalogSource(
   private val storage: LocalDesignStorage,
@@ -74,12 +65,8 @@ class CachingLocalCatalogSource(
 }
 
 /**
- * One remembered text resource, for the small server-served files a local session also needs.
- *
- * The device presets the Screen inspector offers and the operations fixture every new design is
- * seeded from are both static files this page fetches once. Neither is worth a schema of its own,
- * and both are the difference between a complete offline editor and one with a menu missing, so
- * they go through the same network-first rule the catalog does.
+ * One remembered text resource, for the small static files a local session also needs (the device
+ * presets and the seed operations fixture), with the same network-first rule.
  */
 class CachedLocalText(private val storage: LocalDesignStorage) {
   suspend fun text(url: String, fetch: suspend (String) -> String): String {

@@ -18,11 +18,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A component's parameters beyond its texts, and the way back out of a component.
- *
- * Making a component promotes its texts; a colour — the avatar each inbox row tints differently —
- * becomes a parameter when somebody asks for it, and stops being one the same way. Detaching an
- * instance turns it back into the layers it drew, holding the values it passed.
+ * A component's parameters beyond its texts (e.g. the avatar colour each inbox row tints), promoted
+ * and demoted on request, and detaching an instance back into the layers it drew with the values it
+ * passed.
  */
 class LocalComponentsParametersTest {
   private val catalog =

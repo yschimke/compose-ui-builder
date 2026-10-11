@@ -17,22 +17,16 @@ import ee.schimke.composeai.uibuilder.replay.ReplayAnswer
 import ee.schimke.composeai.uibuilder.replay.replayCommandLog
 
 /**
- * Taking a server design into this browser, and bringing it home again.
- *
- * The rules, and why they are these rules, are in
+ * Taking a server design into this browser, and bringing it home again; see
  * [`UI_BUILDER_DESIGN_PORTABILITY.md`](../../../../../../../../docs/design/UI_BUILDER_DESIGN_PORTABILITY.md).
- * The short version is that there is one merge in this system and it is `CollaborationReducer`: a
- * design that comes home comes home as the commands authored while it was away, replayed at the
- * revisions they were authored against. Syncing back after a flight is a collaborator whose round
- * trip took eight hours instead of eight milliseconds, and that one is already solved.
+ * The only merge is `CollaborationReducer`: a design comes home as the commands authored while
+ * away, replayed at the revisions they were authored against, like a very slow collaborator.
  */
 
 /**
  * The record for a design taken offline: the server's document as the seed, and the fork point.
- *
- * [document] and [documentDigest] come from the same server answer on purpose. The digest is the
- * server's own `documentHash` for that revision, and computing it here from a document fetched a
- * moment later would record a fork point for a revision this browser never held.
+ * [document] and [documentDigest] (the server's `documentHash`) come from the same answer so the
+ * fork point matches a revision this browser actually held.
  */
 fun localCheckoutRecord(
   document: UiBuilderDocument,
@@ -61,13 +55,9 @@ fun localCheckoutRecord(
     )
 
 /**
- * A server design copied into this browser under [newDesignId], for a caller who may read it but
- * not write it.
- *
- * A new id, not the source's: the copy is a different design from the moment it is made, and
- * keeping the id would make it look like a checkout that could sync back. For the same reason it
- * records [LocalDesignRecordV1.copiedFrom] and leaves [LocalDesignRecordV1.origin] null, and drops
- * the source's `home` — this copy's home is this browser.
+ * A server design copied into this browser under [newDesignId], for a caller who may read but not
+ * write it. A new id, [LocalDesignRecordV1.copiedFrom] set, [LocalDesignRecordV1.origin] null and
+ * the source's `home` dropped, so it can never look like a checkout that syncs back.
  */
 fun localCopyRecord(
   document: UiBuilderDocument,
@@ -125,12 +115,7 @@ data class LocalSyncReport(
   val complete: Boolean
     get() = refusal == null
 
-  /**
-   * One sentence for the status line: what landed, what it overwrote, and where it stopped.
-   *
-   * A sync is not a silent merge — an author who took a design on a plane and brought it back is
-   * owed the list of things their edits won against, because nobody else will tell them.
-   */
+  /** One sentence for the status line: what landed, what it overwrote, and where it stopped. */
   fun summary(): String {
     val committed = landed.count { !it.idempotentReplay }
     val replayed = landed.size - committed
@@ -145,11 +130,8 @@ data class LocalSyncReport(
 
 sealed interface LocalSyncResult {
   /**
-   * This design has no fork point, so there is nothing to merge it into.
-   *
-   * A design created in this browser has no common ancestor on any server, and inventing one —
-   * treating an empty template as the base — would be a document merge with a fabricated base.
-   * Publishing it is a create, through the route that refuses to replace.
+   * This design has no fork point (created in this browser), so there's nothing to merge into;
+   * publishing it is a create.
    */
   data object NotLinked : LocalSyncResult
 
@@ -174,11 +156,9 @@ sealed interface LocalSyncResult {
 }
 
 /**
- * Replays a locally stored design's log onto the server it was taken from.
- *
- * No new endpoint and no new document format: this drives the same `applyOperation` the live editor
- * drives, through the same forward bridge, with one thing done differently — the base revision each
- * command claims.
+ * Replays a locally stored design's log onto the server it was taken from, via the same
+ * `applyOperation` and forward bridge as the live editor; only each command's claimed base revision
+ * differs.
  */
 class LocalDesignSyncBack(
   private val actorId: String,
@@ -191,23 +171,19 @@ class LocalDesignSyncBack(
       return it
     }
 
-    // The base chain, the stop-at-first-refusal rule and the per-command report are the shared
-    // replay's (`replayCommandLog`), the same one a server-side branch merge runs, so the two
-    // cannot disagree about what bringing a log home means. What is particular to this lane is the
-    // transport: each command is its own request and commits as it lands. Because each base comes
-    // from what the server already answered rather than from what is current, re-running an
-    // interrupted sync from the top reproduces identical commands — so the landed prefix answers as
-    // an idempotent replay and the run continues from where it stopped.
+    // The base chain, stop-at-first-refusal and per-command report come from the shared
+    // `replayCommandLog` (also used by server-side branch merges). Each command is its own request;
+    // bases come from the server's answers, so re-running an interrupted sync reproduces identical
+    // commands and the landed prefix replays idempotently.
     val replay =
       replayCommandLog(
         forkRevision = origin.revision.toLong(),
         log = record.log,
         maximumRevision = Int.MAX_VALUE.toLong(),
       ) { submission, base ->
-        // Every command of the run was written against the fork, whatever base the chain gives it,
-        // so each one past the first tells the service so: its `STALE_*` checks then read from the
-        // fork, and a server edit made since is reported on whichever command overwrites it — not
-        // only on the first. The fork is this record's, so a re-run sends identical commands.
+        // Every command past the first tells the service it was written against the fork, so
+        // `STALE_*` checks read from the fork and overwrites of server edits are reported on the
+        // command that makes them.
         val wire =
           submission
             .toEditorSubmission()
@@ -273,13 +249,8 @@ class LocalDesignSyncBack(
 
   /**
    * That the server's revision [LocalDesignOriginV1.revision] is still the one this copy forked
-   * from.
-   *
-   * Two ways it is not, and they need different answers. The revision may be past the server's
-   * retention, in which case there is no common ancestor left and the merge cannot be attempted —
-   * the flight was longer than the design's history. Or the revision may be retained and be a
-   * *different* document, which means this record's fork point belongs to another design's history;
-   * replaying onto it would produce a plausible document nobody authored.
+   * from. It may be past retention (no common ancestor left) or a different document (the fork
+   * point belongs to another history); both refuse the merge.
    */
   private suspend fun verifyForkPoint(origin: LocalDesignOriginV1): LocalSyncResult? {
     val answer =
@@ -312,11 +283,8 @@ class LocalDesignSyncBack(
 }
 
 /**
- * The stored command as the editor's own submission.
- *
- * The two are the same three shapes around the same three reducer commands, which is what lets the
- * sync send its log through the forward bridge the live editor uses rather than a second one
- * written for the return journey.
+ * The stored command as the editor's own submission, so sync can use the live editor's forward
+ * bridge.
  */
 private fun ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1.submissionOperationId():
   String =

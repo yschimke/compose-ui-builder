@@ -8,11 +8,8 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
 /**
- * What the editor asks the host for, and how often.
- *
- * The design's whole claim is that a client downloads bytes proportional to what is on screen
- * rather than to the catalog, and that only holds if the client batches a page into one request and
- * never asks twice. Both are properties of this class, so both are pinned here.
+ * What the editor asks the host for, and how often: one request per page of icons, never twice, so
+ * downloads scale with what's on screen.
  */
 class MaterialSymbolsClientTest {
 

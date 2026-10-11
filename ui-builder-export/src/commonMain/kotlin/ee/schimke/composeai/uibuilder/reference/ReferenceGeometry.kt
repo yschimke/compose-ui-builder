@@ -4,12 +4,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * A rectangle in whatever unit its caller works in — frame dp for a layer, grid pixels for a
- * placement on a raster.
- *
- * Its own type rather than Compose's `Rect`, because the measuring code is shared with hosts that
- * have no Compose at all: the serve host answers an agent's comparison with the same arithmetic the
- * editor uses, and a JVM server is not going to put a UI toolkit on its classpath for a rectangle.
+ * A rectangle in the caller's unit (frame dp or grid pixels). Not Compose's `Rect`, because the
+ * measuring code is shared with hosts that have no Compose.
  */
 data class ReferenceBox(val left: Float, val top: Float, val right: Float, val bottom: Float) {
   val width: Float
@@ -46,20 +42,16 @@ data class ReferenceBox(val left: Float, val top: Float, val right: Float, val b
 }
 
 /**
- * Where the base reference lands inside a [frameWidth] × [frameHeight] frame, in that frame's own
- * units, under [fit], then scaled by [scale] and nudged by [offsetX], [offsetY] (same units).
+ * Where the base reference lands inside a [frameWidth] × [frameHeight] frame, in that frame's
+ * units, under [fit], then scaled by [scale] and nudged by [offsetX], [offsetY]. The one placement
+ * rule, shared by the editor's overlay and measurements and the serve host's agent tools.
  *
- * The one placement rule, shared by the editor's overlay, its flattener, its measurements and the
- * serve host's agent tools, so a picture an agent measures is the picture a person sees.
- *
- * - [ReferenceFit.Contain]: the whole picture, centred. Contain rather than stretch, because a mock
- *   at a different aspect than the screen is nearly always the *screen* being wrong, and stretching
- *   would hide exactly the mismatch the overlay is for.
+ * - [ReferenceFit.Contain]: the whole picture, centred (stretching would hide aspect mismatches).
  * - [ReferenceFit.Width]: across the width, pinned to the top — how a tall capture lines up.
- * - [ReferenceFit.Actual]: its own size in dp from the top-left, which needs [facts] to know a dp;
- *   without them it falls back to contain rather than guessing.
+ * - [ReferenceFit.Actual]: its own dp size from the top-left; needs [facts], else falls back to
+ *   contain.
  *
- * The nudge is applied after the scale so that a unit of nudge is a unit on screen at any scale.
+ * The nudge applies after the scale, so a unit of nudge is a unit on screen.
  */
 fun referencePlacement(
   frameWidth: Float,

@@ -12,16 +12,14 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * Local components: a subtree of this design, named, drawn wherever a placement names it.
+ * Local components: a named subtree of this design, drawn wherever a placement names it.
  *
- * The document model, the canvas and both exporters already speak this
- * ([`UI_BUILDER_REPETITION_AND_COMPONENTS.md`](../../../../../../../../docs/design/UI_BUILDER_REPETITION_AND_COMPONENTS.md)
- * §2): `components[key] = {name, root}` holds the definition, a `design/component-instance` node
- * with `component = {componentKey, arguments}` is a placement, and a body property reads an
- * argument as `{"type": "binding", "value": "<key>"}`. What this file adds is the editor's half —
- * making one from a selection, listing the ones a design has, and swapping one for a catalog
- * component once the app ships it — as pure functions of the document, so the reducer, the palette
- * and the inspector ask one place.
+ * The model is in
+ * [`UI_BUILDER_REPETITION_AND_COMPONENTS.md`](../../../../../../../../docs/design/UI_BUILDER_REPETITION_AND_COMPONENTS.md)
+ * §2: `components[key] = {name, root}` is the definition, a `design/component-instance` node with
+ * `component = {componentKey, arguments}` is a placement, and body properties read arguments as
+ * `{"type": "binding", "value": "<key>"}`. This file holds the editor's pure functions: making,
+ * listing and graduating components.
  */
 internal const val COMPONENT_INSTANCE_ID = "design/component-instance"
 
@@ -38,8 +36,8 @@ data class EditorLocalComponent(
   /** The argument keys the body reads, sorted — the generated function's parameters. */
   val parameters: List<String>,
   /**
-   * A catalog component this one has graduated into, when the catalog now ships one under the same
-   * name — the cue to swap the design-only copy for the app's own.
+   * A catalog component of the same name this one has graduated into: the cue to swap to the app's
+   * own.
    */
   val publishedAs: ComponentCapability? = null,
   /** Where the project library holds this component, once it was imported or published there. */
@@ -52,11 +50,8 @@ data class EditorLocalComponent(
 data class EditorLibrarySource(val system: String, val componentId: String, val digest: String)
 
 /**
- * One of this design's components, as a publish to the project library sends it.
- *
- * [document] is the file a project would commit — a `DesignDocumentV1` declaring exactly this
- * component, under [componentId], with its body as the only root — so the server reads a published
- * component with the same reader it reads a committed one.
+ * One of this design's components as a library publish sends it. [document] is the one-component
+ * `DesignDocumentV1` a project would commit, so the server reads it with the same reader.
  */
 data class EditorLibraryPublication(
   val componentKey: String,
@@ -79,8 +74,8 @@ sealed interface EditorLibraryPublishResult {
 }
 
 /**
- * One component a project publishes to its shared library, as the palette lists it — the server's
- * `GET /api/ui-builder/v1/component-library` row. Its body is fetched only when it is placed.
+ * One library component as the palette lists it (a `GET /api/ui-builder/v1/component-library` row).
+ * Its body is fetched only when placed.
  */
 data class EditorLibraryComponent(
   val system: String,
@@ -92,8 +87,8 @@ data class EditorLibraryComponent(
 )
 
 /**
- * One published component, fetched to be placed: its declaration and the nodes its body is made of,
- * and the digest a design records beside it so a later read can tell it has drifted.
+ * One published component fetched for placing: its declaration, body nodes, and the digest recorded
+ * to detect drift.
  */
 data class EditorLibrarySymbol(
   val component: EditorLibraryComponent,
@@ -191,12 +186,9 @@ internal fun UiBuilderDocument.localComponents(
 }
 
 /**
- * The catalog component that ships what a local component named [name] drew, if there is one.
- *
- * Matched on the composable's name — the catalog's `code.symbol`, as a component pack records an
- * app's own `@Composable fun InboxEmail` — and then on the display name with its spaces taken out.
- * Never on a prefix or a likeness: a swap rewrites every placement, and a guess that is nearly
- * right is a design quietly drawing a different component.
+ * The catalog component that ships what a local component named [name] drew, if any. Matched
+ * exactly on the catalog's `code.symbol`, then on the display name without spaces; never fuzzily,
+ * since a swap rewrites every placement.
  */
 internal fun CapabilityCatalog.publishedComponentNamed(name: String): ComponentCapability? {
   val wanted = name.lowercase()
@@ -209,10 +201,8 @@ internal fun CapabilityCatalog.publishedComponentNamed(name: String): ComponentC
 }
 
 /**
- * A Kotlin function name from what somebody typed: `inbox email` → `InboxEmail`.
- *
- * The export keeps the authored name as the composable's name, so it has to be a legal one before
- * it reaches the document, rather than a refusal at the first export.
+ * A legal Kotlin function name from typed text (`inbox email` → `InboxEmail`), since the export
+ * uses it as the composable's name.
  */
 internal fun componentFunctionName(raw: String): String? {
   val words = raw.split(Regex("[^A-Za-z0-9]+")).filter(String::isNotEmpty)
@@ -247,13 +237,8 @@ internal fun UiBuilderDocument.suggestedComponentName(
 }
 
 /**
- * The parameter a promoted text becomes, named after what it says when that reads as a name.
- *
- * A row a designer filled with `Sender`, `Subject` and `Preview` exports as `InboxEmail(sender = …,
- * subject = …, preview = …)`, which is the call somebody would have written. One word only: real
- * content — `Ada Lovelace`, `10:42`, a sentence — is what one placement says rather than what the
- * slot is, and `adaLovelace` is a worse parameter than the property's own name, numbered from the
- * second.
+ * The parameter a promoted text becomes: named after its content when that is one word (`Sender` →
+ * `sender`), else the property's own name, numbered from the second.
  */
 internal fun parameterNameFor(property: String, content: String?, taken: Set<String>): String {
   val fromContent =
@@ -272,8 +257,8 @@ internal fun parameterNameFor(property: String, content: String?, taken: Set<Str
 }
 
 /**
- * Modifiers that speak to the slot a node sits in. A component's body root draws inside its
- * placement's `Box`, so one of these left on it would silently stop meaning anything.
+ * Modifiers addressed to the parent slot; meaningless on a body root drawn inside its placement's
+ * `Box`.
  */
 internal val PARENT_SCOPED_MODIFIERS =
   setOf("weight", "align", "alignHorizontal", "alignVertical", "matchParentSize")
@@ -282,8 +267,8 @@ internal val PARENT_SCOPED_MODIFIERS =
 private val RESERVED_PARAMETERS = setOf("modifier", "content")
 
 /**
- * Why [name] cannot be a parameter of a component that already has [existing], or null when it can:
- * a plain lower-camel Kotlin name, not one the generated function already uses, not taken.
+ * Why [name] cannot be a parameter alongside [existing], or null: it must be a plain lower-camel
+ * Kotlin name not used by the generated function or taken.
  */
 internal fun componentParameterRefusal(name: String, existing: Set<String>): String? =
   when {
@@ -305,11 +290,8 @@ internal fun UiBuilderDocument.placedCapability(
   componentRootOf(components[key])?.let(nodes::get)?.componentId?.let(catalog.componentsById::get)
 
 /**
- * Why [key] cannot be published to the project library as it stands, or null when it can.
- *
- * The server applies the same rules on every read, so a component refused here would be one the
- * library dropped: a published body uses only its catalog's components, and placing another
- * component is a dependency the importing design never named.
+ * Why [key] cannot be published to the project library, or null. Mirrors the server's read rules: a
+ * body may use only its catalog's components, not other components.
  */
 internal fun UiBuilderDocument.libraryPublicationRefusal(key: String): String? {
   val declaration = components[key] as? JsonObject ?: return "This design has no component $key"
@@ -324,8 +306,8 @@ internal fun UiBuilderDocument.libraryPublicationRefusal(key: String): String? {
 }
 
 /**
- * [key] as a publish sends it: the component and its body as the one-component document a project
- * would commit, published under the id it was imported or published as before, else its own key.
+ * [key] as a publish sends it: a one-component document, under its previous import/publish id or
+ * else its own key.
  */
 internal fun UiBuilderDocument.libraryPublication(key: String): EditorLibraryPublication? {
   if (libraryPublicationRefusal(key) != null) return null

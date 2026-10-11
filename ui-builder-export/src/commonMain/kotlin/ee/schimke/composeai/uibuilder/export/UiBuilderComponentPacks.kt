@@ -10,37 +10,14 @@ import kotlinx.serialization.json.put
 /**
  * A set of components another catalog contributes to this one, as the catalog declares it.
  *
- * ## What a pack is
+ * A design is still pinned to one catalog; a pack (e.g. `confetti-mobile`, with ids
+ * `confetti-mobile/<component>`) is merged by the runtime into every authoring catalog of the same
+ * [UiBuilderCatalogPlatform]. This declaration lets the editor shelve and toggle a pack's
+ * components and mark them as placeholders, and lets the server pick the bundle to compile against.
  *
- * A design is pinned to exactly one catalog, and that is not changing: the pin is what makes a
- * reopened design render the same components it was saved with. What a pinned catalog may now carry
- * is components that are not its own. A host serving `confetti-mobile` can admit it as a **pack** —
- * every composable its published component record proves a call site for, under ids of the form
- * `confetti-mobile/<component>` — and the builder's runtime merges that pack into every authoring
- * catalog of the same [UiBuilderCatalogPlatform]. A Material 3 phone screen can then hold a
- * `SessionCard` from Confetti beside its `m3/card`, validate it, export it and render it natively,
- * while a Wear widget is offered nothing from a mobile app, because it could not call it.
- *
- * The merge is the runtime's. What the catalog carries afterwards is this declaration, so that the
- * editor can tell a pack's components apart from the catalog's own — shelve them under the pack's
- * name, let a person switch the shelf on and off from settings, and say on the canvas that a pack
- * component is drawn as a placeholder rather than as itself — and so that the server can tell which
- * served bundle a design that uses one has to be compiled against.
- *
- * ## What a pack is not
- *
- * Not a second pin. A pack's components are part of the catalog the design is pinned to, exactly as
- * `wear-m3`'s borrowed foundation components are; a design does not record which packs it drew
- * from, and one that uses none is unaffected by a host that admits some. Not a Wasm adapter either:
- * the canvas cannot link an arbitrary application's classes, so a pack component is drawn as a
- * named placeholder in the same honest shape `wear-m3`'s native-only components are, and the
- * picture comes from the native lane, compiled against the pack's own served bundle.
- *
- * ## Where it lives
- *
- * `CatalogCapabilityV1.statusSemantics`, under [KEY], beside `previewSurfaces` and `componentMenu`,
- * for the reason [UiBuilderPreviewSurfaces] gives. A catalog that says nothing has no packs, which
- * is what every catalog had before this existed.
+ * Not a second pin (designs do not record packs) and not a Wasm adapter (the canvas draws a named
+ * placeholder; the native lane renders the real thing). Stored in `statusSemantics` under [KEY], as
+ * [UiBuilderPreviewSurfaces] explains; no declaration means no packs.
  */
 data class UiBuilderComponentPack(
   /** The pack's id — the served catalog it came from, and the prefix of every component id. */
@@ -74,13 +51,8 @@ data class UiBuilderComponentPack(
 
   companion object {
     /**
-     * The component id a pack gives the [componentName] it contributes.
-     *
-     * One rule for both sides. The runtime writes ids with it when it merges a pack, and the export
-     * path rewrites them back to the record with the same function — so the two cannot disagree
-     * about what `confetti-mobile/session-card` refers to. The name is kebab-cased from the
-     * composable's own, because that is the spelling every other id in this builder uses
-     * (`m3/icon-button`, `wear-m3/list-header`).
+     * The component id a pack gives [componentName]: kebab-cased, as all builder ids are. Used both
+     * by the runtime merge and the export's reverse mapping, so they cannot disagree.
      */
     fun componentId(packId: String, componentName: String): String =
       "$packId/${kebabCase(componentName)}"
@@ -126,12 +98,8 @@ data class UiBuilderComponentPacks(val packs: List<UiBuilderComponentPack>) {
     val NONE: UiBuilderComponentPacks = UiBuilderComponentPacks(emptyList())
 
     /**
-     * Read the declaration out of a catalog's `statusSemantics`, falling back to [NONE].
-     *
-     * Per entry rather than all-or-nothing: an entry missing its id or naming a platform this build
-     * does not know is dropped, and the rest are kept. A malformed declaration must not take a
-     * catalog's editor down, and the components it named are still in the catalog — they are simply
-     * not shelved as a pack.
+     * Read the declaration out of a catalog's `statusSemantics`, falling back to [NONE]. Malformed
+     * or unknown-platform entries are dropped individually, so the editor still opens.
      */
     fun from(statusSemantics: JsonObject): UiBuilderComponentPacks {
       val declared = (statusSemantics[KEY] as? JsonArray) ?: return NONE

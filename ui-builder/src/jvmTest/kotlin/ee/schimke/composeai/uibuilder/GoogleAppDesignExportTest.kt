@@ -13,17 +13,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * The six Google-app sample designs, through the same gate the editor's Code pane and the server's
- * Compose export ask: each one has to come out as Kotlin.
- *
- * The samples exist to show that a real tablet screen can be built against the real composables and
- * the AndroidX adaptive libraries. A sample the export refuses shows the opposite — the canvas
- * draws it, and nothing can be taken away from it — so a refusal here is a finding about the
- * builder, not about the sample.
- *
- * `DesignFixturesTest` already exports every fixture, but through `CapabilityComposeCodeExporter`,
- * which has a hand-written emitter for every catalog id. That is how all five passed there while
- * the server's export — this gate — refused every one of them.
+ * The six Google-app sample designs, through the same gate as the editor's Code pane and the
+ * server's Compose export: each must come out as Kotlin, or it's a finding about the builder.
+ * (`DesignFixturesTest` uses `CapabilityComposeCodeExporter`, which has an emitter for every
+ * catalog id, so it can't stand in for this gate.)
  */
 class GoogleAppDesignExportTest {
 
@@ -61,10 +54,8 @@ class GoogleAppDesignExportTest {
   }
 
   /**
-   * `singlePane` and a pane spacing adjust the computed directive the way the canvas does: one
-   * `copy(…)` member call, whose result is both the `directive` argument and the receiver the value
-   * reads its partition count from. The generator holds each receiver in a typed local, so the
-   * adjusted directive is the thing the scaffold and its value agree on.
+   * `singlePane` and pane spacing adjust the computed directive as the canvas does: one `copy(…)`
+   * held in a typed local, used as both the `directive` argument and the value's receiver.
    */
   @Test
   fun `singlePane and a pane spacing export through the directive's copy`() {

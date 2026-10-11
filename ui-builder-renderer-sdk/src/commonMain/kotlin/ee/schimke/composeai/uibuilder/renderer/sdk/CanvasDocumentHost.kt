@@ -111,10 +111,9 @@ fun CanvasDocumentHost(
   rootModifier: BoxScope.(CanvasRenderNode) -> Modifier = { Modifier },
   /**
    * In [CanvasMode.AuthoringUnrolled], measure the roots at their own height rather than the
-   * surface's; see [UnrolledExtent]. On for a catalog runtime, which draws into a root the size it
-   * was handed. Off for a host that already measures its unrolled content itself, as the editor's
-   * in-process canvas does through its extent layout: measured twice over, a screen that pins a
-   * slot to its bottom edge was placed below what that layout then captured.
+   * surface's; see [UnrolledExtent]. On for a catalog runtime. Off for a host that measures its
+   * unrolled content itself (the editor's extent layout), since measuring twice misplaces
+   * bottom-pinned slots.
    */
   measureUnrolledExtent: Boolean = true,
   content: @Composable CanvasDocumentScope.(CanvasRenderNode, Modifier) -> Unit,
@@ -139,20 +138,16 @@ fun CanvasDocumentHost(
         canvasAdapterIds = adapterIds,
       )
     }
-  // Read through holders rather than captured, because a disposal is reported by whichever scope
-  // the leaving item was composed under, and that can be a revision older than the collector now
-  // answering: forgetting into a discarded collector would publish its stale snapshot over the
-  // current one.
+  // Read through holders: a disposal may come from an older scope, and forgetting into a discarded
+  // collector would publish a stale snapshot.
   val currentInspection = rememberUpdatedState(inspection)
   val currentMode = rememberUpdatedState(mode)
   val currentOverlayForgotten = rememberUpdatedState(onOverlayBoundsForgotten)
   // Which drawing of a node measured it last. A node repeated by a `for-each` reports under one id
   // from several paths, and one copy leaving must not take the box of a copy still on screen.
   val lastMeasuredPath = remember(renderSessionId) { mutableMapOf<String, UiBuilderInstancePath>() }
-  // Forgotten a frame late, on purpose. A disposal is also what closing the whole surface looks
-  // like, node by node, and a one-shot render reads the snapshot *after* its scene is closed:
-  // forgetting there published an empty inspection over the one it had just measured. A surface
-  // that is still alive recomposes the flush below; one that has gone never does.
+  // Forgotten a frame late: closing a surface disposes every node, and a one-shot render reads the
+  // snapshot after closing, so immediate forgets would publish an empty inspection.
   val pendingForgets = remember(renderSessionId) { mutableSetOf<UiBuilderInstancePath>() }
   val forgetRequests = remember(renderSessionId) { mutableIntStateOf(0) }
   val flushForgets = {
@@ -292,17 +287,10 @@ fun CanvasDocumentHost(
 /**
  * The unrolled surface's content at its own height, never less than the surface's.
  *
- * A runtime is handed the frame's size and draws into a root that size, and the editor grows the
- * surface only when the content it measured reaches past it. Measured inside that root, content
- * that fills its parent — a screen, a `fillMaxSize` column — was one frame tall however many rows
- * it held: the rows past the fold were squeezed to nothing, nothing ever reached past the frame,
- * and the unrolled view drew the same frame as the device view.
- *
- * So it is measured the way the editor measures its own extent (`CanvasExtentLayout`): once against
- * an unbounded height for the content's natural size, then placed at that or the surface's height,
- * whichever is taller, so `fillMaxHeight` still fills a design that fits. Only the second
- * measurement is placed, so the probe records no bounds. The content may overhang this box, which
- * reports the surface's own size; the rows' bounds past it are what tell the editor to grow.
+ * Measured as `CanvasExtentLayout` does: once with unbounded height for the natural size, then
+ * placed at the taller of that and the surface, so filling content still grows past the frame and
+ * `fillMaxHeight` still fills. Only the second measurement is placed. Overhanging rows' bounds tell
+ * the editor to grow.
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -343,12 +331,8 @@ private fun UiBuilderNode.textContentTopPaddingDp(): Float =
     .toFloat()
 
 /**
- * [node]'s bounds in this surface's coordinates.
- *
- * A node drawn inside a `Dialog` or a popup is laid out in that layer's own hierarchy, not the
- * surface's, and `localBoundingBoxOf` refuses a pair with no common ancestor: it threw from the
- * positioning pass, so a design holding an `m3/dialog` took the whole canvas down with it. Both
- * hierarchies share the window, so such a node is mapped through window space instead.
+ * [node]'s bounds in this surface's coordinates. Nodes in a `Dialog` or popup have no common
+ * ancestor with the surface (`localBoundingBoxOf` throws), so they are mapped through window space.
  */
 private fun LayoutCoordinates.overlayBoundsOf(node: LayoutCoordinates): Rect =
   if (node.findRootCoordinates() == findRootCoordinates()) {
@@ -357,26 +341,17 @@ private fun LayoutCoordinates.overlayBoundsOf(node: LayoutCoordinates): Rect =
     node.boundsInWindow().translate(-positionInWindow())
   }
 
-/**
- * Applies the forgets queued since the last frame.
- *
- * Its own scope so that reading [requests] recomposes this and nothing else: the host above it
- * rebuilds every entry of the tree when it recomposes, and a list scrolled by a wheel disposes an
- * item nearly every frame.
- */
+/** Applies the forgets queued since the last frame, in its own scope so only this recomposes. */
 @Composable
 private fun FlushForgottenBounds(requests: IntState, flush: () -> Unit) {
   if (requests.intValue > 0) SideEffect(flush)
 }
 
 /**
- * The document environment key that asks for horizontal scrollers drawn whole: a `LazyRow` as a
- * `Row`, a carousel's items side by side, a `horizontalScroll` dropped. Set by the editor on the
- * one surface measured against an unbounded width — the pop-out of a single horizontal container —
- * and nowhere else. An environment key rather than a surface mode because the renderer protocol's
- * modes are a closed set this SDK does not publish; see
- * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL] for why an editor sends it only to a runtime that
- * says it honours it.
+ * The document environment key asking for horizontal scrollers drawn whole (a `LazyRow` as a `Row`,
+ * carousel items side by side), set only on the pop-out of a single horizontal container. An
+ * environment key because renderer protocol modes are closed; see
+ * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL].
  */
 const val UI_BUILDER_UNROLLED_AXIS_KEY = "uiBuilderUnrolledAxis"
 

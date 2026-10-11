@@ -15,13 +15,9 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A checked-in design file (`.uid`) as the editor's hosts read and write it.
- *
- * Every host that owns the file rather than the editor — the IntelliJ plugin's project sessions,
- * the VS Code host bridge (`HostBridgeApp.kt`) and the MCP App host (`McpAppHostApp.kt`) — must
- * write the same design as the same bytes, or opening a file in one and saving it in another is a
- * diff of whitespace. So the format lives here once: `DesignDocumentV1`, with the established
- * host-file JSON options, and a trailing newline.
+ * A checked-in design file (`.uid`) as the editor's hosts read and write it: `DesignDocumentV1`
+ * with the host-file JSON options and a trailing newline, so every host (IntelliJ, VS Code
+ * `HostBridgeApp.kt`, MCP App `McpAppHostApp.kt`) writes identical bytes.
  */
 object UidDesignFiles {
   /** The declarations a checked-in design may carry, as the IntelliJ plugin accepts them. */
@@ -117,9 +113,8 @@ object UidDesignFiles {
   }
 
   /**
-   * The file's bytes for [collection]. Given the [original] file, every design that is unchanged
-   * from it is written back as the JSON it was read from, so a field this editor does not model —
-   * written by a newer one — survives in the designs nobody edited.
+   * The file's bytes for [collection]. Designs unchanged from [original] are written back as their
+   * original JSON, so fields a newer editor wrote survive.
    */
   fun encodeCollection(collection: UidDesignCollection, original: String? = null): String {
     val unchanged =

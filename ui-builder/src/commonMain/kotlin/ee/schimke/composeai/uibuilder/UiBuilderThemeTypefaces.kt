@@ -15,12 +15,9 @@ import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 
 /**
- * Draw [content] under both type scales with the theme host's typefaces applied — Material 3's for
- * the mobile and foundation components that read it, Wear's for the Wear port's.
- *
- * [read] is the host's string property by name. Its [ThemeTextStyle] role, when it names one,
- * becomes the ambient text style on both scales. A host that names neither a typeface nor a role
- * leaves both scales exactly as they were, so a design without one composes nothing extra.
+ * Draw [content] under both type scales (Material 3's and Wear's) with the theme host's typefaces
+ * applied. [read] is the host's string property by name; its [ThemeTextStyle] role, if any, becomes
+ * the ambient text style on both. A host naming neither leaves both scales untouched.
  */
 @Composable
 internal fun ThemeTypefacesHost(read: (String) -> String?, content: @Composable () -> Unit) {
@@ -136,11 +133,9 @@ fun Typography.withRoleFamilies(families: Map<String, FontFamily>): Typography {
 }
 
 /**
- * This Wear scale with each role in [families] re-pointed at its family.
- *
- * Explicitly per role: `Typography(defaultFontFamily = …)` is a no-op on Wear, because every stock
- * role already names `roboto-flex`. The arc roles keep the stock face — they are `CurvedTextStyle`
- * and draw the curved status strip, system chrome rather than the design's type.
+ * This Wear scale with each role in [families] re-pointed at its family. Per role, since
+ * `Typography(defaultFontFamily = …)` is a no-op on Wear (every stock role names `roboto-flex`).
+ * The arc roles (`CurvedTextStyle`, the status strip) keep the stock face.
  */
 fun WearTypography.withRoleFamilies(families: Map<String, FontFamily>): WearTypography {
   if (families.isEmpty()) return this

@@ -19,18 +19,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
- * `remote-widgets`, the phone launcher widget design system remote-m3-catalog publishes from
- * `:widget-catalog`, under the catalog-owned cutover.
- *
- * It is the catalog the cutover fits best, and the one that most needs it: the builder synthesises
- * nothing for it, so its definition was only ever its own; its frame sizes are already catalog data
- * (`frame.geometry.sizesDp`); and it publishes its own seed templates. Off the flag it gets the
- * builder's Kotlin copy of a launcher seed (`LauncherWidgetTemplates`), and its export reaches
- * `LauncherWidgetCodeExporter` only because its root is spelled `remote-widgets/launcher-widget`.
- *
- * Read from its delivery branch (`design-artifacts/remote-widgets`) like every other captured
- * catalog: the published `statusSemantics` carries the same `builtins`, `frame` and
- * `composeSourceExport` its policy file states, so these hold the catalog as a host serves it.
+ * `remote-widgets` (the launcher widget catalog remote-m3-catalog publishes from `:widget-catalog`)
+ * under the catalog-owned cutover: nothing is synthesised for it, its frame sizes and seed
+ * templates are already catalog data. Read from its delivery branch
+ * (`design-artifacts/remote-widgets`).
  */
 class LauncherWidgetCutoverTest {
 
@@ -142,10 +134,8 @@ class LauncherWidgetCutoverTest {
   }
 
   /**
-   * The property routing by declaration buys: a launcher widget catalog may call its root anything,
-   * so long as it marks that root `LauncherWidgetHost`. Here the catalog is the same policy with
-   * its root renamed. Routed by component id the same design is not recognised as a launcher widget
-   * at all.
+   * Routing by declaration lets a launcher widget catalog name its root anything marked
+   * `LauncherWidgetHost`; routed by component id, the renamed root is not recognised.
    */
   @Test
   fun `a renamed root still exports when the catalog declares the route`() {

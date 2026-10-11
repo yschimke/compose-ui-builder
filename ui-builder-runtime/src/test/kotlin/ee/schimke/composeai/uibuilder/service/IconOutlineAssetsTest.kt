@@ -8,12 +8,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The outline registry, which shares `assets` with somebody's uploaded images.
- *
- * Sharing one map is the whole risk here: the released `DesignDocumentV1` has no separate home for
- * resolved outlines, so the only thing keeping an upload from being pruned as a stale icon — or an
- * icon from being served as a picture the design alone has — is a key prefix and a media type. Both
- * are pinned below.
+ * The outline registry shares `assets` with uploaded images, kept apart only by a key prefix and a
+ * media type, both pinned here.
  */
 class IconOutlineAssetsTest {
 

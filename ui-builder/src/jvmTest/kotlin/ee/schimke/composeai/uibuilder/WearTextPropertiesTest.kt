@@ -19,37 +19,16 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A Wear text node is drawn with the properties the catalog declares, not with four of them.
- *
- * ## The bug this pins
- *
- * `wear-m3/text` was the last of the three Material 3 renames, and it was the one that read least:
- * `text`, `color`, `style` and `maxLines`. The catalog declares sixteen properties for it —
- * inherited wholesale from `m3/text` — and the mobile branch beside it honours every one, so
+ * A Wear text node is drawn with all the properties the catalog declares (inherited from `m3/text`:
  * `fontSizeSp`, `lineHeightSp`, `letterSpacingSp`, `softWrap`, `overflow`, `minLines`,
- * `textDecoration`, `fontWeight` and `fontStyle` were inert on a Wear node and live on a phone.
+ * `textDecoration`, `fontWeight`, `fontStyle`, …), not just `text`, `color`, `style` and
+ * `maxLines`. The template's `fontSizeSp` pins depend on it.
  *
- * It went unnoticed because the *style* was right: `wearTextStyle` resolves the role names against
- * Wear's own typography, so a `titleMedium` was the correct Wear face and the screen template
- * looked like it matched. What it actually measured was a title 73.0dp wide against the reference's
- * 67.0dp — the template's `fontSizeSp` pins, which exist to correct for the canvas's wider font,
- * were being thrown away. With the pins live the same title measures 64.5dp.
+ * It must also report its text layout (`onTextLayout`), since
+ * `isUiBuilderTextComponent("wear-m3/text")` is true and the inspector waits for those measurements
+ * (see `WearTextComponentTest`).
  *
- * ## And the second half of the same bug
- *
- * The branch passed no `onTextLayout` either, so a Wear text node was *declared* a text node —
- * `isUiBuilderTextComponent("wear-m3/text")` is true, and `WearTextComponentTest` exists to keep it
- * true — while never reporting a layout. The inspector waits for the measurements its expected
- * inventory promises, which is exactly the stall that test's KDoc warns a wrong predicate would
- * cause, arriving from the other side. this class's first assertion failing with "the text node
- * reported no layout" rather than a size is how that half was found.
- *
- * ## Why this asserts on bounds and baselines
- *
- * Because that is what the properties change. `fontSizeSp` moves the line height and the baseline;
- * `maxLines` moves the line count. Both are published by the inspection snapshot, so the assertion
- * is about what the renderer did rather than about which branch it took — the same reading
- * `WearCanvasDeviceSizeTest` takes of a ring's stroke.
+ * Asserted on inspected bounds and baselines, which is what the properties change.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class WearTextPropertiesTest {
@@ -103,8 +82,8 @@ class WearTextPropertiesTest {
   private data class TextNode(val bounds: UiBuilderPixelBounds, val text: UiBuilderTextInspection)
 
   /**
-   * A Wear screen holding one label, at a width narrow enough that a long one has to wrap: the same
-   * shape the screen template's rows have, without the card around it.
+   * A Wear screen holding one label, narrow enough that a long one wraps: the template rows' shape
+   * without the card.
    */
   private fun document(fontSizeSp: Float, maxLines: Int) =
     UiBuilderDocument(

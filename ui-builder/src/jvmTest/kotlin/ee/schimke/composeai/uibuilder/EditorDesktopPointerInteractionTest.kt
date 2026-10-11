@@ -207,9 +207,8 @@ class EditorDesktopPointerInteractionTest {
       waitForIdle()
       val opened = onNodeWithText("Quick edit").fetchSemanticsNode().boundsInRoot
 
-      // Frame by frame through the close animation: while the menu is still drawn it stays where it
-      // opened, give or take the few pixels its own shrink moves an item (the bug was a jump of
-      // hundreds).
+      // Frame by frame through the close animation: the menu must stay where it opened, give or
+      // take its own shrink.
       mainClock.autoAdvance = false
       onNodeWithText("Quick edit").performClick()
       repeat(20) {

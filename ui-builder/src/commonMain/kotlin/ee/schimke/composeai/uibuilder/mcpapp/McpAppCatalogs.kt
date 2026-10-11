@@ -1,20 +1,14 @@
 package ee.schimke.composeai.uibuilder.mcpapp
 
 /**
- * Which capability catalog a design opened in an MCP App host is edited against.
+ * Which capability catalog a design opened in an MCP App host is edited against. As in the IntelliJ
+ * project session (`OfflineCatalog.forSystem(document.catalogPin.systemId)`), the design's
+ * `catalogPin.systemId` picks one of the catalogs **packaged with the editor**
+ * (`<systemId>-capabilities-v1.json` at the archive root, loaded from the editor's origin, so it
+ * works offline); any other pin is refused by name.
  *
- * The IntelliJ project session's rule (`OfflineCatalog.forSystem(document.catalogPin.systemId)`):
- * the design's `catalogPin.systemId` picks one of the catalogs **packaged with the editor**, and a
- * design pinned to any other is refused with its name rather than opened against the wrong
- * components. The web archive carries the same three capability files at its root —
- * `<systemId>-capabilities-v1.json` — and the MCP App reads them from the origin it loaded the
- * editor from, so resolution needs nothing but the editor's own assets: it works offline whenever
- * the editor itself loaded.
- *
- * A host may also name a [hostedBaseUrl] (`composeUiBuilderMcpApp.catalogBase` in the shell), a
- * place serving `<systemId>-capabilities-v1.json` for catalogs the archive does not package. It is
- * tried only for those, and only when set; the MCP App shell leaves it unset today, so an unknown
- * catalog is an error naming it.
+ * A host may name a [hostedBaseUrl] (`composeUiBuilderMcpApp.catalogBase`) serving catalogs the
+ * archive doesn't package, tried only for those.
  */
 class McpAppCatalogs(
   private val fetchAsset: suspend (String) -> String,

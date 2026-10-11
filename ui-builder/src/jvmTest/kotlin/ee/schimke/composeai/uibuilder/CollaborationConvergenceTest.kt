@@ -391,13 +391,9 @@ class CollaborationConvergenceTest {
   }
 
   /**
-   * A design has at most one root, checked here rather than only when somebody asks for Kotlin.
-   *
-   * Both doors: an insert that names no parent puts its node in the root list, and a document
-   * loaded with two roots satisfies every placement rule — each node reachable once, no cycles — so
-   * nothing else here would notice. Export refuses `ROOT_CARDINALITY` and the editor cannot delete
-   * a root without its whole subtree, which makes a second root a state a real design can be stored
-   * in and never leave (yschimke/compose-preview-server#429).
+   * A design has at most one root, checked by the reducer on both doors: a parentless insert, and a
+   * loaded document with two roots (which passes every placement rule). A second root can't be
+   * exported or removed without its subtree (see yschimke/compose-preview-server#429).
    */
   @Test
   fun `a second root is refused, by an insert and in a loaded document`() {
@@ -451,10 +447,8 @@ class CollaborationConvergenceTest {
   }
 
   /**
-   * The other half of the rule above, and the reason it is asked once per command rather than once
-   * per operation: wrapping a root takes an insert beside it and a move inside it, so the document
-   * has two roots in between. A command is what commits, so a command is what a document-level
-   * invariant answers to — `PersistentUiBuilderService` has always checked it exactly here.
+   * Checked once per command, not per operation: wrapping a root inserts beside it then moves it
+   * inside, passing through two roots. `PersistentUiBuilderService` checks at the same point.
    */
   @Test
   fun `a command may pass through two roots on its way to one`() {
@@ -1240,9 +1234,8 @@ class CollaborationConvergenceTest {
         slots = mapOf("content" to listOf("child")),
       )
     val b = UiBuilderNode("b", "button")
-    // One root. A second is a document nothing can export and the reducer now refuses it
-    // (yschimke/compose-preview-server#429), so `b` lives in a second slot of the container — which
-    // is what the moves below want it for: a place to move to that is not where the node is.
+    // One root (a second is refused), so `b` lives in a second slot of the container, giving the
+    // moves below somewhere to go.
     val container =
       UiBuilderNode(
         "container",

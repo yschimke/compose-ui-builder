@@ -11,18 +11,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Same-origin `GET` for icon outlines.
- *
- * Ordinary cache semantics, deliberately, though caching is the whole point of this route. A pinned
- * URL (`v=…`) is answered `immutable`, so the browser serves it from its own cache with no round
- * trip regardless — `force-cache` buys nothing there. What `force-cache` does buy is a stale hit on
- * the *unpinned* bootstrap request, returning a cached name list without ever sending its
- * `If-None-Match`: the client would then keep an old pin after a release, and every versioned URL
- * it built from that pin would be wrong too. So the validator is allowed to do its job here, and a
- * 304 costs a header exchange rather than the list.
- *
- * The editor is served by the host that serves these, so `same-origin` credentials carry whatever
- * the session already has.
+ * Same-origin `GET` for icon outlines, with ordinary cache semantics. Pinned (`v=…`) URLs are
+ * answered `immutable`, so they're served from cache anyway; `force-cache` would only make the
+ * unpinned bootstrap request skip its `If-None-Match` and keep a stale pin after a release.
+ * `same-origin` credentials carry the session.
  */
 class BrowserMaterialSymbolsTransport : MaterialSymbolsTransport {
   override suspend fun get(url: String): MaterialSymbolsHttpResponse {

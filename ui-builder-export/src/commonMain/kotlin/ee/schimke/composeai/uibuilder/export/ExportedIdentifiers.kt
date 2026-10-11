@@ -1,13 +1,9 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * What the Compose generator will call a state variable, and what it may not call one.
- *
- * These live beside the export projection rather than inside the browser's emitter because two
- * callers need them: the emitter, which writes `var $$name` bare, and design creation, which
- * refuses a name the emitter could never write. Creation moved to the server when creating a design
- * became a request rather than a page load, and a rule enforced on only one of the two sides is a
- * design that can be created and never exported.
+ * What the Compose generator will call a state variable, and what it may not call one. Shared by
+ * the emitter and design creation (now on the server), so no design can be created that cannot be
+ * exported.
  */
 fun exportedStateIdentifier(name: String): String = name.identifier()
 

@@ -23,11 +23,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * A mobile screen holding remote content, judged by the two things that judge a design: the catalog
- * and the Compose export.
- *
- * The tree is the one from `docs/design/UI_BUILDER_REMOTE_COMPOSE.md` — a Column with Text either
- * side of a Remote Compose node whose body holds a custom component filled with ordinary Compose.
+ * A mobile screen holding remote content, judged by the catalog and the Compose export. The tree
+ * from `docs/design/UI_BUILDER_REMOTE_COMPOSE.md`: a Column with Text either side of a Remote
+ * Compose node whose body holds a custom component filled with ordinary Compose.
  */
 class InlineRemoteContentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -73,9 +71,8 @@ class InlineRemoteContentTest {
 
     assertEquals(listOf("REMOTE_CONTENT_NOT_COMPOSE"), diagnostics.map { it.code })
     assertEquals("remote", diagnostics.single().nodeId)
-    // The `layout/column` and `m3/text` inside the remote body are the same components the exporter
-    // emits happily elsewhere, and the custom component has no Kotlin symbol at all. Reporting any
-    // of them would be judging Remote Compose source by whether Compose can call it.
+    // Nodes inside the remote body are Remote Compose source, so Compose-export diagnostics must
+    // not report them.
     assertTrue(diagnostics.none { it.nodeId == "custom" }, diagnostics.toString())
   }
 
@@ -125,12 +122,8 @@ class InlineRemoteContentTest {
   }
 
   /**
-   * Author → emit → the name in the generated body is the name the canvas draws the hole under.
-   *
-   * The two sides of the seam are written in different places and read the same property, and a
-   * design whose body names `search-field` while the canvas registers `field` is a design that
-   * authors, validates, exports and then draws nothing on a real player — the failure this round
-   * trip exists to catch.
+   * Author → emit → the name in the generated body is the name the canvas registers the hole under;
+   * a mismatch would draw nothing on a real player.
    */
   @Test
   fun `the emitted custom component carries the name the design authored`() {

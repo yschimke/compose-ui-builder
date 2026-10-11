@@ -129,8 +129,8 @@ class TypefacePickerTest {
   }
 
   /**
-   * A design that names a family nobody vendored — what an agent theming a design usually writes —
-   * draws in it when the host can fetch it by name, instead of silently in the default face.
+   * A family nobody vendored (what agents usually write) draws in its own face when the host can
+   * fetch it by name.
    */
   @Test
   fun `a family outside the manifest is fetched by name when the host can`() = runBlocking {
@@ -212,9 +212,8 @@ class TypefacePickerTest {
   }
 
   /**
-   * The clear is recorded as absent, not as JSON null: undo checks the field still holds what the
-   * command wrote, and an absent field never equals a recorded null — so undoing Default was
-   * refused, and redoing it would have written an explicit null back.
+   * The clear is recorded as absent, not JSON null: undo compares the field against what the
+   * command wrote, and an absent field never equals a recorded null.
    */
   @Test
   fun `choosing Default can be undone and redone`() {

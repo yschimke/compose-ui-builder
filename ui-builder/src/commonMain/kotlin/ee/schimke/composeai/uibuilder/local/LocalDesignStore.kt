@@ -11,10 +11,8 @@ data class LocalDesignSummary(
   val updatedAtEpochMillis: Long,
   val storedBytes: Int,
   /**
-   * True when the record under this id would not parse. The row is still listed — keyed by the id
-   * in its storage key, so [LocalDesignStore.delete] can reach it — because a record that is
-   * invisible is not cleaned up, it is kept: the bytes stay in this origin's quota forever, and the
-   * only thing that can free them is a delete nobody can name.
+   * True when the record under this id would not parse. Still listed (keyed by its storage key) so
+   * [LocalDesignStore.delete] can free its quota.
    */
   val corrupted: Boolean = false,
   /** The server design this one is a browser copy of, when it is one. */
@@ -23,30 +21,21 @@ data class LocalDesignSummary(
 
 /**
  * Every locally stored design in this origin, and the rules for keeping them inside its quota.
+ * Reads, writes, lists and deletes [LocalDesignRecordV1] values; replaying is
+ * [LocalDesignSession]'s job, so listing needs no catalog.
  *
- * The store is deliberately dumb about *what* a design means: it reads and writes
- * [LocalDesignRecordV1] values, lists them, and deletes them. Replaying a record into a document is
- * [LocalDesignSession]'s job, because that needs the reducer and the catalog's validators, and a
- * store that needed them could not answer the chooser's "what is in this browser?" question without
- * loading a catalog first.
- *
- * Keys are `ui-builder.local.design.<designId>`, one per design, rather than one key holding every
- * design: `localStorage` has no partial write, so a single key would mean re-encoding every design
- * in the browser on each keystroke-sized edit, and one design over the quota would take all of them
- * down with it.
+ * One key per design (`ui-builder.local.design.<designId>`): `localStorage` has no partial write,
+ * so one shared key would re-encode everything on each edit and one oversized design would break
+ * all of them.
  */
 class LocalDesignStore(
   private val storage: LocalDesignStorage,
   private val json: Json = localDesignJson,
 ) {
   /**
-   * The designs this browser holds, newest first.
-   *
-   * A record that will not parse is listed as [LocalDesignSummary.corrupted] rather than skipped:
-   * it may be somebody else's key in this origin's namespace or one written by a builder newer than
-   * this page, but it is under this store's prefix and holds this store's quota, and a delete is
-   * the only thing that can free it. Skipped entirely is the key whose remainder is empty, which is
-   * not a design under any reading.
+   * The designs this browser holds, newest first. Unparseable records are listed as
+   * [LocalDesignSummary.corrupted] (they hold quota under this prefix and only a delete frees
+   * them); keys with an empty remainder are skipped.
    */
   fun list(): List<LocalDesignSummary> =
     storage
@@ -85,12 +74,8 @@ class LocalDesignStore(
     storage.read(designKey(designId))?.let(::decode)?.takeIf { it.designId == designId }
 
   /**
-   * The record under [designId] exactly as this browser stores it, for a download.
-   *
-   * The stored text rather than a re-encoding: it is the whole design — seed, log, provenance — and
-   * the one copy that survives this browser's site data being cleared. Unreadable records come back
-   * too, for the same reason [list] keeps them: they may be a newer builder's, and a download is
-   * the only way to keep them before deleting.
+   * The record under [designId] exactly as stored, for a download: the whole design (seed, log,
+   * provenance). Unreadable records come back too, so they can be saved before deleting.
    */
   fun storedText(designId: String): String? = storage.read("$DESIGN_KEY_PREFIX$designId")
 
@@ -109,12 +94,8 @@ class LocalDesignStore(
     json.encodeToString(LocalDesignRecordV1.serializer(), record).length
 
   /**
-   * Removes the record stored under [designId].
-   *
-   * Deliberately without [designKey]'s shape check: the id may have come from a corrupted record's
-   * own key, which the store never wrote and so never held to the shape. Removing
-   * `DESIGN_KEY_PREFIX + id` can only ever remove a key under this store's prefix, which is this
-   * store's to remove whatever wrote it.
+   * Removes the record stored under [designId], without [designKey]'s shape check: the id may come
+   * from a corrupted record's key, and the prefix keeps the delete within this store.
    */
   fun delete(designId: String) {
     storage.remove("$DESIGN_KEY_PREFIX$designId")
@@ -132,10 +113,7 @@ class LocalDesignStore(
   companion object {
     const val DESIGN_KEY_PREFIX: String = "ui-builder.local.design."
 
-    /**
-     * A design id is part of a storage key and of a URL, so it is held to the same shape both
-     * places rather than to a looser one here.
-     */
+    /** A design id is part of a storage key and a URL, so it is held to the same shape in both. */
     private val SAFE_DESIGN_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
     fun designKey(designId: String): String {
@@ -146,10 +124,8 @@ class LocalDesignStore(
 }
 
 /**
- * The record [document] starts life as in this browser, at the revision it already carries.
- *
- * Used both by "New design" and by the compaction below, which is the same statement twice: this
- * document, no history before it.
+ * The record [document] starts life as in this browser, at its current revision with no history.
+ * Used by "New design" and by compaction.
  */
 fun localDesignRecord(
   document: UiBuilderDocument,
@@ -168,11 +144,8 @@ fun localDesignRecord(
   )
 
 /**
- * Tolerant on read, exact on write.
- *
- * `ignoreUnknownKeys` because a record written by a newer builder that learned a field should still
- * open rather than reading as a design this browser does not have; `encodeDefaults` off to keep the
- * bytes — which are charged against a few-megabyte quota — to what actually differs from a default.
+ * Tolerant on read (`ignoreUnknownKeys`, so newer builders' records still open), exact on write
+ * (`encodeDefaults` off to save quota).
  */
 internal val localDesignJson: Json = Json {
   classDiscriminator = "type"

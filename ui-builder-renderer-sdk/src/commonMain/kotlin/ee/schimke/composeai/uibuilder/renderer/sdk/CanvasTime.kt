@@ -18,12 +18,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * The value of `environment.animations` that lets time run.
- *
- * Every saved document says `settled`, and a render of one is pinned to its `fixedTime`: a render
- * that moved would be a render nothing could diff. An interactive surface — the editor canvas, the
- * device previews — hands its renderer a copy that says `running` instead, so a clock hand turns
- * and a pulse pulses while somebody designs it. The copy is never saved.
+ * The value of `environment.animations` that lets time run. Saved documents say `settled` and
+ * render at their `fixedTime` (diffable); interactive surfaces get an unsaved copy saying
+ * `running`.
  */
 const val ANIMATIONS_RUNNING = "running"
 
@@ -46,13 +43,9 @@ fun UiBuilderDocument.withTimeRunning(running: Boolean): UiBuilderDocument {
 }
 
 /**
- * The wall clock [document] is drawn at this frame, or null to draw it at its `fixedTime`.
- *
- * Live only when the document lets time run and something in it reads the clock: a design with no
- * `time.*` value never recomposes for one. Whole-second values only change once a second, so a
- * design that reads neither `time.continuousSecond` nor `time.animation` recomposes once a second
- * rather than every frame. `time.animation` counts from the moment time started running, as the
- * player's counts from the moment it started the document.
+ * The wall clock [document] is drawn at this frame, or null to draw it at its `fixedTime`. Live
+ * only when time runs and something reads `time.*`; whole-second reads recompose once a second.
+ * `time.animation` counts from when time started running.
  */
 @Composable
 internal fun rememberLiveCanvasClock(document: UiBuilderDocument): UiExpressions.Clock? {

@@ -19,18 +19,10 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * One wrapper per property, decided on the write.
- *
- * The catalog declares `m3/text.style` as `jsonType: "string"` with an `allowedValues` list, and
- * both `{"type":"enum","value":"bodyLarge"}` and `{"type":"string","value":"bodyLarge"}` were
- * accepted, committed and rendered — the reducer treated the two literal wrappers alike and the
- * renderer reads both through `string(name)`. Nothing anywhere said which one the property wanted,
- * and downstream they took unrelated export paths (issue #339).
- *
- * `enum` is canonical. The reasoning and the reason this is a **write-time** rule rather than a
- * document-wide one are in `CapabilityValidator.writeWrapperIssue`; what these tests hold is the
- * behaviour: the wrong spelling is rejected where a person chooses it, and a design that already
- * holds it stays editable everywhere else.
+ * One wrapper per property, decided on the write: `enum` is canonical for an `allowedValues`
+ * property like `m3/text.style` (see #339). Rationale, and why it's write-time only, in
+ * `CapabilityValidator.writeWrapperIssue`. The wrong spelling is rejected where a person chooses
+ * it; existing designs holding it stay editable.
  */
 class EnumWrapperCanonicalizationTest {
 
@@ -47,9 +39,7 @@ class EnumWrapperCanonicalizationTest {
     assertEquals(RejectionCode.INVALID_PROPERTY, rejected.code)
     assertEquals("text", rejected.nodeId)
     assertEquals("style", rejected.field)
-    // The message has to name the wrapper. The failure this replaces was an export refusal about
-    // `TextStyle` on a document that rendered correctly, which named neither the wrapper nor
-    // anything a person could act on from the builder.
+    // The message must name the wrapper so it is actionable from the builder.
     assertTrue(rejected.message.contains("`enum`"), rejected.message)
     assertTrue(rejected.message.contains("`string`"), rejected.message)
   }
@@ -81,18 +71,10 @@ class EnumWrapperCanonicalizationTest {
   }
 
   /**
-   * The write path already refused an invented wrapper, and this pins that it still does.
-   *
-   * Worth having explicitly, because it is the half of #901 that was **not** broken and it is easy
-   * to assume otherwise: `CollaborationReducer` has always asked `propertyWrapperIssue` on a write,
-   * so a value with an invented type never reached a commit through the editor. It reaches
-   * `MALFORMED_PROPERTY` rather than `INVALID_PROPERTY` because the wrapper is malformed before it
-   * is a property value at all.
-   *
-   * What #901 was actually about is the document path — `UiBuilderReducer.replay`, which a
-   * committed fixture and a `design-sync` import take without passing through a writer.
-   * `CapabilityValidator.validate` now asks there; `WrapperVocabularyTest` holds the vocabulary the
-   * two share.
+   * The write path refuses an invented wrapper (`CollaborationReducer` asks
+   * `propertyWrapperIssue`), as `MALFORMED_PROPERTY`. The document path (`UiBuilderReducer.replay`)
+   * is covered by `CapabilityValidator.validate`; `WrapperVocabularyTest` holds the shared
+   * vocabulary.
    */
   @Test
   fun `an invented wrapper type is rejected on the write, by node and field`() {

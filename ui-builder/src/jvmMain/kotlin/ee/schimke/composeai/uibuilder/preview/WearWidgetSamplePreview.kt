@@ -32,16 +32,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The Hello widget from `android/wear-os-samples`' `WearWidget` sample, as a UI-builder design.
- *
- * Rendered through [UiBuilderSurface] — the same renderer the editor canvas and the production
- * export use — so this is the design as an author would see it on the canvas, not a mock of one.
- * `editorOverlay = false` because the question is what the widget looks like, not what the editor
- * looks like around it; [UiBuilderEditorChromePreview] covers the second.
- *
- * Sized to the Small host canvas plus a margin, so the squircle frame is visible against the page
- * rather than bled to the edge: the frame is the *host's* contribution and the point of these two
- * previews is that the design sits inside it.
+ * The Hello widget from `android/wear-os-samples`' `WearWidget` sample, as a UI-builder design,
+ * rendered through [UiBuilderSurface] (the canvas and export renderer) with `editorOverlay =
+ * false`. Sized to the Small host canvas plus a margin so the host's squircle frame is visible.
  */
 @Preview(widthDp = 260, heightDp = 120)
 @Composable
@@ -73,20 +66,12 @@ fun WeatherWearWidgetSamplePreview() {
 }
 
 /**
- * The same Weather widget in every host container shape, side by side.
+ * The same Weather widget in every host container shape, side by side: the canvas half of the
+ * host-shape view ([LocalWearWidgetHostShape]).
  *
- * This is the canvas half of the host-shape view: the editor's control switches
- * [LocalWearWidgetHostShape] and the canvas redraws the design inside the chosen frame, which is
- * what this pair shows without needing the editor chrome around it.
- *
- * The frames are genuinely different rather than one with its corners changed. At Large the
- * squircle gives a widget 200×108dp inside a uniform 8dp; the rectangular container gives 168×112dp
- * inside 32/16dp; the round one gives 160×136dp inside 35/16dp, the least width of the three,
- * because that frame has to fit inside a circle rather than beside one. So the design is laid out
- * in a progressively narrower, taller box from left to right. That is the question a designer is
- * asking when they switch: does this survive the other frames the host might draw it in.
- *
- * Sized to hold all three Large frames (216, 232 and 230dp) plus the gaps and a margin.
+ * The frames really differ: at Large the squircle gives 200×108dp inside a uniform 8dp, the
+ * rectangle 168×112dp inside 32/16dp, the round one 160×136dp inside 35/16dp. Sized to hold all
+ * three Large frames (216, 232 and 230dp) plus gaps.
  */
 @Preview(widthDp = 780, heightDp = 220)
 @Composable
@@ -117,12 +102,8 @@ fun WearWidgetHostShapesPreview() {
 }
 
 /**
- * The empty Small and Large host frames, side by side, with no widget background declared.
- *
- * This is what the two blank templates open on, and the state the scaffold's default decides:
- * `WearWidgetContainer` paints `#FF272430` — a literal it forks from Wear Material 3's
- * `surfaceContainerLow` — for a widget that declares no background of its own, so both frames are
- * that colour whatever theme the editor is in.
+ * The empty Small and Large host frames, with no widget background declared: both show
+ * `WearWidgetContainer`'s default `#FF272430` whatever the editor theme.
  */
 @Preview(widthDp = 500, heightDp = 170)
 @Composable
@@ -152,13 +133,9 @@ fun EmptyWearWidgetContainerPreview() {
 }
 
 /**
- * The Code pane on the Hello widget: the Kotlin a widget design generates.
- *
- * The pane on a widget is not the Compose exporter's output and could not be — `remote-m3` has no
- * component record, and a widget ships as a `WearWidgetDocument` of Remote Compose rather than as a
- * screen. What it shows instead is `WearWidgetCodeExporter`'s: a `GlanceWearWidget`, its content
- * composable, and the `@Preview` that draws it through the real host tooling. The host container
- * appears nowhere in it, which is the point — on-device the launcher draws that.
+ * The Code pane on the Hello widget: `WearWidgetCodeExporter`'s output (a `GlanceWearWidget`, its
+ * content composable, and a `@Preview` via the real host tooling), since `remote-m3` has no
+ * component record. The host container doesn't appear; the launcher draws it.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -178,8 +155,7 @@ fun WearWidgetCodePanePreview() {
 
 /**
  * The catalog the widget previews author against: the packaged `remote-m3` one, which carries the
- * widget containers and `remote-m3/remote-text`, drawn by the `wear-m3/text` adapter it names. The
- * M3 catalog this used to be had neither, so the sample's text drew as "Unsupported component".
+ * widget containers and `remote-m3/remote-text` (drawn by the `wear-m3/text` adapter it names).
  */
 private val wearWidgetPreviewCatalog by lazy {
   CapabilityCatalogParser.parse(
@@ -192,17 +168,10 @@ private val wearWidgetPreviewCatalog by lazy {
  * Every background `WearWidgetBrush` can carry, in the Small container: the host default, a solid
  * colour, a vertical gradient and an image.
  *
- * The four factories are the whole API — `color`, `verticalGradient`, `horizontalGradient` and
- * `image` — and the last three take shapes a string property cannot hold, so they are authored as
- * nodes in the container's `background` slot. That is not a workaround: `WearWidgetBrush` is a
- * *chain* of drawing elements the container folds over, drawing each into the same round rect, and
- * an ordered slot is that chain.
- *
- * The image tile is honest about one thing: this renderer resolves an `asset/image` to real pixels
- * only for the two project-owned artwork keys, and to a placeholder otherwise. What it proves is
- * that the brush slot composes and clips an image to the frame — not that arbitrary widget artwork
- * resolves in the browser, which is the builder's asset-registry question rather than this
- * scaffold's.
+ * `WearWidgetBrush` is a chain of drawing elements over the same round rect, so non-colour brushes
+ * are authored as ordered nodes in the container's `background` slot. The image tile only resolves
+ * for the two project-owned artwork keys; it proves the slot composes and clips an image, not
+ * general asset resolution.
  */
 @Preview(widthDp = 560, heightDp = 260)
 @Composable
@@ -329,11 +298,8 @@ private fun previewLiteral(type: String, value: String) =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 
 /**
- * The `remote-m3` pin these designs are authored against.
- *
- * Spelled out rather than read from the frozen Jetcaster fixture: that fixture pins `m3-catalog`,
- * and a preview claiming a design belongs to a catalog it does not is a lie the renderer happens
- * not to check.
+ * The `remote-m3` pin these designs are authored against, spelled out because the Jetcaster fixture
+ * pins `m3-catalog`.
  */
 internal val wearWidgetSampleCatalogPin: JsonObject =
   Json.parseToJsonElement(
@@ -349,9 +315,8 @@ internal val wearWidgetSampleCatalogPin: JsonObject =
     .jsonObject
 
 /**
- * Light, at 1.0 density and a settled clock, because a widget preview that moved would make the
- * render lane's diff meaningless. The watch surface itself is drawn by the scaffold, so nothing
- * here is claiming a device.
+ * Light, 1.0 density and a settled clock, so the render lane's diff is stable. The scaffold draws
+ * the watch surface, so no device is claimed.
  */
 internal val wearWidgetSampleEnvironment: JsonObject =
   Json.parseToJsonElement(

@@ -22,13 +22,10 @@ import kotlinx.serialization.json.contentOrNull
 internal data class NodeCaptureRequest(val nodeId: String, val sequence: Int)
 
 /**
- * Draws [request]'s node on its own, off screen, and hands back a PNG of it — or null when the node
- * is gone or the platform will not encode a bitmap.
- *
- * The node is made the design's only root, in the design's own frame and environment, so it is
- * drawn by the same renderer and theme the canvas uses; the transparent margin around it is then
- * trimmed, the way [ReferenceComponentCapture] trims a component. A node that fills the screen is a
- * picture of the screen. Recorded and never shown, for the reason that capture gives.
+ * Draws [request]'s node on its own, off screen, and hands back a PNG, or null when the node is
+ * gone or the platform can't encode. The node becomes the design's only root in its own frame and
+ * environment, then transparent margins are trimmed as [ReferenceComponentCapture] does. Recorded,
+ * never shown.
  */
 @Composable
 internal fun NodeCapture(

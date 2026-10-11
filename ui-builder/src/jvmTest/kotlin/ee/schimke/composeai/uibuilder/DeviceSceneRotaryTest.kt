@@ -28,31 +28,21 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 
 /**
- * The experiment that decides whether the device panes can be their own Compose scene.
+ * Whether a device pane can be its own Compose scene, so a mouse wheel can be delivered as a
+ * **rotary side button** (`ComposeScene.sendRotaryScrollEvent`). Three undocumented facts, each a
+ * test below:
  *
- * The plan is to give each device pane a `CanvasLayersComposeScene` of its own, so a mouse wheel
- * can be delivered as a **rotary side button** — `ComposeScene.sendRotaryScrollEvent` — and the
- * Wear components that listen for rotary turn the way they do on a watch. Three things had to be
- * true, and none of them is in any documentation. Each is a test below, because each was wrong in
- * the first attempt:
- *
- * 1. **The scene dispatches rotary at all.** It does: `BaseComposeScene.sendRotaryScrollEvent` →
+ * 1. **The scene dispatches rotary**: `BaseComposeScene.sendRotaryScrollEvent` →
  *    `RootNodeOwner.onRotaryEvent` → `FocusOwner.dispatchRotaryEvent`.
- * 2. **The dispatch walks UP from the focused node**, not out from the node under the pointer. A
- *    rotary modifier *below* the focus target in the chain is never reached — so a plain
- *    `onRotaryScrollEvent` on the same element as `focusable()` receives nothing, while the same
- *    modifier above it receives everything. This is the shape a Wear list has (the list is an
- *    ancestor of the focused row), and it is why the pane does not have to place anything itself.
- * 3. **The scroll is animated, so the frame clock has to be real.** A rotary event moves a Wear
- *    list through its snap/fling behaviour, and a hand-driven clock that advances a nanosecond per
- *    frame leaves it exactly where it started — the event is *handled*, the list does not move, and
- *    the failure reads as "rotary does not work here". 60fps frames and thirty of them per event is
- *    what makes it turn.
+ * 2. **The dispatch walks UP from the focused node**: a rotary modifier below the focus target is
+ *    never reached; above it, it is. A Wear list is an ancestor of the focused row, so the pane
+ *    places nothing itself.
+ * 3. **The scroll is animated, so the frame clock must be real**: a nanosecond-per-frame clock
+ *    leaves the list unmoved while the event reports handled. Thirty 60fps frames per event make it
+ *    turn.
  *
- * **The scene factory is `@InternalComposeUiApi`** — "use only between compose-ui modules sharing
- * the same exact version, subject to change without notice". The SVG export lane already opts into
- * the same factory (`JvmSkiaStructuredSvgRecorder`), so a pane that draws through it inherits a
- * commitment this repository has made once already; it is stated here because that is the cost.
+ * **The scene factory is `@InternalComposeUiApi`** (version-locked to compose-ui);
+ * `JvmSkiaStructuredSvgRecorder` already depends on it.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class DeviceSceneRotaryTest {
@@ -120,10 +110,8 @@ class DeviceSceneRotaryTest {
   }
 
   /**
-   * The direction of the walk, stated as a test because getting it backwards fails silently.
-   *
-   * A rotary modifier **above** the focus target is an ancestor of it and is reached; the same
-   * modifier below it is not, and the scene answers `false` with nothing logged.
+   * The direction of the walk, since getting it backwards fails silently: a rotary modifier above
+   * the focus target is reached; below it, the scene answers `false`.
    */
   @Test
   fun `the dispatch reaches a rotary modifier that is an ancestor of the focused node`() {

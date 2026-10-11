@@ -13,8 +13,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 
 /**
- * The browser half of keeping designs in this browser (#342): saving one as a file, and publishing
- * one to the server as a new design once the server will take it.
+ * The browser half of keeping designs in this browser (see #342): saving one as a file, and
+ * publishing one to the server as a new design once the server will take it.
  */
 
 /**
@@ -26,9 +26,8 @@ internal fun downloadBrowserDesign(designId: String): String? {
     LocalDesignStore(BrowserLocalDesignStorage()).storedText(designId)
       ?: return "this browser no longer holds $designId"
   if (browserCanShareDesignCopy()) {
-    // Straight from the tap, with no await before it, so the share sheet still has the tap's user
-    // activation. Its answer is not waited for: the sheet is the feedback, and a refusal has
-    // already fallen back to the download this function always did.
+    // Called straight from the tap with no prior await, so the share sheet keeps the tap's user
+    // activation; not awaited, since refusals already fall back to a download.
     shareOrDownloadTextPromise("$designId.ui-builder.json", text, "application/json")
     return null
   }
@@ -40,10 +39,7 @@ internal fun downloadBrowserDesign(designId: String): String? {
 internal fun browserDesignSaveLabel(): String =
   if (browserCanShareDesignCopy()) "Share" else "Download"
 
-/**
- * Asked of a `.json` rather than of any file: Safari shares one, Chrome on Android does not, and a
- * button labelled Share that downloads would be a small lie on every press.
- */
+/** Asked of a `.json` specifically: Safari can share one, Chrome on Android can't. */
 private fun browserCanShareDesignCopy(): Boolean =
   browserCanShareFile("design.ui-builder.json", "application/json")
 

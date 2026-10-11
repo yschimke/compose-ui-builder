@@ -25,40 +25,27 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
- * Draw the horizontal scrollers unrolled along their own axis: `layout/lazy-row` as a `Row`, the
- * carousel's items side by side, and a `horizontalScroll` modifier dropped.
- *
- * Separate from [LocalUiBuilderUnrolled] because the two answer different surfaces. The extent
- * unrolls *vertically* — its width is the frame's, so a lazy row inside it is still a real lazy row
- * and has to stay one, pixel for pixel. Only the pop-out of a single horizontal container is
- * measured against an unbounded width, and a `LazyRow` refuses that exactly as a `LazyColumn`
- * refuses an unbounded height.
+ * Draw horizontal scrollers unrolled along their own axis: `layout/lazy-row` as a `Row`, the
+ * carousel's items side by side, `horizontalScroll` dropped. Separate from [LocalUiBuilderUnrolled]
+ * (vertical): only the pop-out of a horizontal container is measured against an unbounded width.
  */
 internal val LocalUiBuilderUnrolledHorizontal = staticCompositionLocalOf { false }
 
 /**
- * The selected node and every ancestor of it, which is what a lazy container asks to find out
- * whether one of its items holds the selection. Empty wherever nothing is selected.
+ * The selected node and every ancestor, so a lazy container can tell whether one of its items holds
+ * the selection. Empty when nothing is selected.
  */
 internal val LocalUiBuilderRevealChain = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
- * The whole design a re-rooted surface is a piece of, or null for a surface drawing a design whole.
- *
- * The pop-out draws one container as its own document, and the theme the design is drawn in lives
- * on a surface *above* that container: read from the re-rooted document alone, the palette, type
- * scale and corner radius fell back to the defaults and the pop-out was a differently coloured copy
- * of the thing it is a copy of.
+ * The whole design a re-rooted surface (the pop-out) is a piece of, or null; theme lookups read it
+ * since the themed surface sits above the popped-out container.
  */
 internal val LocalUiBuilderDetachedFrom = staticCompositionLocalOf<UiBuilderDocument?> { null }
 
 /**
- * Leave pointer input to the design under the editor overlay rather than catching every press.
- *
- * The overlay is a sibling drawn over the design, and a sibling on top takes the whole pointer
- * stream: harmless on the extent, where nothing scrolls, but it left the device frame's lists deaf
- * to the wheel and the drag that are the reason to look at the frame at all. So on the device view
- * the overlay selects through [passThroughClick], which shares the stream instead.
+ * Leave pointer input to the design under the editor overlay: on the device view the overlay
+ * selects through [passThroughClick] so lists still get wheel and drag.
  */
 internal val LocalUiBuilderOverlayPassesInput = staticCompositionLocalOf { false }
 
@@ -81,15 +68,9 @@ internal fun UiBuilderDocument.selectionChain(nodeId: String?): List<String> {
 }
 
 /**
- * Scrolls the item of a device-sized lazy container that holds the selection into view.
- *
- * Selecting from the layers panel, or from the unrolled pop-out beside the frame, names a node the
- * frame may have scrolled far away from, and a selection outline drawn around nothing on screen is
- * a selection nobody can see. Only when the selection *changes*, never on every recomposition: an
- * author who then scrolls the frame by hand is looking somewhere on purpose.
- *
- * Nothing at the extent, where every item is already drawn — nor in any surface that names no
- * selection, like the preview panes.
+ * Scrolls the item of a device-sized lazy container that holds the selection into view, only when
+ * the selection changes (manual scrolling is respected). Not at the extent, nor in surfaces without
+ * a selection.
  */
 @Composable
 internal fun RevealSelectedItem(
@@ -134,10 +115,8 @@ internal fun LazyGridState.showsWhole(key: String): Boolean {
 }
 
 /**
- * Keeps [composed] holding the ids a carousel currently draws.
- *
- * `CarouselState` publishes no layout info, so "is it on screen" is answered by whether the
- * carousel composed it — which it does for exactly the items in its viewport.
+ * Keeps [composed] holding the ids a carousel currently draws; `CarouselState` has no layout info,
+ * but it composes exactly its visible items.
  */
 @Composable
 internal fun MarkComposed(composed: MutableSet<String>, id: String) {
@@ -148,14 +127,9 @@ internal fun MarkComposed(composed: MutableSet<String>, id: String) {
 }
 
 /**
- * A primary click on the overlay that lets the design under it keep the pointer.
- *
- * The overlay is a sibling drawn over the design, and a sibling on top takes the pointer stream
- * from the siblings beneath — which on the device frame left its lists deaf to the wheel and the
- * drag that scroll them. This shares the stream with its siblings instead and watches it in the
- * [PointerEventPass.Initial] pass: a press that comes back up within the touch slop is a click, its
- * release is consumed so the button under it does not also fire, and [onClick] is told where it
- * landed. A press that travels further is somebody scrolling, and is left alone.
+ * A primary click on the overlay that lets the design under it keep the pointer. Watches the shared
+ * stream in [PointerEventPass.Initial]: a press released within touch slop is a click (its release
+ * consumed, [onClick] told where); a press that travels further is a scroll and is left alone.
  */
 internal fun Modifier.passThroughClick(onClick: (Offset) -> Unit): Modifier =
   this then PassThroughClickElement(onClick)

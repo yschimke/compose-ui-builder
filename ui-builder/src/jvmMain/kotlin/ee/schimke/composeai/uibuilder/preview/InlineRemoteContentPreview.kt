@@ -27,16 +27,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * A mobile screen with Remote Compose content in the middle of it, and Compose back inside that.
- *
- * The three-scope tree from `docs/design/UI_BUILDER_REMOTE_COMPOSE.md`, drawn through
- * [UiBuilderSurface] — the same renderer the editor canvas and the production export use — so this
- * is what an author sees rather than a mock of it. The two dashed frames are the point: the outer
- * one marks where the vocabulary switches to `@RemoteComposable`, the inner one names the custom
- * component a host has to register for the content inside it to draw on a real player.
- *
- * Wired here so the next change to either frame is diffed by the preview workflow rather than
- * noticed by somebody.
+ * A mobile screen with Remote Compose content in the middle of it, and Compose back inside that:
+ * the three-scope tree from `docs/design/UI_BUILDER_REMOTE_COMPOSE.md`, drawn through
+ * [UiBuilderSurface]. The outer dashed frame marks the switch to `@RemoteComposable`; the inner one
+ * names the custom component a host must register.
  */
 @Preview(widthDp = 320, heightDp = 260)
 @Composable
@@ -48,24 +42,14 @@ fun InlineRemoteContentPreview() {
 }
 
 /**
- * The same screen once its remote content has been **captured** and is played for real.
+ * The same screen once its remote content has been **captured** and is played for real:
+ * `RcComposePlayer` draws the document and the design's Compose fills the `field` custom component
+ * through
+ * [RcCustomComponentRegistry][ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry], as
+ * a host would. The frame stays, labelled `played`.
  *
- * The counterpart of [InlineRemoteContentPreview] and the reason both are wired: they are the two
- * states of one node, and the difference between them is the whole feature. Above, the subtree is
- * drawn with Compose stand-ins because nobody has captured it — the shapes the generated
- * `@RemoteComposable` body *describes*. Here a document exists, so `RcComposePlayer` draws it and
- * the design's own Compose fills the `field` custom component through
- * [RcCustomComponentRegistry][ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry],
- * which is exactly what a host does with a registered renderer on a watch.
- *
- * The frame survives the upgrade and stops standing in for anything: the boundary is still a fact
- * about the design, and `played` beside the label is what says the pixels inside it are a player's.
- *
- * The fixture is built here rather than captured, because a preview has no Android daemon to run
- * `captureSingleRemoteDocument` on. What it stands for is the shape a capture returns — a root, and
- * the custom component the emitted body writes for a `remote-compose/custom` node — and the bytes
- * are real: they are encoded and parsed by the same codec and played by the same player as any
- * document this builder embeds.
+ * The fixture is built here (no Android daemon to run `captureSingleRemoteDocument`), but its bytes
+ * go through the real codec and player.
  */
 @Preview(widthDp = 320, heightDp = 260)
 @Composable
@@ -84,12 +68,9 @@ fun PlayedInlineRemoteContentPreview() {
 }
 
 /**
- * What a capture of the design's `remote` node comes back as, in the smallest honest form.
- *
- * One `LAYOUT_CUSTOM` operation naming `field`, which is the operation `RemoteCustomComponent(name
- * = "field")` writes and the one the design's own `remote-compose/custom` node registers a renderer
- * for. A document with no custom component would play as an empty box and prove nothing about the
- * seam this preview exists to show.
+ * The smallest honest capture of the design's `remote` node: one `LAYOUT_CUSTOM` operation naming
+ * `field`, as `RemoteCustomComponent(name = "field")` writes, so the custom-component seam is
+ * exercised.
  */
 internal fun capturedInlineDocument(width: Int = 300, height: Int = 96): RcDocument =
   RcDocument(
@@ -105,11 +86,8 @@ internal fun capturedInlineDocument(width: Int = 300, height: Int = 96): RcDocum
   )
 
 /**
- * The same screen with its remote content sourced by URL instead of authored.
- *
- * Nothing resolves it here — a preview has no host to fetch with — which is exactly the state worth
- * having a picture of: an unresolved `documentUrl` draws as a *waiting* surface rather than an
- * error box, because a design pointing at a URL nobody has fetched is not a broken design.
+ * The same screen with its remote content sourced by URL. Nothing resolves it here, so it draws the
+ * *waiting* surface, not an error.
  */
 @Preview(widthDp = 320, heightDp = 200)
 @Composable

@@ -58,18 +58,12 @@ private data class OutlinesPayload(
 )
 
 /**
- * Fetches the outlines of the icons about to be drawn, and nothing else.
- *
- * The editor holds no font. A design names about five icons and a grid page shows eighty, so asking
- * for ~550 bytes each is three orders of magnitude less than the 4.8 MB face they came from — which
- * is what lets the Wasm bundle drop the 17.8 MB of generated vectors without putting a download in
- * its place. See
+ * Fetches the outlines of the icons about to be drawn, and nothing else (~550 bytes each instead of
+ * a 4.8 MB font). See
  * [`UI_BUILDER_MATERIAL_SYMBOLS.md`](../../../../../../../../../docs/design/UI_BUILDER_MATERIAL_SYMBOLS.md).
  *
- * Everything fetched is kept: outlines are immutable for a given pin, so the second request for an
- * icon never happens, and scrolling back up a grid costs nothing. A name the host does not carry is
- * remembered too — re-asking for an icon that does not exist, once per frame, is the failure mode
- * this avoids.
+ * Everything fetched is cached (outlines are immutable per pin), including misses, so unknown names
+ * aren't re-requested every frame.
  */
 class MaterialSymbolsClient(
   private val transport: MaterialSymbolsTransport,
@@ -96,10 +90,8 @@ class MaterialSymbolsClient(
   }
 
   /**
-   * Makes sure every key in [keys] is resolved, in one request per style and axis position.
-   *
-   * Callers hand this the page they are about to compose and then read [vector] for each row, so a
-   * grid scroll is one round trip rather than eighty.
+   * Makes sure every key in [keys] is resolved, in one request per style and axis position, so a
+   * grid page is one round trip.
    */
   suspend fun prefetch(keys: Collection<MaterialSymbolsKey>) {
     keys
@@ -107,16 +99,14 @@ class MaterialSymbolsClient(
       .groupBy { it.style to it.axes }
       .forEach { (group, wanted) ->
         val (style, axes) = group
-        // Chunked to the server's own limit. One oversized request is refused wholesale, and since
-        // a refusal caches nothing, an un-chunked prefetch of a large selection would resolve
-        // nothing and repeat the same rejected call on every pass.
+        // Chunked to the server's limit: an oversized request is refused wholesale and caches
+        // nothing.
         wanted
           .distinctBy { it.name }
           .chunked(MAXIMUM_NAMES_PER_REQUEST)
           .forEach { batch ->
-            // One `names=` per icon, not one comma-separated list: the server decodes the query
-            // before it splits, so a comma inside a stale name would arrive as a delimiter no
-            // matter how it was encoded and take the rest of the batch with it.
+            // One `names=` per icon: the server decodes before splitting, so a comma in a stale
+            // name would break the batch.
             val requested = batch.joinToString("&names=") { encode(it.name) }
             val pin = pins[style]?.let { "&v=$it" }.orEmpty()
             val response =
@@ -135,10 +125,8 @@ class MaterialSymbolsClient(
   }
 
   /**
-   * The vector for [key], or null when it has not been fetched yet or the host does not carry it.
-   *
-   * Deliberately not a suspending call: this is read from a composition, where the answer has to be
-   * whatever is known now. A caller draws a placeholder for null and [prefetch]es the page.
+   * The vector for [key], or null when not fetched yet or not carried by the host. Non-suspending,
+   * for composition; callers draw a placeholder and [prefetch].
    */
   fun vector(key: MaterialSymbolsKey): ImageVector? {
     vectors[key]?.let {
@@ -158,22 +146,12 @@ class MaterialSymbolsClient(
   companion object {
     private val JSON = Json { ignoreUnknownKeys = true }
 
-    /**
-     * Matches `MaterialSymbolsIcons.MAXIMUM_NAMES` on the server.
-     *
-     * Duplicated rather than shared because the two sides are separate modules; the server is the
-     * one that enforces it, and this only has to avoid writing a request it knows will be refused.
-     */
+    /** Matches `MaterialSymbolsIcons.MAXIMUM_NAMES` on the server, which enforces it. */
     const val MAXIMUM_NAMES_PER_REQUEST = 256
 
     /**
-     * Percent-encodes a name for the query string.
-     *
-     * Every name the pinned face carries is `[a-z0-9_]`, but a *stale* one from an older design is
-     * whatever was saved, and a `&` or `#` in it would rewrite the request rather than come back
-     * under `missing` — taking the rest of its batch down with it. A comma is encoded too, though
-     * the server no longer splits on one: the encoding is what makes the value unambiguous, and the
-     * repeated parameter is what makes the boundary survive decoding.
+     * Percent-encodes a name for the query string. Pinned names are `[a-z0-9_]`, but stale names
+     * from older designs may contain `&`, `#` or `,`.
      */
     internal fun encode(name: String): String = buildString {
       name.encodeToByteArray().forEach { byte ->
@@ -198,11 +176,9 @@ class MaterialSymbolsClient(
     private const val HEX = "0123456789ABCDEF"
 
     /**
-     * Builds the vector a served outline describes.
-     *
-     * The viewport is the font's 960 units per em, so a 24 dp icon needs no scaling, and the fill
-     * is black because `Icon` tints it — a path added without a brush is an outline that draws
-     * nothing at all, which compiles and ships and shows an empty box.
+     * Builds the vector a served outline describes. The viewport is the font's 960 units per em (no
+     * scaling at 24dp); the fill is black because `Icon` tints it, and a path without a brush draws
+     * nothing.
      */
     fun imageVector(name: String, pathData: String, autoMirror: Boolean = false): ImageVector =
       ImageVector.Builder(

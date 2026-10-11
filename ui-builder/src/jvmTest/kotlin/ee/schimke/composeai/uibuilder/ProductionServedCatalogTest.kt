@@ -11,12 +11,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * A design whose catalog this renderer does not package, drawn in a production PNG export.
- *
- * preview.coo.ee owns `glimmer-catalog`, which publishes its own catalog and which this renderer
- * predates. With no catalog for the pin the renderer knew neither its adapters nor its component
- * ids, so the export — and the design card's thumbnail, which is that export — drew every component
- * as a red "Unsupported component" box. The host now passes the catalog it serves.
+ * A design whose catalog this renderer doesn't package (e.g. `glimmer-catalog`), drawn in a
+ * production PNG export: the host passes its served catalog, so components draw as named
+ * placeholders rather than "Unsupported component".
  */
 @OptIn(ExperimentalTestApi::class)
 class ProductionServedCatalogTest {

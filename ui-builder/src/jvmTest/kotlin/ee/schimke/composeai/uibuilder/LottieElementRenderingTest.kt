@@ -20,18 +20,11 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 
 /**
- * What the canvas draws where a Lottie element sits.
- *
- * The element is the one node in `remote-m3` whose *export* is the whole feature: Horologist's
- * `LottieAnimation` compiles the animation into the widget's Remote Compose document, and the
- * browser can neither run that Android-only creation API nor host a Lottie runtime to fake it with.
- * So the canvas draws the node's identity, its source and whether it is ready — and this test holds
- * it to the two things that claim is worth anything for:
- *
- * 1. it is not [UnsupportedComponentDiagnostic]'s error box, which is what an unhandled component
- *    id draws and what this looked like before the branch existed; and
- * 2. an element still carrying only its URL draws *differently* from a resolved one, because "the
- *    export will refuse this" is the fact the canvas exists to surface early.
+ * What the canvas draws where a Lottie element sits: its identity, source and readiness (the
+ * browser can't run the Android-only `LottieAnimation` creation API). Held to two things:
+ * 1. it is not [UnsupportedComponentDiagnostic]'s error box; and
+ * 2. an element carrying only its URL draws differently from a resolved one, since the export will
+ *    refuse it.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class LottieElementRenderingTest {
@@ -53,18 +46,15 @@ class LottieElementRenderingTest {
         )
       }
 
-    // Something was drawn at all: an unhandled component id used to reach
-    // `UnsupportedComponentDiagnostic`, and a branch that drew nothing would be the other way this
-    // can go wrong — a node an author can select on the layers panel and cannot see on the canvas.
+    // Something was drawn: a branch drawing nothing would leave a selectable but invisible node.
     val pixels = Bitmap().apply { allocN32Pixels(WIDTH, HEIGHT) }
     resolved.readPixels(pixels)
     val painted =
       (0 until HEIGHT).sumOf { y -> (0 until WIDTH).count { x -> pixels.getColor(x, y) != 0 } }
     assertTrue(painted > 0, "the Lottie placeholder drew nothing")
 
-    // …and the unresolved element does not draw the resolved one's picture. The difference is the
-    // sentence the canvas adds — "the export needs the animation itself, not its URL" — which is
-    // the whole reason an author finds out here rather than at export.
+    // The unresolved element draws differently, adding the sentence that the export needs the
+    // animation itself, not its URL.
     assertNotEquals(
       unresolved.encodeToData()!!.bytes.toList(),
       resolved.encodeToData()!!.bytes.toList(),

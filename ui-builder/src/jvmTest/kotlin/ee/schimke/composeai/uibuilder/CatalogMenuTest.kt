@@ -21,13 +21,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The insert panel's tree: the catalog's own families, the components on each, and the variants
- * under a component.
- *
- * These are assertions about a **menu**, which is why they are here rather than left to a render:
- * the shape of the tree is a pure function of the catalog and two sets of open rows, and a
- * screenshot can tell you that a row is missing but not why. The rendering — chevrons, counts,
- * indentation — is what the editor chrome previews are for.
+ * The insert panel's tree: the catalog's families, the components on each, and the variants under a
+ * component. A pure function of the catalog and the open rows; rendering is covered by the chrome
+ * previews.
  */
 class CatalogMenuTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -45,10 +41,8 @@ class CatalogMenuTest {
 
   @Test
   fun `the menu declaration covers this catalog and nothing else`() {
-    // The declaration rides in the catalog's own `statusSemantics` (see `ComponentMenu`), which
-    // means it can go stale against the components beside it in the same file. A component that
-    // arrives with no shelf falls back to its kind heading in the product — a quiet regression to
-    // the panel this replaced — so it fails here instead.
+    // The shelf declaration lives in `statusSemantics` (see `ComponentMenu`) and can go stale; a
+    // component with no shelf would silently fall back to its kind heading, so fail here.
     val known = catalog.components.map { it.componentId }.toSet()
 
     assertEquals(
@@ -209,10 +203,8 @@ class CatalogMenuTest {
         ),
       )
 
-    // `variant` is optional, so the row's Add writes no opinion at all and the renderer applies the
-    // catalog's first allowed value — which is exactly what this insert did before variants
-    // existed, and what the Default variant row then writes down. Picking the default explicitly
-    // is a choice, and a choice a collaborator can read is worth the one property.
+    // `variant` is optional: Add writes nothing and the renderer applies the catalog's first value;
+    // the Default variant row writes it explicitly.
     assertEquals(
       null,
       inserted(plain).properties["variant"],
@@ -236,9 +228,7 @@ class CatalogMenuTest {
     val collapsed = reducer.reduce(state, UiBuilderEditorEvent.ToggleCatalogGroup("Containment"))
     val searching = reducer.reduce(collapsed, UiBuilderEditorEvent.SearchCatalog("outlined"))
 
-    // "outlined" is a variant label and nothing's display name, so the only way a Card is here is
-    // by its variants — and the row is open, since a match hidden behind a twisty reads as no
-    // match.
+    // "outlined" is only a variant label, so the Card matches by its variants, with its row open.
     val matched = searching.let(::rows).filterIsInstance<EditorCatalogRow.Component>()
     assertTrue(matched.any { it.item.componentId == "m3/card" }, matched.toString())
     assertTrue(variantRows(rows(searching), "m3/card").isNotEmpty())
@@ -260,12 +250,9 @@ class CatalogMenuTest {
 
   @Test
   fun `a component the declaration does not know joins the shelf its kind names`() {
-    // `remote-m3`'s real shape: the two `remote-m3/widget-container-*` scaffolds the m3
-    // declaration says nothing about, beside the m3 components it does. Their kind label is
-    // "Scaffolds", which is
-    // also a declared shelf — so they join it rather than opening a second heading beside it, and
-    // the panel for that catalog reads as one tree. Nothing arranges that; it falls out of the
-    // fallback, which is exactly why it is worth a test.
+    // `remote-m3`'s real shape: its `widget-container-*` scaffolds fall back to the "Scaffolds"
+    // kind label, which is also a declared shelf, so they join it rather than adding a second
+    // heading.
     val widget =
       catalog.componentsById
         .getValue("layout/scaffold")
@@ -304,11 +291,8 @@ class CatalogMenuTest {
 
   @Test
   fun `a second catalog declares its own shelves and gets them`() {
-    // The point of the declaration living in the catalog rather than in a table here. A table in
-    // `:ui-builder` can only describe catalogs whose component ids this repository knows, so a
-    // second catalog was stuck with Scaffolds/Containers/Composables however well-organised it was.
-    // This is `wear-m3`'s shape — its own ids, its own shelves, its own order — built the way
-    // `wearM3Catalog` builds it.
+    // `wear-m3`'s own ids, shelves and order, built as `wearM3Catalog` builds it: shelves come from
+    // the catalog, not a table here.
     val wear =
       catalog.copy(
         statusSemantics =
@@ -339,9 +323,7 @@ class CatalogMenuTest {
 
     val groups =
       UiBuilderEditorReducer(wear)
-        // Empty, so the root-only screen scaffold is listed: on a design with a root it has
-        // nowhere to land and the list leaves it out, which is `RootOnlyPaletteTest`'s question,
-        // not this one.
+        // Empty, so the root-only screen scaffold is listed (see `RootOnlyPaletteTest`).
         .catalogRows(emptyDesign)
         .filterIsInstance<EditorCatalogRow.Group>()
         .map { it.name }
@@ -351,11 +333,9 @@ class CatalogMenuTest {
 
   @Test
   fun `no two rows of one search answer to the same name`() {
-    // `ui-builder-editor.spec.mjs` drags `getByRole("img", {name: "Drag Text"})` after filtering to
-    // "Text", and Playwright's strict mode fails on a second match. Button's `text` variant is
-    // exactly that second match, which is why the variant rows qualify their names with the
-    // component. Every query anyone might type is checked, not just that one — the collision is a
-    // property of the panel, not of one string in one spec.
+    // `ui-builder-editor.spec.mjs` filters to "Text" and drags `getByRole("img", {name: "Drag
+    // Text"})`; Playwright's strict mode fails on a second match, so variant rows qualify their
+    // names. Checked for every possible query.
     val queries = catalog.components.flatMap { listOf(it.displayName) + it.menuVariantValues(menu) }
     queries.forEach { query ->
       val filtered = reducer.reduce(state, UiBuilderEditorEvent.SearchCatalog(query))
