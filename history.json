@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "88c752669a236da095833e125f02dde68c8d88d0",
+    "generatedFrom": "49f681d819d976e92e57a55697da42147838c0e4",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -5310,6 +5310,13 @@
             "path": "renders/ui-builder/UiBuilderShortcutsPreview-707f5f98.png",
             "versions": [
                 {
+                    "blob": "4d8c9c4024b0a57592fae7c62aba1b85b2077cf0",
+                    "commit": "49f681d819d976e92e57a55697da42147838c0e4",
+                    "date": "2026-10-11T12:15:33Z",
+                    "sourceSha": "99517458",
+                    "commits": 1
+                },
+                {
                     "blob": "729d32d5ed343bbad2009828b6982c62b87887c8",
                     "commit": "88c752669a236da095833e125f02dde68c8d88d0",
                     "date": "2026-10-11T11:10:21Z",
@@ -5352,7 +5359,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 6,
+            "observations": 7,
             "unstable": false,
             "flapCount": 0
         },
@@ -5427,6 +5434,21 @@
             "observations": 4,
             "unstable": false,
             "flapCount": 1
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderWrapChooserPreviewKt.UiBuilderWrapChooserPreview": {
+            "path": "renders/ui-builder/UiBuilderWrapChooserPreview-646b794e.png",
+            "versions": [
+                {
+                    "blob": "db0371d7c289dbe60d3e271ccb5db1dbcd41f4fa",
+                    "commit": "49f681d819d976e92e57a55697da42147838c0e4",
+                    "date": "2026-10-11T12:15:33Z",
+                    "sourceSha": "99517458",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UnadvertisedComponentPreviewKt.CatalogUnadvertisedComponentsPreview": {
             "path": "renders/ui-builder/CatalogUnadvertisedComponentsPreview-f3ed924a.png",
