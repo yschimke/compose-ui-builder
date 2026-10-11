@@ -205,4 +205,38 @@ class EditorShortcutTableTest {
   fun `every shortcut does exactly one thing`() {
     assertTrue(EDITOR_SHORTCUTS.all { (it.event == null) != (it.view == null) })
   }
+
+  @Test
+  fun `zoom is not taken while something has replaced the canvas`() {
+    // The editor pane is open but the canvas is not drawn — a revision or suggestion under review,
+    // or a compact layout's preview tab. The browser keeps its page zoom; the rest stay live.
+    listOf(Key.Equals, Key.Minus, Key.Zero, Key.One).forEach { key ->
+      assertNull(
+        editorShortcutFor(
+          EditorChord(key, command = true, shift = false),
+          editing = true,
+          canvasShown = false,
+        ),
+        "$key should be the browser's with no canvas on screen",
+      )
+    }
+    assertEquals(
+      UiBuilderEditorEvent.Undo,
+      editorShortcutFor(
+          EditorChord(Key.Z, command = true, shift = false),
+          editing = true,
+          canvasShown = false,
+        )
+        ?.event,
+    )
+    assertEquals(
+      EditorViewCommand.Zoom(CanvasZoomCommand.In),
+      editorShortcutFor(
+          EditorChord(Key.Equals, command = true, shift = false),
+          editing = true,
+          canvasShown = true,
+        )
+        ?.view,
+    )
+  }
 }

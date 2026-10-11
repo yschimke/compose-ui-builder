@@ -1995,6 +1995,7 @@ internal fun editorShortcut(
   event: KeyEvent,
   enabled: Boolean,
   editing: Boolean,
+  canvasShown: Boolean,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   onViewCommand: (EditorViewCommand) -> Unit,
 ): Boolean {
@@ -2005,7 +2006,7 @@ internal fun editorShortcut(
       command = event.isCtrlPressed || event.isMetaPressed,
       shift = event.isShiftPressed,
     )
-  val match = editorShortcutFor(chord, editing) ?: return false
+  val match = editorShortcutFor(chord, editing, canvasShown) ?: return false
   match.event?.let(dispatch)
   match.view?.let(onViewCommand)
   // Returning true is also what keeps the browser out of it: the Wasm host prevents the default of
@@ -2025,12 +2026,24 @@ internal fun editorShortcut(
  * no selection overlay on screen to show what a Delete or an arrow just did, so those chords would
  * edit invisibly and surprise later — and a pane toggle is the way back to seeing them.
  */
-internal fun editorShortcutFor(chord: EditorChord, editing: Boolean = true): EditorShortcut? =
+internal fun editorShortcutFor(
+  chord: EditorChord,
+  editing: Boolean = true,
+  canvasShown: Boolean = editing,
+): EditorShortcut? =
   EDITOR_SHORTCUTS.firstOrNull { it.matches(chord) }
     ?.takeIf {
-      editing ||
-        it.event is UiBuilderEditorEvent.TogglePane ||
-        it.view == EditorViewCommand.ShowShortcuts
+      when {
+        // The zoom chords need the canvas itself on screen, which the open editor pane does not
+        // promise: an old revision or a suggestion under review replaces the canvas, and the
+        // compact layout may be showing a preview tab. Taken then, they would rescale a canvas
+        // nobody can see from a stale drawn scale, and keep the browser's page zoom from answering.
+        it.view is EditorViewCommand.Zoom -> canvasShown
+        else ->
+          editing ||
+            it.event is UiBuilderEditorEvent.TogglePane ||
+            it.view == EditorViewCommand.ShowShortcuts
+      }
     }
 
 /** The part of a key press a shortcut is allowed to look at. */
