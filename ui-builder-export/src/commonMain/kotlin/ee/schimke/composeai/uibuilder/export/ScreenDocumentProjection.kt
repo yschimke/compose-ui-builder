@@ -1105,7 +1105,9 @@ object ScreenDocumentProjection {
       // Only the direct child of an item wrapper is in the role, and only once.
       val role = itemRoles.remove(node.id)
       val lowered =
-        when (val outcome = projection.lower(literal, role)) {
+        // A projected `materialIcon` property is written from this build's own icon table, exactly
+        // as `m3/icon` is.
+        when (val outcome = projection.lower(literal, role, ::icon)) {
           is ExportProjection.Lowered.Refused -> {
             outcome.reasons.forEach { reasons += "$where: $it" }
             return null

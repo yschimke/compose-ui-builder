@@ -463,6 +463,61 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a projected Material icon key is written from this build's icon table`() {
+    val icon =
+      record(
+        "Icon",
+        listOf("wear-m3/icon"),
+        listOf(
+          parameter(
+            "imageVector",
+            "ImageVector",
+            "androidx.compose.ui.graphics.vector.ImageVector",
+          ),
+          parameter("contentDescription", "String?", "kotlin.String")
+            .newBuilder()
+            .also { it.nullable = true }
+            .build(),
+        ),
+      )
+    val projection =
+      ExportProjection(
+        listOf(
+          ExportProjection.Target(
+            icon.canonicalId,
+            mapOf(
+              "imageVector" to
+                ExportProjection.Value.Property("iconKey", ExportProjection.Codec.MaterialIcon)
+            ),
+          )
+        )
+      )
+    fun exported(key: String): ScreenExportGate.Outcome {
+      val base = document(button())
+      val node =
+        DesignNodeV1(
+          "glyph",
+          "wear-m3/icon",
+          properties = mapOf("iconKey" to EnumValueV1(key)),
+        )
+      return ScreenExportGate.export(
+        base.copy(roots = listOf("glyph"), nodes = mapOf("glyph" to node)),
+        ComponentRecordFile.Builder("wear", "release", records.components + icon).build(),
+        mapOf("wear-m3/icon" to projection),
+      )
+    }
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(exported("filled/add"), "filled/add").source
+    assertContains(source, "Icon(imageVector = Icons.Filled.Add")
+    assertContains(source, "import androidx.compose.material.icons.filled.Add")
+    val refused = assertIs<ScreenExportGate.Outcome.Refused>(exported("filled/noSuchIcon"))
+    assertTrue(
+      refused.reasons.any { "is not a Material icon key" in it },
+      refused.reasons.toString(),
+    )
+  }
+
+  @Test
   fun `a catalog without projections exports exactly as before`() {
     val document = document(button())
     assertEquals(
