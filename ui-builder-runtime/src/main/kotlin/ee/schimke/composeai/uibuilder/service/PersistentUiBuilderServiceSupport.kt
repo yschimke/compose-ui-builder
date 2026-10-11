@@ -115,9 +115,9 @@ internal fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Bool
   access.ownedBy(actor)
 
 /**
- * True when this actor may delete the design: its owner, or the delegate that created it acting
- * for that same owner. The one owner-only action a delegate shares, and only on its own creations,
- * so an agent can clean up the probes it made without reaching the rest of its principal's designs.
+ * True when this actor may delete the design: its owner, or the delegate that created it acting for
+ * that same owner. The one owner-only action a delegate shares, and only on its own creations, so
+ * an agent can clean up the probes it made without reaching the rest of its principal's designs.
  */
 internal fun DesignAccessControlV1.deletableBy(
   actor: AuthenticatedUiBuilderActor,

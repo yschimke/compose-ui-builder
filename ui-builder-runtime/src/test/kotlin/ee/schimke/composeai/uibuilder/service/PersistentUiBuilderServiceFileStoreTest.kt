@@ -374,8 +374,7 @@ class PersistentUiBuilderServiceFileStoreTest {
         .requesterAccess
         .role,
     )
-    for ((actor, designId) in
-      listOf(agent to "mine", otherAgent to "probe", outsider to "probe")) {
+    for ((actor, designId) in listOf(agent to "mine", otherAgent to "probe", outsider to "probe")) {
       assertEquals(
         ServiceErrorCodeV1.FORBIDDEN,
         assertIs<UiBuilderServiceResponse.Error>(

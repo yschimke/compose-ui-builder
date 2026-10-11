@@ -130,8 +130,9 @@ public sealed interface UiBuilderServiceRequest {
    * Remove a design, its history and its access list, closing every open stream on it.
    *
    * Owner only, never a grantee, and never a delegate except on a design that delegate created for
-   * the owner (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs whose owner is gone. Unservable designs
-   * can still be deleted. No protocol shape yet; see [UiBuilderProtocolMapper.toProtocolRequest].
+   * the owner (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs
+   * whose owner is gone. Unservable designs can still be deleted. No protocol shape yet; see
+   * [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
 

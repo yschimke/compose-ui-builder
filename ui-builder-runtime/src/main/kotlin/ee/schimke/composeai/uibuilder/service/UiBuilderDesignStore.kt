@@ -160,7 +160,9 @@ internal data class StoredDesignHeaderV3(
    * replaced whole, so it lives in the header. Never written for ordinary designs.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val branch: DesignBranchRecordV1? = null,
-  /** [PersistedDesignV1.createdByDelegateActorId]; in the header so a quarantined design keeps it. */
+  /**
+   * [PersistedDesignV1.createdByDelegateActorId]; in the header so a quarantined design keeps it.
+   */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val createdByDelegateActorId: String? = null,
 )
 
