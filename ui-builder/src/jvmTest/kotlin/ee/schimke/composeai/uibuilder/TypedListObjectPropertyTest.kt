@@ -247,7 +247,7 @@ class TypedListObjectPropertyTest {
       )
     assertIs<CommandOutcome.Accepted>(unread.lastOutcome)
     assertEquals(
-      json("""{"type": "int", "value": 5}"""),
+      json("""{"type": "int", "value": 5}""").jsonObject,
       unread
         .contacts()
         .let { PropertyValueShapes.read(shape("contacts"), it, listOf(Index(0), Field("unread"))) }
@@ -306,12 +306,13 @@ class TypedListObjectPropertyTest {
     // Seeded from the shape: the required name empty, every other field its default.
     assertEquals(
       json(
-        """{"type": "object", "fields": {
+          """{"type": "object", "fields": {
           "name": {"type": "string", "value": ""},
           "unread": {"type": "int", "value": 0},
           "role": {"type": "string", "value": "member"},
           "tags": {"type": "list", "values": []}}}"""
-      ),
+        )
+        .jsonObject,
       PropertyValueShapes.read(shape("contacts"), added.contacts(), listOf(Index(2)))?.wrapper,
     )
     assertEquals(listOf("Ada", "Grace", ""), names(added))
@@ -358,7 +359,7 @@ class TypedListObjectPropertyTest {
       )
     assertIs<CommandOutcome.Accepted>(named.lastOutcome)
     assertEquals(
-      json("""{"type": "list", "values": [{"type": "string", "value": "friend"}]}"""),
+      json("""{"type": "list", "values": [{"type": "string", "value": "friend"}]}""").jsonObject,
       PropertyValueShapes.read(shape("contacts"), named.contacts(), listOf(Index(1), Field("tags")))
         ?.wrapper,
     )
