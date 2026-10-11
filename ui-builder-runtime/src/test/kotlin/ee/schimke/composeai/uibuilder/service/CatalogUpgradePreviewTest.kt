@@ -147,6 +147,34 @@ class CatalogUpgradePreviewTest {
   }
 
   @Test
+  fun `a component placement passes through, and its body is upgraded like any node`() {
+    // Design-local components: `body` is the declared body, `card` places it. A placement is a
+    // document construct the target catalog never declares, so it must not read as an unknown
+    // component and block the move (yschimke/compose-ui-builder: the Google tablet samples).
+    val document =
+      document("d")
+        .withNode(node("body", "m3/text", mapOf("text" to "Discover Weekly")))
+        .withNode(
+          DesignNodeV1(
+            "card",
+            DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+            component = DesignComponentInstanceV1("summary", emptyMap()),
+          )
+        )
+        .copy(components = mapOf("summary" to DesignComponentV1("Summary", "body")))
+
+    val outcome = planCatalogUpgrade(document, remoteM3(), TARGET)
+
+    assertTrue(
+      outcome.issues.none { it.severity == CatalogUpgradeIssueSeverityV1.ERROR },
+      outcome.issues.toString(),
+    )
+    assertEquals(document.nodes.getValue("card"), outcome.candidate.nodes.getValue("card"))
+    assertEquals("remote-m3/remote-text", outcome.candidate.nodes.getValue("body").componentId)
+    assertTrue(outcome.changes.none { it.path.startsWith("/nodes/card") }, "nothing to report")
+  }
+
+  @Test
   fun `a component with no successor is an error, and the node is left alone`() {
     val document = document("d").withNode(node("chip", "m3/assist-chip", mapOf("label" to "hi")))
 
