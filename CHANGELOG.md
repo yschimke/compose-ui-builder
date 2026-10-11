@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.107.0](https://github.com/yschimke/compose-ui-builder/compare/v3.106.0...v3.107.0) (2026-10-11)
+
+
+### Features
+
+* **export:** recognise a projected node's children by slot pattern and write synthesized children ([#712](https://github.com/yschimke/compose-ui-builder/issues/712)) ([90ebfa4](https://github.com/yschimke/compose-ui-builder/commit/90ebfa43abe6556739acf693c4887a23328bb202))
+* **export:** write a projection catalog's screen frame, item wrappers and list-item contexts ([#720](https://github.com/yschimke/compose-ui-builder/issues/720)) ([9238b27](https://github.com/yschimke/compose-ui-builder/commit/9238b270cac0dd87b0e8fdb5aeb87f238974eabb))
+
+
+### Bug Fixes
+
+* **canvas:** draw the published m3/outlined-text-field as a real outlined field ([#718](https://github.com/yschimke/compose-ui-builder/issues/718)) ([2ff798e](https://github.com/yschimke/compose-ui-builder/commit/2ff798e18cd35c9c6af4c212bca10d83c63f9fc9))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.30.0 ([#708](https://github.com/yschimke/compose-ui-builder/issues/708)) ([4b13de5](https://github.com/yschimke/compose-ui-builder/commit/4b13de5d5829b05e8e749e72bcec150b166e9620))
+* **export:** read a column as lines only when its arrangement is provably the default ([#714](https://github.com/yschimke/compose-ui-builder/issues/714)) ([0e30181](https://github.com/yschimke/compose-ui-builder/commit/0e30181a6faf3e96295887342ebb168de1898537))
+
 ## [3.106.0](https://github.com/yschimke/compose-ui-builder/compare/v3.105.0...v3.106.0) (2026-10-11)
 
 
