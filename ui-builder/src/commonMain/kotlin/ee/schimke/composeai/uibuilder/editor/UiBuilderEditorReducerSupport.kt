@@ -1108,8 +1108,9 @@ internal fun UiBuilderDocument.subtreeOf(nodeId: String): Set<String> {
  * and the title, so the function keeps the design's name — plus the bodies of the local components
  * it places, transitively, since a placement exports as a call to its component's function. Other
  * components are dropped so their functions are not written beside a layer that never calls them. A
- * theme on the design's surface is not carried: it belongs to that surface, and a copied layer is
- * pasted inside a theme of the reader's own.
+ * theme on the design's surface is not carried into a layer inside it: it belongs to that surface,
+ * and a copied layer is pasted inside a theme of the reader's own. Copying the theme-hosting
+ * surface itself is copying the screen, so its theme comes with it, as in the full export.
  *
  * The one change to the layer itself: its [PARENT_SCOPED_MODIFIERS] go. A `weight` or `align` is
  * addressed to the parent the layer is being copied out of, and at the root there is no row or box
