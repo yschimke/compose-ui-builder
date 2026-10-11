@@ -281,30 +281,28 @@ private constructor(
   ): UiBuilderNativeRender? = remotePreview?.render(document, hostShape)
 
   private suspend fun openOrCreate() {
-    // A catalog read from disk is usually a regeneration of the packaged one, with a new revision.
+    // A catalog read from disk or fetched again may have a new revision.
     // A design pinned to the old revision would then fail every export on CATALOG_PIN_MISMATCH
     // while being edited against the new capabilities — so the design follows the catalog it is
     // being authored against, as a stored record and as a project document alike.
-    if (appliedOverride != null) {
-      // A store that cannot be rewritten (read-only, full) still opens the design, at its old pin,
-      // and says why exports may refuse it, rather than leaving the editor blank.
-      runCatching {
-        store.read(designId)?.let { record ->
-          val repinned = record.seed.pinnedTo(catalog)
-          if (repinned != record.seed) store.write(record.copy(seed = repinned))
-        }
+    // A store that cannot be rewritten (read-only, full) still opens the design, at its old pin,
+    // and says why exports may refuse it, rather than leaving the editor blank.
+    runCatching {
+      store.read(designId)?.let { record ->
+        val repinned = record.seed.pinnedTo(catalog)
+        if (repinned != record.seed) store.write(record.copy(seed = repinned))
       }
-        .onFailure {
-          mutableFailure.value =
-            "could not re-pin the design to ${catalog.benchmark.catalogRevision}: " +
-              (it.message ?: it::class.simpleName)
-        }
     }
+      .onFailure {
+        mutableFailure.value =
+          "could not re-pin the design to ${catalog.benchmark.catalogRevision}: " +
+            (it.message ?: it::class.simpleName)
+      }
     when (val open = service.execute(OpenDesignRequestV1(designId))) {
       is SnapshotResponseV1 -> mutableSnapshot.value = open
       is ErrorResponseV1 -> {
         val seed =
-          initialDocument?.let { if (appliedOverride != null) it.pinnedTo(catalog) else it }
+          initialDocument?.pinnedTo(catalog)
             ?: offlineCatalog.seed(
               designId = designId,
               catalogRevision = catalog.benchmark.catalogRevision,
@@ -376,6 +374,8 @@ private const val CLOSE_DRAIN_TIMEOUT_MILLIS = 2_000L
  */
 internal fun UiBuilderDocument.pinnedTo(catalog: CapabilityCatalog): UiBuilderDocument {
   val benchmark = catalog.benchmark
+  // A different catalog is not a republication of this design's catalog.
+  if (catalogPin["systemId"]?.jsonPrimitive?.contentOrNull != benchmark.catalogSystemId) return this
   val previousRevision = catalogPin["catalogRevision"]?.jsonPrimitive?.contentOrNull
   val pin =
     catalogPin.toMutableMap().apply {

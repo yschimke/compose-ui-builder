@@ -12,6 +12,8 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -149,11 +151,13 @@ public class PublishedCatalogStore(
     public data class Unavailable(override val systemId: String, val reason: String) : Load
   }
 
-  private val loaded = mutableMapOf<String, Load>()
+  private val loaded = mutableMapOf<String, Load.Loaded>()
 
-  /** [systemId], fetched once per store and composed; later calls answer the same result. */
+  /** Successful loads are reused; a failed fetch can be retried in the same process. */
   @Synchronized
-  public fun load(systemId: String): Load = loaded.getOrPut(systemId) { fetchAndCompose(systemId) }
+  public fun load(systemId: String): Load =
+    loaded[systemId]
+      ?: fetchAndCompose(systemId).also { if (it is Load.Loaded) loaded[systemId] = it }
 
   /** [systemId] if this store has already opened it, without fetching anything. */
   @Synchronized public fun peek(systemId: String): Load? = loaded[systemId]
@@ -165,7 +169,7 @@ public class PublishedCatalogStore(
     val dir = cacheDir.resolve(systemId)
     val files =
       try {
-        fetchAll(location)?.also { write(dir, it) }
+        fetchAll(location)
       } catch (offline: IOException) {
         read(dir)?.let {
           return compose(systemId, it, fromCache = true)
@@ -181,7 +185,9 @@ public class PublishedCatalogStore(
           systemId,
           "${location.baseUrl} publishes no ui-builder.json for '$systemId'",
         )
-    return compose(systemId, files, fromCache = false)
+    return compose(systemId, files, fromCache = false).also {
+      if (it is Load.Loaded) write(dir, files)
+    }
   }
 
   /** The branch's files, or null when it publishes no `ui-builder.json`. */
@@ -245,23 +251,55 @@ public class PublishedCatalogStore(
   private fun write(dir: Path, files: Map<String, String>) {
     // A cache that cannot be written still serves this run; it only costs the next offline open.
     runCatching {
-      for ((path, text) in files) {
-        val target = dir.resolve(path)
-        Files.createDirectories(target.parent)
-        Files.writeString(target, text)
+      if (read(dir) == files) return
+      Files.createDirectories(dir)
+      val staged = Files.createTempDirectory(dir, "snapshot-")
+      var pointer: Path? = null
+      var committed = false
+      try {
+        for ((path, text) in files) {
+          val target = staged.resolve(path).normalize()
+          require(target.startsWith(staged.normalize())) { "catalog file outside snapshot: $path" }
+          Files.createDirectories(target.parent)
+          Files.writeString(target, text)
+        }
+        pointer = Files.createTempFile(dir, "current-", ".tmp")
+        Files.writeString(pointer, staged.fileName.toString())
+        // Publish only the fully written, validated snapshot. Readers see the old or new one,
+        // never a mixture; absent files cannot survive from a previous publication.
+        Files.move(pointer, dir.resolve("current"), ATOMIC_MOVE, REPLACE_EXISTING)
+        committed = true
+      } finally {
+        pointer?.let { Files.deleteIfExists(it) }
+        if (!committed) {
+          Files.walk(staged).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+          }
+        }
       }
     }
   }
 
-  private fun read(dir: Path): Map<String, String>? {
-    val published = dir.resolve(UI_BUILDER_JSON).takeIf(Files::isRegularFile) ?: return null
+  private fun read(dir: Path): Map<String, String>? = runCatching {
+    val pointer = dir.resolve("current")
+    val snapshot =
+      if (Files.isRegularFile(pointer)) {
+        val name = Files.readString(pointer)
+        if (!name.matches(Regex("snapshot-[A-Za-z0-9_-]+"))) return@runCatching null
+        dir.resolve(name)
+      } else dir // The flat cache written by earlier hosts remains readable.
+    val published =
+      snapshot.resolve(UI_BUILDER_JSON).takeIf(Files::isRegularFile) ?: return@runCatching null
     val text = Files.readString(published)
     val files = linkedMapOf(UI_BUILDER_JSON to text)
     for (path in listOf(COMPONENTS_JSON) + templatePaths(text)) {
-      dir.resolve(path).takeIf(Files::isRegularFile)?.let { files[path] = Files.readString(it) }
+      snapshot.resolve(path).takeIf(Files::isRegularFile)?.let {
+        files[path] = Files.readString(it)
+      }
     }
-    return files
+    files
   }
+    .getOrNull()
 
   public companion object {
     private const val UI_BUILDER_JSON = "ui-builder.json"
