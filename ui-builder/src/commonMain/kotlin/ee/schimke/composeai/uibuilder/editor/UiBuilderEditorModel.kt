@@ -503,6 +503,12 @@ data class UiBuilderEditorState(
    */
   val recentComponents: List<String> = emptyList(),
   /**
+   * The colours most recently committed to a colour property, theme roles and literals alike, most
+   * recent first and each at most once — see [withRecentColour]. Session-scoped like
+   * [recentComponents]: what the reader was just using, not a palette they chose to keep.
+   */
+  val recentColours: List<String> = emptyList(),
+  /**
    * The last component-library drift read for this design's imports; empty means not asked. Kept on
    * the state because [problems] must stay a pure function of the document.
    */
