@@ -1110,6 +1110,10 @@ fun UiBuilderEditor(
     return "$name › ${target.slot}"
   }
 
+  // Encoded bytes too: sandboxed catalog runtimes and the widget export receive only the document,
+  // so pictures travel inside it (`LocalUiBuilderAssetBytes`). Declared before the selection menu,
+  // whose "Copy as Compose code" hands them to the export as the code pane does.
+  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   /**
    * The selection's verbs as menu rows. Built here because every answer comes from the reducer; the
    * lambda takes the menu's dismiss so rows can close it.
@@ -1188,6 +1192,32 @@ fun UiBuilderEditor(
             }
           }
         },
+      // The export the code pane runs, on the design re-rooted at the layer. Asked at the press
+      // rather than per menu build: the menu is rebuilt on every recomposition and generating is
+      // not free.
+      onCopyCode =
+        state.selectedNodeId
+          ?.takeIf { state.selection.size == 1 }
+          ?.let { nodeId ->
+            {
+              val code = reducer.subtreeCode(state.document, nodeId) { assetBytesByDigest[it] }
+              val layer =
+                layerRows
+                  .filterIsInstance<EditorLayerRow.Node>()
+                  .firstOrNull { it.nodeId == nodeId }
+                  ?.row
+                  ?.label ?: state.document.nodes[nodeId]?.componentId ?: nodeId
+              if (code != null) {
+                editorScope.launch {
+                  say(
+                    copyCodeSentence(code, layer) {
+                      systemClipboard.setClipEntry(plainTextClipEntry(it))
+                    }
+                  )
+                }
+              }
+            }
+          },
       onDismiss = close,
       dispatch = ::dispatch,
     )
@@ -1883,9 +1913,6 @@ fun UiBuilderEditor(
   // Cached against the document: it walks every node and property, and the inspector recomposes on
   // every keystroke and drag frame.
   val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
-  // Encoded bytes too: sandboxed catalog runtimes and the widget export receive only the document,
-  // so pictures travel inside it (`LocalUiBuilderAssetBytes`).
-  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   val documentProblems =
     remember(reducer, state.document, assetBytesByDigest.size) {
       reducer.problems(state.document) { assetBytesByDigest[it] }
