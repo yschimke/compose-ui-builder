@@ -15,14 +15,24 @@ import kotlinx.serialization.json.decodeFromJsonElement
  * remembering an anonymous mutable the host could never reach (compose-ui-builder#750).
  */
 class RemoteHostInputExportTest {
-  private fun export(clickActions: String = "[]"): WearWidgetCodeExporter.Result =
-    WearWidgetCodeExporter.export(
+  private fun export(
+    clickActions: String = "[]",
+    nameVariable: String = "light.s0.name",
+  ): WearWidgetCodeExporter.Result {
+    // The name text reads [nameVariable]; anything but the host input is a design-local string.
+    val extraState =
+      if (nameVariable == "light.s0.name") ""
+      else
+        """"$nameVariable":{"type":"text","valueType":"string","initialValue":"Kitchen",
+           "nullable":false,"persistence":"session"},"""
+    return WearWidgetCodeExporter.export(
       Json.decodeFromJsonElement<UiBuilderDocument>(
         Json.parseToJsonElement(
           """
           {"schema":"ui-builder-design-v1","id":"tile","title":"Tile","revision":1,
            "catalogPin":{},"environment":{},
            "stateVariables":{
+             $extraState
              "light.s0.name":{"type":"text","valueType":"string","initialValue":"Kitchen",
                "nullable":false,"persistence":"host"},
              "light.s0.is_on":{"type":"value","valueType":"bool","initialValue":true,
@@ -36,7 +46,7 @@ class RemoteHostInputExportTest {
             "column":{"id":"column","componentId":"layout/column",
               "slots":{"children":["name","switch"]}},
             "name":{"id":"name","componentId":"remote-m3/remote-text",
-              "properties":{"text":{"type":"state","variable":"light.s0.name"}},
+              "properties":{"text":{"type":"state","variable":"$nameVariable"}},
               "eventBindings":{"click":$clickActions}},
             "switch":{"id":"switch","componentId":"remote-m3/remote-switch-button",
               "properties":{"checked":{"type":"state","variable":"light.s0.is_on"}},
@@ -45,6 +55,7 @@ class RemoteHostInputExportTest {
         ) as JsonObject
       )
     )
+  }
 
   @Test
   fun `a host input is a named User-domain value under its declared name`() {
@@ -72,6 +83,17 @@ class RemoteHostInputExportTest {
     val source = assertIs<WearWidgetCodeExporter.Result.Emitted>(result, result.toString()).source
 
     assertFalse("valueChange(light_s0_is_on" in source, source)
+  }
+
+  @Test
+  fun `a local cannot shadow the types a host input is declared through`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(export(nameVariable = "RemoteState"))
+
+    assertTrue(
+      refused.reasons.any { "`RemoteState` conflicts with a generated Kotlin identifier" in it },
+      refused.reasons.toString(),
+    )
   }
 
   @Test

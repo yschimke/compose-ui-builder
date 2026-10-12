@@ -1288,7 +1288,10 @@ internal class RemoteContentEmitter(
     val target = variable.remoteIdentifier()
     if (
       target in KOTLIN_HARD_KEYWORDS ||
-        document.stateVariables.keys.any { it != variable && it.remoteIdentifier() == target }
+        document.stateVariables.keys.any { it != variable && it.remoteIdentifier() == target } ||
+        // Host inputs are declared through these types; a local of the same name would shadow one.
+        (target in NAMED_STATE_TYPES &&
+          document.stateVariables.values.any { (it as? JsonObject)?.isHostInput() == true })
     ) {
       refusals += "$where state `$variable` conflicts with a generated Kotlin identifier"
       return null
@@ -4140,6 +4143,10 @@ internal fun JsonObject.isHostInput(): Boolean =
   (this["persistence"] as? JsonPrimitive)?.contentOrNull == HOST_PERSISTENCE
 
 internal const val HOST_PERSISTENCE = "host"
+
+/** The types a host input's declaration names (`RemoteString.createNamedRemoteString(…)`). */
+private val NAMED_STATE_TYPES =
+  setOf("RemoteState", "RemoteString", "RemoteInt", "RemoteFloat", "RemoteBoolean")
 
 /** Escaped for a Kotlin `"…"` literal. `$` matters for Lottie JSON, which is arbitrary text. */
 private fun String.escaped(): String =
