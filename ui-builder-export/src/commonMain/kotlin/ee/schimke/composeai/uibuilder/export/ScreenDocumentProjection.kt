@@ -4304,7 +4304,8 @@ object ScreenDocumentProjection {
           "alignment" to BOX_ALIGNMENT_MEMBERS,
         ),
       "m3/text" to mapOf("style" to EnumMembers(TEXT_STYLE, TYPOGRAPHY_TOKENS)) + TEXT_ENUM_MEMBERS,
-      "wear-m3/text" to
+      // The Wear text id the Wear screen exporter already writes, rather than a second literal.
+      WearScreenCodeExporter.TEXT to
         mapOf("style" to EnumMembers(TEXT_STYLE, WEAR_TYPOGRAPHY_TOKENS)) + TEXT_ENUM_MEMBERS,
       // Arrangements; when spacing is also set they are read together — see `arranged`.
       "layout/row" to
