@@ -258,7 +258,7 @@ junit = "4.13.2"
 truth = "1.4.5"
 okhttp = "5.5.0"
 okio = "3.18.2"
-classgraph = "4.8.195"
+classgraph = "4.8.197"
 jmdns = "3.6.3"
 json-schema-validator = "3.0.7"
 # The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
