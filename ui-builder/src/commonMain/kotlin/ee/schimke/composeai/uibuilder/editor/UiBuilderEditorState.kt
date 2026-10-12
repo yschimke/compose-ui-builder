@@ -1455,9 +1455,10 @@ class UiBuilderEditorReducer(
         val numberBounds = property.numberBounds(typeNames)
         val control =
           when {
-            // A list or object whose published shape did not parse stays uneditable.
+            // A list, object or union whose published shape did not parse stays uneditable.
             declaredControl == PropertyEditorControl.LIST ||
-              declaredControl == PropertyEditorControl.OBJECT -> EditorPropertyControl.Unsupported
+              declaredControl == PropertyEditorControl.OBJECT ||
+              declaredControl == PropertyEditorControl.UNION -> EditorPropertyControl.Unsupported
             declaredControl == PropertyEditorControl.COLOR -> EditorPropertyControl.Color
             property.allowedValues.isNotEmpty() || declaredControl == PropertyEditorControl.ENUM ->
               EditorPropertyControl.Enum

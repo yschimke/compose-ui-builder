@@ -271,7 +271,11 @@ object ScreenExportGate {
   /** Where `stringResource` and `StringResource` are declared. */
   internal const val COMPOSE_RESOURCES_PACKAGE: String = "org.jetbrains.compose.resources"
 
-  /** Every object callable [projection]'s list and object codecs write, at any depth. */
+  /**
+   * Every callable or object [projection]'s composite codecs write, at any depth: an object's
+   * constructor, a parsed value's factory (`Instant.parse`), a union case's constructor and a `data
+   * object` case itself.
+   */
   private fun objectCallables(projection: ExportProjection): Set<String> = buildSet {
     fun codec(written: ExportProjection.Codec) {
       when (written) {
@@ -280,6 +284,10 @@ object ScreenExportGate {
           add(written.callableFqn)
           written.fields.values.forEach { codec(it.codec) }
         }
+        is ExportProjection.Codec.Parsed -> add(written.parseFqn)
+        is ExportProjection.Codec.Nullable -> codec(written.value)
+        is ExportProjection.Codec.Union -> written.cases.values.forEach(::codec)
+        is ExportProjection.Codec.Singleton -> add(written.typeFqn)
         else -> Unit
       }
     }

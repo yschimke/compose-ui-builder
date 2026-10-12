@@ -207,6 +207,32 @@ class TypedCanvasAdapterTest {
     assertEquals(listOf<Pair<String, String?>>("checkedState" to "true"), updates)
   }
 
+  private data class PickerProps(
+    val onPick: (Contact) -> Unit,
+    val onConnect: (String, Int) -> Unit,
+  )
+
+  private class PickerAdapter : TypedComponentAdapter<PickerProps>("acme/picker", record()) {
+    val pick = event(PickerProps::onPick)
+    val connect = event(PickerProps::onConnect)
+  }
+
+  @Test
+  fun `callbacks with arguments dispatch the design's action and drop the arguments`() {
+    val adapter = PickerAdapter()
+    val events = mutableListOf<String>()
+    val canvas = TypedCanvasNodeScope(adapter, scope(events = events))
+    val pick: (Contact) -> Unit = canvas.callback(adapter.pick)
+    val connect: (String, Int) -> Unit = canvas.callback(adapter.connect)
+    pick(Contact("Ada", 1, emptyList()))
+    connect("192.168.1.10", 5000)
+    assertEquals(listOf("pick", "connect"), events)
+    // Another instance's handle is refused, as a zero-argument one is.
+    assertFailsWith<IllegalArgumentException> {
+      TypedCanvasNodeScope(PickerAdapter(), scope()).callback(adapter.pick)
+    }
+  }
+
   @Test
   fun `handles from another instance are rejected even with identical model and names`() {
     val adapter = Adapter()
