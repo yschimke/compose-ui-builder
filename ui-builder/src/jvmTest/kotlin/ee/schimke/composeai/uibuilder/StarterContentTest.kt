@@ -39,9 +39,8 @@ class StarterContentTest {
   private val remoteCatalog =
     CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
 
-  /** The A2UI basic catalog, whose required values are seeded against it. */
-  private val a2uiCatalog =
-    CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+  /** An A2UI-shaped catalog, whose required values are seeded against it. */
+  private val a2uiCatalog = SyntheticCatalogs.a2ui
 
   private fun catalogFor(componentId: String) =
     when {
@@ -236,7 +235,7 @@ class StarterContentTest {
   }
 
   /**
-   * The same for the A2UI palette: all eighteen insert into the column validly, thanks to the
+   * The same for an A2UI palette: every component inserts into the column validly, thanks to the
    * seeded schema-required `action`, `max`, `value` and `options`.
    */
   @Test
@@ -253,7 +252,6 @@ class StarterContentTest {
         fixture =
           Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
-    assertEquals(18, a2uiCatalog.components.size)
     a2uiCatalog.components.forEach { component ->
       val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
       val target =

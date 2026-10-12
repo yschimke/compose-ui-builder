@@ -83,7 +83,7 @@ class WrapChooserTest {
   fun `the roles are read from the catalog, so A2UI's own Column and Row are offered`() {
     // A2UI has no `layout/*` floor and no Box: its containers are `a2ui/Column` and `a2ui/Row`, and
     // the chooser must find them without the builder knowing either id.
-    val a2ui = CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+    val a2ui = SyntheticCatalogs.a2ui
     val a2uiReducer = UiBuilderEditorReducer(a2ui)
     val preview = assertNotNull(a2uiReducer.previewDocument("a2ui/Text"))
     val text = preview.nodes.values.single { it.componentId == "a2ui/Text" }.id

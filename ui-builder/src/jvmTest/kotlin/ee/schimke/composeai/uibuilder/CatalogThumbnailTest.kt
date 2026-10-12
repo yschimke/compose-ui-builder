@@ -63,7 +63,7 @@ class CatalogThumbnailTest {
    */
   @Test
   fun `every A2UI component draws its own insert, framed by the catalog's own column`() {
-    val a2ui = CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+    val a2ui = SyntheticCatalogs.a2ui
     val a2uiReducer = UiBuilderEditorReducer(a2ui)
     a2ui.components.forEach { component ->
       val document =

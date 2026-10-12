@@ -3,7 +3,6 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -17,9 +16,8 @@ import kotlin.test.assertTrue
  */
 @OptIn(ExperimentalTestApi::class)
 class ProductionServedCatalogTest {
-  /** A served catalog: any published capability document; the a2ui golden is one. */
-  private val served =
-    File("../docs/design/fixtures/ui-builder/a2ui-catalog-capabilities-v1.json").readText()
+  /** A served catalog: any capability document holding the component drawn. */
+  private val served = SyntheticCatalogs.A2UI_JSON
 
   /** Pinned to a catalog this renderer packages nothing for, using one of the served components. */
   private val document = decodeProductionRendererDocument(document("unpackaged-catalog"))
