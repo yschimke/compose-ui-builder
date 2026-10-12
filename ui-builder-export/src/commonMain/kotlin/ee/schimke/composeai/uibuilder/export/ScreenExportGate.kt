@@ -19,10 +19,14 @@ object ScreenExportGate {
   /** The packages a generated screen may name. Narrow on purpose; widening is a reviewed act. */
   // `kotlin.math` for nonnegative bound spacing; `kotlin.collections` for gradient colour lists;
   // `kotlin.io.encoding` (the Base64 codec only — subpackages match, parents don't) for Play
-  // services' font certificates; ranges, text and Int for list-detail destination role mapping.
+  // services' font certificates; ranges, text and Int for list-detail destination role mapping;
+  // `androidx.wear.compose` for a Wear catalog's own theme roles (`MaterialTheme.typography.…`),
+  // which are the same Compose theme reads as `androidx.compose.material3`'s, from the Wear
+  // library.
   val EXPRESSION_PACKAGES: Set<String> =
     setOf(
       "androidx.compose",
+      "androidx.wear.compose",
       "kotlin.math",
       "kotlin.ranges",
       "kotlin.text",
