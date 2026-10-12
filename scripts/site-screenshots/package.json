@@ -7,6 +7,6 @@
     "capture": "node capture.mjs ../../ui-builder/build/wasmDist ../../site/img"
   },
   "devDependencies": {
-    "playwright": "1.56.1"
+    "playwright": "1.64.0"
   }
 }
