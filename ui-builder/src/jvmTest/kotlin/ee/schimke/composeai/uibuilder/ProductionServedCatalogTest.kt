@@ -29,7 +29,7 @@ class ProductionServedCatalogTest {
     assertNull(productionCatalogFor(document, ""))
     assertNull(productionCatalogFor(document, "not a catalog"), "an unreadable catalog is ignored")
     // A packaged pin keeps its packaged catalog whatever the host sends.
-    val packaged = decodeProductionRendererDocument(document("a2ui-catalog"))
+    val packaged = decodeProductionRendererDocument(document("wear-m3"))
     assertEquals(
       productionPreviewCatalog(packaged)?.componentsById?.keys,
       productionCatalogFor(packaged, served)?.componentsById?.keys,
