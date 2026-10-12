@@ -1048,6 +1048,8 @@ object ScreenDocumentProjection {
           PropertyValueKinds.isColour(property) -> COLOR
           property in setOf("text", "contentDescription", "label", "placeholder", "value") ->
             "kotlin.String"
+          // A part's own description: a split control's `toggleContentDescription`.
+          property.endsWith("ContentDescription") -> "kotlin.String"
           property in
             setOf("enabled", "checked", "selected", "expanded", "singleLine", "softWrap") ->
             "kotlin.Boolean"
@@ -3753,14 +3755,16 @@ object ScreenDocumentProjection {
 
   /**
    * An event with no actions that is the component's API rather than authoring, which a caller
-   * supplies as `() -> Unit`: a click, or a toggle's change, whose reported value is only the
-   * complement of the `checked` the caller passed (the generator writes `{ _ -> onXCheckedChange()
-   * }`). A value change is not one: its value is what the user typed.
+   * supplies as `() -> Unit`: a click (on a split control, its container's or its selection's own;
+   * a radio's `select`), or a toggle's change, whose reported value is only the complement of the
+   * `checked` the caller passed (the generator writes `{ _ -> onXCheckedChange() }`). A value
+   * change is not one: its value is what the user typed.
    */
   private fun isIntent(event: String, actions: List<*>): Boolean =
     actions.isEmpty() && event in INTENT_EVENTS
 
-  private val INTENT_EVENTS = setOf("click", "checkedChange")
+  private val INTENT_EVENTS =
+    setOf("click", "containerClick", "selectionClick", "select", "checkedChange")
 
   /** A generated callback parameter name: `on` and a plain Kotlin identifier. */
   private val CALLBACK_NAME = Regex("on[A-Z][A-Za-z0-9]*")
@@ -3882,6 +3886,36 @@ object ScreenDocumentProjection {
         "labelSmall",
       )
       .associateWith { listOf(THEME, "typography", it) }
+
+  /**
+   * Wear Material 3's type scale, read from its own `MaterialTheme`: the same roles a phone has
+   * (less the headlines), plus the arc styles for curved text and the numerals for big digits.
+   */
+  private val WEAR_TYPOGRAPHY_TOKENS: Map<String, List<String>> =
+    listOf(
+        "arcLarge",
+        "arcMedium",
+        "arcSmall",
+        "displayLarge",
+        "displayMedium",
+        "displaySmall",
+        "titleLarge",
+        "titleMedium",
+        "titleSmall",
+        "labelLarge",
+        "labelMedium",
+        "labelSmall",
+        "bodyLarge",
+        "bodyMedium",
+        "bodySmall",
+        "bodyExtraSmall",
+        "numeralExtraLarge",
+        "numeralLarge",
+        "numeralMedium",
+        "numeralSmall",
+        "numeralExtraSmall",
+      )
+      .associateWith { listOf("androidx.wear.compose.material3.MaterialTheme", "typography", it) }
 
   private val SHAPE_TOKENS: Map<String, List<String>> =
     listOf("extraSmall", "small", "medium", "large", "extraLarge").associateWith {
@@ -4169,6 +4203,52 @@ object ScreenDocumentProjection {
     )
 
   /**
+   * A text composable's enum parameters other than its style, shared by every catalog's `Text`
+   * (`m3/text`, `wear-m3/text`): `TextAlign`, `FontWeight` and the rest are Compose UI's own, so
+   * the values mean the same members whichever Material draws the text. The style is not here,
+   * because each Material has its own type scale ([TYPOGRAPHY_TOKENS], [WEAR_TYPOGRAPHY_TOKENS]).
+   */
+  private val TEXT_ENUM_MEMBERS: Map<String, EnumMembers> by lazy {
+    mapOf(
+      "fontWeight" to
+        members(
+          FONT_WEIGHT,
+          FONT_WEIGHT,
+          "normal" to "Normal",
+          "medium" to "Medium",
+          "semiBold" to "SemiBold",
+          "bold" to "Bold",
+        ),
+      "fontStyle" to members(FONT_STYLE, FONT_STYLE, "normal" to "Normal", "italic" to "Italic"),
+      "textAlign" to
+        members(
+          TEXT_ALIGN,
+          TEXT_ALIGN,
+          "start" to "Start",
+          "center" to "Center",
+          "end" to "End",
+          "justify" to "Justify",
+        ),
+      "overflow" to
+        members(
+          TEXT_OVERFLOW,
+          TEXT_OVERFLOW,
+          "clip" to "Clip",
+          "ellipsis" to "Ellipsis",
+          "visible" to "Visible",
+        ),
+      "textDecoration" to
+        members(
+          TEXT_DECORATION,
+          TEXT_DECORATION,
+          "none" to "None",
+          "underline" to "Underline",
+          "lineThrough" to "LineThrough",
+        ),
+    )
+  }
+
+  /**
    * Which Kotlin member each catalog enum value names, per component and property (`semiBold` →
    * `FontWeight.SemiBold`). `m3/text`.`style` reuses [TYPOGRAPHY_TOKENS].
    */
@@ -4223,46 +4303,10 @@ object ScreenDocumentProjection {
           // The same nine as a box's, which is what they were before they were spelled out twice.
           "alignment" to BOX_ALIGNMENT_MEMBERS,
         ),
-      "m3/text" to
-        mapOf(
-          "style" to EnumMembers(TEXT_STYLE, TYPOGRAPHY_TOKENS),
-          "fontWeight" to
-            members(
-              FONT_WEIGHT,
-              FONT_WEIGHT,
-              "normal" to "Normal",
-              "medium" to "Medium",
-              "semiBold" to "SemiBold",
-              "bold" to "Bold",
-            ),
-          "fontStyle" to
-            members(FONT_STYLE, FONT_STYLE, "normal" to "Normal", "italic" to "Italic"),
-          "textAlign" to
-            members(
-              TEXT_ALIGN,
-              TEXT_ALIGN,
-              "start" to "Start",
-              "center" to "Center",
-              "end" to "End",
-              "justify" to "Justify",
-            ),
-          "overflow" to
-            members(
-              TEXT_OVERFLOW,
-              TEXT_OVERFLOW,
-              "clip" to "Clip",
-              "ellipsis" to "Ellipsis",
-              "visible" to "Visible",
-            ),
-          "textDecoration" to
-            members(
-              TEXT_DECORATION,
-              TEXT_DECORATION,
-              "none" to "None",
-              "underline" to "Underline",
-              "lineThrough" to "LineThrough",
-            ),
-        ),
+      "m3/text" to mapOf("style" to EnumMembers(TEXT_STYLE, TYPOGRAPHY_TOKENS)) + TEXT_ENUM_MEMBERS,
+      // The Wear text id the Wear screen exporter already writes, rather than a second literal.
+      WearScreenCodeExporter.TEXT to
+        mapOf("style" to EnumMembers(TEXT_STYLE, WEAR_TYPOGRAPHY_TOKENS)) + TEXT_ENUM_MEMBERS,
       // Arrangements; when spacing is also set they are read together — see `arranged`.
       "layout/row" to
         mapOf(
