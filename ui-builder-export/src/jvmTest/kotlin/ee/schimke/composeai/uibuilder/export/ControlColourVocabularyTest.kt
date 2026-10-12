@@ -150,4 +150,24 @@ class ControlColourVocabularyTest {
       )
     assertEquals("androidx.compose.material3.TopAppBarDefaults.topAppBarColors", colors.callableFqn)
   }
+
+  @Test
+  fun `a wide rail's initial state is its remembered state`() {
+    val rail =
+      root(
+        "m3/wide-navigation-rail",
+        """"state": {"type": "enum", "value": "expanded"},
+           "arrangement": {"type": "enum", "value": "top"}""",
+      )
+    val state = construct(rail.arguments["state"])
+    assertEquals("androidx.compose.material3.rememberWideNavigationRailState", state.callableFqn)
+    assertEquals(
+      listOf("Expanded"),
+      assertIs<ScreenValue.Reference>(state.named["initialValue"]).members,
+    )
+    assertEquals(
+      "androidx.compose.foundation.layout.Arrangement.Vertical",
+      assertIs<ScreenValue.Reference>(rail.arguments["arrangement"]).typeFqn,
+    )
+  }
 }

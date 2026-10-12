@@ -4108,16 +4108,25 @@ object ScreenDocumentProjection {
   private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
     mapOf(
       // Where the rail's items sit along it: `WideNavigationRail(arrangement = Arrangement.Top)`.
+      // The record spells this parameter's type with a dot, not the `$` the layout tables use.
       "m3/wide-navigation-rail" to
         mapOf(
           "arrangement" to
             members(
-              ARRANGEMENT_VERTICAL,
+              "androidx.compose.foundation.layout.Arrangement.Vertical",
               ARRANGEMENT,
               "top" to "Top",
               "center" to "Center",
               "bottom" to "Bottom",
-            )
+            ),
+          // The rail's initial value, read by its state bundle below.
+          "state" to
+            members(
+              "androidx.compose.material3.WideNavigationRailValue",
+              "androidx.compose.material3.WideNavigationRailValue",
+              "collapsed" to "Collapsed",
+              "expanded" to "Expanded",
+            ),
         ),
       "m3/time-picker" to
         mapOf(
@@ -4503,7 +4512,16 @@ object ScreenDocumentProjection {
             ),
           // None: the record lists no `requiredOptIns` for this call.
           optIns = emptyList(),
-        )
+        ),
+      // A wide rail starts collapsed or expanded: `rememberWideNavigationRailState(initialValue)`.
+      "m3/wide-navigation-rail" to
+        StateBundle(
+          parameter = "state",
+          factoryFqn = "androidx.compose.material3.rememberWideNavigationRailState",
+          typeFqn = "androidx.compose.material3.WideNavigationRailState",
+          arguments = mapOf("state" to StateArgument("initialValue")),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        ),
     )
 
   /**
