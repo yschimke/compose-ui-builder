@@ -50,7 +50,7 @@ class ThemeSchemesTest {
       )
       .document
 
-  private val wearCatalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val wearCatalog = SyntheticCatalogs.wear
   private val wear = UiBuilderEditorReducer(wearCatalog)
   private val wearScreen =
     UiBuilderNewDesignSeed.document(
@@ -158,10 +158,7 @@ class ThemeSchemesTest {
 
   @Test
   fun `typography pickers follow what the theme host declares`() {
-    val remote =
-      UiBuilderEditorReducer(
-        CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
-      )
+    val remote = UiBuilderEditorReducer(SyntheticCatalogs.remote)
     val widget =
       wearScreen.copy(
         roots = listOf("widget"),

@@ -6,7 +6,6 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -21,7 +20,7 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 @OptIn(ExperimentalTestApi::class)
 class CatalogRowRefusalTest {
-  private val wearCatalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val wearCatalog = SyntheticCatalogs.wear
 
   /** The sentence the *document* refuses a wrap with — panel-wide, and about the design. */
   private val documentRefusal =
@@ -141,6 +140,4 @@ class CatalogRowRefusalTest {
    */
   private fun runWideEditor(block: androidx.compose.ui.test.ComposeUiTest.() -> Unit) =
     runDesktopComposeUiTest(width = 1600, height = 900) { block() }
-
-  private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }

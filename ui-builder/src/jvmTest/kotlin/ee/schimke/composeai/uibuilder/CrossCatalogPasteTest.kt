@@ -23,7 +23,7 @@ import kotlinx.serialization.json.jsonObject
 class CrossCatalogPasteTest {
   private fun resource(path: String) = checkNotNull(javaClass.getResource(path)).readText()
 
-  private val remote = CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+  private val remote = SyntheticCatalogs.remote
   private val m3 = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(remote)
   private val widget =

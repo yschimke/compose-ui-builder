@@ -3,7 +3,6 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -20,10 +19,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 @OptIn(ExperimentalTestApi::class)
 class FormulaBindingTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
-    )
+  private val catalog = SyntheticCatalogs.remote
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document = decodeProductionRendererDocument(DOCUMENT)
 
