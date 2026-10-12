@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.110.0](https://github.com/yschimke/compose-ui-builder/compare/v3.109.0...v3.110.0) (2026-10-12)
+
+
+### Features
+
+* **export:** component intents and the control vocabulary catalog stickers need ([#732](https://github.com/yschimke/compose-ui-builder/issues/732)) ([3726ee6](https://github.com/yschimke/compose-ui-builder/commit/3726ee6ba9b9476fb72657a16b631d19ced7733d))
+* **export:** host inputs export as named User-domain RemoteCompose values ([#754](https://github.com/yschimke/compose-ui-builder/issues/754)) ([80a138e](https://github.com/yschimke/compose-ui-builder/commit/80a138e001291a268990407df279786d63e7ba99))
+* **export:** the wear-m3 vocabulary the Wear catalog's stickers need ([#756](https://github.com/yschimke/compose-ui-builder/issues/756)) ([f8201a9](https://github.com/yschimke/compose-ui-builder/commit/f8201a9cbbb68e6c2af1bcf528ab2fa551c88a03))
+* **runtime:** serve catalogs unlisted, hidden from the chooser ([#753](https://github.com/yschimke/compose-ui-builder/issues/753)) ([61bf2e2](https://github.com/yschimke/compose-ui-builder/commit/61bf2e2bab30a5860d3f4533dda6ffa317a5cd4c))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.15.4 ([#751](https://github.com/yschimke/compose-ui-builder/issues/751)) ([58582e7](https://github.com/yschimke/compose-ui-builder/commit/58582e7b5066fb86d1d0535efb52bb3f647cd60f))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.16.0 ([#760](https://github.com/yschimke/compose-ui-builder/issues/760)) ([5327069](https://github.com/yschimke/compose-ui-builder/commit/5327069981683198dbb438bb6a22c7a36fc775cd))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.10.0 ([#762](https://github.com/yschimke/compose-ui-builder/issues/762)) ([ffca868](https://github.com/yschimke/compose-ui-builder/commit/ffca868b23a0522f81d306d521bd496910fcdb54))
+* **deps:** update dependency io.github.classgraph:classgraph to v4.8.198 ([#765](https://github.com/yschimke/compose-ui-builder/issues/765)) ([51c409a](https://github.com/yschimke/compose-ui-builder/commit/51c409a42a831b5e5c37aeb8084a8764ae829bd7))
+
 ## [3.109.0](https://github.com/yschimke/compose-ui-builder/compare/v3.108.0...v3.109.0) (2026-10-12)
 
 
