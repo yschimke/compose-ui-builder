@@ -507,9 +507,9 @@ jobs:
     if: ${{ !cancelled() && needs.update-release-pr.result == 'success' && needs.update-release-pr.outputs.pr != '' }}
     runs-on: ubuntu-latest
     permissions:
-      actions: write # dispatch ci.yml
+      actions: write # dispatch ci.yml and the ruleset's common checks
     steps:
-      - name: Run CI on the release PR's branch
+      - name: Run CI and the required checks on the release PR's branch
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -523,6 +523,16 @@ jobs:
           fi
           gh workflow run ci.yml --ref "$branch"
           echo "dispatched ci.yml on $branch"
+          # The ruleset also requires the common checks, which a `github.token` push starts no
+          # run of either; without them the release PR's auto-merge waits forever.
+          number="$(jq -r '.number // empty' <<<"$RP_PR")"
+          if [ -z "$number" ]; then
+            echo "::error::release-please reported no PR number; cannot dispatch the required checks"
+            exit 1
+          fi
+          gh workflow run pr-title.yml --ref "$branch" -f pr="$number"
+          gh workflow run no-agent-attribution.yml --ref "$branch" -f pr="$number"
+          echo "dispatched pr-title.yml and no-agent-attribution.yml for #$number"
 
   # Which Maven coordinates merging the release PR would publish, as one comment on that PR. The
   # publish plan only runs inside the release, so the answer was visible only after the
