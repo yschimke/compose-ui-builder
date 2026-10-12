@@ -42,38 +42,6 @@ const catalogFiles = {
 const catalogs = {};
 for (const [id, file] of Object.entries(catalogFiles)) catalogs[id] = await readJson(join(fixtures, file));
 
-// The A2UI catalog has no committed design; this is its New design starter
-// (`a2uiUiBuilderDocument`) with a card, a field and a button added, so it draws more than a line.
-function a2uiDocument() {
-  const literal = (type, value) => ({ type, value });
-  const node = (id, componentId, properties = {}, slots = {}) => ({
-    id, componentId, properties, modifiers: [], slots, eventBindings: {}, predicate: null,
-    accessibility: null, assetBindings: {}, tokenBindings: {}, component: null,
-  });
-  const nodes = [
-    node('a2ui-column', 'a2ui/Column', {}, { children: ['a2ui-headline', 'a2ui-card'] }),
-    node('a2ui-headline', 'a2ui/Text', { text: literal('string', 'Hello, A2UI'), variant: literal('enum', 'h2') }),
-    node('a2ui-card', 'a2ui/Card', {}, { child: ['a2ui-card-column'] }),
-    node('a2ui-card-column', 'a2ui/Column', {}, { children: ['a2ui-body', 'a2ui-field', 'a2ui-divider', 'a2ui-button'] }),
-    node('a2ui-body', 'a2ui/Text', { text: literal('string', 'Book a table for tonight.'), variant: literal('enum', 'body') }),
-    node('a2ui-field', 'a2ui/TextField', { label: literal('string', 'Name') }),
-    node('a2ui-divider', 'a2ui/Divider'),
-    node('a2ui-button', 'a2ui/Button', {}, { child: ['a2ui-button-label'] }),
-    node('a2ui-button-label', 'a2ui/Text', { text: literal('string', 'Reserve') }),
-  ];
-  return {
-    schema: 'compose-ui-builder-document/v1-candidate', id: 'a2ui-reservation', title: 'A2UI reservation',
-    revision: 0, catalogPin: {}, environment: {
-      widthDp: 412, heightDp: 915, density: 2.625, theme: 'light', dynamicColor: false, locale: 'en-US',
-      fontScale: 1.0, layoutDirection: 'ltr', windowPosture: 'flat', browserZoomPercent: 100,
-      fixedTime: '2024-05-16T12:00:00Z', animations: 'settled', networkAccess: false, background: null,
-      typeface: null, exportDevices: [],
-    },
-    stateVariables: {}, roots: ['a2ui-column'], nodes: Object.fromEntries(nodes.map((n) => [n.id, n])),
-    assets: {}, tokenBindings: {}, createdAtEpochMillis: null, updatedAtEpochMillis: null, components: {},
-  };
-}
-
 // One open design per catalog, plus a second Wear design so the list is not one-per-row.
 const designs = {};
 const pinTo = (document, systemId) => {
@@ -89,7 +57,6 @@ const scenarioDesigns = {
   'm3-catalog': pinTo(await readJson(join(repo, 'site/designs/google-gmail-tablet.uid')), 'm3-catalog'),
   'wear-m3': pinTo(await readJson(join(repo, 'site/designs/google-home-wear.uid')), 'wear-m3'),
   'remote-m3': pinTo(await readJson(join(repo, 'site/designs/weather-widget.uid')), 'remote-m3'),
-  'a2ui-catalog': pinTo(a2uiDocument(), 'a2ui-catalog'),
 };
 pinTo(await readJson(join(repo, 'site/designs/wear-list.uid')), 'wear-m3');
 const devicePresets = await readFile(join(repo, 'site/device-presets.json'));
