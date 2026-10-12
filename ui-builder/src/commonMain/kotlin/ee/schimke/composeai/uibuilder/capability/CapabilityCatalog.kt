@@ -25,6 +25,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 
@@ -283,6 +284,11 @@ enum class PropertyEditorControl {
   @SerialName("list") LIST,
   /** A typed adapter's object: one row per field, each edited by its own shape. */
   @SerialName("object") OBJECT,
+  /**
+   * A typed adapter's sealed type: a case picked from its cases, then that case's fields, each
+   * edited by its own shape.
+   */
+  @SerialName("union") UNION,
 }
 
 @Serializable
@@ -418,7 +424,10 @@ object CapabilityCatalogParser {
           val capability = property as? JsonObject ?: return@mapNotNull null
           val name = (capability["name"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
           val editor = capability["editor"] as? JsonObject ?: return@mapNotNull null
-          PropertyValueShapes.declaredCompositeEditor(editor)?.let { (componentId to name) to it }
+          val nullable = (capability["nullable"] as? JsonPrimitive)?.booleanOrNull ?: false
+          PropertyValueShapes.declaredCompositeEditor(editor, nullable)?.let {
+            (componentId to name) to it
+          }
         }
       }
       .toMap()
