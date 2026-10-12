@@ -2293,6 +2293,11 @@ object ScreenDocumentProjection {
         refuse("$where is $number, which does not survive `Float`")
         return null
       }
+      // `Modifier.weight` throws on a weight that is not positive; the canvas drops one.
+      if (weight <= 0f) {
+        refuse("$where is $number, and `Modifier.weight` takes only a positive weight")
+        return null
+      }
       return ChainLink(
         "$scope.weight",
         positional = listOf(ScreenValue.Fractional32(weight)),

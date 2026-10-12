@@ -252,12 +252,12 @@ class ProjectedComposeExportTest {
           )
         )
         .getOrThrow()
-    fun export(fill: Boolean?): ScreenExportGate.Outcome {
+    fun export(fill: Boolean?, weight: Double = 0.7): ScreenExportGate.Outcome {
       val base = document(button())
       val weighted =
         base.nodes
           .getValue("go")
-          .copy(modifiers = listOf(WeightModifierV1(JsonPrimitive(0.7), fill)))
+          .copy(modifiers = listOf(WeightModifierV1(JsonPrimitive(weight), fill)))
       val node =
         DesignNodeV1("group", "wear-m3/button-group", slots = mapOf("children" to listOf("go")))
       return ScreenExportGate.export(
@@ -275,6 +275,8 @@ class ProjectedComposeExportTest {
     assertContains(source, "Button(onClick = {}, modifier = Modifier.weight(0.7f), label = {")
     val refused = assertIs<ScreenExportGate.Outcome.Refused>(export(false))
     assertTrue(refused.reasons.any { "does not take" in it }, refused.reasons.toString())
+    val zero = assertIs<ScreenExportGate.Outcome.Refused>(export(null, weight = 0.0))
+    assertTrue(zero.reasons.any { "only a positive weight" in it }, zero.reasons.toString())
   }
 
   @Test
