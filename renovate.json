@@ -5,16 +5,13 @@
     "helpers:pinGitHubActionDigests"
   ],
   "platformAutomerge": true,
-  "description": "Extends the shared preset at yschimke/renovate-config, which owns the release-train grouping for the ee.schimke.composeai group: compose-ai-tools, compose-preview-daemon, compose-preview-contracts and rc-players each get a group of their own, so a BOM bump here rides the same group it does in the sibling repositories. The rules below are this repository's own. Automerge follows the preset (minor/patch/digest/pin; majors stay manual) and `platformAutomerge` hands the merge to GitHub's native auto-merge, which waits for the `gradle` check the `Protect Main` ruleset requires (yschimke/renovate-config `repo-policy/`). The rest of what the preset changes about how PRs are opened is set back to what this repository had under config:recommended: no `dependencies` label, rangeStrategy auto, semantic commits auto-detected, two PRs an hour, and the UTC schedule.",
+  "description": "Extends the shared preset at yschimke/renovate-config, which owns the release-train grouping for the ee.schimke.composeai group: compose-ai-tools, compose-preview-daemon, compose-preview-contracts and rc-players each get a group of their own, so a BOM bump here rides the same group it does in the sibling repositories. The rules below are this repository's own. Automerge follows the preset (minor/patch/digest/pin; majors stay manual) and `platformAutomerge` hands the merge to GitHub's native auto-merge, which waits for the `gradle` check the `Protect Main` ruleset requires (yschimke/renovate-config `repo-policy/`). The rest of what the preset changes about how PRs are opened is set back to what this repository had under config:recommended: no `dependencies` label, rangeStrategy auto, semantic commits auto-detected, two PRs an hour, and UTC as the timezone. There is no `schedule`: neither this file nor the preset sets one, so an update is proposed on whichever Renovate run first sees it (roughly hourly on the hosted app), and the first-party release trains arrive as soon as they are published.",
   "labels": [],
   "rangeStrategy": "auto",
   "semanticCommits": "auto",
   "prHourlyLimit": 2,
   "timezone": "UTC",
   "prConcurrentLimit": 5,
-  "schedule": [
-    "before 5am on Monday"
-  ],
   "packageRules": [
     {
       "description": "The preset groups GitHub Actions as `github-actions`; keep this repository's existing group name so the branch and PR title do not change.",
