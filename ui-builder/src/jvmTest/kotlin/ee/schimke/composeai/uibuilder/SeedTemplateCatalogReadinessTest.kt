@@ -40,7 +40,7 @@ class SeedTemplateCatalogReadinessTest {
       "m3-catalog" to catalog("/m3-catalog-capabilities-v1.json"),
       "wear-m3" to catalog("/wear-m3-capabilities-v1.json"),
       "remote-m3" to catalog("/remote-m3-capabilities-v1.json"),
-      A2uiDocumentExporter.CATALOG_SYSTEM_ID to catalog("/a2ui-catalog-capabilities-v1.json"),
+      A2uiDocumentExporter.CATALOG_SYSTEM_ID to SyntheticCatalogs.a2ui,
     )
 
   @Test

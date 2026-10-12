@@ -67,7 +67,7 @@ class DragGhostDocumentTest {
    */
   @Test
   fun `an A2UI ghost is rooted at the component, not the column it was validated in`() {
-    val a2ui = CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+    val a2ui = SyntheticCatalogs.a2ui
     val a2uiReducer = UiBuilderEditorReducer(a2ui)
     val a2uiState = a2uiReducer.initial(document, selectedNodeId = null)
     a2ui.components.forEach { component ->

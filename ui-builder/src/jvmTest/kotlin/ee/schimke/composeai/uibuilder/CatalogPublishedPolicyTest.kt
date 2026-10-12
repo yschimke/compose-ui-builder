@@ -53,7 +53,6 @@ class CatalogPublishedPolicyTest {
       listOf(
         "/m3-catalog-capabilities-v1.json",
         "/remote-m3-capabilities-v1.json",
-        "/a2ui-catalog-capabilities-v1.json",
       )) {
       val parsed = CapabilityCatalogParser.parse(resource(path))
       parsed.components.forEach { component ->
