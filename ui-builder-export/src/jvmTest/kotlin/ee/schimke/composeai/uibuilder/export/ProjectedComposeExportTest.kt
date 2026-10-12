@@ -864,6 +864,68 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a filled root slot exports into the frame the catalog publishes for it`() {
+    val edge =
+      DesignNodeV1("edge", "wear-m3/text", properties = mapOf("text" to StringValueV1("Go")))
+    val document =
+      scaffolded(slots = mapOf("content" to listOf("list"), "edgeButton" to listOf("edge"))).let {
+        it.copy(nodes = it.nodes + ("edge" to edge))
+      }
+    val structure =
+      wearStructure.copy(
+        slotFrames =
+          mapOf(
+            setOf("edgeButton") to
+              "val listState = rememberTransformingLazyColumnState()\n" +
+                "val spec = rememberTransformationSpec()\n" +
+                "ScreenScaffold(scrollState = listState, edgeButton = {\n" +
+                "  ${'$'}{edgeButton}\n" +
+                "}) { contentPadding ->\n" +
+                "  ${'$'}{content}\n" +
+                "}"
+          )
+      )
+    val outcome =
+      ScreenExportGate.export(
+        document,
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        structure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "ScreenScaffold(scrollState = listState, edgeButton = {\n")
+    assertContains(source, "Text(text = \"Go\")\n    }) { contentPadding ->")
+    assertContains(source, "TransformingLazyColumn(state = listState) {")
+    // The plain frame stays for a screen that fills no other slot.
+    assertIs<ScreenExportGate.Outcome.Emitted>(
+      ScreenExportGate.export(
+        scaffolded(),
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        structure,
+      )
+    )
+  }
+
+  @Test
+  fun `a frame per filled slot set is read from its template key`() {
+    val structure =
+      CatalogScreenStructure.from(
+        Json.parseToJsonElement(
+            """{ "code": { "templates": { "screen-root": "a", "screen-root+edgeButton": "b",
+              "screen-root+edgeButton+overlays": "c" } } }"""
+          )
+          .jsonObject
+      )
+    assertEquals("a", structure.frameFor(emptySet()))
+    assertEquals("b", structure.frameFor(setOf("edgeButton")))
+    assertEquals("c", structure.frameFor(setOf("overlays", "edgeButton")))
+    assertEquals(null, structure.frameFor(setOf("overlays")))
+  }
+
+  @Test
   fun `without a frame the screen-root builtin is left to the record path`() {
     val document = scaffolded()
     assertIs<ScreenRootFrame.Unwrapped.Document>(

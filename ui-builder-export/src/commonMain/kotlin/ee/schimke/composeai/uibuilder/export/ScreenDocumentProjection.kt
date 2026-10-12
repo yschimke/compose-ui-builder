@@ -159,7 +159,29 @@ object ScreenDocumentProjection {
        * flexpress at export and joined into the screen's file. See [VariableFontText].
        */
       val variableFontTexts: List<VariableFontText.Request> = emptyList(),
+      /**
+       * [ProjectedStructure.frameSlots] projected: each slot's children, for the screen frame's
+       * hole of the same name.
+       */
+      val frameSlots: Map<String, List<ScreenNode>> = emptyMap(),
     ) : Outcome {
+      /** The published five-field constructor, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(
+        document: ScreenDocument,
+        assetPlaceholders: List<AssetPlaceholder>,
+        themed: Boolean,
+        systemFontFamilies: List<String>,
+        variableFontTexts: List<VariableFontText.Request>,
+      ) : this(
+        document,
+        assetPlaceholders,
+        themed,
+        systemFontFamilies,
+        variableFontTexts,
+        emptyMap(),
+      )
+
       /**
        * [record] plus `MaterialTheme`, which a themed root's wrapper calls and no catalog records.
        * Only added to a themed screen: a record carrying `MaterialTheme` makes the generator refuse
@@ -329,6 +351,14 @@ object ScreenDocumentProjection {
       pass.node(roots.single())?.let { content ->
         if (theme == null) content else pass.themed(content, theme, screenName)
       }
+    // The frame's other holes, in the same pass: they read the screen's state like the root does.
+    if (theme != null && structure.frameSlots.isNotEmpty()) {
+      pass.reasons +=
+        "the design sets a theme on its surface, which wraps the frame's `content` but not its " +
+          structure.frameSlots.keys.sorted().joinToString { "`$it`" } +
+          "; set the theme on the catalog's screen instead"
+    }
+    val frameSlots = structure.frameSlots.mapValues { (_, ids) -> ids.mapNotNull { pass.node(it) } }
     val projected = root?.let {
       pass.finish(ScreenDocument(screenName, it, pass.state.values.toList()))
     }
@@ -354,6 +384,7 @@ object ScreenDocumentProjection {
       themed = theme != null,
       systemFontFamilies = pass.systemFontFamilies.toList(),
       variableFontTexts = VariableFontText.requests(pass.variableFontSpecs),
+      frameSlots = frameSlots,
     )
   }
 
