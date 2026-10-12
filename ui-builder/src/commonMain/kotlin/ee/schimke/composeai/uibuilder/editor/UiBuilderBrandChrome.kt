@@ -39,8 +39,16 @@ fun ProvideUiBuilderBrand(
 /** This scheme with [brand]'s accent as its primary role, and a legible colour on top of it. */
 internal fun ColorScheme.branded(brand: UiBuilderBrand?): ColorScheme {
   val accent = brand?.accentArgb?.let { Color(it.toInt()) } ?: return this
-  return copy(
-    primary = accent,
-    onPrimary = if (accent.luminance() > 0.4f) Color.Black else Color.White,
-  )
+  return copy(primary = accent, onPrimary = onAccent(accent))
+}
+
+/**
+ * Black or white, whichever contrasts more with [accent] (WCAG contrast ratio). The two tie at a
+ * relative luminance of about 0.179, so a mid-tone such as `#03A9F4` (≈0.35) takes black.
+ */
+internal fun onAccent(accent: Color): Color {
+  val l = accent.luminance()
+  val withBlack = (l + 0.05f) / 0.05f
+  val withWhite = 1.05f / (l + 0.05f)
+  return if (withBlack >= withWhite) Color.Black else Color.White
 }
