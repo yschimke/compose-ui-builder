@@ -167,6 +167,20 @@ class ComponentCallbackExportTest {
   }
 
   @Test
+  fun `components export alone as internal functions with named values and callbacks`() {
+    val outcome = ScreenExportGate.exportComponents(document(), record)
+    assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString())
+    val source = outcome.source
+    assertTrue(
+      "internal fun Choice(modifier: androidx.compose.ui.Modifier, label: kotlin.String, " +
+        "onGoButtonClick: () -> kotlin.Unit)" in source,
+      source,
+    )
+    assertTrue("onClick = onGoButtonClick" in source, source)
+    assertFalse("fun ChoiceScreen(" in source, source)
+  }
+
+  @Test
   fun `the screen still refuses to place a component with a handler that does nothing`() {
     val outcome = ScreenExportGate.export(document(), record)
     assertIs<ScreenExportGate.Outcome.Refused>(outcome)

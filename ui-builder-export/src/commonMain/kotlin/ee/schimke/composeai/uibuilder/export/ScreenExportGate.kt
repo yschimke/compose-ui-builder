@@ -185,6 +185,62 @@ object ScreenExportGate {
   }
 
   /**
+   * [document]'s reusable components as a file of `internal` composables and nothing else: no
+   * screen function. Each binding a component's body reads is a value parameter named for its key,
+   * and each action-free event on a node inside it is a callback named for the node and the event
+   * (`onCancelClick`), so code in the same module calls a component the way it would call one it
+   * wrote. The document's root, which only places the components to draw them in the builder, is
+   * not written.
+   */
+  fun exportComponents(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    exportProjections: Map<String, ExportProjection> = emptyMap(),
+    structure: CatalogScreenStructure? = null,
+  ): Outcome {
+    if (record == null) {
+      return Outcome.Refused(
+        listOf("no component record is configured for this catalog, so nothing can be exported")
+      )
+    }
+    return when (
+      val projected =
+        ScreenDocumentProjection.project(
+          document,
+          exportProjections,
+          slotReceivers = slotReceivers(exportProjections, record),
+          structure =
+            ProjectedStructure(
+              dslReceivers(exportProjections, record),
+              structure?.itemScope,
+              structure?.stringResources,
+            ),
+        )
+    ) {
+      is ScreenDocumentProjection.Outcome.Refused ->
+        Outcome.Refused((projected.reasons + unprovenComponents(document, record)).distinct())
+      is ScreenDocumentProjection.Outcome.Projected ->
+        when (
+          val generated =
+            ScreenGenerator.generate(
+              projected.document,
+              projected.resolvable(record.callableAliases()),
+              PACKAGE_NAME,
+              EXPRESSION_PACKAGES +
+                projectedOwners(exportProjections, record) +
+                stringResourcePackages(structure),
+              locals = structure?.locals.orEmpty(),
+              frame = null,
+              output = ScreenGenerator.Output.COMPONENTS,
+            )
+        ) {
+          is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
+          is ScreenGenerator.Result.Emitted -> Outcome.Emitted(generated.source)
+        }
+    }
+  }
+
+  /**
    * What a `stringResource(Res.string.key)` names, widened only when the catalog declares its
    * resource accessor: the resources runtime and the package its generated `Res` lives in.
    */
