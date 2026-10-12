@@ -387,11 +387,16 @@ object ScreenDocumentProjection {
     // Components are not behind this flag: a placement exports as a private composable in the same
     // file.
     if (!UiBuilderBuildFeatures.remoteCompose) {
+      // A click with no actions on a node inside a component definition is a callback parameter of
+      // that component: intent the caller handles, with nothing stateful in the document.
+      val callbacksOnly = componentNodes(document)
       document.nodes.values
         .filter {
           SHOW_BY_STATE in it.properties ||
             it.componentId == "layout/for-each" ||
-            it.eventBindings.isNotEmpty() ||
+            (it.eventBindings.isNotEmpty() &&
+              !(it.id in callbacksOnly &&
+                it.eventBindings.all { (event, actions) -> isIntent(event, actions) })) ||
             it.properties.values.any { value ->
               value is StateValueV1 || value is StateEqualsValueV1
             }
@@ -407,6 +412,17 @@ object ScreenDocumentProjection {
       variableFontTexts = VariableFontText.requests(pass.variableFontSpecs),
       frameSlots = frameSlots,
     )
+  }
+
+  /** Every node inside a component definition's body, reached through its slots. */
+  private fun componentNodes(document: DesignDocumentV1): Set<String> {
+    val reached = mutableSetOf<String>()
+    fun walk(id: String) {
+      if (!reached.add(id)) return
+      document.nodes[id]?.slots?.values?.flatten()?.forEach(::walk)
+    }
+    document.components.values.forEach { walk(it.root) }
+    return reached
   }
 
   /** One `asset/image` the source draws with a placeholder painter in place of its picture. */
@@ -543,8 +559,9 @@ object ScreenDocumentProjection {
 
     private fun modifierClick(node: DesignNodeV1): ChainLink? {
       if (node.componentId !in MODIFIER_CLICK_COMPONENTS) return null
-      val actions = node.eventBindings["click"].orEmpty()
-      if (actions.isEmpty()) return null
+      val actions = node.eventBindings["click"] ?: return null
+      // Inside a component an action-free click is still the caller's callback, on the modifier.
+      if (actions.isEmpty() && functionScope == null) return null
       val callback = callback(node, "click") ?: return null
       return ChainLink(
         "androidx.compose.foundation.clickable",
@@ -554,7 +571,11 @@ object ScreenDocumentProjection {
 
     private fun callback(node: DesignNodeV1, event: String): ScreenValue? {
       functionScope?.let { function ->
-        return function.capture("event:${node.id}:$event", null) { callback(node, event) }
+        // An action-free event is the component's API, so it reads as one (`onCancelClick`). A
+        // callback forwarding authored actions keeps its positional name, as before.
+        val intent = isIntent(event, node.eventBindings[event].orEmpty())
+        val name = if (intent) callbackName(node.id, event) else null
+        return function.capture("event:${node.id}:$event", null, name) { callback(node, event) }
       }
       val projected = node.eventBindings[event].orEmpty().mapNotNull { action(it, node.id, event) }
       val json = Json
@@ -573,6 +594,13 @@ object ScreenDocumentProjection {
         )
       }
     }
+
+    /** `cancel` + `click` → `onCancelClick`: the parameter a caller passes a node's event as. */
+    private fun callbackName(nodeId: String, event: String): String =
+      "on" +
+        (nodeId.split(Regex("[^A-Za-z0-9]+")) + event)
+          .filter { it.isNotEmpty() }
+          .joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
 
     private fun action(action: DesignActionV1, nodeId: String, event: String): ScreenAction? {
       val where = "node `$nodeId`.`eventBindings.$event`"
@@ -655,9 +683,14 @@ object ScreenDocumentProjection {
       val captures = linkedMapOf<String, Pair<JsonObject, () -> ScreenValue?>>()
       var root: ScreenNode? = null
 
-      fun capture(key: String, type: String?, supply: () -> ScreenValue?): ScreenValue? {
+      fun capture(
+        key: String,
+        type: String?,
+        preferredName: String? = null,
+        supply: () -> ScreenValue?,
+      ): ScreenValue? {
         val parameter =
-          captures.getOrPut(key) { parameter("capture${captures.size}", type) to supply }.first
+          captures.getOrPut(key) { parameter(captureName(preferredName), type) to supply }.first
         return scopedRead(
           "ParameterRead",
           "parameter",
@@ -665,6 +698,28 @@ object ScreenDocumentProjection {
           type ?: "kotlin.Function0",
         )
       }
+
+      /**
+       * [preferred] when it is a plain Kotlin name no other parameter of this function claims (a
+       * callback reads `onCancelClick`, not `capture0`); otherwise an opaque positional name.
+       */
+      private fun captureName(preferred: String?): String {
+        val taken =
+          setOf("modifier") +
+            bindings.fields.values.map { it.name } +
+            captures.values.map { it.first.getValue("name").jsonPrimitive.content }
+        val usable =
+          preferred != null &&
+            CALLBACK_NAME.matches(preferred) &&
+            preferred !in KOTLIN_HARD_KEYWORDS &&
+            preferred !in taken &&
+            !Regex("(argument|capture)\\d+").matches(preferred)
+        return if (usable) checkNotNull(preferred) else "capture${captures.size}"
+      }
+
+      /** The names this function's captured parameters already hold. */
+      fun parameterNames(): Set<String> =
+        captures.values.map { it.first.getValue("name").jsonPrimitive.content }.toSet()
 
       fun encode(): JsonObject = buildJsonObject {
         put("name", name)
@@ -754,7 +809,10 @@ object ScreenDocumentProjection {
           key !in KOTLIN_HARD_KEYWORDS &&
           key != "modifier" &&
           !Regex("(argument|capture)\\d+").matches(key)
-      return if (plain && scope.fields.values.none { it.name == key }) key else positional
+      // A callback captured earlier in the body may already hold the name (`onGoButtonClick`).
+      val callbacks = functionScope?.takeIf { it.bindings === scope }?.parameterNames().orEmpty()
+      return if (plain && scope.fields.values.none { it.name == key } && key !in callbacks) key
+      else positional
     }
 
     private fun supplied(value: UiValueV1, field: BoundField, where: String): ScreenValue? =
@@ -766,8 +824,11 @@ object ScreenDocumentProjection {
         return it
       }
       if (functionScope == null) return emptyMap()
+      // Inside a component every bound event with actions is a parameter, and so is an action-free
+      // click: the caller decides what that intent does. Other action-free events (a value change
+      // carries a value a zero-argument callback cannot) are left out, as before.
       return node.eventBindings
-        .filterValues { it.isNotEmpty() }
+        .filter { (event, actions) -> actions.isNotEmpty() || isIntent(event, actions) }
         .mapNotNull { (event, _) ->
           if (event == "click" && node.componentId in MODIFIER_CLICK_COMPONENTS) null
           else
@@ -938,7 +999,9 @@ object ScreenDocumentProjection {
 
     private fun scalarType(value: UiValueV1): String? =
       when (value) {
-        is StringValueV1 -> "kotlin.String"
+        is StringValueV1,
+        // A string resource argument is the translated `String` the component reads.
+        is ResourceValueV1 -> "kotlin.String"
         is BooleanValueV1 -> "kotlin.Boolean"
         is IntegerValueV1 -> "kotlin.Int"
         is DecimalValueV1 -> "kotlin.Float"
@@ -951,7 +1014,12 @@ object ScreenDocumentProjection {
     private fun scalar(value: UiValueV1, type: String, where: String): ScreenValue? {
       if (value is StateValueV1) return stateRead(value.variable, where)
       return when (type) {
-        "kotlin.String" -> (value as? StringValueV1)?.let { ScreenValue.Text(it.value) }
+        "kotlin.String" ->
+          when (value) {
+            is StringValueV1 -> ScreenValue.Text(value.value)
+            is ResourceValueV1 -> return stringResource(value.resourceKey, where)
+            else -> null
+          }
         "kotlin.Boolean" -> (value as? BooleanValueV1)?.let { ScreenValue.Bool(it.value) }
         "kotlin.Int" -> (value as? IntegerValueV1)?.let { ScreenValue.Whole(it.value) }
         "kotlin.Float" -> {
@@ -1640,6 +1708,60 @@ object ScreenDocumentProjection {
      * spacing, top-bar colour pairs, time-picker hour + minute, and colour-dot chains. Read one at
      * a time, the second would overwrite the first.
      */
+    /**
+     * A toggle button's `ToggleButtonShapes` for one of the kit's sizes, round or square: round is
+     * `ToggleButtonDefaults.shapesFor(height)`; square keeps the size's square shape at rest and
+     * pressed corner, and turns into a pill when checked (`checkedShape = roundShape`).
+     */
+    private fun toggleShapes(value: UiValueV1, where: String): ScreenValue? {
+      val name =
+        when (value) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else -> return refuse("$where must name a size: xs, s, m, l, xl, or xsSquare … xlSquare")
+        }
+      val square = name.endsWith("Square")
+      val size =
+        TOGGLE_SIZES[name.removeSuffix("Square")]
+          ?: return refuse("$where is `$name`, which is not a toggle button size")
+      fun member(member: String, typeFqn: String) =
+        ScreenValue.Reference(
+          rootFqn = TOGGLE_BUTTON_DEFAULTS,
+          members = listOf(member),
+          typeFqn = typeFqn,
+          requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        )
+      if (!square) {
+        return ScreenValue.Construct(
+          callableFqn = "$TOGGLE_BUTTON_DEFAULTS.shapesFor",
+          positional = listOfNotNull(size.height()),
+          typeFqn = TOGGLE_BUTTON_SHAPES,
+          requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        )
+      }
+      return ScreenValue.Construct(
+        callableFqn = "$TOGGLE_BUTTON_DEFAULTS.shapes",
+        named =
+          mapOf(
+            "shape" to member(size.squareShape, SHAPE),
+            "pressedShape" to member(size.pressedShape, SHAPE),
+            "checkedShape" to member("roundShape", SHAPE),
+          ),
+        typeFqn = TOGGLE_BUTTON_SHAPES,
+        requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+      )
+    }
+
+    private fun ToggleSize.height(): ScreenValue? =
+      heightMember?.let {
+        ScreenValue.Reference(
+          rootFqn = "androidx.compose.material3.ButtonDefaults",
+          members = listOf(it),
+          typeFqn = DP,
+          requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        )
+      } ?: dp(heightDp)
+
     private fun composite(
       node: DesignNodeV1,
       arguments: MutableMap<String, ScreenValue>,
@@ -1678,6 +1800,36 @@ object ScreenDocumentProjection {
                 requiredOptIns = bundle.optIns,
               )
           }
+        }
+      }
+      if (node.componentId in TOGGLE_BUTTONS) {
+        node.properties[TOGGLE_SHAPES]?.let { authored ->
+          spent += TOGGLE_SHAPES
+          toggleShapes(authored, "node `${node.id}`.`$TOGGLE_SHAPES`")?.let {
+            arguments[TOGGLE_SHAPES] = it
+          }
+        }
+      }
+      BORDER_STROKES[node.componentId]?.let { border ->
+        val color = node.properties[border.colorProperty] ?: return@let
+        spent += border.colorProperty
+        spent += border.widthProperty
+        val where = "node `${node.id}`.`${border.colorProperty}`"
+        val width =
+          when (val authored = node.properties[border.widthProperty]) {
+            null -> dp(1.0)
+            is DecimalValueV1 -> dp(authored.value)
+            is IntegerValueV1 -> dp(authored.value.toDouble())
+            else -> refuse("node `${node.id}`.`${border.widthProperty}` needs a number")
+          }
+        val stroke = colour(color, where)
+        if (width != null && stroke != null) {
+          arguments[border.parameter] =
+            ScreenValue.Construct(
+              callableFqn = "androidx.compose.foundation.BorderStroke",
+              positional = listOf(width, stroke),
+              typeFqn = "androidx.compose.foundation.BorderStroke",
+            )
         }
       }
       STATE_BUNDLES[node.componentId]?.let { bundle ->
@@ -3598,6 +3750,20 @@ object ScreenDocumentProjection {
   private const val STRING_RESOURCE_TYPE = "org.jetbrains.compose.resources.StringResource"
   /** A generated `Res.string` member name: a plain Kotlin identifier. */
   private val RESOURCE_KEY = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+  /**
+   * An event with no actions that is the component's API rather than authoring, which a caller
+   * supplies as `() -> Unit`: a click, or a toggle's change, whose reported value is only the
+   * complement of the `checked` the caller passed (the generator writes `{ _ -> onXCheckedChange()
+   * }`). A value change is not one: its value is what the user typed.
+   */
+  private fun isIntent(event: String, actions: List<*>): Boolean =
+    actions.isEmpty() && event in INTENT_EVENTS
+
+  private val INTENT_EVENTS = setOf("click", "checkedChange")
+
+  /** A generated callback parameter name: `on` and a plain Kotlin identifier. */
+  private val CALLBACK_NAME = Regex("on[A-Z][A-Za-z0-9]*")
   private const val DP = "androidx.compose.ui.unit.Dp"
   private const val SHAPE = "androidx.compose.ui.graphics.Shape"
 
@@ -4008,6 +4174,48 @@ object ScreenDocumentProjection {
    */
   private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
     mapOf(
+      // Where the rail's items sit along it: `WideNavigationRail(arrangement = Arrangement.Top)`.
+      // The record spells this parameter's type with a dot, not the `$` the layout tables use.
+      "m3/wide-navigation-rail" to
+        mapOf(
+          "arrangement" to
+            members(
+              "androidx.compose.foundation.layout.Arrangement.Vertical",
+              ARRANGEMENT,
+              "top" to "Top",
+              "center" to "Center",
+              "bottom" to "Bottom",
+            ),
+          // The rail's initial value, read by its state bundle below.
+          "state" to
+            members(
+              "androidx.compose.material3.WideNavigationRailValue",
+              "androidx.compose.material3.WideNavigationRailValue",
+              "collapsed" to "Collapsed",
+              "expanded" to "Expanded",
+            ),
+        ),
+      "m3/time-picker" to
+        mapOf(
+          "layoutType" to
+            members(
+              "androidx.compose.material3.TimePickerLayoutType",
+              "androidx.compose.material3.TimePickerLayoutType",
+              "vertical" to "Vertical",
+              "horizontal" to "Horizontal",
+            )
+        ),
+      "m3/tri-state-checkbox" to
+        mapOf(
+          "state" to
+            members(
+              "androidx.compose.ui.state.ToggleableState",
+              "androidx.compose.ui.state.ToggleableState",
+              "on" to "On",
+              "off" to "Off",
+              "indeterminate" to "Indeterminate",
+            )
+        ),
       "asset/image" to
         mapOf(
           "contentScale" to
@@ -4193,7 +4401,138 @@ object ScreenDocumentProjection {
           optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
           factoryNames = mapOf("containerColor" to "toolbarContainerColor"),
         ),
+      "m3/top-app-bar" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "$TOP_APP_BAR_DEFAULTS.topAppBarColors",
+          typeFqn = "androidx.compose.material3.TopAppBarColors",
+          roles = listOf("containerColor", "scrolledContainerColor"),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3),
+        ),
+      // The icon buttons take every colour through one `IconButtonColors`, and each style has its
+      // own factory, so an unset role keeps that style's default.
+      "m3/icon-button" to iconButtonColors("iconButtonColors"),
+      "m3/filled-icon-button" to iconButtonColors("filledIconButtonColors"),
+      "m3/filled-tonal-icon-button" to iconButtonColors("filledTonalIconButtonColors"),
+      "m3/outlined-icon-button" to iconButtonColors("outlinedIconButtonColors"),
+      // Compose has no error flag on these controls: the kit's error state is the error role in
+      // the colour bundle.
+      "m3/radio-button" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "androidx.compose.material3.RadioButtonDefaults.colors",
+          typeFqn = "androidx.compose.material3.RadioButtonColors",
+          roles =
+            listOf(
+              "selectedColor",
+              "unselectedColor",
+              "disabledSelectedColor",
+              "disabledUnselectedColor",
+            ),
+          optIns = emptyList(),
+        ),
+      "m3/checkbox" to checkboxColors(),
+      "m3/tri-state-checkbox" to checkboxColors(),
+      "m3/list-item" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "androidx.compose.material3.ListItemDefaults.colors",
+          typeFqn = "androidx.compose.material3.ListItemColors",
+          roles =
+            listOf(
+              "containerColor",
+              "headlineColor",
+              "leadingIconColor",
+              "overlineColor",
+              "supportingColor",
+              "trailingIconColor",
+            ),
+          optIns = emptyList(),
+        ),
+      "m3/wide-navigation-rail" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "androidx.compose.material3.WideNavigationRailDefaults.colors",
+          typeFqn = "androidx.compose.material3.WideNavigationRailColors",
+          roles = listOf("containerColor"),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        ),
     )
+
+  private fun iconButtonColors(factory: String) =
+    ColorBundle(
+      parameter = "colors",
+      factoryFqn = "androidx.compose.material3.IconButtonDefaults.$factory",
+      typeFqn = "androidx.compose.material3.IconButtonColors",
+      roles =
+        listOf("containerColor", "contentColor", "disabledContainerColor", "disabledContentColor"),
+      optIns = emptyList(),
+    )
+
+  private fun checkboxColors() =
+    ColorBundle(
+      parameter = "colors",
+      factoryFqn = "androidx.compose.material3.CheckboxDefaults.colors",
+      typeFqn = "androidx.compose.material3.CheckboxColors",
+      roles = listOf("checkedColor", "uncheckedColor", "checkmarkColor"),
+      optIns = emptyList(),
+    )
+
+  /**
+   * An outline drawn as a `BorderStroke(width, color)`: the colour is required, the width defaults
+   * to Material's 1dp outline.
+   */
+  private class BorderStrokeTarget(
+    val parameter: String,
+    val colorProperty: String,
+    val widthProperty: String,
+  )
+
+  private const val TOGGLE_SHAPES = "shapes"
+  private const val TOGGLE_BUTTON_DEFAULTS = "androidx.compose.material3.ToggleButtonDefaults"
+  private const val TOGGLE_BUTTON_SHAPES = "androidx.compose.material3.ToggleButtonShapes"
+  private val TOGGLE_BUTTONS =
+    setOf(
+      "m3/toggle-button",
+      "m3/elevated-toggle-button",
+      "m3/tonal-toggle-button",
+      "m3/outlined-toggle-button",
+    )
+
+  /**
+   * One of the kit's five button sizes, as `ToggleButtonDefaults` and `ButtonDefaults` name them.
+   * Small has no `ButtonDefaults` height constant; it is the 40dp minimum.
+   */
+  private class ToggleSize(
+    val heightMember: String?,
+    val heightDp: Double,
+    val squareShape: String,
+    val pressedShape: String,
+  )
+
+  private val TOGGLE_SIZES =
+    mapOf(
+      "xs" to
+        ToggleSize(
+          "ExtraSmallContainerHeight",
+          32.0,
+          "extraSmallSquareShape",
+          "extraSmallPressedShape",
+        ),
+      "s" to ToggleSize(null, 40.0, "squareShape", "pressedShape"),
+      "m" to ToggleSize("MediumContainerHeight", 56.0, "mediumSquareShape", "mediumPressedShape"),
+      "l" to ToggleSize("LargeContainerHeight", 96.0, "largeSquareShape", "largePressedShape"),
+      "xl" to
+        ToggleSize(
+          "ExtraLargeContainerHeight",
+          136.0,
+          "extraLargeSquareShape",
+          "extraLargePressedShape",
+        ),
+    )
+
+  private val BORDER_STROKES: Map<String, BorderStrokeTarget> =
+    mapOf("m3/outlined-icon-button" to BorderStrokeTarget("border", "borderColor", "borderWidthDp"))
 
   /**
    * Properties that configure a component's remembered state rather than its call (`TimePicker`'s
@@ -4240,7 +4579,16 @@ object ScreenDocumentProjection {
             ),
           // None: the record lists no `requiredOptIns` for this call.
           optIns = emptyList(),
-        )
+        ),
+      // A wide rail starts collapsed or expanded: `rememberWideNavigationRailState(initialValue)`.
+      "m3/wide-navigation-rail" to
+        StateBundle(
+          parameter = "state",
+          factoryFqn = "androidx.compose.material3.rememberWideNavigationRailState",
+          typeFqn = "androidx.compose.material3.WideNavigationRailState",
+          arguments = mapOf("state" to StateArgument("initialValue")),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        ),
     )
 
   /**
