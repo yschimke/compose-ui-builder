@@ -114,7 +114,16 @@ private class NewDesignFormState(
 
   var otherTypesExpanded by mutableStateOf(!initialCatalog.isPrimary)
   var selectedCatalogId by mutableStateOf(initialCatalog.systemId)
-  var selectedTemplateId by mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
+  /**
+   * The template group chosen as the target, when the picker offers a single catalog's groups
+   * ([newDesignTargetGroups]); null while the choice is between catalogs.
+   */
+  var selectedGroup by
+    mutableStateOf(
+      initialCatalog.takeIf { catalogs.size == 1 }?.let(::newDesignTargetGroups)?.firstOrNull()
+    )
+  var selectedTemplateId by
+    mutableStateOf(templatesForTarget(initialCatalog, selectedGroup).firstOrNull()?.id.orEmpty())
   // Pre-filled, so a design can be created in one click; a person who wants their own name
   // overwrites it, and one who wants another roll asks for it.
   var designId by mutableStateOf(initialDesignId ?: NewDesignNames.random())
@@ -129,10 +138,12 @@ private class NewDesignFormState(
   val selectedCatalog: UiBuilderNewDesignCatalog
     get() = catalogs.first { it.systemId == selectedCatalogId }
 
+  /** The starting points on offer for the chosen catalog and, when there is one, target group. */
+  val targetTemplates: List<UiBuilderNewDesignTemplate>
+    get() = templatesForTarget(selectedCatalog, selectedGroup).ifEmpty { selectedCatalog.templates }
+
   val selectedTemplate: UiBuilderNewDesignTemplate
-    get() =
-      selectedCatalog.templates.firstOrNull { it.id == selectedTemplateId }
-        ?: selectedCatalog.templates.first()
+    get() = targetTemplates.firstOrNull { it.id == selectedTemplateId } ?: targetTemplates.first()
 
   val designIdValid: Boolean
     get() = designId.matches(NEW_DESIGN_ID)
@@ -143,8 +154,21 @@ private class NewDesignFormState(
   fun selectCatalog(catalog: UiBuilderNewDesignCatalog) {
     if (selectedCatalogId == catalog.systemId) return
     selectedCatalogId = catalog.systemId
+    selectedGroup = null
     selectedTemplateId = catalog.templates.first().id
   }
+
+  fun select(choice: NewDesignTypeChoice) {
+    val catalog = catalogs.first { it.systemId == choice.catalogSystemId }
+    if (choice.group == null) return selectCatalog(catalog)
+    if (selectedCatalogId == catalog.systemId && selectedGroup == choice.group) return
+    selectedCatalogId = catalog.systemId
+    selectedGroup = choice.group
+    selectedTemplateId = templatesForTarget(catalog, choice.group).first().id
+  }
+
+  fun isSelected(choice: NewDesignTypeChoice): Boolean =
+    selectedCatalogId == choice.catalogSystemId && selectedGroup == choice.group
 
   fun addVariable(): Boolean {
     if (!variableNameValid || !newDesignInitialValueValid(variableKind, variableInitial))
@@ -156,50 +180,52 @@ private class NewDesignFormState(
   }
 }
 
-/** The primary types have one entry each; additional host catalogs remain available on demand. */
+/**
+ * "What are you designing?": the row of [NewDesignTypeOptions.primary] cards
+ * ([newDesignTypeOptions] decides what they are), and any other catalogs behind "Other design
+ * types…".
+ */
 @Composable
-private fun NewDesignTypePicker(form: NewDesignFormState) {
-  val primaryIds = listOf("m3-catalog", "wear-m3", "remote-m3")
-  val primary = primaryIds.mapNotNull { id -> form.catalogs.firstOrNull { it.systemId == id } }
-  val other = form.catalogs.filter { it.systemId !in primaryIds }
+private fun NewDesignTypePicker(form: NewDesignFormState, picker: NewDesignTypeOptions) {
+  val other = picker.other
   Text("1. What are you designing?", style = MaterialTheme.typography.titleSmall)
-  Row(
-    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).selectableGroup(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    primary.forEach { catalog ->
-      val (label, description) =
-        when (catalog.systemId) {
-          "m3-catalog" -> "Mobile app" to "Phone & tablet"
-          "wear-m3" -> "Wear app" to "Watch screens"
-          else -> "Remote Compose" to "Watch widgets & clocks"
-        }
-      val isSelected = form.selectedCatalogId == catalog.systemId
-      Surface(
-        modifier =
-          Modifier.weight(1f)
-            .fillMaxHeight()
-            .selectable(
-              selected = isSelected,
-              role = Role.RadioButton,
-              onClick = { form.selectCatalog(catalog) },
+  // Three to a row: past that a card is too narrow for its title, so further cards wrap.
+  picker.primary.chunked(TYPE_CARDS_PER_ROW).forEach { row ->
+    Row(
+      modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).selectableGroup(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      row.forEach { choice ->
+        val isSelected = form.isSelected(choice)
+        Surface(
+          modifier =
+            Modifier.weight(1f)
+              .fillMaxHeight()
+              .selectable(
+                selected = isSelected,
+                role = Role.RadioButton,
+                onClick = { form.select(choice) },
+              ),
+          shape = RoundedCornerShape(12.dp),
+          color =
+            if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+            else MaterialTheme.colorScheme.surface,
+          border =
+            BorderStroke(
+              1.dp,
+              if (isSelected) MaterialTheme.colorScheme.primary
+              else MaterialTheme.colorScheme.outlineVariant,
             ),
-        shape = RoundedCornerShape(12.dp),
-        color =
-          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-          else MaterialTheme.colorScheme.surface,
-        border =
-          BorderStroke(
-            1.dp,
-            if (isSelected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.outlineVariant,
-          ),
-      ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Text(label, style = MaterialTheme.typography.titleSmall)
-          Text(description, style = MaterialTheme.typography.bodySmall)
+        ) {
+          Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(choice.title, style = MaterialTheme.typography.titleSmall)
+            choice.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+          }
         }
       }
+      // Keep a short last row's cards the width of the full rows above it.
+      if (picker.primary.size > TYPE_CARDS_PER_ROW)
+        repeat(TYPE_CARDS_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
     }
   }
   if (other.isNotEmpty()) {
@@ -266,9 +292,12 @@ private fun NewDesignChoice(
 private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) {
 
   Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    // A host offering one catalog has no type to choose, so the form starts at the template.
-    val oneCatalog = LocalUiBuilderBrand.current?.singleCatalog == true && form.catalogs.size == 1
-    if (!oneCatalog) NewDesignTypePicker(form)
+    val brand = LocalUiBuilderBrand.current
+    val picker = remember(form.catalogs, brand) { newDesignTypeOptions(form.catalogs, brand) }
+    // A host offering one catalog has no type to choose, so the form starts at the template —
+    // unless that catalog's templates are grouped, when the groups are the choice.
+    val oneCatalog = brand?.singleCatalog == true && form.catalogs.size == 1 && !picker.byGroup
+    if (!oneCatalog) NewDesignTypePicker(form, picker)
     Text(
       if (oneCatalog) "Choose a starting point" else "2. Choose a starting point",
       style = MaterialTheme.typography.titleSmall,
@@ -277,9 +306,11 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
       modifier = Modifier.selectableGroup(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      val templates = form.selectedCatalog.templates
-      // Headed only when the catalog offers more than one kind of thing, in the catalog's order.
-      val headed = templates.mapNotNull { it.group }.distinct().size > 1
+      val templates = form.targetTemplates
+      // Headed only when the catalog offers more than one kind of thing, in the catalog's order —
+      // and not when the picker already chose between those kinds.
+      val headed =
+        form.selectedGroup == null && templates.mapNotNull { it.group }.distinct().size > 1
       templates.forEachIndexed { index, template ->
         if (
           headed &&
@@ -841,6 +872,7 @@ fun UiBuilderNewDesignScreen(
                 onBrowseDesigns = onBrowseDesigns,
                 onMoveDesign = onMoveDesign,
                 loadThumbnail = loadThumbnail,
+                catalogs = catalogs,
               )
             }
             val notesPanel: @Composable (Modifier) -> Unit = { modifier ->
@@ -924,7 +956,13 @@ private fun NewDesignHomePanel(
     ) {
       Text("New design", style = MaterialTheme.typography.titleMedium)
       Text(
-        "Choose a design type, then start blank or use a template.",
+        if (
+          LocalUiBuilderBrand.current?.singleCatalog == true &&
+            form.catalogs.size == 1 &&
+            newDesignTargetGroups(form.catalogs.single()).isEmpty()
+        )
+          "Start blank or use a template."
+        else "Choose a design type, then start blank or use a template.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -950,6 +988,8 @@ internal fun ExistingDesignsPanel(
   onBrowseDesigns: (() -> Unit)?,
   onMoveDesign: ((designId: String, folder: String?) -> Unit)?,
   loadThumbnail: (suspend (designId: String, revision: Long) -> ImageBitmap?)? = null,
+  /** The catalogs this page offers, which name each design's kind and say which are widgets. */
+  catalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
 ) {
   Surface(
     modifier = modifier,
@@ -1002,6 +1042,7 @@ internal fun ExistingDesignsPanel(
                         onCopyDesign = onCopyDesign,
                         onMoveDesign = onMoveDesign,
                         loadThumbnail = loadThumbnail,
+                        catalogs = catalogs,
                       )
                     }
                   }
@@ -1037,6 +1078,7 @@ private fun ExistingDesignCard(
   onCopyDesign: ((String) -> Unit)?,
   onMoveDesign: ((String, String?) -> Unit)?,
   loadThumbnail: (suspend (String, Long) -> ImageBitmap?)?,
+  catalogs: List<UiBuilderNewDesignCatalog>,
 ) {
   Surface(
     modifier = modifier,
@@ -1045,10 +1087,10 @@ private fun ExistingDesignCard(
     color = MaterialTheme.colorScheme.surface,
   ) {
     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      if (loadThumbnail != null) DesignThumbnail(design, loadThumbnail, onOpenDesign)
+      if (loadThumbnail != null) DesignThumbnail(design, loadThumbnail, onOpenDesign, catalogs)
       Text(design.title.ifBlank { design.designId }, style = MaterialTheme.typography.titleMedium)
       Text(
-        listOf(homeDesignKindLabel(design.catalogSystemId), design.updatedLabel)
+        listOf(homeDesignKindLabel(design.catalogSystemId, catalogs), design.updatedLabel)
           .filter { it.isNotBlank() }
           .joinToString(" · "),
         style = MaterialTheme.typography.bodySmall,
@@ -1081,15 +1123,6 @@ private fun ExistingDesignCard(
     }
   }
 }
-
-private fun homeDesignKindLabel(systemId: String): String =
-  when (systemId) {
-    "m3-catalog" -> "Mobile app"
-    "wear-m3" -> "Wear app"
-    "remote-m3" -> "Wear widget"
-    "a2ui-catalog" -> "A2UI surface"
-    else -> systemId
-  }
 
 /** A sentence about who this page is signed in as, and the one thing to do about it. */
 @Composable
@@ -1242,6 +1275,7 @@ private fun DesignThumbnail(
   design: UiBuilderHomeDesign,
   loadThumbnail: suspend (designId: String, revision: Long) -> ImageBitmap?,
   onOpenDesign: ((String) -> Unit)?,
+  catalogs: List<UiBuilderNewDesignCatalog>,
 ) {
   val revision = design.revision
   var picture by remember(design.designId, revision) { mutableStateOf<ImageBitmap?>(null) }
@@ -1265,7 +1299,7 @@ private fun DesignThumbnail(
   DesignThumbnailFrame(previewModifier) {
     val image = picture
     if (image != null) {
-      val isWidget = design.catalogSystemId == "remote-m3"
+      val isWidget = isWidgetDesign(design.catalogSystemId, catalogs)
       val ratio = image.width.toFloat() / image.height
       val imageModifier =
         if (isWidget)
@@ -1411,3 +1445,5 @@ internal fun homeDesignFolders(
       compareBy<Pair<String?, List<UiBuilderHomeDesign>>> { it.first == null }
         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.first.orEmpty() }
     )
+
+private const val TYPE_CARDS_PER_ROW = 3

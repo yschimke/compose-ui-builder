@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorColors
 import ee.schimke.composeai.uibuilder.editor.ExistingDesignsPanel
+import ee.schimke.composeai.uibuilder.editor.ProvideUiBuilderBrand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
@@ -484,6 +485,132 @@ class UiBuilderHomeScreenTest {
         )
       onNodeWithContentDescription("More actions for wear-list").performClick()
       onNodeWithText("Move to folder").assertIsDisplayed()
+    }
+
+  private val haCards =
+    UiBuilderNewDesignCatalog(
+      systemId = "ha-cards",
+      label = "Home Assistant",
+      description = "Dashboard cards and widgets",
+      primary = true,
+      catalogOwned = true,
+      templates =
+        listOf(
+          UiBuilderNewDesignTemplate(
+            "tile",
+            "Tile card",
+            "One entity, its icon and state.",
+            group = "Dashboard card",
+          ),
+          UiBuilderNewDesignTemplate(
+            "entities",
+            "Entities card",
+            "A titled list of entities.",
+            group = "Dashboard card",
+          ),
+          UiBuilderNewDesignTemplate(
+            "wear-entity",
+            "Entity widget",
+            "One entity on a watch widget.",
+            group = "Wear widget",
+          ),
+          UiBuilderNewDesignTemplate(
+            "launcher-entity",
+            "Entity widget",
+            "One entity on the home screen.",
+            group = "Launcher widget",
+          ),
+        ),
+    )
+
+  private fun ComposeUiTest.captureEvidence(name: String) {
+    val folder =
+      File(System.getProperty("uiBuilderProjectDir"), "build/new-design-evidence").apply {
+        mkdirs()
+      }
+    File(folder, "$name.png")
+      .writeBytes(
+        requireNotNull(
+            Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap())
+              .encodeToData(EncodedImageFormat.PNG)
+          )
+          .bytes
+      )
+  }
+
+  @Test
+  fun `a single-catalog host chooses between the catalog's template groups`() =
+    runDesktopComposeUiTest(width = 520, height = 900) {
+      var created: Pair<String, String>? = null
+      setContent {
+        ProvideUiBuilderBrand(
+          UiBuilderBrand(name = "Home Assistant", catalogs = listOf("ha-cards")),
+          openHome = {},
+        ) {
+          UiBuilderNewDesignScreen(
+            catalogs = listOf(haCards),
+            initialDesignId = "sunny-otter",
+            initialCatalogSystemId = "ha-cards",
+            releaseNotes = emptyList(),
+            onCreate = { catalog, _, template, _ -> created = catalog to template },
+          )
+        }
+      }
+      onNodeWithText("1. What are you designing?").assertIsDisplayed()
+      onNodeWithText("Dashboard card").assertIsSelected()
+      onNodeWithText("Tile card").assertIsDisplayed()
+      onNodeWithText("Entity widget").assertDoesNotExist()
+      captureEvidence("ha-dashboard-card")
+      onNodeWithText("Entities card").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("ha-cards" to "entities", created)
+      onNodeWithText("Wear widget").performScrollTo().performClick()
+      onNodeWithText("Tile card").assertDoesNotExist()
+      onNodeWithText("One entity on a watch widget.").assertIsDisplayed()
+      captureEvidence("ha-wear-widget")
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("ha-cards" to "wear-entity", created)
+      onNodeWithText("Launcher widget").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("ha-cards" to "launcher-entity", created)
+    }
+
+  @Test
+  fun `a brand that narrows the catalogs offers each of them in the row`() =
+    runDesktopComposeUiTest(width = 520, height = 900) {
+      val tiles =
+        UiBuilderNewDesignCatalog(
+          systemId = "ha-tiles",
+          label = "Wall tablet",
+          description = "Full-screen kiosk panels",
+          catalogOwned = true,
+          templates = listOf(UiBuilderNewDesignTemplate("panel", "Panel", "A blank panel.")),
+        )
+      setContent {
+        ProvideUiBuilderBrand(
+          UiBuilderBrand(name = "Home Assistant", catalogs = listOf("ha-cards", "ha-tiles")),
+          openHome = {},
+        ) {
+          UiBuilderNewDesignScreen(
+            catalogs = listOf(haCards, tiles),
+            initialDesignId = "sunny-otter",
+            initialCatalogSystemId = "ha-cards",
+            releaseNotes = emptyList(),
+            onCreate = { _, _, _, _ -> },
+          )
+        }
+      }
+      // The app bar and the catalog's own card both say it.
+      onAllNodesWithText("Home Assistant").assertCountEquals(2)
+      onNodeWithText("Dashboard cards and widgets").assertIsDisplayed()
+      // Not promoted, but the host chose to offer it: in the row, not behind "Other design types".
+      onNodeWithText("Wall tablet").assertIsDisplayed()
+      onNodeWithText("Other design types…").assertDoesNotExist()
+      // Beside another catalog, the groups head sections of the starting points again.
+      onNodeWithText("Dashboard card").performScrollTo().assertIsDisplayed()
+      captureEvidence("ha-two-catalogs")
+      onNodeWithText("Wall tablet").performClick()
+      onNodeWithText("Panel").assertIsDisplayed()
     }
 
   private fun resource(path: String): String =

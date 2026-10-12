@@ -252,4 +252,27 @@ class CatalogOwnedNewDesignTest {
       )
     assertEquals(listOf("m3-catalog", "a2ui-catalog"), cards.map { it.systemId })
   }
+
+  @Test
+  fun `a catalog can describe its type card and promote itself into the row`() {
+    val ha =
+      withNewDesign(
+        catalog("ha-cards", "mobile", null, listOf("ui-builder/designs/blank.json")),
+        """{"label": "Home Assistant", "description": "Cards, widgets and tiles", "primary": true}""",
+      )
+    val card = catalogOwnedNewDesignCatalog(ha)
+    assertEquals("Home Assistant", card.label)
+    assertEquals("Cards, widgets and tiles", card.description)
+    assertEquals(true, card.primary)
+    assertTrue(card.isPrimary)
+    // Saying nothing leaves both to the defaults: no second line of its own, not in the row.
+    val quiet = catalogOwnedNewDesignCatalog(catalog("ha-cards", "mobile", null, null))
+    assertEquals(null, quiet.description)
+    assertEquals(null, quiet.primary)
+    assertFalse(quiet.isPrimary)
+    // A built-in primary catalog can step out of the row.
+    assertFalse(
+      catalogOwnedNewDesignCatalog(withNewDesign(wear, """{"primary": false}""")).isPrimary
+    )
+  }
 }

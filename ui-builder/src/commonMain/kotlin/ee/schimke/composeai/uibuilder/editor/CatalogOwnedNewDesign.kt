@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -16,10 +17,11 @@ import kotlinx.serialization.json.jsonPrimitive
  * The new-design chooser's card for a catalog that answers for itself, built only from the served
  * catalog.
  *
- * Label: `newDesign.label`, then `platformLabel`, then the catalog's name. Templates: those
- * `templates` names, carded from matching `newDesign.templates` entries and sorted by their
- * `order`. Without a `newDesign` block, templates are named after their files rather than from a
- * table keyed by catalog id.
+ * Label: `newDesign.label`, then `platformLabel`, then the catalog's name; `newDesign.description`
+ * is the type card's second line and `newDesign.primary` its place in the picker
+ * ([newDesignTypeOptions]). Templates: those `templates` names, carded from matching
+ * `newDesign.templates` entries and sorted by their `order`. Without a `newDesign` block, templates
+ * are named after their files rather than from a table keyed by catalog id.
  */
 fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCatalog {
   val systemId = catalog.benchmark.catalogSystemId
@@ -45,6 +47,8 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
     systemId = systemId,
     label = label ?: titleOf(systemId),
     platform = UiBuilderCatalogPlatform.from(semantics),
+    description = chooser?.string("description"),
+    primary = (chooser?.get("primary") as? JsonPrimitive)?.booleanOrNull,
     templates =
       ids
         .withIndex()
@@ -141,14 +145,13 @@ fun revealedNewDesignCatalogs(urlCatalogSystemId: String?): Set<String> =
   setOfNotNull(urlCatalogSystemId?.takeIf(String::isNotBlank))
 
 /**
- * Whether the chooser lists this card among the primary types rather than under "other types":
- * built-in cards by their id list, catalog-owned cards by whether their declared platform is a
- * screen-authoring one.
+ * Whether the chooser lists this card among the primary types rather than under "other types": what
+ * the catalog's `newDesign.primary` says, else whether it is one of the three catalogs the row has
+ * always held. A brand that narrows the catalogs puts every one in the row regardless
+ * ([newDesignTypeOptions]).
  */
 val UiBuilderNewDesignCatalog.isPrimary: Boolean
-  get() =
-    if (catalogOwned) platform != UiBuilderCatalogPlatform.A2UI
-    else systemId in BUILT_IN_PRIMARY_CATALOGS
+  get() = primary ?: (systemId in BUILT_IN_PRIMARY_CATALOGS)
 
 private val BUILT_IN_PRIMARY_CATALOGS = listOf("m3-catalog", "wear-m3", "remote-m3")
 
