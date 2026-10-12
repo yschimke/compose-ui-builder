@@ -2270,12 +2270,16 @@ object ScreenDocumentProjection {
       where: String,
       scope: String?,
     ): ChainLink? {
-      if (scope != ROW_SCOPE && scope != COLUMN_SCOPE) {
+      if (scope !in WEIGHT_SCOPES) {
         refuse(
           "$where is a layout weight, which `Modifier.weight` supplies from a row's or column's " +
             "scope; this node sits " +
             (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
         )
+        return null
+      }
+      if (fill != null && scope !in FILL_WEIGHT_SCOPES) {
+        refuse("$where sets `fill`, which `$scope.weight` does not take")
         return null
       }
       if (number == null) {
@@ -4427,6 +4431,14 @@ object ScreenDocumentProjection {
   private const val BOX_CHILDREN_SLOT = "children"
 
   private const val COLUMN_SCOPE = "androidx.compose.foundation.layout.ColumnScope"
+
+  /** Wear's `ButtonGroup` content scope, whose `Modifier.weight(weight)` shares out the group. */
+  private const val BUTTON_GROUP_SCOPE = "androidx.wear.compose.material3.ButtonGroupScope"
+
+  /** The library scopes that declare `Modifier.weight`, and those whose `weight` takes `fill`. */
+  private val FILL_WEIGHT_SCOPES = setOf(ROW_SCOPE, COLUMN_SCOPE)
+
+  private val WEIGHT_SCOPES = FILL_WEIGHT_SCOPES + BUTTON_GROUP_SCOPE
   private const val BOX_SCOPE = "androidx.compose.foundation.layout.BoxScope"
 
   /**
