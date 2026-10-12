@@ -484,6 +484,30 @@ Child-to-host events reuse UI Builder event bindings:
 This boundary is intentionally directional. Remote Compose document-local mutations stay local;
 documents publish values they want the host to observe through host actions.
 
+### Host inputs
+
+A design's own document is the other side of that boundary when a host embeds UI Builder to design
+the documents *it* plays and feeds ([#750](https://github.com/yschimke/compose-ui-builder/issues/750)).
+A state variable declared with `"persistence": "host"` is a **host input**: a value the host owns
+and pushes by name into the running document.
+
+```json
+"stateVariables": {
+  "light.s0.name": {"type": "text", "valueType": "string", "initialValue": "Kitchen",
+                    "nullable": false, "persistence": "host"}
+}
+```
+
+- The Remote Compose export declares it as a named value in the User domain under its declared
+  name, verbatim (`RemoteString.createNamedRemoteString("light.s0.name", "Kitchen",
+  RemoteState.Domain.User)`), never as an anonymous `rememberMutableRemote…`. The name is the
+  contract the host pushes by, so it is not mangled into an identifier; only the Kotlin local is.
+- The initial value is what the document shows until the host pushes one, and what the canvas
+  previews.
+- A host input is read-only to the design: a control bound to one reads it and writes nothing
+  back, and an action that writes one is refused at export. Interaction goes to the host as a host
+  action instead.
+
 ## Theme and other player services
 
 The node defaults to `inherit`, mapping the outer light/dark/system environment to the nested

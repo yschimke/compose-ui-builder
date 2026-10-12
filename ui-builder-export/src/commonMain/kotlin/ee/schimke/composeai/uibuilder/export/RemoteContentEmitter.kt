@@ -1085,6 +1085,8 @@ internal class RemoteContentEmitter(
         node.eventBindings[event],
       ) ?: return authored
     val declaration = document.stateVariables[variable] as? JsonObject ?: return authored
+    // A host input is the host's to change: the control reads it and writes nothing back.
+    if (declaration.isHostInput()) return authored
     if (declaration.plainString("valueType") != "bool") return authored
     val writeBack =
       JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive(variable)))
@@ -1177,6 +1179,12 @@ internal class RemoteContentEmitter(
     val valueType = declared?.plainString("valueType")
     if (declared == null || valueType == null) {
       refusals += "`${node.id}` writes `$variable` on `$event`, which the design does not declare"
+      return null
+    }
+    if (declared.isHostInput()) {
+      refusals +=
+        "`${node.id}` writes host input `$variable` on `$event`; a host input is read-only, " +
+          "the host pushes it by name"
       return null
     }
     val target = remoteState(variable, valueType, "`${node.id}`.$event") ?: return null
@@ -1296,6 +1304,16 @@ internal class RemoteContentEmitter(
           }
       return current.capture("state:$variable", type) { remoteState(variable, expectedType, where) }
     }
+    if (declaration?.isHostInput() == true) {
+      // A host input keeps its declared name, verbatim, as a named value in the User domain: the
+      // name is the contract a host pushes values by, so it is never mangled to an identifier.
+      val type = remoteTypeName(expectedType)
+      stateWrites.getOrPut(variable) {
+        "val $target = Remote$type.createNamedRemote$type(\"${variable.escaped()}\", " +
+          "${remoteInitial(expectedType, initial)}, RemoteState.Domain.User)"
+      }
+      return target
+    }
     val factory = stateFactory(expectedType) ?: return null
     stateWrites.getOrPut(variable) {
       "val $target = $factory(${remoteInitial(expectedType, initial)})"
@@ -1390,6 +1408,14 @@ internal class RemoteContentEmitter(
     lines += "$pad}"
     return lines
   }
+
+  private fun remoteTypeName(valueType: String): String =
+    when (valueType) {
+      "bool" -> "Boolean"
+      "int" -> "Int"
+      "float" -> "Float"
+      else -> "String"
+    }
 
   private fun stateFactory(valueType: String): String? =
     when (valueType) {
@@ -3347,7 +3373,14 @@ internal class RemoteContentEmitter(
       if (usesValueChange) imports += "androidx.compose.remote.creation.compose.action.valueChange"
       stateWrites.values.forEach { declaration ->
         val factory = declaration.substringAfter("= ").substringBefore('(')
-        imports += "androidx.compose.remote.creation.compose.state.$factory"
+        if ('.' in factory) {
+          // `RemoteString.createNamedRemoteString(…, RemoteState.Domain.User)`: a host input.
+          val type = factory.substringBefore('.')
+          imports += "androidx.compose.remote.creation.compose.state.$type"
+          imports += "androidx.compose.remote.creation.compose.state.RemoteState"
+        } else {
+          imports += "androidx.compose.remote.creation.compose.state.$factory"
+        }
       }
     }
     if (usesRemoteInt) imports += "androidx.compose.remote.creation.compose.state.ri"
@@ -4098,6 +4131,15 @@ internal fun String.argbLiteral(): String {
 }
 
 private val SIX_DIGIT_HEX = Regex("[0-9A-F]{6}")
+
+/**
+ * A state variable the host owns (`"persistence": "host"`): the design reads it and never writes
+ * it, and the export names it so a host can push values into the running document.
+ */
+internal fun JsonObject.isHostInput(): Boolean =
+  (this["persistence"] as? JsonPrimitive)?.contentOrNull == HOST_PERSISTENCE
+
+internal const val HOST_PERSISTENCE = "host"
 
 /** Escaped for a Kotlin `"…"` literal. `$` matters for Lottie JSON, which is arbitrary text. */
 private fun String.escaped(): String =
