@@ -1048,6 +1048,8 @@ object ScreenDocumentProjection {
           PropertyValueKinds.isColour(property) -> COLOR
           property in setOf("text", "contentDescription", "label", "placeholder", "value") ->
             "kotlin.String"
+          // A part's own description: a split control's `toggleContentDescription`.
+          property.endsWith("ContentDescription") -> "kotlin.String"
           property in
             setOf("enabled", "checked", "selected", "expanded", "singleLine", "softWrap") ->
             "kotlin.Boolean"
@@ -3753,14 +3755,16 @@ object ScreenDocumentProjection {
 
   /**
    * An event with no actions that is the component's API rather than authoring, which a caller
-   * supplies as `() -> Unit`: a click, or a toggle's change, whose reported value is only the
-   * complement of the `checked` the caller passed (the generator writes `{ _ -> onXCheckedChange()
-   * }`). A value change is not one: its value is what the user typed.
+   * supplies as `() -> Unit`: a click (on a split control, its container's or its selection's own;
+   * a radio's `select`), or a toggle's change, whose reported value is only the complement of the
+   * `checked` the caller passed (the generator writes `{ _ -> onXCheckedChange() }`). A value
+   * change is not one: its value is what the user typed.
    */
   private fun isIntent(event: String, actions: List<*>): Boolean =
     actions.isEmpty() && event in INTENT_EVENTS
 
-  private val INTENT_EVENTS = setOf("click", "checkedChange")
+  private val INTENT_EVENTS =
+    setOf("click", "containerClick", "selectionClick", "select", "checkedChange")
 
   /** A generated callback parameter name: `on` and a plain Kotlin identifier. */
   private val CALLBACK_NAME = Regex("on[A-Z][A-Za-z0-9]*")
