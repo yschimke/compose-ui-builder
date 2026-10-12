@@ -117,4 +117,37 @@ class ControlColourVocabularyTest {
       assertIs<ScreenValue.Reference>(box.arguments["state"]).members,
     )
   }
+
+  @Test
+  fun `a toggle button's shapes name the kit size, round or square`() {
+    val round =
+      construct(
+        root("m3/toggle-button", """"shapes": {"type": "enum", "value": "m"}""").arguments["shapes"]
+      )
+    assertEquals("androidx.compose.material3.ToggleButtonDefaults.shapesFor", round.callableFqn)
+    val square =
+      construct(
+        root("m3/tonal-toggle-button", """"shapes": {"type": "enum", "value": "xlSquare"}""")
+          .arguments["shapes"]
+      )
+    assertEquals("androidx.compose.material3.ToggleButtonDefaults.shapes", square.callableFqn)
+    assertEquals(
+      listOf("extraLargeSquareShape"),
+      assertIs<ScreenValue.Reference>(square.named["shape"]).members,
+    )
+    assertEquals(
+      listOf("roundShape"),
+      assertIs<ScreenValue.Reference>(square.named["checkedShape"]).members,
+    )
+  }
+
+  @Test
+  fun `a small top app bar's container colour is its TopAppBarColors`() {
+    val colors =
+      construct(
+        root("m3/top-app-bar", """"containerColor": {"type": "color", "value": "#00000000"}""")
+          .arguments["colors"]
+      )
+    assertEquals("androidx.compose.material3.TopAppBarDefaults.topAppBarColors", colors.callableFqn)
+  }
 }

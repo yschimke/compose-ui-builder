@@ -1650,6 +1650,60 @@ object ScreenDocumentProjection {
      * spacing, top-bar colour pairs, time-picker hour + minute, and colour-dot chains. Read one at
      * a time, the second would overwrite the first.
      */
+    /**
+     * A toggle button's `ToggleButtonShapes` for one of the kit's sizes, round or square: round is
+     * `ToggleButtonDefaults.shapesFor(height)`; square keeps the size's square shape at rest and
+     * pressed corner, and turns into a pill when checked (`checkedShape = roundShape`).
+     */
+    private fun toggleShapes(value: UiValueV1, where: String): ScreenValue? {
+      val name =
+        when (value) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else -> return refuse("$where must name a size: xs, s, m, l, xl, or xsSquare … xlSquare")
+        }
+      val square = name.endsWith("Square")
+      val size =
+        TOGGLE_SIZES[name.removeSuffix("Square")]
+          ?: return refuse("$where is `$name`, which is not a toggle button size")
+      fun member(member: String, typeFqn: String) =
+        ScreenValue.Reference(
+          rootFqn = TOGGLE_BUTTON_DEFAULTS,
+          members = listOf(member),
+          typeFqn = typeFqn,
+          requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        )
+      if (!square) {
+        return ScreenValue.Construct(
+          callableFqn = "$TOGGLE_BUTTON_DEFAULTS.shapesFor",
+          positional = listOfNotNull(size.height()),
+          typeFqn = TOGGLE_BUTTON_SHAPES,
+          requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        )
+      }
+      return ScreenValue.Construct(
+        callableFqn = "$TOGGLE_BUTTON_DEFAULTS.shapes",
+        named =
+          mapOf(
+            "shape" to member(size.squareShape, SHAPE),
+            "pressedShape" to member(size.pressedShape, SHAPE),
+            "checkedShape" to member("roundShape", SHAPE),
+          ),
+        typeFqn = TOGGLE_BUTTON_SHAPES,
+        requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+      )
+    }
+
+    private fun ToggleSize.height(): ScreenValue? =
+      heightMember?.let {
+        ScreenValue.Reference(
+          rootFqn = "androidx.compose.material3.ButtonDefaults",
+          members = listOf(it),
+          typeFqn = DP,
+          requiredOptIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        )
+      } ?: dp(heightDp)
+
     private fun composite(
       node: DesignNodeV1,
       arguments: MutableMap<String, ScreenValue>,
@@ -1687,6 +1741,14 @@ object ScreenDocumentProjection {
                 typeFqn = bundle.typeFqn,
                 requiredOptIns = bundle.optIns,
               )
+          }
+        }
+      }
+      if (node.componentId in TOGGLE_BUTTONS) {
+        node.properties[TOGGLE_SHAPES]?.let { authored ->
+          spent += TOGGLE_SHAPES
+          toggleShapes(authored, "node `${node.id}`.`$TOGGLE_SHAPES`")?.let {
+            arguments[TOGGLE_SHAPES] = it
           }
         }
       }
@@ -4263,6 +4325,14 @@ object ScreenDocumentProjection {
           optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
           factoryNames = mapOf("containerColor" to "toolbarContainerColor"),
         ),
+      "m3/top-app-bar" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "$TOP_APP_BAR_DEFAULTS.topAppBarColors",
+          typeFqn = "androidx.compose.material3.TopAppBarColors",
+          roles = listOf("containerColor", "scrolledContainerColor"),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3),
+        ),
       // The icon buttons take every colour through one `IconButtonColors`, and each style has its
       // own factory, so an unset role keeps that style's default.
       "m3/icon-button" to iconButtonColors("iconButtonColors"),
@@ -4341,6 +4411,49 @@ object ScreenDocumentProjection {
     val colorProperty: String,
     val widthProperty: String,
   )
+
+  private const val TOGGLE_SHAPES = "shapes"
+  private const val TOGGLE_BUTTON_DEFAULTS = "androidx.compose.material3.ToggleButtonDefaults"
+  private const val TOGGLE_BUTTON_SHAPES = "androidx.compose.material3.ToggleButtonShapes"
+  private val TOGGLE_BUTTONS =
+    setOf(
+      "m3/toggle-button",
+      "m3/elevated-toggle-button",
+      "m3/tonal-toggle-button",
+      "m3/outlined-toggle-button",
+    )
+
+  /**
+   * One of the kit's five button sizes, as `ToggleButtonDefaults` and `ButtonDefaults` name them.
+   * Small has no `ButtonDefaults` height constant; it is the 40dp minimum.
+   */
+  private class ToggleSize(
+    val heightMember: String?,
+    val heightDp: Double,
+    val squareShape: String,
+    val pressedShape: String,
+  )
+
+  private val TOGGLE_SIZES =
+    mapOf(
+      "xs" to
+        ToggleSize(
+          "ExtraSmallContainerHeight",
+          32.0,
+          "extraSmallSquareShape",
+          "extraSmallPressedShape",
+        ),
+      "s" to ToggleSize(null, 40.0, "squareShape", "pressedShape"),
+      "m" to ToggleSize("MediumContainerHeight", 56.0, "mediumSquareShape", "mediumPressedShape"),
+      "l" to ToggleSize("LargeContainerHeight", 96.0, "largeSquareShape", "largePressedShape"),
+      "xl" to
+        ToggleSize(
+          "ExtraLargeContainerHeight",
+          136.0,
+          "extraLargeSquareShape",
+          "extraLargePressedShape",
+        ),
+    )
 
   private val BORDER_STROKES: Map<String, BorderStrokeTarget> =
     mapOf("m3/outlined-icon-button" to BorderStrokeTarget("border", "borderColor", "borderWidthDp"))
