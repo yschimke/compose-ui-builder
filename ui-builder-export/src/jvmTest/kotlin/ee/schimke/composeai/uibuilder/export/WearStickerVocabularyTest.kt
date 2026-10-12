@@ -70,6 +70,18 @@ class WearStickerVocabularyTest {
   }
 
   @Test
+  fun `the gate admits Wear's MaterialTheme and nothing else under androidx wear compose`() {
+    assertTrue(
+      "androidx.wear.compose.material3.MaterialTheme" in ScreenExportGate.EXPRESSION_PACKAGES
+    )
+    assertTrue(
+      ScreenExportGate.EXPRESSION_PACKAGES.none {
+        it.startsWith("androidx.wear") && it != "androidx.wear.compose.material3.MaterialTheme"
+      }
+    )
+  }
+
+  @Test
   fun `a split control's two taps are two intents and its description a string binding`() {
     val row =
       component(
