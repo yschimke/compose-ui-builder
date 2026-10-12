@@ -410,8 +410,49 @@ catalog uses straight from another library — `remote-widgets/remote-text`, `re
 component, roles and insert content included, reaches the editor. compose-ai-tools recording those
 library calls, or a wrapper in the catalog, is the fix; until then the builder keeps that id.
 
-Still without a contract, and so still Kotlin here: the chooser's labels and descriptions
-(`platformLabel` covers only the group heading), the web archive's bundled catalog list, the
+#### The New design chooser: `newDesign`
+
+A catalog-owned catalog (`CatalogOwnership`) cards itself in the New design form from a `newDesign`
+block in `statusSemantics`, beside `templates`. Every field is optional; `catalogOwnedNewDesignCatalog`
+reads it and `newDesignTypeOptions` (`editor/NewDesignTypes.kt`) lays out "What are you designing?".
+
+```jsonc
+"newDesign": {
+  "label": "Home Assistant",                   // the type card's title; else platformLabel, else the id
+  "description": "Dashboard cards and widgets", // the card's second line; declaring it makes the card
+                                                //   the catalog's own (see below)
+  "primary": true,                             // in the picker's row (true) or behind "Other design
+                                                //   types…" (false); unset: only m3-catalog, wear-m3
+                                                //   and remote-m3 are in the row
+  "order": 1,                                  // the card's place once every catalog is owned
+  "templates": [                               // one entry per `templates` path, matched by file name
+    { "id": "tile", "label": "Tile card", "supportingText": "One entity, its icon and state.",
+      "group": "Dashboard card", "order": 1 },
+    { "id": "wear-entity", "label": "Entity widget", "supportingText": "…", "group": "Wear widget" },
+    { "id": "launcher-entity", "label": "Entity widget", "supportingText": "…", "group": "Launcher widget" }
+  ]
+}
+```
+
+- **Title and subtitle.** A card whose catalog declares `description` reads `label` over
+  `description`. Without one, `m3-catalog`, `wear-m3` and `remote-m3` keep the words the chooser
+  has always shown ("Mobile app" / "Phone & tablet", "Wear app" / "Watch screens", "Remote Compose"
+  / "Watch widgets & clocks"), and any other catalog shows its `label` alone. The home screen's
+  design lists name a described catalog's designs by its `label` too.
+- **The row.** `primary` decides, defaulting to the three ids above. A white-labelled host whose
+  `ui-builder-catalogs` meta narrows the catalogs puts every one it offers in the row, and there is
+  no "Other design types…".
+- **Groups as the choice.** When the form offers exactly one catalog and its templates name two or
+  more distinct `group`s, the row's cards are those groups, in the order the templates first name
+  them, each subtitled with its number of starting points; step 2 then lists only that group's
+  templates. A template with no `group` (a generic blank) is offered under every group. Beside
+  another catalog the row is catalogs again, and the groups head sections of step 2 as before. A
+  single-catalog host with ungrouped templates still skips the row.
+- **Widget thumbnails.** The home screen draws a design's thumbnail at its own aspect ratio with
+  rounded corners when its catalog's `platform` is `remote-compose`.
+
+Still without a contract, and so still Kotlin here: the built-in catalogs' chooser cards (the
+fallback above), the web archive's bundled catalog list, the
 structural screen emitters (§ Structural code cannot be printed from a signature), and the JVM
 canvas adapters. `.github/scripts/catalog-id-ratchet.sh` counts the catalog-id literals that
 remain, per file, and fails CI if any count moves without the allowlist moving with it.
