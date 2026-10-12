@@ -266,8 +266,13 @@ private fun NewDesignChoice(
 private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) {
 
   Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    NewDesignTypePicker(form)
-    Text("2. Choose a starting point", style = MaterialTheme.typography.titleSmall)
+    // A host offering one catalog has no type to choose, so the form starts at the template.
+    val oneCatalog = LocalUiBuilderBrand.current?.singleCatalog == true && form.catalogs.size == 1
+    if (!oneCatalog) NewDesignTypePicker(form)
+    Text(
+      if (oneCatalog) "Choose a starting point" else "2. Choose a starting point",
+      style = MaterialTheme.typography.titleSmall,
+    )
     Column(
       modifier = Modifier.selectableGroup(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -517,7 +522,7 @@ fun UiBuilderUnavailableScreen(
   recoveryLoading: Boolean = false,
   recoveryError: String? = null,
 ) {
-  MaterialTheme(colorScheme = EditorColors) {
+  MaterialTheme(colorScheme = EditorColors.branded(LocalUiBuilderBrand.current)) {
     Box(
       Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
       contentAlignment = Alignment.Center,
@@ -791,7 +796,8 @@ fun UiBuilderNewDesignScreen(
       onCreatePublic != null,
     )
   val create = if (form.publicRead) onCreatePublic ?: onCreate else onCreate
-  MaterialTheme(colorScheme = EditorColors) {
+  val brand = LocalUiBuilderBrand.current
+  MaterialTheme(colorScheme = EditorColors.branded(brand)) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
       BoxWithConstraints {
         // One breakpoint, and the same one the editor's own toolbar uses: side by side where both
@@ -807,10 +813,14 @@ fun UiBuilderNewDesignScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
           ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              val openBrandHome = LocalUiBuilderOpenBrandHome.current
               Text(
-                "UI Builder",
+                brand?.nameOr("UI Builder") ?: "UI Builder",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
+                modifier =
+                  if (openBrandHome == null) Modifier
+                  else Modifier.clickable(onClickLabel = "Home", onClick = openBrandHome),
               )
               Text(
                 "Start a design, or carry on with one you already have.",

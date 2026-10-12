@@ -802,9 +802,13 @@ private fun LiveSessionApp(
       }
         .getOrNull()
       catalogCapabilities = availableCatalogs
+      // A white-labelled host offers only its own catalogs; the server refuses the rest anyway.
+      val offeredCatalogs = availableCatalogs.filter {
+        uiBuilderBrand?.allows(it.benchmark.catalogSystemId) ?: true
+      }
       newDesignCatalogs =
         orderedNewDesignCatalogs(
-            availableCatalogs,
+            offeredCatalogs,
             // Only the server seeds catalog-owned templates (it holds the published documents).
             // Browser-created designs use `createLocalDesign`'s built-in templates, so they get the
             // built-in cards.

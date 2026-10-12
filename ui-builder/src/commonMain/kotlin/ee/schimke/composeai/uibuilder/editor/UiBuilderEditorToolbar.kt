@@ -157,11 +157,16 @@ internal fun MobileEditorToolbar(
             )
           }
         }
+        // A white-labelled host's name, leading to its home; the editor's own otherwise.
+        val openBrandHome = LocalUiBuilderOpenBrandHome.current
         Text(
-          "UI Builder",
+          LocalUiBuilderBrand.current?.nameOr("UI Builder") ?: "UI Builder",
           fontWeight = FontWeight.Bold,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
+          modifier =
+            if (openBrandHome == null) Modifier
+            else Modifier.clickable(onClickLabel = "Home", onClick = openBrandHome),
         )
         catalogFormFactorLabel(state.document)?.let { FormFactorChip(it) }
       }
@@ -900,11 +905,12 @@ internal const val EXPORT_STATUS_MILLIS = 4_000L
 private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = Modifier) {
   val catalogSystemId =
     state.document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull.orEmpty()
+  val product = LocalUiBuilderBrand.current?.name ?: "Compose UI Builder"
   LocalUiBuilderChrome.current.DocumentIdentity(
     title = state.document.title,
     supporting =
-      if (catalogSystemId.isEmpty()) "Compose UI Builder"
-      else "Compose UI Builder · ${catalogFormFactorLabel(state.document) ?: catalogSystemId}",
+      if (catalogSystemId.isEmpty()) product
+      else "$product · ${catalogFormFactorLabel(state.document) ?: catalogSystemId}",
     modifier = modifier,
   )
 }
