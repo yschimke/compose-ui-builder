@@ -8,19 +8,21 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 
 /**
  * How one value of a typed adapter's list or object property is authored, as the catalog publishes
  * it inside the property capability's `editor` (compose-ai-tools' `AdapterValueCodec.shape`):
  * ```json
  * { "jsonType": "string|boolean|integer|number|array|object", "literalType": "<wrapper type>",
- *   "allowedValues"?: [ "…" ], "editor"?: { "control": "list" | "object", … } }
+ *   "allowedValues"?: [ "…" ], "format"?: "date-time|hex|…", "nullable"?: true,
+ *   "editor"?: { "control": "list" | "object" | "union", … } }
  * ```
  *
  * A scalar is stored as `{"type": literalType, "value": …}`, a list as `{"type": "list", "values":
- * [<wrapper>…]}` and an object as `{"type": "object", "fields": {"<name>": <wrapper>}}`, nesting to
- * any depth.
+ * [<wrapper>…]}`, an object as `{"type": "object", "fields": {"<name>": <wrapper>}}` and one case
+ * of a sealed type as `{"type": "union", "case": "<name>", "fields"?: {…}}`, nesting to any depth.
+ * A [nullable] value may instead be `{"type": "null"}`.
  */
 data class PropertyValueShape(
   val jsonType: String,
@@ -28,6 +30,10 @@ data class PropertyValueShape(
   val allowedValues: List<String> = emptyList(),
   /** Null for a scalar. */
   val composite: CompositeValueShape? = null,
+  /** The syntax a `string` value has (`date-time`, `hex`), when it has one of its own. */
+  val format: String? = null,
+  /** Whether `{"type": "null"}` is a value of this shape too. */
+  val nullable: Boolean = false,
 )
 
 /**
@@ -40,6 +46,23 @@ sealed interface CompositeValueShape {
     CompositeValueShape {
     fun field(name: String): ObjectFieldShape? = fields.firstOrNull { it.name == name }
   }
+
+  /** One case of the sealed type [unionType]: [cases] in the order the catalog lists them. */
+  data class UnionOf(val unionType: String, val cases: List<UnionCaseShape>) : CompositeValueShape {
+    fun case(name: String?): UnionCaseShape? = cases.firstOrNull { it.name == name }
+  }
+}
+
+/**
+ * One case of a [CompositeValueShape.UnionOf]: a class case with its [fields], or a `data object`
+ * case (null [fields]), which stores none.
+ */
+data class UnionCaseShape(
+  val name: String,
+  val objectType: String,
+  val fields: List<ObjectFieldShape>?,
+) {
+  fun field(name: String): ObjectFieldShape? = fields?.firstOrNull { it.name == name }
 }
 
 /**
@@ -71,6 +94,8 @@ data class LocatedPropertyValue(val shape: PropertyValueShape, val wrapper: Json
 object PropertyValueShapes {
   const val LIST: String = "list"
   const val OBJECT: String = "object"
+  const val UNION: String = "union"
+  const val NULL: String = "null"
 
   /** Deeper than any real value; a published shape nested past it is refused, not walked. */
   private const val MAXIMUM_DEPTH = 32
@@ -83,12 +108,20 @@ object PropertyValueShapes {
    * control with no [PropertyEditorCapability.valueShape]: the property stays uneditable, and no
    * later policy or built-in override gives it an editor for some other value.
    */
-  fun declaredCompositeEditor(editor: JsonObject): PropertyEditorCapability? =
+  fun declaredCompositeEditor(
+    editor: JsonObject,
+    nullable: Boolean = false,
+  ): PropertyEditorCapability? =
     when (editor.string("control")) {
       LIST ->
-        compositeEditor(editor) ?: PropertyEditorCapability(control = PropertyEditorControl.LIST)
+        compositeEditor(editor, nullable)
+          ?: PropertyEditorCapability(control = PropertyEditorControl.LIST)
       OBJECT ->
-        compositeEditor(editor) ?: PropertyEditorCapability(control = PropertyEditorControl.OBJECT)
+        compositeEditor(editor, nullable)
+          ?: PropertyEditorCapability(control = PropertyEditorControl.OBJECT)
+      UNION ->
+        compositeEditor(editor, nullable)
+          ?: PropertyEditorCapability(control = PropertyEditorControl.UNION)
       else -> null
     }
 
@@ -96,17 +129,25 @@ object PropertyValueShapes {
    * The editor capability for a published list or object `editor` hint, or null when it is not one
    * or does not parse (a malformed shape is not editable, rather than editable wrongly).
    */
-  fun compositeEditor(editor: JsonObject): PropertyEditorCapability? =
+  fun compositeEditor(editor: JsonObject, nullable: Boolean = false): PropertyEditorCapability? =
     when (val composite = parseEditor(editor, 0)) {
       is CompositeValueShape.ListOf ->
         PropertyEditorCapability(
           control = PropertyEditorControl.LIST,
-          valueShape = PropertyValueShape("array", LIST, composite = composite),
+          valueShape =
+            PropertyValueShape("array", LIST, composite = composite, nullable = nullable),
         )
       is CompositeValueShape.ObjectOf ->
         PropertyEditorCapability(
           control = PropertyEditorControl.OBJECT,
-          valueShape = PropertyValueShape("object", OBJECT, composite = composite),
+          valueShape =
+            PropertyValueShape("object", OBJECT, composite = composite, nullable = nullable),
+        )
+      is CompositeValueShape.UnionOf ->
+        PropertyEditorCapability(
+          control = PropertyEditorControl.UNION,
+          valueShape =
+            PropertyValueShape("object", UNION, composite = composite, nullable = nullable),
         )
       null -> null
     }
@@ -120,20 +161,40 @@ object PropertyValueShapes {
           ?.let(CompositeValueShape::ListOf)
       OBJECT -> {
         val objectType = editor.string("objectType")?.takeIf(String::isNotBlank) ?: return null
-        val declared = editor["fields"] as? JsonArray ?: return null
-        val fields = declared.map { element ->
-          val field = element as? JsonObject ?: return null
-          val name = field.string("name")?.takeIf(String::isNotBlank) ?: return null
-          val shape = parseShape(field, depth + 1) ?: return null
-          val default = field["default"] as? JsonObject
-          val required = (field["required"] as? JsonPrimitive)?.booleanOrNull ?: (default == null)
-          ObjectFieldShape(name, required, default, shape)
-        }
-        if (fields.isEmpty() || fields.map { it.name }.distinct().size != fields.size) return null
+        val fields = parseFields(editor["fields"], depth) ?: return null
+        if (fields.isEmpty()) return null
         CompositeValueShape.ObjectOf(objectType, fields)
+      }
+      UNION -> {
+        val unionType = editor.string("unionType")?.takeIf(String::isNotBlank) ?: return null
+        val declared = editor["cases"] as? JsonArray ?: return null
+        val cases = declared.map { element ->
+          val case = element as? JsonObject ?: return null
+          val name = case.string("name")?.takeIf(String::isNotBlank) ?: return null
+          val objectType = case.string("objectType")?.takeIf(String::isNotBlank) ?: return null
+          val fields =
+            if ("fields" in case) parseFields(case["fields"], depth) ?: return null else null
+          UnionCaseShape(name, objectType, fields)
+        }
+        if (cases.isEmpty() || cases.map { it.name }.distinct().size != cases.size) return null
+        CompositeValueShape.UnionOf(unionType, cases)
       }
       else -> null
     }
+  }
+
+  /** An object's (or a union case's) published fields: named, distinct, each with its shape. */
+  private fun parseFields(declared: JsonElement?, depth: Int): List<ObjectFieldShape>? {
+    val array = declared as? JsonArray ?: return null
+    val fields = array.map { element ->
+      val field = element as? JsonObject ?: return null
+      val name = field.string("name")?.takeIf(String::isNotBlank) ?: return null
+      val shape = parseShape(field, depth + 1) ?: return null
+      val default = field["default"] as? JsonObject
+      val required = (field["required"] as? JsonPrimitive)?.booleanOrNull ?: (default == null)
+      ObjectFieldShape(name, required, default, shape)
+    }
+    return fields.takeIf { it.map(ObjectFieldShape::name).distinct().size == it.size }
   }
 
   private fun parseShape(shape: JsonObject, depth: Int): PropertyValueShape? {
@@ -150,32 +211,56 @@ object PropertyValueShapes {
         is JsonObject -> parseEditor(editor, depth) ?: return null
         else -> return null
       }
+    val format = shape.string("format")?.takeIf(String::isNotBlank)
+    val nullable = (shape["nullable"] as? JsonPrimitive)?.booleanOrNull ?: false
     // The wrapper spelling and the control must agree, or a value could pass one and not the other.
     val consistent =
       when (composite) {
         is CompositeValueShape.ListOf -> literalType == LIST
         is CompositeValueShape.ObjectOf -> literalType == OBJECT
-        null -> literalType != LIST && literalType != OBJECT
+        is CompositeValueShape.UnionOf -> literalType == UNION
+        null -> literalType !in COMPOSITE_TYPES
       }
-    return if (consistent) PropertyValueShape(jsonType, literalType, allowedValues, composite)
+    return if (consistent)
+      PropertyValueShape(jsonType, literalType, allowedValues, composite, format, nullable)
     else null
   }
+
+  private val COMPOSITE_TYPES = setOf(LIST, OBJECT, UNION, NULL)
 
   /**
    * A new value of [shape]: an empty list, an object of its fields' defaults (or their own seeds),
    * or a scalar's first allowed value, `false`, zero or empty text. What adding a row writes.
    */
   fun seed(shape: PropertyValueShape): JsonObject =
-    when (val composite = shape.composite) {
-      is CompositeValueShape.ListOf -> wrapper(LIST, "values", JsonArray(emptyList()))
-      is CompositeValueShape.ObjectOf ->
-        wrapper(
-          OBJECT,
-          "fields",
-          JsonObject(composite.fields.associate { it.name to (it.default ?: seed(it.shape)) }),
-        )
-      null -> literal(shape, scalarSeed(shape))
-    }
+    if (shape.nullable) NULL_WRAPPER
+    else
+      when (val composite = shape.composite) {
+        is CompositeValueShape.ListOf -> wrapper(LIST, "values", JsonArray(emptyList()))
+        is CompositeValueShape.ObjectOf -> wrapper(OBJECT, "fields", seedFields(composite.fields))
+        is CompositeValueShape.UnionOf -> seedCase(composite.cases.first())
+        null -> literal(shape, scalarSeed(shape))
+      }
+
+  /** A new value of [case]: its name and, for a class case, its fields' defaults or seeds. */
+  fun seedCase(case: UnionCaseShape): JsonObject =
+    JsonObject(
+      buildMap {
+        put("type", JsonPrimitive(UNION))
+        put("case", JsonPrimitive(case.name))
+        case.fields?.let { put("fields", seedFields(it)) }
+      }
+    )
+
+  /** `{"type": "null"}`, a [PropertyValueShape.nullable] value's null. */
+  val NULL_WRAPPER: JsonObject = JsonObject(mapOf("type" to JsonPrimitive(NULL)))
+
+  /** Whether [stored] is exactly `{"type": "null"}`. */
+  fun isNull(stored: JsonElement?): Boolean =
+    stored is JsonObject && stored.keys == setOf("type") && stored.string("type") == NULL
+
+  private fun seedFields(fields: List<ObjectFieldShape>): JsonObject =
+    JsonObject(fields.associate { it.name to (it.default ?: seed(it.shape)) })
 
   private fun scalarSeed(shape: PropertyValueShape): JsonPrimitive =
     when {
@@ -197,6 +282,7 @@ object PropertyValueShapes {
    */
   fun issue(shape: PropertyValueShape, stored: JsonElement?, where: String): String? {
     fun at(message: String) = if (where.isEmpty()) message else "$where: $message"
+    if (shape.nullable && isNull(stored)) return null
     val wrapper = stored as? JsonObject ?: return at("expected a `${shape.literalType}` wrapper")
     val type = wrapper.string("type")
     if (type != shape.literalType) {
@@ -215,18 +301,48 @@ object PropertyValueShapes {
         val fields = wrapper["fields"] as? JsonObject
         if (wrapper.keys != setOf("type", "fields") || fields == null)
           return at("an `object` wrapper is exactly type and a fields object")
-        val unknown = fields.keys - composite.fields.map { it.name }.toSet()
-        if (unknown.isNotEmpty()) {
-          return at("${composite.objectType} has no field ${unknown.sorted().joinToString(", ")}")
-        }
-        composite.fields.firstNotNullOfOrNull { field ->
-          val value = fields[field.name]
-          if (value == null || value is JsonNull) {
-            if (field.required) at("missing field `${field.name}`") else null
-          } else issue(field.shape, value, "$where.${field.name}")
+        fieldsIssue(composite.objectType, composite.fields, fields, where)
+      }
+      is CompositeValueShape.UnionOf -> {
+        val name = wrapper.string("case")
+        val case =
+          composite.case(name)
+            ?: return at(
+              "`$name` is not a case of ${composite.unionType}: " +
+                composite.cases.joinToString(", ") { it.name }
+            )
+        val declared = case.fields
+        if (declared == null) {
+          if (wrapper.keys != setOf("type", "case"))
+            return at("the `${case.name}` case is exactly type and case")
+          null
+        } else {
+          val fields = wrapper["fields"] as? JsonObject
+          if (wrapper.keys != setOf("type", "case", "fields") || fields == null)
+            return at("the `${case.name}` case is exactly type, case and a fields object")
+          fieldsIssue(case.objectType, declared, fields, where)
         }
       }
       null -> scalarIssue(shape, wrapper)?.let(::at)
+    }
+  }
+
+  private fun fieldsIssue(
+    objectType: String,
+    declared: List<ObjectFieldShape>,
+    fields: JsonObject,
+    where: String,
+  ): String? {
+    fun at(message: String) = if (where.isEmpty()) message else "$where: $message"
+    val unknown = fields.keys - declared.map { it.name }.toSet()
+    if (unknown.isNotEmpty()) {
+      return at("$objectType has no field ${unknown.sorted().joinToString(", ")}")
+    }
+    return declared.firstNotNullOfOrNull { field ->
+      val value = fields[field.name]
+      if (value == null || value is JsonNull) {
+        if (field.required) at("missing field `${field.name}`") else null
+      } else issue(field.shape, value, "$where.${field.name}")
     }
   }
 
@@ -237,7 +353,8 @@ object PropertyValueShapes {
       when (shape.jsonType) {
         "string" -> value.isString
         "boolean" -> !value.isString && value.booleanOrNull != null
-        "integer" -> !value.isString && value.intOrNull != null
+        // A Long's full range: an `int` wrapper also stores a typed adapter's `Long`.
+        "integer" -> !value.isString && value.longOrNull != null
         "number" -> !value.isString && value.doubleOrNull?.isFinite() == true
         else -> true
       }
@@ -245,8 +362,30 @@ object PropertyValueShapes {
     if (shape.allowedValues.isNotEmpty() && value.content !in shape.allowedValues) {
       return "`${value.content}` is not one of ${shape.allowedValues.joinToString(", ")}"
     }
-    return null
+    return formatIssue(shape.format, value.content)
   }
+
+  /**
+   * Why [text] is not spelled as [format] says, or null. Only the formats the typed codecs publish
+   * are checked here; the renderer's codec is the authority, and an unknown format is the codec's
+   * alone.
+   */
+  fun formatIssue(format: String?, text: String): String? =
+    when (format) {
+      DATE_TIME ->
+        if (ISO_INSTANT.matches(text)) null
+        else "`$text` is not an ISO-8601 instant, like 2026-10-12T08:00:00Z"
+      HEX ->
+        if (text.length % 2 == 0 && text.all { it in HEX_DIGITS }) null
+        else "`$text` is not hex: pairs of 0-9 and a-f"
+      else -> null
+    }
+
+  const val DATE_TIME: String = "date-time"
+  const val HEX: String = "hex"
+  private const val HEX_DIGITS = "0123456789abcdefABCDEF"
+  private val ISO_INSTANT =
+    Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$""")
 
   /**
    * The value at [path] inside [root] (a property of [shape]), reading an absent root, or an absent
@@ -270,6 +409,12 @@ object PropertyValueShapes {
           is CompositeValueShape.ObjectOf -> {
             val name = (segment as? PropertyPathSegment.Field)?.name ?: return null
             val field = composite.field(name) ?: return null
+            LocatedPropertyValue(field.shape, current.wrapper.fieldOrDefault(field))
+          }
+          // A field of whichever case is stored; a null union has none.
+          is CompositeValueShape.UnionOf -> {
+            val name = (segment as? PropertyPathSegment.Field)?.name ?: return null
+            val field = composite.case(current.wrapper.string("case"))?.field(name) ?: return null
             LocatedPropertyValue(field.shape, current.wrapper.fieldOrDefault(field))
           }
           null -> return null
@@ -306,6 +451,20 @@ object PropertyValueShapes {
         val fields = LinkedHashMap((current["fields"] as? JsonObject).orEmpty())
         fields[name] = write(field.shape, current.fieldOrDefault(field), rest, value) ?: return null
         wrapper(OBJECT, "fields", JsonObject(fields))
+      }
+      is CompositeValueShape.UnionOf -> {
+        val name = (path.first() as? PropertyPathSegment.Field)?.name ?: return null
+        val case = composite.case(current.string("case")) ?: return null
+        val field = case.field(name) ?: return null
+        val fields = LinkedHashMap((current["fields"] as? JsonObject).orEmpty())
+        fields[name] = write(field.shape, current.fieldOrDefault(field), rest, value) ?: return null
+        JsonObject(
+          mapOf(
+            "type" to JsonPrimitive(UNION),
+            "case" to JsonPrimitive(case.name),
+            "fields" to JsonObject(fields),
+          )
+        )
       }
       null -> null
     }
@@ -386,11 +545,14 @@ object PropertyValueShapes {
     return property to path
   }
 
+  // A stored null is read as itself, so its rows show that nothing is set.
   private fun JsonObject?.orSeed(shape: PropertyValueShape): JsonObject =
-    this?.takeIf { it.string("type") == shape.literalType } ?: seed(shape)
+    this?.takeIf { it.string("type") == shape.literalType || (shape.nullable && isNull(it)) }
+      ?: seed(shape)
 
   private fun JsonObject.values(): List<JsonElement> = (this["values"] as? JsonArray).orEmpty()
 
+  /** [field] of this object (or union case) as stored, or its default or [seed]. */
   private fun JsonObject.fieldOrDefault(field: ObjectFieldShape): JsonObject =
     ((this["fields"] as? JsonObject)?.get(field.name) as? JsonObject)
       ?: field.default

@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 
@@ -45,13 +46,14 @@ internal object CatalogPublishedPolicy {
     property: String,
   ): PropertyEditorCapability? {
     val policy = componentPolicy(statusSemantics, componentId) ?: return null
-    val declared =
+    val capability =
       ((policy["propertyCapabilities"] ?: policy["properties"]) as? JsonArray)
         ?.filterIsInstance<JsonObject>()
-        ?.firstOrNull { (it["name"] as? JsonPrimitive)?.contentOrNull == property }
-        ?.get("editor") as? JsonObject ?: return null
-    // A typed adapter's list or object: its shape is the whole editor, or the property is blocked.
-    PropertyValueShapes.declaredCompositeEditor(declared)?.let {
+        ?.firstOrNull { (it["name"] as? JsonPrimitive)?.contentOrNull == property } ?: return null
+    val declared = capability["editor"] as? JsonObject ?: return null
+    val nullable = (capability["nullable"] as? JsonPrimitive)?.booleanOrNull ?: false
+    // A typed adapter's list, object or union: its shape is the whole editor, or it is blocked.
+    PropertyValueShapes.declaredCompositeEditor(declared, nullable)?.let {
       return it
     }
     val editor =

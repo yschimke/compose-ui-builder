@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyPathSegment
 import ee.schimke.composeai.uibuilder.capability.PropertyValueShape
 import ee.schimke.composeai.uibuilder.capability.PropertyValueShapes
+import ee.schimke.composeai.uibuilder.capability.UnionCaseShape
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -24,6 +25,12 @@ internal object StructuredProperties {
    * the bounds a slider's own numbers use, finite so the `Float` round trip holds.
    */
   private const val NESTED_NUMBER_LIMIT = 1_000_000.0
+
+  /**
+   * The choice a nullable value's picker offers for null. Not a case or object name, which are
+   * identifiers, so it can never be mistaken for one.
+   */
+  const val NONE: String = "(none)"
 
   /** What one edit makes of the property: its whole new wrapper, or why there is none. */
   sealed interface Outcome {
@@ -56,6 +63,7 @@ internal object StructuredProperties {
       row: EditorListRow?,
     ) {
       val located = PropertyValueShapes.read(shape, stored, path) ?: return
+      val isNull = PropertyValueShapes.isNull(located.wrapper)
       val field =
         EditorPropertyField(
           // A structured edit writes the anchor alone, so its rows never claim the selection.
@@ -69,7 +77,32 @@ internal object StructuredProperties {
           value = "",
           structure = EditorPropertyStructure(property.name, path, row),
         )
+      // A null composite is its picker alone: "(none)", or the value to start it as.
+      if (isNull && located.shape.composite != null) {
+        rows += nullPicker(field, located.shape)
+        return
+      }
       when (val composite = located.shape.composite) {
+        is CompositeValueShape.UnionOf -> {
+          val case = composite.case(located.wrapper.string("case"))
+          rows +=
+            field.copy(
+              control = EditorPropertyControl.Enum,
+              value = case?.name.orEmpty(),
+              choices =
+                listOfNotNull(NONE.takeIf { located.shape.nullable }) +
+                  composite.cases.map(UnionCaseShape::name),
+            )
+          if (mixed || case == null) return
+          case.fields?.forEach { caseField ->
+            visit(
+              path + PropertyPathSegment.Field(caseField.name),
+              caseField.name.humanLabel(),
+              caseField.required,
+              row = null,
+            )
+          }
+        }
         is CompositeValueShape.ListOf -> {
           val count = (located.wrapper["values"] as? JsonArray)?.size ?: 0
           rows +=
@@ -89,10 +122,13 @@ internal object StructuredProperties {
         }
         is CompositeValueShape.ObjectOf -> {
           rows +=
-            field.copy(
-              control = EditorPropertyControl.Object,
-              value = composite.objectType.substringAfterLast('.'),
-            )
+            if (located.shape.nullable)
+              nullPicker(field.copy(value = kindName(located.shape)), located.shape)
+            else
+              field.copy(
+                control = EditorPropertyControl.Object,
+                value = composite.objectType.substringAfterLast('.'),
+              )
           if (mixed) return
           composite.fields.forEach { objectField ->
             visit(
@@ -119,8 +155,38 @@ internal object StructuredProperties {
   }
 
   /**
+   * The picker of a nullable composite: [NONE], or the value's own kind (its object type, or
+   * "List") to start one from its seed.
+   */
+  private fun nullPicker(
+    field: EditorPropertyField,
+    shape: PropertyValueShape,
+  ): EditorPropertyField {
+    val kind = kindName(shape)
+    val choices =
+      when (val composite = shape.composite) {
+        is CompositeValueShape.UnionOf -> composite.cases.map(UnionCaseShape::name)
+        else -> listOf(kind)
+      }
+    return field.copy(
+      control = EditorPropertyControl.Enum,
+      value = if (field.value.isEmpty()) NONE else field.value,
+      choices = listOf(NONE) + choices,
+    )
+  }
+
+  private fun kindName(shape: PropertyValueShape): String =
+    when (val composite = shape.composite) {
+      is CompositeValueShape.ObjectOf -> composite.objectType.substringAfterLast('.')
+      is CompositeValueShape.ListOf -> "List"
+      is CompositeValueShape.UnionOf -> composite.unionType.substringAfterLast('.')
+      null -> shape.literalType
+    }
+
+  /**
    * A scalar row: an enum from its allowed values, a switch, a number (whole for an `integer`) or
-   * text — a colour or token without a closed set is typed as its stored spelling.
+   * text — a colour or token without a closed set is typed as its stored spelling. A nullable
+   * scalar reads as empty when null, and an empty draft commits null (see [commit]).
    */
   private fun scalarField(
     field: EditorPropertyField,
@@ -138,7 +204,10 @@ internal object StructuredProperties {
     return field.copy(
       control = control,
       value = stored?.content.orEmpty(),
-      choices = shape.allowedValues,
+      choices =
+        if (shape.nullable && control == EditorPropertyControl.Enum)
+          listOf(NONE) + shape.allowedValues
+        else shape.allowedValues,
       numberBounds =
         when (shape.jsonType) {
           "integer" ->
@@ -165,13 +234,35 @@ internal object StructuredProperties {
     val located =
       PropertyValueShapes.read(shape, stored, path)
         ?: return Outcome.Refused("$spelled is not a value of $property")
-    when (located.shape.composite) {
+    fun written(value: JsonObject): Outcome =
+      PropertyValueShapes.write(shape, stored, path, value)?.let(Outcome::Written)
+        ?: Outcome.Refused("$spelled is not a value of $property")
+    val nullable = located.shape.nullable
+    if (nullable && draft == NONE) return written(PropertyValueShapes.NULL_WRAPPER)
+    val isNull = PropertyValueShapes.isNull(located.wrapper)
+    when (val composite = located.shape.composite) {
+      // The picker: a case name starts that case from its seed; the stored case keeps its fields.
+      is CompositeValueShape.UnionOf -> {
+        val case =
+          composite.case(draft)
+            ?: return Outcome.Refused(
+              "`$draft` is not a case of ${composite.unionType.substringAfterLast('.')}"
+            )
+        if (!isNull && located.wrapper.string("case") == case.name) return written(located.wrapper)
+        return written(PropertyValueShapes.seedCase(case))
+      }
       is CompositeValueShape.ListOf ->
-        return Outcome.Refused("$spelled is a list; add, remove or move its rows instead")
+        return if (nullable && isNull && draft == kindName(located.shape))
+          written(PropertyValueShapes.seed(located.shape.copy(nullable = false)))
+        else Outcome.Refused("$spelled is a list; add, remove or move its rows instead")
       is CompositeValueShape.ObjectOf ->
-        return Outcome.Refused("$spelled is an object; set its fields instead")
+        return if (nullable && isNull && draft == kindName(located.shape))
+          written(PropertyValueShapes.seed(located.shape.copy(nullable = false)))
+        else Outcome.Refused("$spelled is an object; set its fields instead")
       null -> Unit
     }
+    // A nullable scalar cleared to nothing is null; text has no other way to say it.
+    if (nullable && draft.isEmpty()) return written(PropertyValueShapes.NULL_WRAPPER)
     val field =
       scalarField(
         EditorPropertyField(
@@ -190,13 +281,13 @@ internal object StructuredProperties {
         is PropertyDraft.Invalid -> return Outcome.Refused(parsed.message)
         is PropertyDraft.Valid -> parsed.value
       }
-    return PropertyValueShapes.write(
-        shape,
-        stored,
-        path,
-        PropertyValueShapes.literal(located.shape, value),
-      )
-      ?.let(Outcome::Written) ?: Outcome.Refused("$spelled is not a value of $property")
+    // Text with a syntax of its own is checked as the codec will read it.
+    if (value is JsonPrimitive && value.isString) {
+      PropertyValueShapes.formatIssue(located.shape.format, value.content)?.let {
+        return Outcome.Refused("$spelled: $it")
+      }
+    }
+    return written(PropertyValueShapes.literal(located.shape, value))
   }
 
   /** [stored] with [edit] made to the rows of the list at [path]. */
@@ -230,4 +321,7 @@ internal object StructuredProperties {
         }
       )
   }
+
+  private fun JsonObject.string(key: String): String? =
+    (this[key] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
 }

@@ -4,6 +4,8 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import ee.schimke.composeai.discovery.AdapterEvent
+import ee.schimke.composeai.discovery.AdapterEvent1
+import ee.schimke.composeai.discovery.AdapterEvent2
 import ee.schimke.composeai.discovery.AdapterProperty
 import ee.schimke.composeai.discovery.AdapterSlot
 import ee.schimke.composeai.discovery.AdapterStateChange
@@ -102,6 +104,18 @@ class TypedCanvasNodeScope<P>(
   fun callback(event: AdapterEvent<P>): () -> Unit {
     require(definition.owns(event)) { "event belongs to another adapter" }
     return { canvas.dispatch(event.eventName) }
+  }
+
+  /** A one-argument callback: the design's action runs, and the argument is not part of it. */
+  fun <A> callback(event: AdapterEvent1<P, A>): (A) -> Unit {
+    require(definition.owns(event)) { "event belongs to another adapter" }
+    return { _ -> canvas.dispatch(event.eventName) }
+  }
+
+  /** A two-argument callback, dispatched as the one-argument one is. */
+  fun <A, B> callback(event: AdapterEvent2<P, A, B>): (A, B) -> Unit {
+    require(definition.owns(event)) { "event belongs to another adapter" }
+    return { _, _ -> canvas.dispatch(event.eventName) }
   }
 
   fun <T> callback(change: AdapterStateChange<P, T>): (T) -> Unit {
