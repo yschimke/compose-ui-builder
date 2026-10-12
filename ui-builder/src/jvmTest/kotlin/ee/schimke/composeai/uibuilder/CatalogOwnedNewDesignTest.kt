@@ -5,6 +5,8 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.catalogOwnedNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.isPrimary
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs
+import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
+import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
@@ -114,6 +116,67 @@ class CatalogOwnedNewDesignTest {
         ::builtIn,
       )
     assertEquals(listOf(false, true), cards.map { it.catalogOwned })
+  }
+
+  private val wearPilot =
+    CatalogListing.markUnlisted(catalog("wear-m3-typed-pilot", "wear", "Wear OS", null))
+
+  @Test
+  fun `an unlisted catalog gets no card, with the flag off or on`() {
+    for (ownership in listOf(CatalogOwnership.NONE, CatalogOwnership.ALL)) {
+      val cards = newDesignCatalogs(listOf(wear, wearPilot, m3), ownership, builtInOrder, ::builtIn)
+      assertEquals(setOf("m3-catalog", "wear-m3"), cards.map { it.systemId }.toSet(), "$ownership")
+    }
+  }
+
+  @Test
+  fun `an unlisted catalog is offered on its own page`() {
+    val cards =
+      newDesignCatalogs(
+        listOf(wear, wearPilot, m3),
+        CatalogOwnership.NONE,
+        builtInOrder,
+        ::builtIn,
+        revealed = setOf("wear-m3-typed-pilot"),
+      )
+    assertTrue("wear-m3-typed-pilot" in cards.map { it.systemId })
+  }
+
+  @Test
+  fun `only a catalog the URL named is revealed, never the default`() {
+    assertEquals(emptySet(), revealedNewDesignCatalogs(null))
+    assertEquals(emptySet(), revealedNewDesignCatalogs(""))
+    val unlistedM3 = CatalogListing.markUnlisted(m3)
+    val plain =
+      newDesignCatalogs(
+        listOf(wear, unlistedM3),
+        CatalogOwnership.NONE,
+        builtInOrder,
+        ::builtIn,
+        revealed = revealedNewDesignCatalogs(null),
+      )
+    assertEquals(listOf("wear-m3"), plain.map { it.systemId })
+    val named =
+      newDesignCatalogs(
+        listOf(wear, unlistedM3),
+        CatalogOwnership.NONE,
+        builtInOrder,
+        ::builtIn,
+        revealed = revealedNewDesignCatalogs("m3-catalog"),
+      )
+    assertEquals(listOf("m3-catalog", "wear-m3"), named.map { it.systemId })
+  }
+
+  @Test
+  fun `by default every served catalog is listed`() {
+    val cards =
+      newDesignCatalogs(
+        listOf(wear, catalog("wear-m3-typed-pilot", "wear", "Wear OS", null), m3),
+        CatalogOwnership.NONE,
+        builtInOrder,
+        ::builtIn,
+      )
+    assertEquals(3, cards.size)
   }
 
   private fun withNewDesign(catalog: CatalogCapabilityV1, newDesign: String) =

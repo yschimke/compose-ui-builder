@@ -77,6 +77,7 @@ import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.refusing
+import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
@@ -811,6 +812,8 @@ private fun LiveSessionApp(
             else CatalogOwnership.NONE,
             NEW_DESIGN_CATALOG_ORDER,
             ::newDesignCatalog,
+            // An unlisted catalog is offered only on its own page (`/ui-builder/<catalog>/`).
+            revealed = revealedNewDesignCatalogs(config.urlCatalogSystemId),
           )
           .map { choice ->
             val capability = availableCatalogs.first {

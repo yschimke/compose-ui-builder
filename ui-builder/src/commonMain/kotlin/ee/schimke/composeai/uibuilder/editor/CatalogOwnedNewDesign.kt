@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.editor
 
+import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
@@ -89,13 +90,21 @@ private fun JsonObject.int(key: String): Int? = (get(key) as? JsonPrimitive)?.in
  * Once all are owned, served order is used. Until then [builtInOrder] decides, with unnamed
  * catalogs after in served order, so unmoved cards keep their place. With the flag off this is the
  * original chooser.
+ *
+ * Unlisted catalogs ([CatalogListing]) get no card, except one named in [revealed] — the catalog
+ * the page's URL asked for, so `/ui-builder/<unlisted>/` still offers its own templates.
  */
 fun newDesignCatalogs(
   catalogs: List<CatalogCapabilityV1>,
   ownership: CatalogOwnership,
   builtInOrder: List<String>,
   builtIn: (CatalogCapabilityV1) -> UiBuilderNewDesignCatalog?,
+  revealed: Set<String> = emptySet(),
 ): List<UiBuilderNewDesignCatalog> {
+  @Suppress("NAME_SHADOWING")
+  val catalogs = catalogs.filter {
+    !CatalogListing.isUnlisted(it) || it.benchmark.catalogSystemId in revealed
+  }
   val served = catalogs.map { it.benchmark.catalogSystemId }
   val allOwned = served.all(ownership::owns)
   val cards = catalogs.mapNotNull { catalog ->
@@ -122,6 +131,14 @@ fun newDesignCatalogs(
       ?: (builtInOrder.size + served.indexOf(card.systemId))
   }
 }
+
+/**
+ * The catalogs [newDesignCatalogs] shows even when unlisted: the one the page's URL named, if any.
+ * A default the URL did not name reveals nothing, or an unlisted default would leak into the plain
+ * chooser.
+ */
+fun revealedNewDesignCatalogs(urlCatalogSystemId: String?): Set<String> =
+  setOfNotNull(urlCatalogSystemId?.takeIf(String::isNotBlank))
 
 /**
  * Whether the chooser lists this card among the primary types rather than under "other types":
