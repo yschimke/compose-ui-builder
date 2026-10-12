@@ -811,6 +811,8 @@ private fun LiveSessionApp(
             else CatalogOwnership.NONE,
             NEW_DESIGN_CATALOG_ORDER,
             ::newDesignCatalog,
+            // An unlisted catalog is offered only on its own page (`/ui-builder/<catalog>/`).
+            revealed = setOf(config.catalogSystemId),
           )
           .map { choice ->
             val capability = availableCatalogs.first {

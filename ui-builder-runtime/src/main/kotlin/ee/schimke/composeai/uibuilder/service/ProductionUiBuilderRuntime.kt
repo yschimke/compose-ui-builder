@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
+import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -76,6 +77,7 @@ private data class Configuration(
   val published: Map<String, CatalogCapabilityV1>,
   val nativeRuntimeIds: Map<String, String> = emptyMap(),
   val catalogOwnership: CatalogOwnership = CatalogOwnership.NONE,
+  val unlistedCatalogIds: Set<String> = emptySet(),
 )
 
 private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
@@ -111,6 +113,14 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
    * [LegacySynthesisedReferences].
    */
   public val catalogOwnership: CatalogOwnership = configuration.catalogOwnership
+
+  /**
+   * Served catalogs left out of what people are offered (`CatalogListing`): each is marked
+   * `statusSemantics.unlisted`, so the chooser and New design list skip it, while it still resolves
+   * by id for a URL, a pinned design or an MCP client. An id this executor does not serve is
+   * ignored. Empty by default: everything listed.
+   */
+  public val unlistedCatalogIds: Set<String> = configuration.unlistedCatalogIds
 
   /**
    * The original constructor, retained for binary compatibility (a new defaulted parameter would
@@ -173,6 +183,12 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     /** See [CurrentM3UiBuilderCatalogExecutor.catalogOwnership]. Off by default. */
     public var catalogOwnership: CatalogOwnership = CatalogOwnership.NONE
 
+    /**
+     * See [CurrentM3UiBuilderCatalogExecutor.unlistedCatalogIds]. Empty by default; a host flag's
+     * comma-separated value parses with `CatalogListing.parse`.
+     */
+    public var unlistedCatalogIds: Set<String> = emptySet()
+
     public fun build(): CurrentM3UiBuilderCatalogExecutor =
       CurrentM3UiBuilderCatalogExecutor(
         Configuration(
@@ -184,6 +200,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           published = published,
           nativeRuntimeIds = nativeRuntimeIds,
           catalogOwnership = catalogOwnership,
+          unlistedCatalogIds = unlistedCatalogIds,
         )
       )
   }
@@ -421,6 +438,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           }
           .build()
           .withPacks(packs.filter { it.platform == catalog.platform })
+          .let { if (systemId in unlistedCatalogIds) CatalogListing.markUnlisted(it) else it }
       }
   /**
    * Where each enabled catalog came from — `published` or `synthesised` — for the startup line, so
