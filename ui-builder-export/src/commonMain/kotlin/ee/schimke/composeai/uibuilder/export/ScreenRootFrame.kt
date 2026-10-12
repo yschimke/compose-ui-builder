@@ -34,6 +34,11 @@ object ScreenRootFrame {
       /** The published one-field constructor, kept for binaries compiled against it. */
       @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
       constructor(document: DesignDocumentV1) : this(document, null, emptyMap())
+
+      /** The published one-field `copy`, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(document: DesignDocumentV1 = this.document): Document =
+        Document(document, frame, frameSlots)
     }
 
     data class Refused(val reasons: List<String>) : Unwrapped

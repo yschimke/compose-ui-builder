@@ -165,14 +165,17 @@ object ScreenDocumentProjection {
        */
       val frameSlots: Map<String, List<ScreenNode>> = emptyMap(),
     ) : Outcome {
-      /** The published five-field constructor, kept for binaries compiled against it. */
+      /**
+       * The published five-field constructor and its defaults, kept for binaries compiled against
+       * them.
+       */
       @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
       constructor(
         document: ScreenDocument,
-        assetPlaceholders: List<AssetPlaceholder>,
-        themed: Boolean,
-        systemFontFamilies: List<String>,
-        variableFontTexts: List<VariableFontText.Request>,
+        assetPlaceholders: List<AssetPlaceholder> = emptyList(),
+        themed: Boolean = false,
+        systemFontFamilies: List<String> = emptyList(),
+        variableFontTexts: List<VariableFontText.Request> = emptyList(),
       ) : this(
         document,
         assetPlaceholders,
@@ -181,6 +184,24 @@ object ScreenDocumentProjection {
         variableFontTexts,
         emptyMap(),
       )
+
+      /** The published five-field `copy`, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(
+        document: ScreenDocument = this.document,
+        assetPlaceholders: List<AssetPlaceholder> = this.assetPlaceholders,
+        themed: Boolean = this.themed,
+        systemFontFamilies: List<String> = this.systemFontFamilies,
+        variableFontTexts: List<VariableFontText.Request> = this.variableFontTexts,
+      ): Projected =
+        Projected(
+          document,
+          assetPlaceholders,
+          themed,
+          systemFontFamilies,
+          variableFontTexts,
+          frameSlots,
+        )
 
       /**
        * [record] plus `MaterialTheme`, which a themed root's wrapper calls and no catalog records.
