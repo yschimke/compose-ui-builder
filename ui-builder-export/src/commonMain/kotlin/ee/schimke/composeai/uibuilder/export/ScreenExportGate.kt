@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.discovery.ExportProjection
 import ee.schimke.composeai.discovery.ScreenGenerator
+import ee.schimke.composeai.discovery.ScreenValue
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 
 /**
@@ -135,7 +136,10 @@ object ScreenExportGate {
       // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
       // sequencing them hid the second list until the first was empty.
       is ScreenDocumentProjection.Outcome.Refused ->
-        Outcome.Refused((projected.reasons + unprovenComponents(framed, record)).distinct())
+        Outcome.Refused(
+          (projected.reasons + unprovenComponents(framed, record, exportProjections.keys))
+            .distinct()
+        )
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
           val generated =
@@ -179,7 +183,8 @@ object ScreenExportGate {
     val packages =
       record.components.map { it.symbol.callable.substringBeforeLast('.', "") }.toSet() - ""
     return (exportProjections.values.flatMap { it.qualifiedOwners } +
-        exportProjections.values.flatMap(::objectCallables))
+        exportProjections.values.flatMap(::objectCallables) +
+        exportProjections.values.flatMap(::fixedCallables))
       .filter { owner -> owner.substringBeforeLast('.', "") in packages }
       .toSet()
   }
@@ -219,6 +224,49 @@ object ScreenExportGate {
     for (target in projection.targets) {
       target.parameters.values.forEach(::value)
       target.contexts.values.forEach { context -> context.parameters.values.forEach(::value) }
+    }
+  }
+
+  /**
+   * Each callable a projection's fixed values construct, named as itself: a top-level one's owner
+   * is its whole package (`SurfaceTransformation(spec)` would name
+   * `androidx.wear.compose.material3`), so admitting the callable, not the owner, keeps the
+   * allowlist to exactly what is called.
+   */
+  private fun fixedCallables(projection: ExportProjection): Set<String> = buildSet {
+    fun screen(value: ScreenValue) {
+      when (value) {
+        is ScreenValue.Construct -> {
+          add(value.callableFqn)
+          value.positional.forEach(::screen)
+          value.named.values.forEach(::screen)
+        }
+        is ScreenValue.Chain -> {
+          screen(value.receiver)
+          value.links.forEach { link ->
+            link.positional.forEach(::screen)
+            link.named.values.forEach(::screen)
+          }
+        }
+        else -> Unit
+      }
+    }
+    fun value(read: ExportProjection.Value) {
+      when (read) {
+        is ExportProjection.Value.Fixed -> screen(read.value)
+        is ExportProjection.Value.Call -> read.arguments.values.forEach(::value)
+        else -> Unit
+      }
+    }
+    for (target in projection.targets) {
+      target.parameters.values.forEach(::value)
+      for (context in target.contexts.values) {
+        context.parameters.values.forEach(::value)
+        context.modifier.forEach { link ->
+          link.positional.forEach(::screen)
+          link.named.values.forEach(::screen)
+        }
+      }
     }
   }
 
@@ -284,6 +332,7 @@ object ScreenExportGate {
   private fun unprovenComponents(
     document: DesignDocumentV1,
     record: ComponentRecordFile,
+    projected: Set<String> = emptySet(),
   ): List<String> {
     val byCanonical = record.components.groupBy { it.canonicalId }
     val byAlias =
@@ -297,6 +346,8 @@ object ScreenExportGate {
       // records itself; see `VariableFontTextRecord`.
       .filter {
         it.component == null &&
+          // A projected component is called through its projection's own records, not by id.
+          it.componentId !in projected &&
           it.componentId != "layout/for-each" &&
           it.componentId != VariableFontText.M3_ID
       }

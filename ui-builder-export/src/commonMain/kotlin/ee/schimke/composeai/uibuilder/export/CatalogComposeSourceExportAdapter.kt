@@ -31,13 +31,28 @@ public object CatalogComposeSourceExportAdapters {
   /** First stable Compose Material 3 source projection. */
   public const val COMPOSE_MATERIAL3_V1: Int = 1
 
+  /**
+   * The same component-record export for any catalog, named for what it does rather than for one
+   * library: a catalog whose components publish typed export projections (and, for a structured
+   * screen, a `code` block's frame, locals and scopes) selects this, whatever platform it is for.
+   */
+  public const val COMPONENT_RECORDS: String = "compose-component-records"
+
+  /** First version of [COMPONENT_RECORDS]. */
+  public const val COMPONENT_RECORDS_V1: Int = 1
+
   private val adapters =
     listOf(
       CatalogComposeSourceExportAdapter(
         id = COMPOSE_MATERIAL3,
         version = COMPOSE_MATERIAL3_V1,
         strategy = CatalogComposeSourceExportAdapter.Strategy.COMPONENT_RECORDS,
-      )
+      ),
+      CatalogComposeSourceExportAdapter(
+        id = COMPONENT_RECORDS,
+        version = COMPONENT_RECORDS_V1,
+        strategy = CatalogComposeSourceExportAdapter.Strategy.COMPONENT_RECORDS,
+      ),
     )
 
   /**
