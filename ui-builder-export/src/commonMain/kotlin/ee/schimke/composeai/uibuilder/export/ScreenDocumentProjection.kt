@@ -1690,6 +1690,28 @@ object ScreenDocumentProjection {
           }
         }
       }
+      BORDER_STROKES[node.componentId]?.let { border ->
+        val color = node.properties[border.colorProperty] ?: return@let
+        spent += border.colorProperty
+        spent += border.widthProperty
+        val where = "node `${node.id}`.`${border.colorProperty}`"
+        val width =
+          when (val authored = node.properties[border.widthProperty]) {
+            null -> dp(1.0)
+            is DecimalValueV1 -> dp(authored.value)
+            is IntegerValueV1 -> dp(authored.value.toDouble())
+            else -> refuse("node `${node.id}`.`${border.widthProperty}` needs a number")
+          }
+        val stroke = colour(color, where)
+        if (width != null && stroke != null) {
+          arguments[border.parameter] =
+            ScreenValue.Construct(
+              callableFqn = "androidx.compose.foundation.BorderStroke",
+              positional = listOf(width, stroke),
+              typeFqn = "androidx.compose.foundation.BorderStroke",
+            )
+        }
+      }
       STATE_BUNDLES[node.componentId]?.let { bundle ->
         val present = bundle.arguments.filterKeys { it in node.properties }
         if (present.isNotEmpty()) {
@@ -4019,6 +4041,39 @@ object ScreenDocumentProjection {
    */
   private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
     mapOf(
+      // Where the rail's items sit along it: `WideNavigationRail(arrangement = Arrangement.Top)`.
+      "m3/wide-navigation-rail" to
+        mapOf(
+          "arrangement" to
+            members(
+              ARRANGEMENT_VERTICAL,
+              ARRANGEMENT,
+              "top" to "Top",
+              "center" to "Center",
+              "bottom" to "Bottom",
+            )
+        ),
+      "m3/time-picker" to
+        mapOf(
+          "layoutType" to
+            members(
+              "androidx.compose.material3.TimePickerLayoutType",
+              "androidx.compose.material3.TimePickerLayoutType",
+              "vertical" to "Vertical",
+              "horizontal" to "Horizontal",
+            )
+        ),
+      "m3/tri-state-checkbox" to
+        mapOf(
+          "state" to
+            members(
+              "androidx.compose.ui.state.ToggleableState",
+              "androidx.compose.ui.state.ToggleableState",
+              "on" to "On",
+              "off" to "Off",
+              "indeterminate" to "Indeterminate",
+            )
+        ),
       "asset/image" to
         mapOf(
           "contentScale" to
@@ -4204,7 +4259,87 @@ object ScreenDocumentProjection {
           optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
           factoryNames = mapOf("containerColor" to "toolbarContainerColor"),
         ),
+      // The icon buttons take every colour through one `IconButtonColors`, and each style has its
+      // own factory, so an unset role keeps that style's default.
+      "m3/icon-button" to iconButtonColors("iconButtonColors"),
+      "m3/filled-icon-button" to iconButtonColors("filledIconButtonColors"),
+      "m3/filled-tonal-icon-button" to iconButtonColors("filledTonalIconButtonColors"),
+      "m3/outlined-icon-button" to iconButtonColors("outlinedIconButtonColors"),
+      // Compose has no error flag on these controls: the kit's error state is the error role in
+      // the colour bundle.
+      "m3/radio-button" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "androidx.compose.material3.RadioButtonDefaults.colors",
+          typeFqn = "androidx.compose.material3.RadioButtonColors",
+          roles =
+            listOf(
+              "selectedColor",
+              "unselectedColor",
+              "disabledSelectedColor",
+              "disabledUnselectedColor",
+            ),
+          optIns = emptyList(),
+        ),
+      "m3/checkbox" to checkboxColors(),
+      "m3/tri-state-checkbox" to checkboxColors(),
+      "m3/list-item" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "androidx.compose.material3.ListItemDefaults.colors",
+          typeFqn = "androidx.compose.material3.ListItemColors",
+          roles =
+            listOf(
+              "containerColor",
+              "headlineColor",
+              "leadingIconColor",
+              "overlineColor",
+              "supportingColor",
+              "trailingIconColor",
+            ),
+          optIns = emptyList(),
+        ),
+      "m3/wide-navigation-rail" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "androidx.compose.material3.WideNavigationRailDefaults.colors",
+          typeFqn = "androidx.compose.material3.WideNavigationRailColors",
+          roles = listOf("containerColor"),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+        ),
     )
+
+  private fun iconButtonColors(factory: String) =
+    ColorBundle(
+      parameter = "colors",
+      factoryFqn = "androidx.compose.material3.IconButtonDefaults.$factory",
+      typeFqn = "androidx.compose.material3.IconButtonColors",
+      roles =
+        listOf("containerColor", "contentColor", "disabledContainerColor", "disabledContentColor"),
+      optIns = emptyList(),
+    )
+
+  private fun checkboxColors() =
+    ColorBundle(
+      parameter = "colors",
+      factoryFqn = "androidx.compose.material3.CheckboxDefaults.colors",
+      typeFqn = "androidx.compose.material3.CheckboxColors",
+      roles = listOf("checkedColor", "uncheckedColor", "checkmarkColor"),
+      optIns = emptyList(),
+    )
+
+  /**
+   * An outline drawn as a `BorderStroke(width, color)`: the colour is required, the width defaults
+   * to Material's 1dp outline.
+   */
+  private class BorderStrokeTarget(
+    val parameter: String,
+    val colorProperty: String,
+    val widthProperty: String,
+  )
+
+  private val BORDER_STROKES: Map<String, BorderStrokeTarget> =
+    mapOf("m3/outlined-icon-button" to BorderStrokeTarget("border", "borderColor", "borderWidthDp"))
 
   /**
    * Properties that configure a component's remembered state rather than its call (`TimePicker`'s
