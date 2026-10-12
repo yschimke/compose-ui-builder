@@ -3623,11 +3623,15 @@ object ScreenDocumentProjection {
   private val RESOURCE_KEY = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
   /**
-   * An event with no actions that is the component's API rather than authoring: a zero-argument
-   * click, which a caller can supply as `() -> Unit`.
+   * An event with no actions that is the component's API rather than authoring, which a caller
+   * supplies as `() -> Unit`: a click, or a toggle's change, whose reported value is only the
+   * complement of the `checked` the caller passed (the generator writes `{ _ -> onXCheckedChange()
+   * }`). A value change is not one: its value is what the user typed.
    */
   private fun isIntent(event: String, actions: List<*>): Boolean =
-    actions.isEmpty() && event == "click"
+    actions.isEmpty() && event in INTENT_EVENTS
+
+  private val INTENT_EVENTS = setOf("click", "checkedChange")
 
   /** A generated callback parameter name: `on` and a plain Kotlin identifier. */
   private val CALLBACK_NAME = Regex("on[A-Z][A-Za-z0-9]*")

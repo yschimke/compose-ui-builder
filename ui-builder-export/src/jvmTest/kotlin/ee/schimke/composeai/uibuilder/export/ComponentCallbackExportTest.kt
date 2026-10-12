@@ -141,6 +141,24 @@ class ComponentCallbackExportTest {
   }
 
   @Test
+  fun `an action-free toggle change is an intent callback`() {
+    val choice =
+      component(
+        document(
+          event = "checkedChange",
+          button = """"componentId": "m3/checkbox", "properties": {}""",
+        ),
+        ProjectedStructure(),
+      )
+    assertTrue(
+      choice.parameters.any {
+        it is ScreenParameter.Callback && it.name == "onGoButtonCheckedChange"
+      },
+      choice.toString(),
+    )
+  }
+
+  @Test
   fun `a binding keeps clear of a callback that already took its name`() {
     val choice = component(document(binding = "onGoButtonClick"), ProjectedStructure())
     val names = choice.parameters.map { it.name }
