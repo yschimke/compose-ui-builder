@@ -109,6 +109,8 @@ internal object StructuredProperties {
             field.copy(
               control = EditorPropertyControl.List,
               value = "$count ${if (count == 1) "item" else "items"}",
+              // A started nullable list keeps its way back to null: the heading offers [NONE].
+              choices = listOfNotNull(NONE.takeIf { located.shape.nullable }),
             )
           if (mixed) return
           repeat(count) { index ->
@@ -186,28 +188,31 @@ internal object StructuredProperties {
   /**
    * A scalar row: an enum from its allowed values, a switch, a number (whole for an `integer`) or
    * text — a colour or token without a closed set is typed as its stored spelling. A nullable
-   * scalar reads as empty when null, and an empty draft commits null (see [commit]).
+   * scalar reads as empty when null, and an empty draft commits null (see [commit]); a nullable
+   * enum or Boolean, whose control has no empty spelling, picks [NONE] instead — a switch would
+   * show null as `false` and never return to it.
    */
   private fun scalarField(
     field: EditorPropertyField,
     shape: PropertyValueShape,
     wrapper: JsonObject,
   ): EditorPropertyField {
+    val nullableBoolean = shape.nullable && shape.jsonType == "boolean"
     val control =
       when {
-        shape.allowedValues.isNotEmpty() -> EditorPropertyControl.Enum
+        shape.allowedValues.isNotEmpty() || nullableBoolean -> EditorPropertyControl.Enum
         shape.jsonType == "boolean" -> EditorPropertyControl.Boolean
         shape.jsonType == "integer" || shape.jsonType == "number" -> EditorPropertyControl.Number
         else -> EditorPropertyControl.Text
       }
     val stored = (wrapper["value"] as? JsonPrimitive)?.takeUnless { it is JsonNull }
+    val pickable =
+      shape.allowedValues.ifEmpty { listOf("true", "false").takeIf { nullableBoolean } }
+    val nullPick = shape.nullable && control == EditorPropertyControl.Enum
     return field.copy(
       control = control,
-      value = stored?.content.orEmpty(),
-      choices =
-        if (shape.nullable && control == EditorPropertyControl.Enum)
-          listOf(NONE) + shape.allowedValues
-        else shape.allowedValues,
+      value = stored?.content ?: if (nullPick) NONE else "",
+      choices = if (nullPick) listOf(NONE) + pickable.orEmpty() else shape.allowedValues,
       numberBounds =
         when (shape.jsonType) {
           "integer" ->
@@ -279,7 +284,10 @@ internal object StructuredProperties {
     val value =
       when (val parsed = field.parseDraft(draft)) {
         is PropertyDraft.Invalid -> return Outcome.Refused(parsed.message)
-        is PropertyDraft.Valid -> parsed.value
+        // A nullable Boolean is picked by name, and stored as the Boolean it names.
+        is PropertyDraft.Valid ->
+          if (located.shape.jsonType == "boolean") JsonPrimitive(draft.toBooleanStrict())
+          else parsed.value
       }
     // Text with a syntax of its own is checked as the codec will read it.
     if (value is JsonPrimitive && value.isString) {

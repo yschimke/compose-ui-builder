@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.capability
 
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -367,13 +369,14 @@ object PropertyValueShapes {
 
   /**
    * Why [text] is not spelled as [format] says, or null. Only the formats the typed codecs publish
-   * are checked here; the renderer's codec is the authority, and an unknown format is the codec's
-   * alone.
+   * are checked here, a `date-time` by the same `Instant.parse` its codec decodes with; the
+   * renderer's codec is the authority, and an unknown format is the codec's alone.
    */
+  @OptIn(ExperimentalTime::class)
   fun formatIssue(format: String?, text: String): String? =
     when (format) {
       DATE_TIME ->
-        if (ISO_INSTANT.matches(text)) null
+        if (ISO_INSTANT.matches(text) && Instant.parseOrNull(text) != null) null
         else "`$text` is not an ISO-8601 instant, like 2026-10-12T08:00:00Z"
       HEX ->
         if (text.length % 2 == 0 && text.all { it in HEX_DIGITS }) null

@@ -106,6 +106,11 @@ class TypedUnionNullablePropertyTest {
             "message": {"type": "string", "value": "x"},
             "seen": {"type": "string", "value": "yesterday"}}}""" to
           "status.seen: `yesterday` is not an ISO-8601 instant",
+        // Spelled like an instant, but no calendar has it: refused as `Instant.parse` refuses it.
+        """{"type": "union", "case": "failed", "fields": {
+            "message": {"type": "string", "value": "x"},
+            "seen": {"type": "string", "value": "2026-99-99T99:99Z"}}}""" to
+          "status.seen: `2026-99-99T99:99Z` is not an ISO-8601 instant",
         """{"type": "union", "case": "failed", "fields": {
             "message": {"type": "null"}}}""" to
           "status.message: expected a `string` wrapper",
@@ -193,7 +198,10 @@ class TypedUnionNullablePropertyTest {
         UiBuilderEditorEvent.CommitPropertyPath("device", "owner", emptyList(), "Owner"),
       )
     assertEquals(
-      json("""{"type": "object", "fields": {"name": {"type": "string", "value": ""}}}"""),
+      json(
+        """{"type": "object", "fields": {"name": {"type": "string", "value": ""},
+          "verified": {"type": "null"}}}"""
+      ),
       started.document.nodes.getValue("device").properties["owner"],
     )
     val shown = reducer.propertyFields(started).associateBy { it.name }
@@ -209,6 +217,65 @@ class TypedUnionNullablePropertyTest {
     val owner = none.document.nodes.getValue("device").properties["owner"]
     assertTrue(owner == null || owner == json("""{"type": "null"}"""), "owner is $owner")
     assertEquals("(none)", reducer.propertyFields(none).first { it.name == "owner" }.value)
+  }
+
+  @Test
+  fun `a nullable Boolean is picked between none, true and false`() {
+    fun owner(state: UiBuilderEditorState) =
+      state.document.nodes.getValue("device").properties.getValue("owner").jsonObject
+    fun verifiedRow(state: UiBuilderEditorState) =
+      reducer.propertyFields(state).first { it.name == "owner.verified" }
+    fun pick(state: UiBuilderEditorState, draft: String) =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.CommitPropertyPath(
+          "device",
+          "owner",
+          listOf(Field("verified")),
+          draft,
+        ),
+      )
+    val started =
+      reducer.reduce(
+        state("owner" to """{"type": "null"}"""),
+        UiBuilderEditorEvent.CommitPropertyPath("device", "owner", emptyList(), "Owner"),
+      )
+    val unset = verifiedRow(started)
+    assertEquals(EditorPropertyControl.Enum, unset.control)
+    assertEquals("(none)", unset.value)
+    assertEquals(listOf("(none)", "true", "false"), unset.choices)
+
+    val no = pick(started, "false")
+    assertEquals(
+      json("""{"type": "bool", "value": false}"""),
+      owner(no).getValue("fields").jsonObject.getValue("verified"),
+    )
+    assertEquals("false", verifiedRow(no).value)
+    val back = pick(no, "(none)")
+    assertEquals(
+      json("""{"type": "null"}"""),
+      owner(back).getValue("fields").jsonObject.getValue("verified"),
+    )
+  }
+
+  @Test
+  fun `a started nullable list keeps its way back to none`() {
+    val started =
+      reducer.reduce(
+        state("tags" to """{"type": "null"}"""),
+        UiBuilderEditorEvent.CommitPropertyPath("device", "tags", emptyList(), "List"),
+      )
+    val header = reducer.propertyFields(started).first { it.name == "tags" }
+    assertEquals(EditorPropertyControl.List, header.control)
+    assertEquals(listOf("(none)"), header.choices)
+
+    val none =
+      reducer.reduce(
+        started,
+        UiBuilderEditorEvent.CommitPropertyPath("device", "tags", emptyList(), "(none)"),
+      )
+    val tags = none.document.nodes.getValue("device").properties["tags"]
+    assertTrue(tags == null || tags == json("""{"type": "null"}"""), "tags is $tags")
   }
 
   private companion object {
@@ -243,7 +310,12 @@ class TypedUnionNullablePropertyTest {
             {"name": "owner", "jsonType": "object", "required": false, "nullable": true,
              "editor": {"control": "object", "objectType": "com.example.Owner", "fields": [
                {"name": "name", "required": true, "jsonType": "string",
-                "literalType": "string"}]}}],
+                "literalType": "string"},
+               {"name": "verified", "required": false, "default": {"type": "null"},
+                "jsonType": "boolean", "literalType": "bool", "nullable": true}]}},
+            {"name": "tags", "jsonType": "array", "required": false, "nullable": true,
+             "editor": {"control": "list", "element": {"jsonType": "string",
+               "literalType": "string"}}}],
           "wasm": {"platformSupported": true, "adapterStatus": "supported"}}]}"""
   }
 }
