@@ -229,6 +229,57 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a button group's children share it out by weight, without the row's fill`() {
+    val group =
+      record(
+        "ButtonGroup",
+        listOf("wear-m3/button-group"),
+        listOf(
+          parameter("modifier", "Modifier", "androidx.compose.ui.Modifier", default = true),
+          parameter(
+            "content",
+            "ButtonGroupScope.() -> Unit",
+            slot = true,
+            receiver = "androidx.wear.compose.material3.ButtonGroupScope",
+          ),
+        ),
+      )
+    val groupProjection =
+      ExportProjectionJson.decode(
+          Json.parseToJsonElement(
+            """{ "targets": [ { "record": "${group.canonicalId}",
+              "slots": { "children": "content" } } ] }"""
+          )
+        )
+        .getOrThrow()
+    fun export(fill: Boolean?, weight: Double = 0.7): ScreenExportGate.Outcome {
+      val base = document(button())
+      val weighted =
+        base.nodes
+          .getValue("go")
+          .copy(modifiers = listOf(WeightModifierV1(JsonPrimitive(weight), fill)))
+      val node =
+        DesignNodeV1("group", "wear-m3/button-group", slots = mapOf("children" to listOf("go")))
+      return ScreenExportGate.export(
+        base.copy(
+          roots = listOf("group"),
+          nodes = base.nodes + ("go" to weighted) + ("group" to node),
+        ),
+        ComponentRecordFile.Builder("wear", "release", records.components + group).build(),
+        projections + ("wear-m3/button-group" to groupProjection),
+      )
+    }
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(export(null), export(null).toString()).source
+    assertContains(source, "ButtonGroup {")
+    assertContains(source, "Button(onClick = {}, modifier = Modifier.weight(0.7f), label = {")
+    val refused = assertIs<ScreenExportGate.Outcome.Refused>(export(false))
+    assertTrue(refused.reasons.any { "does not take" in it }, refused.reasons.toString())
+    val zero = assertIs<ScreenExportGate.Outcome.Refused>(export(null, weight = 0.0))
+    assertTrue(zero.reasons.any { "only a positive weight" in it }, zero.reasons.toString())
+  }
+
+  @Test
   fun `a variant exports as the real library composable with its factory colours`() {
     val source =
       emitted(

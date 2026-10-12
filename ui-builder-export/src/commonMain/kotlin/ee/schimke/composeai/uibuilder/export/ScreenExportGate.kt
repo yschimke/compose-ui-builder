@@ -149,6 +149,9 @@ object ScreenExportGate {
               PACKAGE_NAME,
               EXPRESSION_PACKAGES +
                 projectedOwners(exportProjections, record) +
+                // A scope a projected record hands its children is theirs to call members of
+                // (`ButtonGroupScope.weight`), as `RowScope`'s are inside a `Row`.
+                slotReceivers(exportProjections, record).values.flatMap { it.values } +
                 stringResourcePackages(structure),
               locals = structure?.locals.orEmpty(),
               frame = structure?.frame?.let { ScreenGenerator.Frame(it, structure.imports) },
