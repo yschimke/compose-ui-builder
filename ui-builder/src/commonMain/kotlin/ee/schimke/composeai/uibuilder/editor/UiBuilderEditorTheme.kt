@@ -55,7 +55,7 @@ internal val LocalUiBuilderEditorPalette = staticCompositionLocalOf {
 /** [MaterialTheme] with [theme]'s scheme, and [theme]'s palette for the non-Material colours. */
 @Composable
 internal fun EditorTheme(theme: UiBuilderEditorTheme, content: @Composable () -> Unit) {
-  MaterialTheme(colorScheme = theme.colorScheme) {
+  MaterialTheme(colorScheme = theme.colorScheme.branded(LocalUiBuilderBrand.current)) {
     CompositionLocalProvider(LocalUiBuilderEditorPalette provides theme.palette, content = content)
   }
 }

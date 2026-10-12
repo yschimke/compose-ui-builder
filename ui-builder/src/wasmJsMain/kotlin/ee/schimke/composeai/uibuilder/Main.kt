@@ -48,6 +48,7 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.EditorOverlays
+import ee.schimke.composeai.uibuilder.editor.ProvideUiBuilderBrand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasInspection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasSurface
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
@@ -210,7 +211,10 @@ fun main() {
           when {
             mcpAppEnabled() -> McpAppHostApp()
             hostBridgeEnabled() -> HostBridgeApp()
-            liveSession -> LiveSessionApp(checkNotNull(identity))
+            liveSession ->
+              ProvideUiBuilderBrand(uiBuilderBrand, openHome = { navigateTo(it) }) {
+                LiveSessionApp(checkNotNull(identity))
+              }
             else -> VisualFixtureApp(captureMode())
           }
         }
@@ -2065,6 +2069,26 @@ private external fun uiBuilderBasePathMeta(): String?
  */
 internal val uiBuilderBasePath: String by lazy {
   normalizeUiBuilderBasePath(uiBuilderBasePathMeta())
+}
+
+/** One of the shell's `<meta>`s by [name], or null on a page without it. */
+@JsFun(
+  """(name) => globalThis.document?.querySelector('meta[name="' + name + '"]')
+    ?.getAttribute('content') ?? null"""
+)
+private external fun uiBuilderMeta(name: String): String?
+
+/**
+ * This host's brand, from the shell's `ui-builder-brand-*` and `ui-builder-catalogs` metas, or null
+ * on a host that writes none of them — every host but a white-labelled one. See [UiBuilderBrand].
+ */
+internal val uiBuilderBrand: UiBuilderBrand? by lazy {
+  UiBuilderBrand.parse(
+    name = uiBuilderMeta(UiBuilderBrand.NAME_META),
+    accent = uiBuilderMeta(UiBuilderBrand.ACCENT_META),
+    home = uiBuilderMeta(UiBuilderBrand.HOME_META),
+    catalogs = uiBuilderMeta(UiBuilderBrand.CATALOGS_META),
+  )
 }
 
 /**
