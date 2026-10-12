@@ -5,8 +5,9 @@ import java.io.File
 import kotlinx.serialization.json.Json
 
 /**
- * `wear-m3` and `remote-m3` as committed capability fixtures, handed to the executor as published
- * catalogs — what production does (no deployment runs the synthesised generators).
+ * `wear-m3` and `remote-m3` as committed capability fixtures, and `a2ui-catalog` as its own
+ * published file, handed to the executor as published catalogs — what production does (no
+ * deployment runs the synthesised generators).
  *
  * The composed fixture (`docs/design/fixtures/ui-builder/<id>-capabilities-v1.json`, written by
  * `SynthesisedCatalogGoldenTest`) rather than the policy pair, because composing needs the record
@@ -21,10 +22,14 @@ internal object PublishedCatalogFixtures {
     setOf(
       CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
       CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+      CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
     )
 
   fun catalog(systemId: String): CatalogCapabilityV1 =
-    json.decodeFromString(file(systemId).readText())
+    if (systemId == CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID)
+      // No golden: this build has no generator for it, so it is a2ui-catalog's own published file.
+      CatalogCutoverFixtures.catalog(systemId)
+    else json.decodeFromString(file(systemId).readText())
 
   // A unit test runs with the module directory as its working directory, so `..` reaches the
   // repository root -- resolved by the DIRECTORY, the way `SynthesisedCatalogGoldenTest` does it.
