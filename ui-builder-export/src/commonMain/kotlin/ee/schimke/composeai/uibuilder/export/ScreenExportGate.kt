@@ -112,11 +112,12 @@ object ScreenExportGate {
       )
     }
     val resolvable = record.callableAliases()
-    val framed =
+    val unwrapped =
       when (val unwrapped = ScreenRootFrame.unwrap(document, structure)) {
         is ScreenRootFrame.Unwrapped.Refused -> return Outcome.Refused(unwrapped.reasons)
-        is ScreenRootFrame.Unwrapped.Document -> unwrapped.document
+        is ScreenRootFrame.Unwrapped.Document -> unwrapped
       }
+    val framed = unwrapped.document
     return when (
       val projected =
         ScreenDocumentProjection.project(
@@ -130,6 +131,7 @@ object ScreenExportGate {
               dslReceivers(exportProjections, record),
               structure?.itemScope,
               structure?.stringResources,
+              unwrapped.frameSlots,
             ),
         )
     ) {
@@ -154,7 +156,12 @@ object ScreenExportGate {
                 slotReceivers(exportProjections, record).values.flatMap { it.values } +
                 stringResourcePackages(structure),
               locals = structure?.locals.orEmpty(),
-              frame = structure?.frame?.let { ScreenGenerator.Frame(it, structure.imports) },
+              frame =
+                (unwrapped.frame ?: structure?.frame)?.let {
+                  ScreenGenerator.Frame(it, structure?.imports.orEmpty())
+                },
+              output = ScreenGenerator.Output.SCREEN,
+              frameSlots = projected.frameSlots,
             )
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)

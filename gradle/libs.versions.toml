@@ -136,7 +136,10 @@ maven-publish = "0.37.0"
 # daemon and contracts as 2.47.0.
 # 2.51.0 names the role a projection target's item member opens (`itemRoles`, #5877), which the
 # projected export now reads instead of assuming `list-item`. Daemon 3.15.3, contracts 3.30.0.
-composeai-tools = "2.51.0"
+# 2.52.0 fills a frame's other slot holes (`generate(…, frameSlots)`, #5901) and writes a
+# projected Material icon from the host's icon table (`Codec.MaterialIcon`, #5891, #5905). Same
+# daemon and contracts as 2.51.0.
+composeai-tools = "2.52.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and

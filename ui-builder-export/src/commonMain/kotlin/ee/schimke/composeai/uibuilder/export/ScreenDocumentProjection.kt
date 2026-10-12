@@ -159,7 +159,50 @@ object ScreenDocumentProjection {
        * flexpress at export and joined into the screen's file. See [VariableFontText].
        */
       val variableFontTexts: List<VariableFontText.Request> = emptyList(),
+      /**
+       * [ProjectedStructure.frameSlots] projected: each slot's children, for the screen frame's
+       * hole of the same name.
+       */
+      val frameSlots: Map<String, List<ScreenNode>> = emptyMap(),
     ) : Outcome {
+      /**
+       * The published five-field constructor and its defaults, kept for binaries compiled against
+       * them.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(
+        document: ScreenDocument,
+        assetPlaceholders: List<AssetPlaceholder> = emptyList(),
+        themed: Boolean = false,
+        systemFontFamilies: List<String> = emptyList(),
+        variableFontTexts: List<VariableFontText.Request> = emptyList(),
+      ) : this(
+        document,
+        assetPlaceholders,
+        themed,
+        systemFontFamilies,
+        variableFontTexts,
+        emptyMap(),
+      )
+
+      /** The published five-field `copy`, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(
+        document: ScreenDocument = this.document,
+        assetPlaceholders: List<AssetPlaceholder> = this.assetPlaceholders,
+        themed: Boolean = this.themed,
+        systemFontFamilies: List<String> = this.systemFontFamilies,
+        variableFontTexts: List<VariableFontText.Request> = this.variableFontTexts,
+      ): Projected =
+        Projected(
+          document,
+          assetPlaceholders,
+          themed,
+          systemFontFamilies,
+          variableFontTexts,
+          frameSlots,
+        )
+
       /**
        * [record] plus `MaterialTheme`, which a themed root's wrapper calls and no catalog records.
        * Only added to a themed screen: a record carrying `MaterialTheme` makes the generator refuse
@@ -329,6 +372,14 @@ object ScreenDocumentProjection {
       pass.node(roots.single())?.let { content ->
         if (theme == null) content else pass.themed(content, theme, screenName)
       }
+    // The frame's other holes, in the same pass: they read the screen's state like the root does.
+    if (theme != null && structure.frameSlots.isNotEmpty()) {
+      pass.reasons +=
+        "the design sets a theme on its surface, which wraps the frame's `content` but not its " +
+          structure.frameSlots.keys.sorted().joinToString { "`$it`" } +
+          "; set the theme on the catalog's screen instead"
+    }
+    val frameSlots = structure.frameSlots.mapValues { (_, ids) -> ids.mapNotNull { pass.node(it) } }
     val projected = root?.let {
       pass.finish(ScreenDocument(screenName, it, pass.state.values.toList()))
     }
@@ -354,6 +405,7 @@ object ScreenDocumentProjection {
       themed = theme != null,
       systemFontFamilies = pass.systemFontFamilies.toList(),
       variableFontTexts = VariableFontText.requests(pass.variableFontSpecs),
+      frameSlots = frameSlots,
     )
   }
 
@@ -1074,7 +1126,9 @@ object ScreenDocumentProjection {
       // Only the direct child of an item wrapper is in the role, and only once.
       val role = itemRoles.remove(node.id)
       val lowered =
-        when (val outcome = projection.lower(literal, role)) {
+        // A projected `materialIcon` property is written from this build's own icon table, exactly
+        // as `m3/icon` is.
+        when (val outcome = projection.lower(literal, role, ::icon)) {
           is ExportProjection.Lowered.Refused -> {
             outcome.reasons.forEach { reasons += "$where: $it" }
             return null

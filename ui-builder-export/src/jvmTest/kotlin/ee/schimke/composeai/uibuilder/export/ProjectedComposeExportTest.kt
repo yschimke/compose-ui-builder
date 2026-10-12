@@ -463,6 +463,61 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a projected Material icon key is written from this build's icon table`() {
+    val icon =
+      record(
+        "Icon",
+        listOf("wear-m3/icon"),
+        listOf(
+          parameter(
+            "imageVector",
+            "ImageVector",
+            "androidx.compose.ui.graphics.vector.ImageVector",
+          ),
+          parameter("contentDescription", "String?", "kotlin.String")
+            .newBuilder()
+            .also { it.nullable = true }
+            .build(),
+        ),
+      )
+    val projection =
+      ExportProjection(
+        listOf(
+          ExportProjection.Target(
+            icon.canonicalId,
+            mapOf(
+              "imageVector" to
+                ExportProjection.Value.Property("iconKey", ExportProjection.Codec.MaterialIcon)
+            ),
+          )
+        )
+      )
+    fun exported(key: String): ScreenExportGate.Outcome {
+      val base = document(button())
+      val node =
+        DesignNodeV1(
+          "glyph",
+          "wear-m3/icon",
+          properties = mapOf("iconKey" to EnumValueV1(key)),
+        )
+      return ScreenExportGate.export(
+        base.copy(roots = listOf("glyph"), nodes = mapOf("glyph" to node)),
+        ComponentRecordFile.Builder("wear", "release", records.components + icon).build(),
+        mapOf("wear-m3/icon" to projection),
+      )
+    }
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(exported("filled/add"), "filled/add").source
+    assertContains(source, "Icon(imageVector = Icons.Filled.Add")
+    assertContains(source, "import androidx.compose.material.icons.filled.Add")
+    val refused = assertIs<ScreenExportGate.Outcome.Refused>(exported("filled/noSuchIcon"))
+    assertTrue(
+      refused.reasons.any { "is not a Material icon key" in it },
+      refused.reasons.toString(),
+    )
+  }
+
+  @Test
   fun `a catalog without projections exports exactly as before`() {
     val document = document(button())
     assertEquals(
@@ -861,6 +916,68 @@ class ProjectedComposeExportTest {
     val empty =
       assertIs<ScreenExportGate.Outcome.Refused>(exportList(scaffolded(slots = emptyMap())))
     assertTrue(empty.reasons.any { "no content" in it }, empty.reasons.toString())
+  }
+
+  @Test
+  fun `a filled root slot exports into the frame the catalog publishes for it`() {
+    val edge =
+      DesignNodeV1("edge", "wear-m3/text", properties = mapOf("text" to StringValueV1("Go")))
+    val document =
+      scaffolded(slots = mapOf("content" to listOf("list"), "edgeButton" to listOf("edge"))).let {
+        it.copy(nodes = it.nodes + ("edge" to edge))
+      }
+    val structure =
+      wearStructure.copy(
+        slotFrames =
+          mapOf(
+            setOf("edgeButton") to
+              "val listState = rememberTransformingLazyColumnState()\n" +
+                "val spec = rememberTransformationSpec()\n" +
+                "ScreenScaffold(scrollState = listState, edgeButton = {\n" +
+                "  ${'$'}{edgeButton}\n" +
+                "}) { contentPadding ->\n" +
+                "  ${'$'}{content}\n" +
+                "}"
+          )
+      )
+    val outcome =
+      ScreenExportGate.export(
+        document,
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        structure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "ScreenScaffold(scrollState = listState, edgeButton = {\n")
+    assertContains(source, "Text(text = \"Go\")\n    }) { contentPadding ->")
+    assertContains(source, "TransformingLazyColumn(state = listState) {")
+    // The plain frame stays for a screen that fills no other slot.
+    assertIs<ScreenExportGate.Outcome.Emitted>(
+      ScreenExportGate.export(
+        scaffolded(),
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        structure,
+      )
+    )
+  }
+
+  @Test
+  fun `a frame per filled slot set is read from its template key`() {
+    val structure =
+      CatalogScreenStructure.from(
+        Json.parseToJsonElement(
+            """{ "code": { "templates": { "screen-root": "a", "screen-root+edgeButton": "b",
+              "screen-root+edgeButton+overlays": "c" } } }"""
+          )
+          .jsonObject
+      )
+    assertEquals("a", structure.frameFor(emptySet()))
+    assertEquals("b", structure.frameFor(setOf("edgeButton")))
+    assertEquals("c", structure.frameFor(setOf("overlays", "edgeButton")))
+    assertEquals(null, structure.frameFor(setOf("overlays")))
   }
 
   @Test

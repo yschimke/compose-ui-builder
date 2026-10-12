@@ -30,7 +30,49 @@ data class CatalogScreenStructure(
   val scopes: Map<String, String> = emptyMap(),
   val rootComponent: String? = null,
   val stringResources: String? = null,
+  /**
+   * The `screen-root` frames for a root that fills other slots, by the set of slots filled:
+   * `code.templates["screen-root+edgeButton"]` is the frame around a screen with an edge button. A
+   * template has no conditionals, so each set the catalog supports is its own frame.
+   */
+  val slotFrames: Map<Set<String>, String> = emptyMap(),
 ) {
+  /**
+   * The published six-field constructor and its defaults, kept for binaries compiled against them.
+   */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  constructor(
+    frame: String? = null,
+    imports: List<String> = emptyList(),
+    locals: Map<String, String> = emptyMap(),
+    scopes: Map<String, String> = emptyMap(),
+    rootComponent: String? = null,
+    stringResources: String? = null,
+  ) : this(frame, imports, locals, scopes, rootComponent, stringResources, emptyMap())
+
+  /** The published six-field `copy`, kept for binaries compiled against it. */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  fun copy(
+    frame: String? = this.frame,
+    imports: List<String> = this.imports,
+    locals: Map<String, String> = this.locals,
+    scopes: Map<String, String> = this.scopes,
+    rootComponent: String? = this.rootComponent,
+    stringResources: String? = this.stringResources,
+  ): CatalogScreenStructure =
+    CatalogScreenStructure(
+      frame,
+      imports,
+      locals,
+      scopes,
+      rootComponent,
+      stringResources,
+      slotFrames,
+    )
+
+  /** The frame for a root filling [slots] besides `content`, or null when none is published. */
+  fun frameFor(slots: Set<String>): String? = if (slots.isEmpty()) frame else slotFrames[slots]
+
   /** The published four-field constructor, kept for binaries compiled against it. */
   @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
   constructor(
@@ -38,7 +80,7 @@ data class CatalogScreenStructure(
     imports: List<String> = emptyList(),
     locals: Map<String, String> = emptyMap(),
     scopes: Map<String, String> = emptyMap(),
-  ) : this(frame, imports, locals, scopes, null, null)
+  ) : this(frame, imports, locals, scopes, null, null, emptyMap())
 
   /** The scope a projection's item member composes its child under, if the catalog attests it. */
   val itemScope: String?
@@ -67,8 +109,9 @@ data class CatalogScreenStructure(
             (value as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull?.let { key to it }
           }
           .toMap()
+      val templates = strings("templates")
       return CatalogScreenStructure(
-        frame = strings("templates")[SCREEN_ROOT],
+        frame = templates[SCREEN_ROOT],
         imports =
           (code["imports"] as? JsonArray).orEmpty().mapNotNull {
             (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.contentOrNull
@@ -78,6 +121,10 @@ data class CatalogScreenStructure(
         rootComponent = rootComponent,
         stringResources =
           (code["stringResources"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull,
+        slotFrames =
+          templates
+            .filterKeys { it.startsWith("$SCREEN_ROOT+") }
+            .mapKeys { (key, _) -> key.split('+').drop(1).toSet() },
       )
     }
   }
@@ -93,7 +140,31 @@ data class ProjectedStructure(
   val itemScope: String? = null,
   /** [CatalogScreenStructure.stringResources], for lowering `resource` values. */
   val stringResources: String? = null,
+  /**
+   * The design nodes a screen frame writes into its holes besides `content`, by slot
+   * ([ScreenRootFrame.Unwrapped.Document.frameSlots]); projected in the same pass as the root.
+   */
+  val frameSlots: Map<String, List<String>> = emptyMap(),
 ) {
+  /**
+   * The published three-field constructor and its defaults, kept for binaries compiled against
+   * them.
+   */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  constructor(
+    dslReceivers: Map<String, Map<String, String>> = emptyMap(),
+    itemScope: String? = null,
+    stringResources: String? = null,
+  ) : this(dslReceivers, itemScope, stringResources, emptyMap())
+
+  /** The published three-field `copy`, kept for binaries compiled against it. */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  fun copy(
+    dslReceivers: Map<String, Map<String, String>> = this.dslReceivers,
+    itemScope: String? = this.itemScope,
+    stringResources: String? = this.stringResources,
+  ): ProjectedStructure = ProjectedStructure(dslReceivers, itemScope, stringResources, frameSlots)
+
   /** The published two-field constructor, kept for binaries compiled against it. */
   @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
   constructor(
