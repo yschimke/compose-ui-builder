@@ -2072,13 +2072,7 @@ private fun WearScreenScaffold(
   val clock: @Composable () -> Unit = {
     if (timeText.isNotEmpty()) {
       val source = remember(timeText) { FixedTimeSource(timeText) }
-      TimeText(timeSource = source) { time ->
-        // Workaround: the port's Skia `CurvedTextDelegate.doDraw` truncates text slightly wider
-        // than its sweep, dropping the last glyph ("10:10" drew "10:1"). An em space pad absorbs it
-        // (a plain space was too narrow on small watches). Breaks above font scale 1. Remove the
-        // pad when the port stops truncating text that fits.
-        timeTextCurvedText("$time\u2003")
-      }
+      TimeText(timeSource = source) { time -> timeTextCurvedText(time) }
     }
   }
   Box(
