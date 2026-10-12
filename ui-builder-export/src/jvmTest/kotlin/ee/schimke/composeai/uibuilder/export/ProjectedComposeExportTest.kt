@@ -551,6 +551,7 @@ class ProjectedComposeExportTest {
               )
           ),
           items = mapOf("content" to "item"),
+          itemRoles = mapOf("content" to "list-item"),
         )
       )
     )
@@ -626,6 +627,22 @@ class ProjectedComposeExportTest {
     assertContains(source, "item {")
     assertContains(source, "Modifier.transformedHeight(this, spec)")
     assertContains(source, "import androidx.wear.compose.material3.ScreenScaffold")
+  }
+
+  @Test
+  fun `a list whose item member opens no role wraps its rows without the role's links`() {
+    val plainList =
+      listProjection.copy(targets = listProjection.targets.map { it.copy(itemRoles = emptyMap()) })
+    val outcome =
+      ScreenExportGate.export(
+        listDocument(),
+        listRecords,
+        projections + mapOf("wear-m3/list" to plainList, "wear-m3/button" to itemButtonProjection),
+        wearStructure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "item {")
+    assertFalse("transformedHeight" in source, source)
   }
 
   @Test
