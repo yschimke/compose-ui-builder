@@ -138,6 +138,18 @@ internal class RemoteContentEmitter(
    * `remote-widgets`).
    */
   private val textVocabulary: RemoteTextVocabulary = RemoteTextVocabulary.MATERIAL3,
+  /**
+   * The visibility a design's component definitions are written with: `private` beside the root
+   * that places them, `internal` when [InlineRemoteContentExporter.exportComponents] writes the
+   * components alone for a catalog's own code to call.
+   */
+  private val componentVisibility: String = "private",
+  /**
+   * Whether a component's binding parameters are named for their keys (`label`) rather than
+   * numbered (`argument0`): a catalog calls the components-only export by name, while the widget
+   * and inline exports keep their established spelling.
+   */
+  private val namedBindings: Boolean = false,
 ) {
   /**
    * The caller's record layered over the embedded [RemoteMaterial3.records]; the caller's wins, so
@@ -526,7 +538,7 @@ internal class RemoteContentEmitter(
       return listOf(
           "@Composable",
           "@RemoteComposable",
-          "private fun $name(${parameters.joinToString()}) {",
+          "$componentVisibility fun $name(${parameters.joinToString()}) {",
           "    RemoteBox(modifier = modifier) {",
         )
         .plus(body)
@@ -568,12 +580,26 @@ internal class RemoteContentEmitter(
       return null
     }
     val field =
-      current.fields.getOrPut(key) { BoundField("argument${current.fields.size}", type, convert) }
+      current.fields.getOrPut(key) { BoundField(parameterName(key, current), type, convert) }
     if (field.type != type) {
       refusals += "$where: binding `$key` is used as both ${field.type} and $type"
       return null
     }
     return current.row?.let { "$it.${field.name}" } ?: field.name
+  }
+
+  /**
+   * A component parameter's name: its binding key when [namedBindings] and the key is a plain
+   * Kotlin identifier no other parameter takes, else the numbered `argumentN` (always, inside a
+   * loop row).
+   */
+  private fun parameterName(key: String, current: Bindings): String {
+    val numbered = "argument${current.fields.size}"
+    if (!namedBindings || current.row != null) return numbered
+    val taken = current.fields.values.map { it.name }.toSet() + "modifier"
+    return key.takeIf {
+      it.matches(Regex("[a-z][A-Za-z0-9]*")) && it !in KOTLIN_HARD_KEYWORDS && it !in taken
+    } ?: numbered
   }
 
   fun validateFunctionNames(vararg topLevelNames: String) {

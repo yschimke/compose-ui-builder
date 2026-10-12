@@ -110,6 +110,70 @@ public object InlineRemoteContentExporter {
     )
   }
 
+  /**
+   * A design's component definitions alone, as `internal` `@RemoteComposable` functions: the Remote
+   * counterpart of [ScreenExportGate.exportComponents], for a catalog that places the components
+   * itself. Every root must place a component; the roots themselves are not written.
+   *
+   * A component's parameters are its `modifier`, its bindings (what each placement supplies, named
+   * for their keys) and its captures. A colour or type token is read from `RemoteMaterialTheme`,
+   * which the caller's own frame provides: no theme is written around a component.
+   */
+  public fun exportComponents(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    components: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Result {
+    val reasons = mutableListOf<String>()
+    if (document.roots.isEmpty()) reasons += "document.roots: place at least one component"
+    document.roots.forEach { id ->
+      val node = document.nodes[id]
+      if (node?.componentId != "design/component-instance")
+        reasons += "document.roots.$id: a components-only export writes components, not `$id`"
+    }
+    if (reasons.isNotEmpty()) return Result.Refused(reasons)
+    val emitter =
+      RemoteContentEmitter(
+        document,
+        reasons,
+        assets = assets,
+        components = components,
+        componentVisibility = "internal",
+        namedBindings = true,
+      )
+    document.roots.forEach { emitter.emit(it, depth = 1) }
+    val declarations = emitter.declarations
+    val first =
+      Regex("""internal fun (\w+)\(""")
+        .find(declarations.firstOrNull().orEmpty())
+        ?.groupValues
+        ?.get(1)
+    if (first == null) reasons += "document: no component was written"
+    if (reasons.isNotEmpty()) return Result.Refused(reasons.distinct())
+    return Result.Emitted(
+      functionName = first!!,
+      source =
+        buildString {
+          appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
+          appendLine(
+            "// Components of design ${document.id.escapeComment()} revision ${document.revision}."
+          )
+          appendLine("@file:Suppress(\"RestrictedApi\")")
+          appendLine()
+          if (packageName != null) {
+            appendLine("package $packageName")
+            appendLine()
+          }
+          emitter.imports(widget = null).forEach { appendLine("import $it") }
+          declarations.forEach {
+            appendLine()
+            appendLine(it)
+          }
+        },
+    )
+  }
+
   private fun source(
     document: UiBuilderDocument,
     contentIds: List<String>,
