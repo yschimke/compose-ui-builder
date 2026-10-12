@@ -246,7 +246,7 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | --- | --- | --- | --- |
 | `WearM3Catalog.kt` (`wearM3Catalog`, `wearDesignTokens`) | 1,684 | wear-m3-catalog's `ui-builder.policy.json` + record | `wear-m3` owned for a release |
 | `RemoteM3Catalog.kt` | 802 | remote-m3-catalog's `remote-catalog/ui-builder.policy.json` | `remote-m3` owned for a release |
-| `A2uiCatalog.kt` | 897 | a2ui-catalog's `ui-builder.policy.json` | `a2ui-catalog` owned for a release |
+| ~~`A2uiCatalog.kt`~~ (deleted, with its golden) | 897 | a2ui-catalog's `ui-builder.policy.json` | — a host serving `a2ui-catalog` now has to publish it; its legacy pin resolves through `LegacySynthesisedReferences` |
 | `UiBuilderTemplates.kt`'s Wear screen, Wear list and widget builders, `WearWidgetSample`, `AdaptiveWearWidget.newDocument` | ~800 | `ui-builder/designs/*.json` in wear-m3-catalog and remote-m3-catalog (round-trip tested there) | the matching catalog owned |
 | `AdaptiveScreenTemplates` | 491 | m3-catalog's `ui-builder/designs/*.json` | `m3-catalog` owned, after its `adaptive-navigation` ledger row |
 | `UiBuilderNewDesignSeed`'s `when`s, `newDesignCatalog`'s table, `NEW_DESIGN_CATALOG_ORDER`, the home screen's three-id list | ~250 | the catalog-owned readers above | all catalogs owned |
