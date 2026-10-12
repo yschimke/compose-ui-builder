@@ -1240,6 +1240,11 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
 
 internal data class LiveSessionConfig(
   val catalogSystemId: String,
+  /**
+   * The catalog the URL itself named (`?catalog=`), or null when [catalogSystemId] is the default.
+   * Only a named catalog reveals an unlisted one in the chooser.
+   */
+  val urlCatalogSystemId: String? = null,
   val designId: String,
   /**
    * What in the design this URL means: a revision, a node, a thread. Parsed by
@@ -1527,6 +1532,7 @@ internal fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val designNamedInPath = pathDesignId.isNotEmpty()
   return LiveSessionConfig(
       catalogSystemId = catalogSystemId,
+      urlCatalogSystemId = catalogSystemId.takeIf { liveConfigPresent("catalog") },
       selectors = parseDesignUrlSelectors(locationSearch(), locationHash()),
       designId =
         if (designNamedInPath) pathDesignId else liveConfigValue("designId", defaultDesignId),

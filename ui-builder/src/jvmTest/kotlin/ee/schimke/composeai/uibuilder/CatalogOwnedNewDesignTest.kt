@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.catalogOwnedNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.isPrimary
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs
+import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -139,6 +140,31 @@ class CatalogOwnedNewDesignTest {
         revealed = setOf("wear-m3-typed-pilot"),
       )
     assertTrue("wear-m3-typed-pilot" in cards.map { it.systemId })
+  }
+
+  @Test
+  fun `only a catalog the URL named is revealed, never the default`() {
+    assertEquals(emptySet(), revealedNewDesignCatalogs(null))
+    assertEquals(emptySet(), revealedNewDesignCatalogs(""))
+    val unlistedM3 = CatalogListing.markUnlisted(m3)
+    val plain =
+      newDesignCatalogs(
+        listOf(wear, unlistedM3),
+        CatalogOwnership.NONE,
+        builtInOrder,
+        ::builtIn,
+        revealed = revealedNewDesignCatalogs(null),
+      )
+    assertEquals(listOf("wear-m3"), plain.map { it.systemId })
+    val named =
+      newDesignCatalogs(
+        listOf(wear, unlistedM3),
+        CatalogOwnership.NONE,
+        builtInOrder,
+        ::builtIn,
+        revealed = revealedNewDesignCatalogs("m3-catalog"),
+      )
+    assertEquals(listOf("m3-catalog", "wear-m3"), named.map { it.systemId })
   }
 
   @Test

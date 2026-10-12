@@ -133,6 +133,14 @@ fun newDesignCatalogs(
 }
 
 /**
+ * The catalogs [newDesignCatalogs] shows even when unlisted: the one the page's URL named, if any.
+ * A default the URL did not name reveals nothing, or an unlisted default would leak into the plain
+ * chooser.
+ */
+fun revealedNewDesignCatalogs(urlCatalogSystemId: String?): Set<String> =
+  setOfNotNull(urlCatalogSystemId?.takeIf(String::isNotBlank))
+
+/**
  * Whether the chooser lists this card among the primary types rather than under "other types":
  * built-in cards by their id list, catalog-owned cards by whether their declared platform is a
  * screen-authoring one.
