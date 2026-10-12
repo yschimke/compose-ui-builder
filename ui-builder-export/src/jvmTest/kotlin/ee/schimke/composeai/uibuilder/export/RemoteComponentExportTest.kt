@@ -16,7 +16,7 @@ import kotlinx.serialization.json.Json
 class RemoteComponentExportTest {
   private val json = Json { ignoreUnknownKeys = true }
 
-  private fun document(root: String = "place") =
+  private fun document(root: String = "place", key: String = "label") =
     json
       .decodeFromString<DesignDocumentV1>(
         """
@@ -32,14 +32,14 @@ class RemoteComponentExportTest {
         "nodes": {
           "place": {"id": "place", "componentId": "design/component-instance",
             "component": {"componentKey": "list-header",
-              "arguments": {"label": {"type": "string", "value": "Title"}}}},
+              "arguments": {"$key": {"type": "string", "value": "Title"}}}},
           "frame": {"id": "frame", "componentId": "layout/box",
             "properties": {"contentAlignment": {"type": "enum", "value": "center"}},
             "modifiers": [{"type": "width", "widthDp": 180},
               {"type": "padding", "startDp": 14, "topDp": 16, "endDp": 14, "bottomDp": 12}],
             "slots": {"children": ["title"]}},
           "title": {"id": "title", "componentId": "remote-m3/remote-text",
-            "properties": {"text": {"type": "binding", "value": "label"},
+            "properties": {"text": {"type": "binding", "value": "$key"},
               "style": {"type": "enum", "value": "titleMedium"},
               "color": {"type": "enum", "value": "onBackground"},
               "textAlign": {"type": "enum", "value": "center"}},
@@ -67,6 +67,17 @@ class RemoteComponentExportTest {
     // The placing root is not written, and no theme is wrapped around a component.
     assertFalse("RemoteContent" in source, source)
     assertFalse("RemoteMaterialTheme {" in source, source)
+  }
+
+  @Test
+  fun `a key spelled like a generated parameter keeps the generated spelling`() {
+    for (key in listOf("argument1", "capture0")) {
+      val result = InlineRemoteContentExporter.exportComponents(document(key = key))
+      val source =
+        assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+      assertTrue("argument0: " in source, source)
+      assertFalse("$key: " in source, source)
+    }
   }
 
   @Test

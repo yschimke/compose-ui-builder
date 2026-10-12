@@ -594,13 +594,24 @@ internal class RemoteContentEmitter(
    * loop row).
    */
   private fun parameterName(key: String, current: Bindings): String {
-    val numbered = "argument${current.fields.size}"
-    if (!namedBindings || current.row != null) return numbered
+    if (!namedBindings || current.row != null) return "argument${current.fields.size}"
     val taken = current.fields.values.map { it.name }.toSet() + "modifier"
-    return key.takeIf {
-      it.matches(Regex("[a-z][A-Za-z0-9]*")) && it !in KOTLIN_HARD_KEYWORDS && it !in taken
-    } ?: numbered
+    // The emitter's own spellings (`argumentN`, and `captureN` for captures) are never a key's
+    // name,
+    // so a named key cannot collide with a fallback or a capture parameter.
+    val named = key.takeIf {
+      it.matches(Regex("[a-z][A-Za-z0-9]*")) &&
+        it !in KOTLIN_HARD_KEYWORDS &&
+        it !in taken &&
+        !it.matches(GENERATED_PARAMETER)
+    }
+    return named
+      ?: generateSequence(current.fields.size) { it + 1 }
+        .map { "argument$it" }
+        .first { it !in taken }
   }
+
+  private val GENERATED_PARAMETER = Regex("(argument|capture)[0-9]+")
 
   fun validateFunctionNames(vararg topLevelNames: String) {
     val reserved =
