@@ -972,7 +972,7 @@ private fun PropertyControl(
             commit,
             showSteppers = false,
           )
-        EditorPropertyControl.List -> ListHeaderControl(field, onListEdit)
+        EditorPropertyControl.List -> ListHeaderControl(field, onListEdit, commit)
         // The heading of an object's fields, which follow as their own rows.
         EditorPropertyControl.Object -> LocalUiBuilderChrome.current.InspectorMessage(field.value)
         EditorPropertyControl.Unsupported ->
@@ -991,7 +991,11 @@ private const val STRUCTURE_INDENT_DP = 12
  * fields, each with [ListRowActions].
  */
 @Composable
-private fun ListHeaderControl(field: EditorPropertyField, onListEdit: (EditorListEdit) -> Unit) {
+private fun ListHeaderControl(
+  field: EditorPropertyField,
+  onListEdit: (EditorListEdit) -> Unit,
+  commit: (String) -> Unit,
+) {
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Text(
       field.value,
@@ -1005,6 +1009,15 @@ private fun ListHeaderControl(field: EditorPropertyField, onListEdit: (EditorLis
         modifier = Modifier.semantics { contentDescription = "Add an item to ${field.label}" },
       ) {
         Text("Add item")
+      }
+      // A nullable list offers its null back: the heading's one choice.
+      field.choices.firstOrNull()?.let { none ->
+        TextButton(
+          onClick = { commit(none) },
+          modifier = Modifier.semantics { contentDescription = "Set ${field.label} to $none" },
+        ) {
+          Text(none)
+        }
       }
     }
   }

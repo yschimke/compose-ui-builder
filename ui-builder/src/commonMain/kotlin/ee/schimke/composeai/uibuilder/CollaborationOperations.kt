@@ -750,6 +750,30 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
           else propertyWrapperIssue(nestedType, nested)?.let { "object field $name $it" }
         }
     }
+    // One case of a typed adapter's sealed type: its name and, for a class case, its fields, which
+    // nest like an object's. Which cases there are is the catalog's question, like a list's shape.
+    "union" -> {
+      val case = encodedValue.nonEmptyString("case")
+      val fields = encodedValue["fields"]
+      when {
+        case == null -> "union wrapper must name its case"
+        fields == null ->
+          if (encodedValue.keys == setOf("type", "case")) null
+          else "union wrapper must contain exactly type, case and optionally a fields object"
+        fields !is JsonObject || encodedValue.keys != setOf("type", "case", "fields") ->
+          "union wrapper must contain exactly type, case and optionally a fields object"
+        else ->
+          fields.entries.firstNotNullOfOrNull { (name, value) ->
+            val nested = value as? JsonObject
+            val nestedType = nested?.nonEmptyString("type")
+            if (nested == null || nestedType == null) "union field $name must be a typed value"
+            else propertyWrapperIssue(nestedType, nested)?.let { "union field $name $it" }
+          }
+      }
+    }
+    // A null inside a list, object or union; whether it may be null is the catalog's question.
+    "null" ->
+      if (encodedValue.keys == setOf("type")) null else "null wrapper must contain only type"
     // A typed adapter's list property, nesting wrappers like `object`. Which element shape it holds
     // is the catalog's question (`PropertyValueShapes.issue`, through the property validator).
     "list" -> {

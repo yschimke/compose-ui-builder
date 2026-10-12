@@ -38,7 +38,6 @@ const catalogFiles = {
   'm3-catalog': 'm3-catalog-capabilities-v1.json',
   'wear-m3': 'wear-m3-capabilities-v1.json',
   'remote-m3': 'remote-m3-capabilities-v1.json',
-  'a2ui-catalog': 'a2ui-catalog-capabilities-v1.json',
 };
 const catalogs = {};
 for (const [id, file] of Object.entries(catalogFiles)) catalogs[id] = await readJson(join(fixtures, file));

@@ -90,6 +90,10 @@ object PropertyValueKinds {
       // A catalog string resource, `{"type": "resource", "resourceKey": …}`; exported through the
       // catalog's declared accessor (`CatalogScreenStructure.stringResources`).
       "resource",
+      // A typed adapter's sealed-type value, `{"type": "union", "case": …, "fields"?: {…}}`, and a
+      // nested null inside a list, object or union (on a node itself, null is the property unset).
+      "union",
+      "null",
       // The repetition pair, checked by `inspectUiBuilderArgumentBindings`.
       "list",
       "binding",

@@ -91,8 +91,9 @@ class CatalogThumbnailRenderTest {
   @Test
   fun `a2ui-catalog thumbnails all draw`() =
     // Framed by `a2ui/Column`, the catalog's own list container: it has no `layout/box`, and a box
-    // frame was refused for every component, so the shelf drew as bare tiles.
-    assertSheet("a2ui-catalog")
+    // frame was refused for every component, so the shelf drew as bare tiles. This build ships no
+    // A2UI catalog, so the sheet draws an A2UI-shaped one built in the test.
+    assertSheet("a2ui-catalog", catalog = SyntheticCatalogs.a2ui)
 
   private fun assertSheet(
     systemId: String,
@@ -103,11 +104,11 @@ class CatalogThumbnailRenderTest {
     miniatures: Set<String> = emptySet(),
     /** Components that are nothing until given a document, an asset or an animation. */
     needsContent: Set<String> = emptySet(),
-  ) {
-    val catalog =
+    catalog: CapabilityCatalog =
       CapabilityCatalogParser.parse(
         checkNotNull(javaClass.getResource("/$systemId-capabilities-v1.json")).readText()
-      )
+      ),
+  ) {
     val reducer = UiBuilderEditorReducer(catalog)
     val tiles =
       reducer.catalogItems("").flatMap { item ->

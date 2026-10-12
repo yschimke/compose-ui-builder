@@ -217,7 +217,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       DEFAULT_CATALOG_SYSTEM_ID to { baseCatalog },
       REMOTE_M3_CATALOG_SYSTEM_ID to { remoteM3Catalog(baseCatalog) },
       WEAR_M3_CATALOG_SYSTEM_ID to { wearM3Catalog(baseCatalog) },
-      A2UI_CATALOG_SYSTEM_ID to { a2uiCatalog(baseCatalog) },
     )
 
   /**
@@ -469,13 +468,16 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       setOfNotNull(
         referenceOf(catalog),
         synthesisedCatalogs[systemId]?.let(::referenceOf),
-        // An owned catalog's generator never runs, so its legacy pin comes from the frozen table;
-        // `CatalogCutoverReadinessTest` keeps them equal.
-        LegacySynthesisedReferences.forCatalog(systemId).takeIf { catalogOwnership.owns(systemId) },
+        // A catalog whose generator did not run (owned, or like `a2ui-catalog` no longer in this
+        // build) takes its legacy pin from the frozen table; `CatalogCutoverReadinessTest` keeps
+        // the rest equal to their generators.
+        LegacySynthesisedReferences.forCatalog(systemId).takeIf {
+          systemId !in synthesisedCatalogs
+        },
         // …and the same pin as a host that configured a runtime for the synthesised catalog
         // stamped it, with that runtime in place of `candidate`.
         LegacySynthesisedReferences.forCatalog(systemId)
-          ?.takeIf { catalogOwnership.owns(systemId) }
+          ?.takeIf { systemId !in synthesisedCatalogs }
           ?.let { legacy ->
             nativeRuntimeIds[systemId]?.let { runtimeId ->
               CatalogReferenceV1(
@@ -921,8 +923,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     public const val WEAR_M3_CATALOG_SYSTEM_ID: String = "wear-m3"
 
     /**
-     * The A2UI basic catalog v0.9.1 as a builder palette; see `a2uiCatalog`. The same id
-     * `:ui-builder-export`'s `A2uiDocumentExporter.CATALOG_SYSTEM_ID` names.
+     * The A2UI basic catalog, which only a2ui-catalog's published file defines: this build has no
+     * Kotlin generator for it. The same id `:ui-builder-export`'s
+     * `A2uiDocumentExporter.CATALOG_SYSTEM_ID` names.
      */
     public const val A2UI_CATALOG_SYSTEM_ID: String = "a2ui-catalog"
 
@@ -1746,3 +1749,6 @@ private val KOTLIN_KEYWORDS =
     "when",
     "while",
   )
+
+/** The platform word an A2UI catalog declares: its designs export as A2UI messages. */
+internal const val A2UI_PLATFORM: String = "a2ui"
