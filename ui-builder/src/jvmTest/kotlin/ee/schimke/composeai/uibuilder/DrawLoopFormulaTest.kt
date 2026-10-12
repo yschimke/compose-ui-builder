@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import kotlin.test.Test
@@ -12,10 +11,7 @@ import kotlin.test.assertTrue
  * formula on an operation outside every loop names a field that is not there, and is refused.
  */
 class DrawLoopFormulaTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
-    )
+  private val catalog = SyntheticCatalogs.remote
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document = decodeProductionRendererDocument(DOCUMENT)
 

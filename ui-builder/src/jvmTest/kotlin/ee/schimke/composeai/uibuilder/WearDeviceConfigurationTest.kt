@@ -2,7 +2,6 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.wearDeviceConfiguration
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,18 +17,8 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 class WearDeviceConfigurationTest {
 
-  /**
-   * The frame the Wear catalog declares, read from the golden on the test classpath so the test
-   * follows catalog changes.
-   */
-  private val declaredFrame =
-    CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/wear-m3-capabilities-v1.json")) {
-            "missing the wear capability golden on the test resources path"
-          }
-          .readText()
-      )
-      .frameGeometry
+  /** The frame a Wear catalog declares: three round sizes, each with its content padding. */
+  private val declaredFrame = SyntheticCatalogs.wear.frameGeometry
 
   private fun document(widthDp: Int?, heightDp: Int? = widthDp): UiBuilderDocument =
     UiBuilderDocument(

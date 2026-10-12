@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.capability
 
+import ee.schimke.composeai.uibuilder.SyntheticCatalogs
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
@@ -16,7 +17,7 @@ import kotlinx.serialization.json.JsonObject
  * insert panel hides it; the catalog keeps it so saved designs still validate.
  */
 class RemoteComposeBuildGateTest {
-  private val remote = catalog("/remote-m3-capabilities-v1.json")
+  private val remote = SyntheticCatalogs.remote
 
   @Test
   fun `a widget palette offers For each exactly when the build can export it`() {

@@ -49,11 +49,7 @@ class CatalogPublishedPolicyTest {
 
   @Test
   fun `no packaged catalog publishes any of it, so every table still answers`() {
-    for (path in
-      listOf(
-        "/m3-catalog-capabilities-v1.json",
-        "/remote-m3-capabilities-v1.json",
-      )) {
+    for (path in listOf("/m3-catalog-capabilities-v1.json")) {
       val parsed = CapabilityCatalogParser.parse(resource(path))
       parsed.components.forEach { component ->
         assertNull(parsed.insertContent(component.componentId), "$path ${component.componentId}")

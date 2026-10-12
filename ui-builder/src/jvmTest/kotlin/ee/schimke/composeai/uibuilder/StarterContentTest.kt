@@ -35,7 +35,11 @@ import kotlinx.serialization.json.jsonPrimitive
 class StarterContentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
 
-  /** The widget catalog, whose Remote Material 3 seeds are checked against it rather than M3. */
+  /**
+   * The widget catalog, whose Remote Material 3 seeds are checked against it rather than M3. It
+   * stays the real one: these checks hold the builder's own [StarterContent] and `RemoteMaterial3`
+   * tables to what remote-m3 declares, which a catalog built here would only restate.
+   */
   private val remoteCatalog =
     CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
 

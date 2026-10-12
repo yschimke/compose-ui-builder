@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.DTCG_EXTENSION
 import ee.schimke.composeai.uibuilder.editor.DesignTokenValue
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
@@ -26,7 +25,7 @@ import kotlinx.serialization.json.jsonObject
  * declares and reports what it didn't.
  */
 class DesignTokenInterchangeTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val catalog = SyntheticCatalogs.wear
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val screen =

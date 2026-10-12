@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.DesignTokenKind
 import ee.schimke.composeai.uibuilder.capability.DesignTokens
 import ee.schimke.composeai.uibuilder.editor.DesignTokenValue
@@ -29,7 +28,7 @@ import kotlinx.serialization.json.jsonObject
  * components they bind.
  */
 class DesignTokensTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val catalog = SyntheticCatalogs.wear
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val seed =

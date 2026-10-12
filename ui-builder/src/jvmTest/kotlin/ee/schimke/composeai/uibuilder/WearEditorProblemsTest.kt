@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
@@ -21,7 +20,7 @@ import kotlinx.serialization.json.jsonObject
  * `CapabilityComposeCodeExporter`'s "No Kotlin symbol/import mapping exists" must not be reported.
  */
 class WearEditorProblemsTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val catalog = SyntheticCatalogs.wear
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val seed =

@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import kotlin.test.Test
@@ -14,7 +13,7 @@ import kotlinx.serialization.json.JsonPrimitive
  * counterparts are, though the editor overrides are keyed on `m3/…` ids.
  */
 class WearNumberEditorsTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val catalog = SyntheticCatalogs.wear
 
   @Test
   fun `every Wear slider, stepper, progress and text number has an editor`() {
@@ -64,6 +63,4 @@ class WearNumberEditorsTest {
     val steps = counted.document.nodes.getValue(slider.id).properties["steps"] as? JsonObject
     assertEquals("3", (steps?.get("value") as? JsonPrimitive)?.content)
   }
-
-  private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }
