@@ -229,6 +229,57 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a button group's children share it out by weight, without the row's fill`() {
+    val group =
+      record(
+        "ButtonGroup",
+        listOf("wear-m3/button-group"),
+        listOf(
+          parameter("modifier", "Modifier", "androidx.compose.ui.Modifier", default = true),
+          parameter(
+            "content",
+            "ButtonGroupScope.() -> Unit",
+            slot = true,
+            receiver = "androidx.wear.compose.material3.ButtonGroupScope",
+          ),
+        ),
+      )
+    val groupProjection =
+      ExportProjectionJson.decode(
+          Json.parseToJsonElement(
+            """{ "targets": [ { "record": "${group.canonicalId}",
+              "slots": { "children": "content" } } ] }"""
+          )
+        )
+        .getOrThrow()
+    fun export(fill: Boolean?, weight: Double = 0.7): ScreenExportGate.Outcome {
+      val base = document(button())
+      val weighted =
+        base.nodes
+          .getValue("go")
+          .copy(modifiers = listOf(WeightModifierV1(JsonPrimitive(weight), fill)))
+      val node =
+        DesignNodeV1("group", "wear-m3/button-group", slots = mapOf("children" to listOf("go")))
+      return ScreenExportGate.export(
+        base.copy(
+          roots = listOf("group"),
+          nodes = base.nodes + ("go" to weighted) + ("group" to node),
+        ),
+        ComponentRecordFile.Builder("wear", "release", records.components + group).build(),
+        projections + ("wear-m3/button-group" to groupProjection),
+      )
+    }
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(export(null), export(null).toString()).source
+    assertContains(source, "ButtonGroup {")
+    assertContains(source, "Button(onClick = {}, modifier = Modifier.weight(0.7f), label = {")
+    val refused = assertIs<ScreenExportGate.Outcome.Refused>(export(false))
+    assertTrue(refused.reasons.any { "does not take" in it }, refused.reasons.toString())
+    val zero = assertIs<ScreenExportGate.Outcome.Refused>(export(null, weight = 0.0))
+    assertTrue(zero.reasons.any { "only a positive weight" in it }, zero.reasons.toString())
+  }
+
+  @Test
   fun `a variant exports as the real library composable with its factory colours`() {
     val source =
       emitted(
@@ -318,6 +369,44 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a top-level call in the catalog's own package is admitted, one elsewhere is not`() {
+    fun topLevel(callable: String) =
+      ExportProjection(
+        listOf(
+          ExportProjection.Target(
+            "wear/androidx.wear.compose.material3.ButtonKt.Button",
+            emptyMap(),
+            contexts =
+              mapOf(
+                "list-item" to
+                  ExportProjection.Context(
+                    mapOf(
+                      "transformation" to
+                        ExportProjection.Value.Fixed(
+                          ScreenValue.Construct(callable, typeFqn = "$callable.Type")
+                        )
+                    )
+                  )
+              ),
+          )
+        )
+      )
+    // `SurfaceTransformation(spec)` is top level in the package the catalog's buttons live in.
+    val owners =
+      ScreenExportGate.projectedOwners(
+        mapOf(
+          "own" to topLevel("androidx.wear.compose.material3.SurfaceTransformation"),
+          "foreign" to topLevel("java.lang.exit"),
+        ),
+        records,
+      )
+    // The callable itself, never its whole package.
+    assertTrue("androidx.wear.compose.material3.SurfaceTransformation" in owners, owners.toString())
+    assertFalse("androidx.wear.compose.material3" in owners, owners.toString())
+    assertFalse(owners.any { it.startsWith("java.") }, owners.toString())
+  }
+
+  @Test
   fun `a projected slot keeps the receiver its record declares`() {
     // `weight` is `RowScope.weight`: legal only because `label` is a `RowScope` slot.
     val source = emitted(document(button(), mapOf("weight" to DecimalValueV1(1.0))))
@@ -336,6 +425,95 @@ class ProjectedComposeExportTest {
     assertEquals(
       mapOf("wear-m3/button" to projections.getValue("wear-m3/button")),
       CatalogExportProjections.from(semantics),
+    )
+  }
+
+  @Test
+  fun `a builtin exports through the projection of the record component implementing it`() {
+    val listRecord =
+      "wear/androidx.wear.compose.foundation.lazy.TransformingLazyColumnKt.TransformingLazyColumn"
+    val semantics = buildJsonObject {
+      putJsonObject("components") {
+        putJsonObject("wear-m3/transforming-lazy-column-call") {
+          put("record", listRecord)
+          put("exportProjection", textProjection)
+        }
+      }
+      putJsonObject("builtins") {
+        putJsonObject("wear-m3/transforming-lazy-column") {
+          put("role", "list")
+          put("implementation", listRecord)
+        }
+        putJsonObject("wear-m3/screen-scaffold") { put("role", "screen-root") }
+        putJsonObject("wear-m3/unimplemented") {
+          put("role", "list")
+          put("implementation", "wear/nothing.Nothing")
+        }
+      }
+    }
+    val projections = CatalogExportProjections.from(semantics)
+    val projection = ExportProjectionJson.decode(textProjection).getOrThrow()
+    assertEquals(
+      mapOf(
+        "wear-m3/transforming-lazy-column-call" to projection,
+        "wear-m3/transforming-lazy-column" to projection,
+      ),
+      projections,
+    )
+  }
+
+  @Test
+  fun `a projected Material icon key is written from this build's icon table`() {
+    val icon =
+      record(
+        "Icon",
+        listOf("wear-m3/icon"),
+        listOf(
+          parameter(
+            "imageVector",
+            "ImageVector",
+            "androidx.compose.ui.graphics.vector.ImageVector",
+          ),
+          parameter("contentDescription", "String?", "kotlin.String")
+            .newBuilder()
+            .also { it.nullable = true }
+            .build(),
+        ),
+      )
+    val projection =
+      ExportProjection(
+        listOf(
+          ExportProjection.Target(
+            icon.canonicalId,
+            mapOf(
+              "imageVector" to
+                ExportProjection.Value.Property("iconKey", ExportProjection.Codec.MaterialIcon)
+            ),
+          )
+        )
+      )
+    fun exported(key: String): ScreenExportGate.Outcome {
+      val base = document(button())
+      val node =
+        DesignNodeV1(
+          "glyph",
+          "wear-m3/icon",
+          properties = mapOf("iconKey" to EnumValueV1(key)),
+        )
+      return ScreenExportGate.export(
+        base.copy(roots = listOf("glyph"), nodes = mapOf("glyph" to node)),
+        ComponentRecordFile.Builder("wear", "release", records.components + icon).build(),
+        mapOf("wear-m3/icon" to projection),
+      )
+    }
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(exported("filled/add"), "filled/add").source
+    assertContains(source, "Icon(imageVector = Icons.Filled.Add")
+    assertContains(source, "import androidx.compose.material.icons.filled.Add")
+    val refused = assertIs<ScreenExportGate.Outcome.Refused>(exported("filled/noSuchIcon"))
+    assertTrue(
+      refused.reasons.any { "is not a Material icon key" in it },
+      refused.reasons.toString(),
     )
   }
 
@@ -551,6 +729,7 @@ class ProjectedComposeExportTest {
               )
           ),
           items = mapOf("content" to "item"),
+          itemRoles = mapOf("content" to "list-item"),
         )
       )
     )
@@ -626,6 +805,22 @@ class ProjectedComposeExportTest {
     assertContains(source, "item {")
     assertContains(source, "Modifier.transformedHeight(this, spec)")
     assertContains(source, "import androidx.wear.compose.material3.ScreenScaffold")
+  }
+
+  @Test
+  fun `a list whose item member opens no role wraps its rows without the role's links`() {
+    val plainList =
+      listProjection.copy(targets = listProjection.targets.map { it.copy(itemRoles = emptyMap()) })
+    val outcome =
+      ScreenExportGate.export(
+        listDocument(),
+        listRecords,
+        projections + mapOf("wear-m3/list" to plainList, "wear-m3/button" to itemButtonProjection),
+        wearStructure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "item {")
+    assertFalse("transformedHeight" in source, source)
   }
 
   @Test
@@ -721,6 +916,68 @@ class ProjectedComposeExportTest {
     val empty =
       assertIs<ScreenExportGate.Outcome.Refused>(exportList(scaffolded(slots = emptyMap())))
     assertTrue(empty.reasons.any { "no content" in it }, empty.reasons.toString())
+  }
+
+  @Test
+  fun `a filled root slot exports into the frame the catalog publishes for it`() {
+    val edge =
+      DesignNodeV1("edge", "wear-m3/text", properties = mapOf("text" to StringValueV1("Go")))
+    val document =
+      scaffolded(slots = mapOf("content" to listOf("list"), "edgeButton" to listOf("edge"))).let {
+        it.copy(nodes = it.nodes + ("edge" to edge))
+      }
+    val structure =
+      wearStructure.copy(
+        slotFrames =
+          mapOf(
+            setOf("edgeButton") to
+              "val listState = rememberTransformingLazyColumnState()\n" +
+                "val spec = rememberTransformationSpec()\n" +
+                "ScreenScaffold(scrollState = listState, edgeButton = {\n" +
+                "  ${'$'}{edgeButton}\n" +
+                "}) { contentPadding ->\n" +
+                "  ${'$'}{content}\n" +
+                "}"
+          )
+      )
+    val outcome =
+      ScreenExportGate.export(
+        document,
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        structure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "ScreenScaffold(scrollState = listState, edgeButton = {\n")
+    assertContains(source, "Text(text = \"Go\")\n    }) { contentPadding ->")
+    assertContains(source, "TransformingLazyColumn(state = listState) {")
+    // The plain frame stays for a screen that fills no other slot.
+    assertIs<ScreenExportGate.Outcome.Emitted>(
+      ScreenExportGate.export(
+        scaffolded(),
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        structure,
+      )
+    )
+  }
+
+  @Test
+  fun `a frame per filled slot set is read from its template key`() {
+    val structure =
+      CatalogScreenStructure.from(
+        Json.parseToJsonElement(
+            """{ "code": { "templates": { "screen-root": "a", "screen-root+edgeButton": "b",
+              "screen-root+edgeButton+overlays": "c" } } }"""
+          )
+          .jsonObject
+      )
+    assertEquals("a", structure.frameFor(emptySet()))
+    assertEquals("b", structure.frameFor(setOf("edgeButton")))
+    assertEquals("c", structure.frameFor(setOf("overlays", "edgeButton")))
+    assertEquals(null, structure.frameFor(setOf("overlays")))
   }
 
   @Test

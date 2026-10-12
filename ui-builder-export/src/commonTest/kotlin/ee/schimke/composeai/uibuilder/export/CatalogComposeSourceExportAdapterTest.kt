@@ -35,6 +35,24 @@ class CatalogComposeSourceExportAdapterTest {
   }
 
   @Test
+  fun `the catalog-neutral component-records adapter resolves to the same strategy`() {
+    val resolution =
+      assertIs<CatalogComposeSourceExportAdapters.Resolution.Supported>(
+        CatalogComposeSourceExportAdapters.resolve(
+          ComposeSourceExportCapabilityV1.Builder(
+              CatalogComposeSourceExportAdapters.COMPONENT_RECORDS,
+              CatalogComposeSourceExportAdapters.COMPONENT_RECORDS_V1,
+            )
+            .build()
+        )
+      )
+    assertEquals(
+      CatalogComposeSourceExportAdapter.Strategy.COMPONENT_RECORDS,
+      resolution.adapter.strategy,
+    )
+  }
+
+  @Test
   fun `undeclared and unknown adapters do not fall back`() {
     assertIs<CatalogComposeSourceExportAdapters.Resolution.NotDeclared>(
       CatalogComposeSourceExportAdapters.resolve(catalog())

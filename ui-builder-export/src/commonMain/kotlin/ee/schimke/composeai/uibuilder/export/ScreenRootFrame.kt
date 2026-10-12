@@ -9,12 +9,14 @@ import ee.schimke.composeai.uibuilder.protocol.StringValueV1
  * (compose-ai-tools' `TYPED_STRUCTURAL_TEMPLATES.md`): the builtin is not a record call but the
  * frame's text, so its node is removed and its `content` child becomes the generated root.
  *
- * The frame has one hole, `${content}`, so anything else the root node says is refused by name
- * rather than dropped: another slot's children (`edgeButton`), a modifier, a binding, or a property
- * the frame does not already write. Two properties are what every frame writes or leaves outside
- * the screen: `scrollIndicator = true` (the frame's own indicator) and `timeText`, which belongs to
- * the app's scaffold around the screen function, as the hand-written Wear export puts it only in
- * its previews.
+ * The frame's `${content}` hole holds the root; another slot's children (`edgeButton`) go into that
+ * slot's own hole, in the frame the catalog publishes for that set of filled slots
+ * (`screen-root+edgeButton`). Anything else the root node says is refused by name rather than
+ * dropped: a slot no published frame writes, a modifier, a binding, or a property the frame does
+ * not already write. Two properties are what every frame writes or leaves outside the screen:
+ * `scrollIndicator = true` (the frame's own indicator) and `timeText`, which belongs to the app's
+ * scaffold around the screen function, as the hand-written Wear export puts it only in its
+ * previews.
  */
 object ScreenRootFrame {
   /** The root builtin's slot the frame's `${content}` hole holds. */
@@ -22,7 +24,22 @@ object ScreenRootFrame {
 
   /** [document] with its screen-root node unwrapped, or the reasons it cannot be. */
   sealed interface Unwrapped {
-    data class Document(val document: DesignDocumentV1) : Unwrapped
+    data class Document(
+      val document: DesignDocumentV1,
+      /** The frame for the slots this root fills; null when [document] is not framed. */
+      val frame: String? = null,
+      /** The design node ids each of the root's other filled slots holds, for the frame's holes. */
+      val frameSlots: Map<String, List<String>> = emptyMap(),
+    ) : Unwrapped {
+      /** The published one-field constructor, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(document: DesignDocumentV1) : this(document, null, emptyMap())
+
+      /** The published one-field `copy`, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(document: DesignDocumentV1 = this.document): Document =
+        Document(document, frame, frameSlots)
+    }
 
     data class Refused(val reasons: List<String>) : Unwrapped
   }
@@ -45,6 +62,8 @@ object ScreenRootFrame {
         )
     }
     val where = "`${root.id}` (`$component`)"
+    val filled = root.slots.filter { (slot, children) -> slot != CONTENT && children.isNotEmpty() }
+    val frame = structure.frameFor(filled.keys)
     val reasons = buildList {
       for ((name, value) in root.properties) {
         val framed =
@@ -55,9 +74,12 @@ object ScreenRootFrame {
           }
         if (!framed) add("$where.`$name` is not written by the screen-root frame")
       }
-      for ((slot, children) in root.slots) {
-        if (slot != CONTENT && children.isNotEmpty()) {
-          add("$where's `$slot` slot is not written by the screen-root frame")
+      if (frame == null) {
+        for (slot in filled.keys.sorted()) {
+          add(
+            "$where's `$slot` slot is not written by the screen-root frame; the catalog publishes " +
+              "no `screen-root+${filled.keys.sorted().joinToString("+")}` frame"
+          )
         }
       }
       if (root.modifiers.isNotEmpty()) add("$where's modifiers are not written by the frame")
@@ -79,7 +101,9 @@ object ScreenRootFrame {
     if (reasons.isNotEmpty()) return Unwrapped.Refused(reasons)
     val content = root.slots.getValue(CONTENT).single()
     return Unwrapped.Document(
-      document.copy(roots = listOf(content), nodes = document.nodes - root.id)
+      document.copy(roots = listOf(content), nodes = document.nodes - root.id),
+      frame,
+      filled,
     )
   }
 }

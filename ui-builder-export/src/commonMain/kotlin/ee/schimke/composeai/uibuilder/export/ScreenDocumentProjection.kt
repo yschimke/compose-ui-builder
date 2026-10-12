@@ -159,7 +159,50 @@ object ScreenDocumentProjection {
        * flexpress at export and joined into the screen's file. See [VariableFontText].
        */
       val variableFontTexts: List<VariableFontText.Request> = emptyList(),
+      /**
+       * [ProjectedStructure.frameSlots] projected: each slot's children, for the screen frame's
+       * hole of the same name.
+       */
+      val frameSlots: Map<String, List<ScreenNode>> = emptyMap(),
     ) : Outcome {
+      /**
+       * The published five-field constructor and its defaults, kept for binaries compiled against
+       * them.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(
+        document: ScreenDocument,
+        assetPlaceholders: List<AssetPlaceholder> = emptyList(),
+        themed: Boolean = false,
+        systemFontFamilies: List<String> = emptyList(),
+        variableFontTexts: List<VariableFontText.Request> = emptyList(),
+      ) : this(
+        document,
+        assetPlaceholders,
+        themed,
+        systemFontFamilies,
+        variableFontTexts,
+        emptyMap(),
+      )
+
+      /** The published five-field `copy`, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(
+        document: ScreenDocument = this.document,
+        assetPlaceholders: List<AssetPlaceholder> = this.assetPlaceholders,
+        themed: Boolean = this.themed,
+        systemFontFamilies: List<String> = this.systemFontFamilies,
+        variableFontTexts: List<VariableFontText.Request> = this.variableFontTexts,
+      ): Projected =
+        Projected(
+          document,
+          assetPlaceholders,
+          themed,
+          systemFontFamilies,
+          variableFontTexts,
+          frameSlots,
+        )
+
       /**
        * [record] plus `MaterialTheme`, which a themed root's wrapper calls and no catalog records.
        * Only added to a themed screen: a record carrying `MaterialTheme` makes the generator refuse
@@ -329,6 +372,14 @@ object ScreenDocumentProjection {
       pass.node(roots.single())?.let { content ->
         if (theme == null) content else pass.themed(content, theme, screenName)
       }
+    // The frame's other holes, in the same pass: they read the screen's state like the root does.
+    if (theme != null && structure.frameSlots.isNotEmpty()) {
+      pass.reasons +=
+        "the design sets a theme on its surface, which wraps the frame's `content` but not its " +
+          structure.frameSlots.keys.sorted().joinToString { "`$it`" } +
+          "; set the theme on the catalog's screen instead"
+    }
+    val frameSlots = structure.frameSlots.mapValues { (_, ids) -> ids.mapNotNull { pass.node(it) } }
     val projected = root?.let {
       pass.finish(ScreenDocument(screenName, it, pass.state.values.toList()))
     }
@@ -359,6 +410,7 @@ object ScreenDocumentProjection {
       themed = theme != null,
       systemFontFamilies = pass.systemFontFamilies.toList(),
       variableFontTexts = VariableFontText.requests(pass.variableFontSpecs),
+      frameSlots = frameSlots,
     )
   }
 
@@ -418,10 +470,11 @@ object ScreenDocumentProjection {
     val reasons = mutableListOf<String>()
 
     /**
-     * The nodes about to be visited as the direct child of the `list-item` role: each wrapped in a
-     * projection's item member, so its target's `list-item` context applies. One level deep.
+     * The nodes about to be visited as the direct child of a structural role, by node: each wrapped
+     * in a projection's item member that opens the role (`itemRoles`), so its target's context for
+     * the role applies. One level deep.
      */
-    private val listItems = mutableSetOf<String>()
+    private val itemRoles = mutableMapOf<String, String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
     /** The families written as `SystemFont` lookups; see [Outcome.Projected.systemFontFamilies]. */
     val systemFontFamilies = linkedSetOf<String>()
@@ -1139,9 +1192,11 @@ object ScreenDocumentProjection {
           refused = true
         }
       // Only the direct child of an item wrapper is in the role, and only once.
-      val role = if (listItems.remove(node.id)) LIST_ITEM_ROLE else null
+      val role = itemRoles.remove(node.id)
       val lowered =
-        when (val outcome = projection.lower(literal, role)) {
+        // A projected `materialIcon` property is written from this build's own icon table, exactly
+        // as `m3/icon` is.
+        when (val outcome = projection.lower(literal, role, ::icon)) {
           is ExportProjection.Lowered.Refused -> {
             outcome.reasons.forEach { reasons += "$where: $it" }
             return null
@@ -1212,12 +1267,15 @@ object ScreenDocumentProjection {
                     refused = true
                     continue
                   }
+                  // The role the member opens, if any: Wear's `transformation = none` list wraps
+                  // its
+                  // rows in `item` without one. Only `list-item` has a scope the catalog attests.
+                  val role = lowered.itemRoles[parameter]
+                  val bodyScope = structure.itemScope.takeIf { role == LIST_ITEM_ROLE }
                   slotItems[parameter] =
-                    SlotItem.Builder(member, receiver)
-                      .also { it.bodyScopeFqn = structure.itemScope }
-                      .build()
-                  listItems += assignedChildren
-                  structure.itemScope
+                    SlotItem.Builder(member, receiver).also { it.bodyScopeFqn = bodyScope }.build()
+                  if (role != null) assignedChildren.forEach { itemRoles[it] = role }
+                  bodyScope
                 }
               slots[parameter] =
                 slots[parameter].orEmpty() +
@@ -2422,12 +2480,16 @@ object ScreenDocumentProjection {
       where: String,
       scope: String?,
     ): ChainLink? {
-      if (scope != ROW_SCOPE && scope != COLUMN_SCOPE) {
+      if (scope !in WEIGHT_SCOPES) {
         refuse(
           "$where is a layout weight, which `Modifier.weight` supplies from a row's or column's " +
             "scope; this node sits " +
             (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
         )
+        return null
+      }
+      if (fill != null && scope !in FILL_WEIGHT_SCOPES) {
+        refuse("$where sets `fill`, which `$scope.weight` does not take")
         return null
       }
       if (number == null) {
@@ -2439,6 +2501,11 @@ object ScreenDocumentProjection {
       // as `Infinity` or collapse to zero, which is a number the design never contained.
       if (!weight.isFinite() || (weight == 0f && number != 0.0)) {
         refuse("$where is $number, which does not survive `Float`")
+        return null
+      }
+      // `Modifier.weight` throws on a weight that is not positive; the canvas drops one.
+      if (weight <= 0f) {
+        refuse("$where is $number, and `Modifier.weight` takes only a positive weight")
         return null
       }
       return ChainLink(
@@ -4775,6 +4842,14 @@ object ScreenDocumentProjection {
   private const val BOX_CHILDREN_SLOT = "children"
 
   private const val COLUMN_SCOPE = "androidx.compose.foundation.layout.ColumnScope"
+
+  /** Wear's `ButtonGroup` content scope, whose `Modifier.weight(weight)` shares out the group. */
+  private const val BUTTON_GROUP_SCOPE = "androidx.wear.compose.material3.ButtonGroupScope"
+
+  /** The library scopes that declare `Modifier.weight`, and those whose `weight` takes `fill`. */
+  private val FILL_WEIGHT_SCOPES = setOf(ROW_SCOPE, COLUMN_SCOPE)
+
+  private val WEIGHT_SCOPES = FILL_WEIGHT_SCOPES + BUTTON_GROUP_SCOPE
   private const val BOX_SCOPE = "androidx.compose.foundation.layout.BoxScope"
 
   /**

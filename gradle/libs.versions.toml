@@ -134,10 +134,16 @@ maven-publish = "0.37.0"
 # (`ScreenGenerator.generate(…, frame)`, compose-ai-tools#5861) and names a projection target's DSL
 # item member (`items`, #5864), which the projected export's frame and item wrappers read. Same
 # daemon and contracts as 2.47.0.
-# 2.51.0 writes a design's components alone, as `internal` functions
-# (`ScreenGenerator.Output.COMPONENTS`, compose-ai-tools#5883), which `ScreenExportGate.exportComponents`
-# calls for a catalog that places them itself. Built on daemon 3.15.3 and contracts 3.30.0.
-composeai-tools = "2.51.0"
+# 2.51.0 names the role a projection target's item member opens (`itemRoles`, #5877), which the
+# projected export now reads instead of assuming `list-item`, and writes a design's components
+# alone, as `internal` functions (`ScreenGenerator.Output.COMPONENTS`, #5883), which
+# `ScreenExportGate.exportComponents` calls for a catalog that places them itself. Daemon 3.15.3,
+# contracts 3.30.0.
+# 2.52.0 fills a frame's other slot holes (`generate(…, frameSlots)`, #5901), writes a projected
+# Material icon from the host's icon table (`Codec.MaterialIcon`, #5891, #5905), and adapts an intent
+# callback to a toggle's `(Boolean) -> Unit` and writes an empty optional slot as `null` (#5896).
+# Same daemon and contracts as 2.51.0.
+composeai-tools = "2.52.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -245,7 +251,7 @@ composeai-contracts = "3.30.0"
 # 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
 # of a `time.*` RemoteCanvas needs once time runs. 2.4.0 plays shared elements and a component's own
 # enter/exit across a StateLayout switch (rc-players#604, rc-players#606).
-rc-players = "2.7.1"
+rc-players = "2.9.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.6.0"
@@ -259,9 +265,9 @@ junit = "4.13.2"
 truth = "1.4.5"
 okhttp = "5.5.0"
 okio = "3.18.2"
-classgraph = "4.8.195"
-jmdns = "3.6.3"
-json-schema-validator = "3.0.7"
+classgraph = "4.8.197"
+jmdns = "3.6.4"
+json-schema-validator = "3.0.8"
 # The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
 # wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
 # canvas, so a JS/DOM highlighter (the playground's vendored CodeMirror) cannot reach it.

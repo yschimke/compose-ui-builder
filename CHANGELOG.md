@@ -1,5 +1,47 @@
 # Changelog
 
+## [3.109.0](https://github.com/yschimke/compose-ui-builder/compare/v3.108.0...v3.109.0) (2026-10-12)
+
+
+### Features
+
+* **export:** fill a frame's other slot holes and write projected Material icons, on compose-ai-tools 2.52.0 ([#744](https://github.com/yschimke/compose-ui-builder/issues/744)) ([77258ee](https://github.com/yschimke/compose-ui-builder/commit/77258ee61bf30b0e1db9055a11f5a0a4f7fe1f3f))
+* **export:** open the role a projection's item member names ([#735](https://github.com/yschimke/compose-ui-builder/issues/735)) ([281df77](https://github.com/yschimke/compose-ui-builder/commit/281df77171312c12bff072862734f4ace34ca2b5))
+* **export:** route a catalog's builtins and designs through its typed projections ([#734](https://github.com/yschimke/compose-ui-builder/issues/734)) ([d3dfeed](https://github.com/yschimke/compose-ui-builder/commit/d3dfeed6665e36d53d0dc474ec01c8d6d39d9473))
+* **export:** weight a projected button group's children through its own scope ([#736](https://github.com/yschimke/compose-ui-builder/issues/736)) ([874cb7a](https://github.com/yschimke/compose-ui-builder/commit/874cb7a2cc020cc08855117dfac1f39115752757))
+
+
+### Bug Fixes
+
+* **deps:** update androidx-compose to v1.0.0-alpha21 ([#741](https://github.com/yschimke/compose-ui-builder/issues/741)) ([48a8f45](https://github.com/yschimke/compose-ui-builder/commit/48a8f45e1e1f182b90f3c7092e9f801c5a511e5f))
+* **deps:** update dependency com.networknt:json-schema-validator to v3.0.8 ([#742](https://github.com/yschimke/compose-ui-builder/issues/742)) ([be53c21](https://github.com/yschimke/compose-ui-builder/commit/be53c21dda93e6a5df155cec1ff47f76bc5c83bd))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.9.0 ([#748](https://github.com/yschimke/compose-ui-builder/issues/748)) ([710cad7](https://github.com/yschimke/compose-ui-builder/commit/710cad7d2a3a3a21dd7c1b8179ce5fb0a2e9d5d3))
+* **deps:** update dependency io.github.classgraph:classgraph to v4.8.197 ([#743](https://github.com/yschimke/compose-ui-builder/issues/743)) ([5556ee3](https://github.com/yschimke/compose-ui-builder/commit/5556ee360066a13d1ee9da268807d29f13784fe5))
+* **deps:** update dependency org.jmdns:jmdns to v3.6.4 ([#746](https://github.com/yschimke/compose-ui-builder/issues/746)) ([5b32bb4](https://github.com/yschimke/compose-ui-builder/commit/5b32bb46eabf10472ac5b278e2488aec76427357))
+
+## [3.108.0](https://github.com/yschimke/compose-ui-builder/compare/v3.107.0...v3.108.0) (2026-10-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **runtime:** retire the catalog-cutover shadow comparison ([#716](https://github.com/yschimke/compose-ui-builder/issues/716))
+
+### Features
+
+* **editor:** structured list and object properties for typed adapters ([#717](https://github.com/yschimke/compose-ui-builder/issues/717)) ([84809b6](https://github.com/yschimke/compose-ui-builder/commit/84809b636d795a763d2264f95d2f0353bb0b5fa9))
+* **export:** lower resource values to the catalog's string resources ([#729](https://github.com/yschimke/compose-ui-builder/issues/729)) ([4cb4e1f](https://github.com/yschimke/compose-ui-builder/commit/4cb4e1f2cce9051fb34d7d08d9c7e8dc3a6a7780))
+* **export:** unwrap the screen-root builtin into the catalog's frame ([#728](https://github.com/yschimke/compose-ui-builder/issues/728)) ([ce423cf](https://github.com/yschimke/compose-ui-builder/commit/ce423cf775cb7135fe22adb55951867d8eabcb53))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.15.3 ([#724](https://github.com/yschimke/compose-ui-builder/issues/724)) ([9f59015](https://github.com/yschimke/compose-ui-builder/commit/9f590151aa71e49efb0eb0dacdca3e960fbf635b))
+
+
+### Code Refactoring
+
+* **runtime:** retire the catalog-cutover shadow comparison ([#716](https://github.com/yschimke/compose-ui-builder/issues/716)) ([fbd99c3](https://github.com/yschimke/compose-ui-builder/commit/fbd99c35180590ae9dfd4acf2b81fa51982bff9d))
+
 ## [3.107.0](https://github.com/yschimke/compose-ui-builder/compare/v3.106.0...v3.107.0) (2026-10-11)
 
 
