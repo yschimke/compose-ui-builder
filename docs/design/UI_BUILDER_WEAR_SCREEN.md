@@ -98,9 +98,9 @@ conservative.
 > explaining why it could not be; and the Material 3 rename table is gone entirely, along with the
 > last three borrows it held.
 >
-> `WearCatalogIsCompleteTest` holds the two halves together from here: what the catalog declares
-> `supported` and what the renderer has a branch for must be the same set, which is the check whose
-> absence let the two drift in the first place.
+> `WearCatalogIsCompleteTest` originally held those two halves together. The published policy and
+> the catalog-owned adapters are now checked in wear-m3-catalog's
+> `WearPublishedPolicyAdapterCoverageTest`.
 >
 > **The shape the architecture should have, and now does:** the Wasm port for visual editing and the
 > first line of previews; the real AndroidX library, under Robolectric through the native

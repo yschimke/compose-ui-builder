@@ -87,9 +87,11 @@ whose screen root was called anything else could not ask for it.
    required one would remove the old `<init>` signature — the break `unrolled` itself caused.
 2. **this repository dispatches on the adapter**: the branch is `ROUND_SCREEN_FRAME ->`, and the two
    other id-based special cases (the screen theme, the root's placement) key on the adapter too.
-   `WearCatalogIsCompleteTest` counts a component as drawn when the renderer has a branch for its id
-   **or for the adapter its catalog declares**, resolving `const val`s in the renderer's source
-   because a branch label may be a constant.
+   The former `WearCatalogIsCompleteTest` counted a component as drawn when the renderer had a
+   branch for its id **or for the adapter its catalog declared**, resolving `const val`s in the
+   renderer's source because a branch label could be a constant. Wear's published policy and its
+   catalog-owned adapters are now checked in wear-m3-catalog's
+   `WearPublishedPolicyAdapterCoverageTest`.
 3. **the Wear catalog names it**: the synthesised catalog sets `canvas = "frame/round-screen"` on its
    screen root, and the transitional `wear-m3/` id is gone from the renderer.
 
