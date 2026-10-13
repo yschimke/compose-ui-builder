@@ -807,8 +807,8 @@ fun UiBuilderNewDesignScreen(
   accountNoticeAction: EditorNoticeAction? = null,
   /**
    * A prompt to sign in shown in place of the create form, or null to offer the form. A
-   * white-labelled host passes it to a signed-out visitor: its catalog's templates are seeded by the
-   * server, so a design kept in the browser would start from none of them.
+   * white-labelled host passes it to a signed-out visitor: its catalog's templates are seeded by
+   * the server, so a design kept in the browser would start from none of them.
    */
   signInToCreate: EditorNoticeAction? = null,
   /** What changed in the builder lately; empty hides the panel. */

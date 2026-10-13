@@ -17,8 +17,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorColors
-import ee.schimke.composeai.uibuilder.editor.ExistingDesignsPanel
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
+import ee.schimke.composeai.uibuilder.editor.ExistingDesignsPanel
 import ee.schimke.composeai.uibuilder.editor.ProvideUiBuilderBrand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
