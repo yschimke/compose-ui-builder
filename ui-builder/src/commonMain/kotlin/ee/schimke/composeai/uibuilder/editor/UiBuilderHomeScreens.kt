@@ -805,6 +805,12 @@ fun UiBuilderNewDesignScreen(
    */
   accountNotice: String? = null,
   accountNoticeAction: EditorNoticeAction? = null,
+  /**
+   * A prompt to sign in shown in place of the create form, or null to offer the form. A
+   * white-labelled host passes it to a signed-out visitor: its catalog's templates are seeded by the
+   * server, so a design kept in the browser would start from none of them.
+   */
+  signInToCreate: EditorNoticeAction? = null,
   /** What changed in the builder lately; empty hides the panel. */
   releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
   /** The pre-filled design name; null rolls a random one, while previews pass a fixed name. */
@@ -861,7 +867,8 @@ fun UiBuilderNewDesignScreen(
             }
             if (accountNotice != null) AccountNotice(accountNotice, accountNoticeAction)
             val newPanel: @Composable (Modifier) -> Unit = { modifier ->
-              NewDesignHomePanel(modifier, form, create)
+              if (signInToCreate != null) SignInToCreatePanel(modifier, signInToCreate)
+              else NewDesignHomePanel(modifier, form, create)
             }
             val designsPanel: @Composable (Modifier) -> Unit = { modifier ->
               ExistingDesignsPanel(
@@ -974,6 +981,31 @@ private fun NewDesignHomePanel(
       ) {
         Text("Create")
       }
+    }
+  }
+}
+
+/** **New design** for a visitor who must sign in first: why, and the way in. */
+@Composable
+private fun SignInToCreatePanel(modifier: Modifier, signIn: EditorNoticeAction) {
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 2.dp,
+  ) {
+    Column(
+      modifier = Modifier.padding(20.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+      Text("New design", style = MaterialTheme.typography.titleMedium)
+      Text(
+        "Sign in to start a design. Designs are kept on this server under your account, and " +
+          "start from its templates.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Button(onClick = signIn.onClick) { Text(signIn.label) }
     }
   }
 }

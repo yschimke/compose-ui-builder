@@ -1360,6 +1360,13 @@ private fun LiveSessionApp(
   }
 
   if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
+    val signIn =
+      config.signInUrl
+        ?.takeIf { localSession == null && !config.canWrite }
+        ?.let { url -> EditorNoticeAction("Sign in with GitHub") { navigateTo(url) } }
+    // A white-labelled host's templates are its catalog's, which only the server seeds: a design
+    // kept in this browser would start from none of them, so ask for a sign-in instead.
+    val signInToCreate = signIn?.takeIf { uiBuilderBrand != null }
     UiBuilderNewDesignScreen(
       catalogs = newDesignCatalogs,
       initialCatalogSystemId = activeCatalogSystemId,
@@ -1435,17 +1442,15 @@ private fun LiveSessionApp(
       // Said before anything is made, not discovered when it is: this account's new designs are
       // kept in this browser, and here is why and how to change that.
       accountNotice =
-        if (localSession != null || config.canWrite) null
+        if (localSession != null || config.canWrite || signInToCreate != null) null
         else
           listOfNotNull(
               "New designs you make here are kept in this browser.",
               config.writeDeniedReason,
             )
             .joinToString(" "),
-      accountNoticeAction =
-        config.signInUrl
-          ?.takeIf { localSession == null && !config.canWrite }
-          ?.let { url -> EditorNoticeAction("Sign in with GitHub") { navigateTo(url) } },
+      accountNoticeAction = signIn.takeIf { signInToCreate == null },
+      signInToCreate = signInToCreate,
       onCreate = createDesign,
       onCreatePublic = createPublicDesign,
     )

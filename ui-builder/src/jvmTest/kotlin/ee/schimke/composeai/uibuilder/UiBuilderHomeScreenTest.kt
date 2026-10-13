@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorColors
 import ee.schimke.composeai.uibuilder.editor.ExistingDesignsPanel
+import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.ProvideUiBuilderBrand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
@@ -573,6 +574,33 @@ class UiBuilderHomeScreenTest {
       onNodeWithText("Launcher widget").performScrollTo().performClick()
       onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals("ha-cards" to "launcher-entity", created)
+    }
+
+  @Test
+  fun `a signed-out visitor to a branded host is asked to sign in instead of creating`() =
+    runDesktopComposeUiTest(width = 520, height = 700) {
+      var signedIn = false
+      setContent {
+        ProvideUiBuilderBrand(
+          UiBuilderBrand(name = "Home Assistant", catalogs = listOf("ha-cards")),
+          openHome = {},
+        ) {
+          UiBuilderNewDesignScreen(
+            catalogs = listOf(haCards),
+            initialDesignId = "sunny-otter",
+            initialCatalogSystemId = "ha-cards",
+            releaseNotes = emptyList(),
+            signInToCreate = EditorNoticeAction("Sign in with GitHub") { signedIn = true },
+            onCreate = { _, _, _, _ -> error("a signed-out visitor cannot create") },
+          )
+        }
+      }
+      onNodeWithText("New design").assertIsDisplayed()
+      onNodeWithText("1. What are you designing?").assertDoesNotExist()
+      onNodeWithContentDescription("Create design").assertDoesNotExist()
+      captureEvidence("ha-sign-in-to-create")
+      onNodeWithText("Sign in with GitHub").performClick()
+      assertTrue(signedIn)
     }
 
   @Test
