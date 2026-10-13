@@ -10,12 +10,16 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -26,6 +30,33 @@ import kotlinx.serialization.json.jsonPrimitive
  * template is covered automatically.
  */
 class SeedTemplateCatalogReadinessTest {
+
+  @Test
+  fun `foundation export aliases come from the captured delivery pair`() {
+    val root = Path.of(checkNotNull(System.getProperty("compose.uiBuilder.catalogDir")))
+    val published =
+      GZIPInputStream(Files.newInputStream(root.resolve("compose-foundation/ui-builder.json.gz")))
+        .use { it.readBytes().decodeToString() }
+    val policy = Json.parseToJsonElement(published).jsonObject
+    val semantics = policy.getValue("statusSemantics").jsonObject
+    val components = semantics.getValue("components").jsonObject
+    val sticker = components.getValue("compose-foundation/sticker").jsonObject
+    // Simulate the catalog publishing its implementation under a builder-owned id. The current
+    // delivery excludes the sticker, so this proves the future join without copying the catalog.
+    val active = JsonObject(sticker - "excluded")
+    val renamed =
+      JsonObject(components - "compose-foundation/sticker" + ("layout/column" to active))
+    val adjusted =
+      JsonObject(policy + ("statusSemantics" to JsonObject(semantics + ("components" to renamed))))
+    val foundationComponent =
+      publishedTestExportRecord("m3-catalog", Json.encodeToString(adjusted)).components.single {
+        "layout/column" in it.componentIds
+      }
+    assertTrue(
+      foundationComponent.canonicalId.startsWith("foundation-catalog/"),
+      "layout/column resolved to the embedded record instead of the foundation delivery pair",
+    )
+  }
 
   /** Where the generated Kotlin lands, for a reader and for the evidence in the plan. */
   private val sourceDirectory = File("build/seed-template-sources")
