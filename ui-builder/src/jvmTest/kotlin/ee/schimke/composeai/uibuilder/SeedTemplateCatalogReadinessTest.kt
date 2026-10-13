@@ -171,7 +171,11 @@ class SeedTemplateCatalogReadinessTest {
       val outcome =
         ScreenExportGate.export(
           document.toProtocolDocument(),
-          catalog.exportRecord(embeddedComponentRecord()),
+          catalog.exportRecord(
+            if (catalog.benchmark.catalogSystemId in setOf("m3-catalog", "wear-m3", "remote-m3"))
+              publishedTestExportRecord(catalog.benchmark.catalogSystemId)
+            else embeddedComponentRecord()
+          ),
         )
     ) {
       is ScreenExportGate.Outcome.Emitted -> Generated.Source(outcome.source)

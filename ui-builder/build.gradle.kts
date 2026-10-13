@@ -180,9 +180,11 @@ kotlin {
 
 // JVM tests exercise the exact captured delivery files without fetching the network.
 tasks.withType<Test>().configureEach {
+  val catalogCaptures = rootProject.file("ui-builder-runtime/src/test/resources/catalog-cutover")
+  inputs.dir(catalogCaptures).withPropertyName("catalogCutoverCaptures")
   systemProperty(
     "compose.uiBuilder.catalogDir",
-    rootProject.file("ui-builder-runtime/src/test/resources/catalog-cutover").absolutePath,
+    catalogCaptures.absolutePath,
   )
 }
 
