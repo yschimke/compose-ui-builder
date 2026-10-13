@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.112.0](https://github.com/yschimke/compose-ui-builder/compare/v3.111.0...v3.112.0) (2026-10-13)
+
+
+### Features
+
+* **ui-builder:** ask a signed-out visitor to a white-labelled host to sign in before creating ([#791](https://github.com/yschimke/compose-ui-builder/issues/791)) ([469bee1](https://github.com/yschimke/compose-ui-builder/commit/469bee1583cfd1538721dba4bfb2485444731f13))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.55.0 ([#793](https://github.com/yschimke/compose-ui-builder/issues/793)) ([cf6ca43](https://github.com/yschimke/compose-ui-builder/commit/cf6ca43336a90b9dc14492019aacbd826a833d23))
+* **deps:** update compose-multiplatform ([#795](https://github.com/yschimke/compose-ui-builder/issues/795)) ([52c354d](https://github.com/yschimke/compose-ui-builder/commit/52c354d16c95ba1a8e3d61585e0b2b2e4fd17fd5))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.16.1 ([#802](https://github.com/yschimke/compose-ui-builder/issues/802)) ([96c5c0f](https://github.com/yschimke/compose-ui-builder/commit/96c5c0f612b40c25e4729e1825fb1f84657dfd35))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.12.0 ([#797](https://github.com/yschimke/compose-ui-builder/issues/797)) ([7cf95bf](https://github.com/yschimke/compose-ui-builder/commit/7cf95bf3701fff1e56e85e27f0bda0ddece888f6))
+* **deps:** update dependency io.github.classgraph:classgraph to v4.8.199 ([#789](https://github.com/yschimke/compose-ui-builder/issues/789)) ([042cd34](https://github.com/yschimke/compose-ui-builder/commit/042cd3418b8805ab1e30af8f125e01da9f39e537))
+
 ## [3.111.0](https://github.com/yschimke/compose-ui-builder/compare/v3.110.0...v3.111.0) (2026-10-13)
 
 
