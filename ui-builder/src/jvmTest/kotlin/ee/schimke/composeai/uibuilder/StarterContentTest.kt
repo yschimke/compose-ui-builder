@@ -37,11 +37,11 @@ class StarterContentTest {
 
   /**
    * The widget catalog, whose Remote Material 3 seeds are checked against it rather than M3. It
-   * stays the real one: these checks hold the builder's own [StarterContent] and `RemoteMaterial3`
-   * tables to what remote-m3 declares, which a catalog built here would only restate.
+   * stays the real published one: these checks hold the builder's own [StarterContent] and
+   * `RemoteMaterial3` tables to what remote-m3 declares, which a catalog built here would only
+   * restate.
    */
-  private val remoteCatalog =
-    CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+  private val remoteCatalog = publishedTestCatalog("remote-m3")
 
   /** An A2UI-shaped catalog, whose required values are seeded against it. */
   private val a2uiCatalog = SyntheticCatalogs.a2ui
