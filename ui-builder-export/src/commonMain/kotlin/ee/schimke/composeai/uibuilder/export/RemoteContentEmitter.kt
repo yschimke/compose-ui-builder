@@ -525,6 +525,8 @@ internal class RemoteContentEmitter(
   private inner class FunctionBody(val name: String) {
     val bindings = Bindings()
     val captures = linkedMapOf<String, Capture>()
+    /** Action-free events, as `Action` parameters the caller supplies: `onCardClick`. */
+    val intents = linkedMapOf<String, String>()
     var body = emptyList<String>()
 
     fun capture(key: String, type: String, supply: () -> String?): String =
@@ -534,7 +536,8 @@ internal class RemoteContentEmitter(
       val parameters =
         listOf("modifier: androidx.compose.remote.creation.compose.modifier.RemoteModifier") +
           bindings.fields.values.map { "${it.name}: ${it.type}" } +
-          captures.values.map { "${it.name}: ${it.type}" }
+          captures.values.map { "${it.name}: ${it.type}" } +
+          intents.values.map { "$it: $ACTION_FQN" }
       return listOf(
           "@Composable",
           "@RemoteComposable",
@@ -611,7 +614,8 @@ internal class RemoteContentEmitter(
         .first { it !in taken }
   }
 
-  private val GENERATED_PARAMETER = Regex("(argument|capture)[0-9]+")
+  /** `argumentN` and `captureN`, and an intent's `onXEvent` ([intentParameter]). */
+  private val GENERATED_PARAMETER = Regex("(argument|capture)[0-9]+|on[A-Z][A-Za-z0-9]*")
 
   fun validateFunctionNames(vararg topLevelNames: String) {
     val reserved =
@@ -1057,7 +1061,7 @@ internal class RemoteContentEmitter(
   private fun actionExpression(node: UiBuilderNode, parameter: TargetParameter): String? {
     val event = parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() }
     val actions = eventActions(node, event)
-    if (actions.isEmpty()) return lambdaActionExpression()
+    if (actions.isEmpty()) return intentParameter(node, event) ?: lambdaActionExpression()
     // A two-way write back leads the authored actions; paths still name the authored index.
     val leading = actions.size - (node.eventBindings[event] as? JsonArray).orEmpty().size
     val operands = linkedMapOf<Int, ActionOperand>()
@@ -1526,6 +1530,26 @@ internal class RemoteContentEmitter(
     scope = enclosing
     return result
   }
+
+  /**
+   * An action-free event inside a component the components-only export writes ([namedBindings]): an
+   * `Action` parameter named for the node and the event (`onCardClick`), which the catalog that
+   * places the component supplies — the Remote counterpart of a Compose component's `() -> Unit`
+   * intent. Anywhere else, or when the name is not a usable identifier, null.
+   */
+  private fun intentParameter(node: UiBuilderNode, event: String): String? {
+    val current = function ?: return null
+    if (!namedBindings) return null
+    val words = (node.id.split(INTENT_WORD_BREAK) + event).filter(String::isNotEmpty)
+    val name = "on" + words.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
+    if (!name.matches(Regex("on[A-Z][A-Za-z0-9]*"))) return null
+    val taken =
+      current.bindings.fields.values.map { it.name } + current.captures.values.map { it.name }
+    if (name in taken) return null
+    return current.intents.getOrPut("${node.id}:$event") { name }
+  }
+
+  private val INTENT_WORD_BREAK = Regex("[^A-Za-z0-9]+")
 
   private fun lambdaActionExpression(): String {
     usesLambdaAction = true
