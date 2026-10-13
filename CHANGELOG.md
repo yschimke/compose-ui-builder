@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.111.0](https://github.com/yschimke/compose-ui-builder/compare/v3.110.0...v3.111.0) (2026-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **runtime:** delete the A2UI Kotlin catalog ([#769](https://github.com/yschimke/compose-ui-builder/issues/769))
+
+### Features
+
+* **export:** export a Remote design's components alone ([#773](https://github.com/yschimke/compose-ui-builder/issues/773)) ([9efc77d](https://github.com/yschimke/compose-ui-builder/commit/9efc77d4c6a16c6e82fa7942a1ae0b760c647e3d))
+* **typed-catalog:** edit sealed, nullable and formatted values and dispatch payload callbacks ([#770](https://github.com/yschimke/compose-ui-builder/issues/770)) ([ca75e53](https://github.com/yschimke/compose-ui-builder/commit/ca75e53674a014986f3dae68ac7b4d5379abb8f0))
+* **ui-builder:** let catalogs and white-labelled hosts drive the New design type row ([#781](https://github.com/yschimke/compose-ui-builder/issues/781)) ([e93a4ff](https://github.com/yschimke/compose-ui-builder/commit/e93a4ff3ebd2611bbebb10465eb1d3a800718e9c))
+* **ui-builder:** wear a white-labelled host's brand from the shell's metas ([#774](https://github.com/yschimke/compose-ui-builder/issues/774)) ([d2e2333](https://github.com/yschimke/compose-ui-builder/commit/d2e2333a123dbe8a39b00d0dbc8be4d028d84713))
+
+
+### Bug Fixes
+
+* **ci:** drop the A2UI memory scenario left behind by the catalog's deletion ([#776](https://github.com/yschimke/compose-ui-builder/issues/776)) ([e875218](https://github.com/yschimke/compose-ui-builder/commit/e875218cfdbf9c416dd072e06d1e23a11c4e1e83))
+* **deps:** update kotlin to v2.4.21 ([#768](https://github.com/yschimke/compose-ui-builder/issues/768)) ([d6ef062](https://github.com/yschimke/compose-ui-builder/commit/d6ef062566ccfc851b901b24b84f3e890ba02a91))
+* **deps:** update wearcmp.port to v1.7.1-cmp02 ([#772](https://github.com/yschimke/compose-ui-builder/issues/772)) ([f283f62](https://github.com/yschimke/compose-ui-builder/commit/f283f62b8ae6a5b405624e6cb8c81ce6f9b43681))
+* **wear:** drop the TimeText em-space pad now that the port draws the last glyph ([#780](https://github.com/yschimke/compose-ui-builder/issues/780)) ([239e7e3](https://github.com/yschimke/compose-ui-builder/commit/239e7e319d31a687429a36da1343fc2d86807dc1))
+
+
+### Code Refactoring
+
+* **runtime:** delete the A2UI Kotlin catalog ([#769](https://github.com/yschimke/compose-ui-builder/issues/769)) ([8fd2cd2](https://github.com/yschimke/compose-ui-builder/commit/8fd2cd256cb6c2c9a43329b1aad090cd847505a3))
+
 ## [3.110.0](https://github.com/yschimke/compose-ui-builder/compare/v3.109.0...v3.110.0) (2026-10-12)
 
 
