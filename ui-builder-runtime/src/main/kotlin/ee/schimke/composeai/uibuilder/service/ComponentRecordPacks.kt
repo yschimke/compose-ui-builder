@@ -234,6 +234,9 @@ internal object ComponentRecordPacks {
       // A text size. `number` like `RemoteFloat`, but only whole numbers have a Kotlin form
       // (`22.rsp`; there is no `Float.rsp`); `RemoteContentEmitter` refuses fractional sizes.
       "androidx.compose.remote.creation.compose.state.RemoteTextUnit" -> "number"
+      // A length (`strokeWidth`, a button's `border`), written `N.rdp`. Unsuffixed like the text
+      // size above: the property is the parameter's own name.
+      "androidx.compose.remote.creation.compose.state.RemoteDp" -> "number"
       else -> null
     }
 

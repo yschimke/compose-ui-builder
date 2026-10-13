@@ -1669,9 +1669,14 @@ internal class RemoteContentEmitter(
           return null
       } else if (
         parameter.typeFqn == REMOTE_COLOR_FQN &&
-          (value.stringOrNull()?.matches(Regex("#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?")) != true)
+          value.stringOrNull()?.let {
+            it.matches(Regex("#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?")) ||
+              it == TRANSPARENT_TOKEN ||
+              it.matches(COLOR_ROLE)
+          } != true
       ) {
-        refusals += "nodes.${node.id}.${parameter.name}: expected a literal colour argument"
+        refusals +=
+          "nodes.${node.id}.${parameter.name}: expected a colour literal or a theme role argument"
         return null
       }
     }

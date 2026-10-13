@@ -357,6 +357,30 @@ class RemoteComponentExportTest {
   }
 
   @Test
+  fun `a bound colour takes a theme role from its placement`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button", "arguments": {
+              "borderColor": {"type": "colorToken", "value": "outline"}}}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {"borderColor": {"type": "binding", "value": "borderColor"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "borderColor: androidx.compose.remote.creation.compose.state.RemoteColor" in source,
+      source,
+    )
+  }
+
+  @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
