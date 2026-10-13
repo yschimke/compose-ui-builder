@@ -14,6 +14,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Could every catalog be switched to catalog-owned today ([CatalogOwnership.ALL]), and if not, what
@@ -83,6 +85,21 @@ class CatalogCutoverReadinessTest {
     for (id in ids + CatalogCutoverFixtures.FOUNDATION) {
       assertEquals(id, CatalogCutoverFixtures.catalog(id).benchmark.catalogSystemId)
     }
+  }
+
+  @Test
+  fun `the published Wear theme tokens reach the served catalog`() {
+    val published =
+      CatalogCutoverFixtures.policy("wear-m3")
+        .getValue("statusSemantics")
+        .jsonObject
+        .getValue("designTokens")
+    assertTrue(published.jsonObject.getValue("tokens").jsonArray.size >= 15)
+    val served =
+      CatalogCutoverFixtures.executor(listOf("wear-m3"), CatalogOwnership.ALL)
+        .listCatalogs()
+        .single()
+    assertEquals(published, served.statusSemantics["designTokens"])
   }
 
   @Test
