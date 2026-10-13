@@ -224,17 +224,31 @@ jobs:
   # The check the ruleset requires. It must run whatever its `needs` did, rather than be skipped,
   # because a skipped required check reads as passing; so it runs unless the workflow was cancelled
   # and fails unless every split job succeeded.
+  #
+  # It gates the three jobs below as well: a job outside `needs` blocks nothing, and
+  # `ui-builder-web-smoke` went red on every push to `main` for a day (the editor bundle over its
+  # size budget after the Kotlin 2.4.21 bump) without stopping a single merge. All three skip on
+  # release-please PRs exactly as the split jobs do (`ui-builder-web-smoke` through `web-archive`),
+  # which the step below already tolerates.
   gradle:
-    needs: [gradle-check, jvm-tests, publishing-lane, web-archive, renderer-runtime]
+    needs:
+      - gradle-check
+      - jvm-tests
+      - publishing-lane
+      - web-archive
+      - renderer-runtime
+      - ui-builder-remote-compose
+      - ui-builder-web-smoke
+      - ui-builder-contract
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
-      - name: Every split Gradle job succeeded
+      - name: Every gated job succeeded
         if: >-
           ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'skipped') || contains(needs.*.result, 'cancelled'))
           && !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
         run: |
-          echo "::error::A Gradle job did not succeed: ${NEEDS}"
+          echo "::error::A gated job did not succeed: ${NEEDS}"
           exit 1
         env:
           NEEDS: ${{ toJSON(needs.*.result) }}

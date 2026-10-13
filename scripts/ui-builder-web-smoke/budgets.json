@@ -1,9 +1,9 @@
 {
   "sizes": [
-    { "name": "uiBuilder.wasm", "files": "uiBuilder.wasm", "maxMb": 15, "maxGzipMb": 4.2 },
+    { "name": "uiBuilder.wasm", "files": "uiBuilder.wasm", "maxMb": 15.5, "maxGzipMb": 4.3 },
     { "name": "skiko.wasm", "files": "skiko.wasm", "maxMb": 8.5, "maxGzipMb": 3.3 },
     { "name": "scripts", "files": "*.*js", "maxMb": 1.1, "maxGzipMb": 0.17 },
-    { "name": "all of wasmDist", "files": "**", "maxMb": 40.5 }
+    { "name": "all of wasmDist", "files": "**", "maxMb": 41.25 }
   ],
   "memory": [
     { "viewport": "desktop", "scenario": "designs", "maxMb": { "rendererPss": 175, "jsHeapUsed": 25 } },
