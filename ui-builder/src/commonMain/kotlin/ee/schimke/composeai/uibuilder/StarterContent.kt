@@ -214,8 +214,8 @@ internal object StarterContent {
         ),
       WearScreenCodeExporter.EDGE_BUTTON to mapOf("content" to listOf(wearText("Done"))),
       // The adaptive widget arrives with each role filled, so both preview sizes have something to
-      // show (Small drops the supporting line). Remote Material 3 labels are `m3/text`, exported as
-      // `RemoteText`.
+      // show (Small drops the supporting line). The published Remote catalog declares
+      // `remote-m3/remote-text` for these labels.
       AdaptiveWearWidget.COMPONENT_ID to
         mapOf(
           AdaptiveWearWidget.HEADLINE to listOf(remoteText("Headline")),
@@ -432,10 +432,10 @@ private fun wearText(value: String): StarterNode =
     properties = mapOf("text" to starterLiteral("string", value)),
   )
 
-/** A widget body's text: `m3/text`, which a Remote catalog writes as `RemoteText`. */
+/** A Remote Material 3 label, declared by the published Remote catalog. */
 private fun remoteText(value: String): StarterNode =
   StarterNode(
-    componentId = "m3/text",
+    componentId = "remote-m3/remote-text",
     properties = mapOf("text" to starterLiteral("string", value)),
   )
 
