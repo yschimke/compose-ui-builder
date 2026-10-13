@@ -1,7 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
@@ -34,12 +33,12 @@ class SeedTemplateCatalogReadinessTest {
   private val fixture =
     Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
 
-  /** The catalogs the builder serves, each with its frozen capability document. */
+  /** The catalogs the builder serves, each with its captured published capability document. */
   private val catalogs: Map<String, CapabilityCatalog> =
     mapOf(
-      "m3-catalog" to catalog("/m3-catalog-capabilities-v1.json"),
-      "wear-m3" to catalog("/wear-m3-capabilities-v1.json"),
-      "remote-m3" to catalog("/remote-m3-capabilities-v1.json"),
+      "m3-catalog" to publishedTestCatalog("m3-catalog"),
+      "wear-m3" to publishedTestCatalog("wear-m3"),
+      "remote-m3" to publishedTestCatalog("remote-m3"),
       A2uiDocumentExporter.CATALOG_SYSTEM_ID to SyntheticCatalogs.a2ui,
     )
 
@@ -189,9 +188,6 @@ class SeedTemplateCatalogReadinessTest {
       nativeRuntimeId = "readiness",
       fixture = fixture,
     )
-
-  private fun catalog(path: String): CapabilityCatalog =
-    CapabilityCatalogParser.parse(resource(path))
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }

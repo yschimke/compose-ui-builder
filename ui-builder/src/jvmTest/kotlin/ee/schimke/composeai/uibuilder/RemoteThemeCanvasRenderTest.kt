@@ -5,7 +5,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.runDesktopComposeUiTest
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -19,10 +18,7 @@ import kotlin.test.assertTrue
 class RemoteThemeCanvasRenderTest {
   @Test
   fun `the palette offers the theme`() {
-    val catalog =
-      CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
-      )
+    val catalog = publishedTestCatalog("remote-m3")
 
     assertNotNull(catalog.componentsById[UiRemoteTheme.ID])
   }

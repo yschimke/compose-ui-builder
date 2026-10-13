@@ -3,7 +3,6 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.export.RemoteClockTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -24,10 +23,7 @@ import kotlinx.serialization.json.JsonObject
  */
 @OptIn(ExperimentalTestApi::class)
 class RemoteClockDesignsTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
-    )
+  private val catalog = publishedTestCatalog("remote-m3")
 
   private val empty = JsonObject(emptyMap())
 

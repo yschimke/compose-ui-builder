@@ -5,22 +5,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
-import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
  * The canvas adapters the Wear catalog declares, for tests that compose `UiBuilderSurface`
  * themselves (and so must provide `LocalUiBuilderCanvasAdapters`, e.g. `frame/round-screen` for the
- * screen root). Read from the golden so tests follow the catalog.
+ * screen root). Read from the captured published catalog so tests follow delivery.
  */
-private val wearCatalog by lazy {
-  CapabilityCatalogParser.parse(
-    checkNotNull(UiBuilderDocument::class.java.getResource("/wear-m3-capabilities-v1.json")) {
-        "missing the wear capability golden on the test resources path"
-      }
-      .readText()
-  )
-}
+private val wearCatalog by lazy { publishedTestCatalog("wear-m3") }
 
 internal val wearCatalogAdapters: Map<String, String> by lazy { wearCatalog.canvasAdapterIds }
 
