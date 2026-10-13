@@ -570,6 +570,7 @@ internal class RemoteContentEmitter(
           REMOTE_STRING_FQN,
           REMOTE_BOOLEAN_FQN,
           REMOTE_FLOAT_FQN,
+          REMOTE_DP_FQN,
           REMOTE_COLOR_FQN,
         )
     ) {
@@ -952,9 +953,33 @@ internal class RemoteContentEmitter(
       return emptyList()
     }
 
+    // The indeterminate circular indicator is the overload without `progress`: the record recovers
+    // only the determinate one, so the call keeps the parameters the two share.
+    val indeterminate = node.properties[INDETERMINATE_PROPERTY]?.boolOrNull() == true
+    if (indeterminate && record.symbol.callable != REMOTE_CIRCULAR_PROGRESS_FQN) {
+      refusals +=
+        "nodes.${node.id}.$INDETERMINATE_PROPERTY: only `RemoteCircularProgressIndicator` has an " +
+          "indeterminate overload"
+      return emptyList()
+    }
+    val parameters =
+      if (!indeterminate) record.parameters
+      else {
+        val dropped =
+          node.properties.keys.filter {
+            it in record.parameters.map(TargetParameter::name) &&
+              it !in INDETERMINATE_CIRCULAR_PARAMETERS
+          }
+        if (dropped.isNotEmpty()) {
+          refusals +=
+            "nodes.${node.id}: the indeterminate indicator takes no ${dropped.joinToString { "`$it`" }}"
+          return emptyList()
+        }
+        record.parameters.filter { it.name in INDETERMINATE_CIRCULAR_PARAMETERS }
+      }
     val arguments = mutableListOf<String>()
     val blocks = mutableListOf<Pair<String, List<String>>>()
-    for (parameter in record.parameters) {
+    for (parameter in parameters) {
       if (parameter.composableSlot) {
         val children = filled.firstOrNull { it.first == parameter }?.second
         when {
@@ -974,6 +999,8 @@ internal class RemoteContentEmitter(
                 record.parameters.none { it.name == "onClick" && it.typeFqn == ACTION_FQN },
             )
           authored != null -> remoteValue(node, parameter, authored)
+          parameter.typeFqn == REMOTE_BORDER_STROKE_FQN && node.has(BORDER_COLOR_PROPERTY) ->
+            borderStroke(node, parameter) ?: return emptyList()
           parameter.typeFqn == ACTION_FQN &&
             (!parameter.hasDefault ||
               eventActions(
@@ -1615,6 +1642,7 @@ internal class RemoteContentEmitter(
         "kotlin.Int" -> setOf("int")
         // A size is authored as a number; whether THIS number has a spelling is asked below.
         REMOTE_TEXT_UNIT_FQN -> setOf("int", "float")
+        REMOTE_DP_FQN -> setOf("int", "float")
         REMOTE_COLOR_FQN -> setOf("color", "colorToken")
         else -> emptySet()
       }
@@ -2608,20 +2636,46 @@ internal class RemoteContentEmitter(
             "${sp.toInt()}.rsp"
           }
         }
-      REMOTE_COLOR_FQN ->
-        value
-          .stringOrNull()
-          ?.takeIf { it.startsWith("#") }
-          ?.let {
-            usesColorLiteral = true
-            "${it.argbLiteral()}.rc"
-          }
+      REMOTE_COLOR_FQN -> remoteColor(value)
+      REMOTE_DP_FQN -> value.numberOrNull()?.dpLiteral()
       "kotlin.String" -> value.stringOrNull()?.let { "\"${it.escaped()}\"" }
       "kotlin.Boolean" -> value.boolOrNull()?.toString()
       "kotlin.Int" -> value.intOrNull()?.toString()
       "kotlin.Float" -> value.numberOrNull()?.let { "${it}f" }
       else -> null
     }
+  }
+
+  /**
+   * A colour a record parameter takes: an ARGB literal (`#FF…`), `transparent`, or a theme role
+   * (`outline`, read as `RemoteMaterialTheme.colorScheme.outline`). Null for anything else.
+   */
+  private fun remoteColor(value: JsonElement): String? {
+    val color = value.stringOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+    return when {
+      color.startsWith("#") -> "${color.argbLiteral()}.rc".also { usesColorLiteral = true }
+      color == TRANSPARENT_TOKEN -> "Color(0x00000000).rc".also { usesColorLiteral = true }
+      color.matches(COLOR_ROLE) ->
+        "RemoteMaterialTheme.colorScheme.$color".also { usesTheme = true }
+      else -> null
+    }
+  }
+
+  /**
+   * A `RemoteBorderStroke` parameter (the outlined card's `border`) from the node's `borderColor`
+   * and `borderWidthDp`, the two properties the Compose export reads for a `BorderStroke`. The
+   * width defaults to Material's 1dp outline. Null, with a refusal, when the colour is not one.
+   */
+  private fun borderStroke(node: UiBuilderNode, parameter: TargetParameter): String? {
+    val where = "nodes.${node.id}.$BORDER_COLOR_PROPERTY"
+    val color = node.properties[BORDER_COLOR_PROPERTY]?.let(::remoteColor)
+    if (color == null) {
+      refusals += "$where: `${parameter.name}` needs a colour literal or a theme role"
+      return null
+    }
+    val width = node.properties[BORDER_WIDTH_PROPERTY]?.numberOrNull() ?: 1f
+    usedComponentImports += REMOTE_BORDER_STROKE_FQN
+    return "RemoteBorderStroke(${width.dpLiteral()}, $color)"
   }
 
   private fun container(
@@ -4294,6 +4348,19 @@ internal val LAYOUT_EVENTS: List<String> = listOf("click", "longClick", "doubleC
 /** An Int literal in written Remote source, which needs the `ri` import. */
 private val INT_LITERAL = Regex("""\b\d+\.ri\b""")
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
+private const val REMOTE_DP_FQN = "androidx.compose.remote.creation.compose.state.RemoteDp"
+private const val REMOTE_CIRCULAR_PROGRESS_FQN =
+  "androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator"
+private const val INDETERMINATE_PROPERTY = "indeterminate"
+/** The parameters the indeterminate `RemoteCircularProgressIndicator` shares with the record's. */
+private val INDETERMINATE_CIRCULAR_PARAMETERS =
+  setOf("modifier", "colors", "strokeWidth", "gapSize")
+private const val REMOTE_BORDER_STROKE_FQN =
+  "androidx.wear.compose.remote.material3.RemoteBorderStroke"
+private const val BORDER_COLOR_PROPERTY = "borderColor"
+private const val BORDER_WIDTH_PROPERTY = "borderWidthDp"
+/** A colour scheme role's name, as `RemoteMaterialTheme.colorScheme` spells its members. */
+private val COLOR_ROLE = Regex("[a-z][A-Za-z0-9]*")
 /**
  * The published Remote Compose text component, served by the same writer as the borrowed `m3/text`,
  * so a design moving between the ids keeps its text properties.
