@@ -1918,6 +1918,10 @@ internal class RemoteContentEmitter(
     listOf("selectedColor", "unselectedColor", "backgroundColor").forEach { name ->
       pageIndicatorColor(node, name)?.let { arguments += "$name = $it" }
     }
+    // The two lengths the record declares, in dp, so the catalog's number editors reach the export.
+    listOf("indicatorRadius", "padding").forEach { name ->
+      node.properties[name]?.numberOrNull()?.let { arguments += "$name = ${it.dpLiteral()}" }
+    }
     return (pad + call(symbol, arguments, pad)).split("\n")
   }
 

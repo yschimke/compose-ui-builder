@@ -381,6 +381,28 @@ class RemoteComponentExportTest {
   }
 
   @Test
+  fun `a page indicator writes its radius and padding in dp`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"dots": {"name": "KitDots", "root": "dots"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "dots"}},
+          "dots": {"id": "dots", "componentId": "remote-m3/remote-horizontal-page-indicator",
+            "properties": {"pageCount": {"type": "int", "value": 3},
+              "indicatorRadius": {"type": "int", "value": 3},
+              "padding": {"type": "int", "value": 2}}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue("indicatorRadius = 3.rdp" in source, source)
+    assertTrue("padding = 2.rdp" in source, source)
+  }
+
+  @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
