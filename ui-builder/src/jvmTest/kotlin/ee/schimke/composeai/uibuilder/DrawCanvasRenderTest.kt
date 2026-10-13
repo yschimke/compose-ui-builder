@@ -6,7 +6,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.runDesktopComposeUiTest
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -22,10 +21,7 @@ class DrawCanvasRenderTest {
 
   @Test
   fun `the remote-m3 palette offers the drawing vocabulary`() {
-    val catalog =
-      CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
-      )
+    val catalog = publishedTestCatalog("remote-m3")
 
     UiDrawing.COMPONENT_IDS.forEach { id ->
       assertNotNull(catalog.componentsById[id], "$id is not on the remote-m3 palette")

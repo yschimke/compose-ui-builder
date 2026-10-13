@@ -3,7 +3,6 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import java.io.File
@@ -25,10 +24,7 @@ class WearUnrolledListAlignmentTest {
       val root =
         generateSequence(File("").absoluteFile) { it.parentFile }
           .first { File(it, "site/designs/wear-list.uid").isFile }
-      val catalog =
-        CapabilityCatalogParser.parse(
-          File(root, "docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json").readText()
-        )
+      val catalog = publishedTestCatalog("wear-m3")
       // The Wear list template: a `ListHeader` reading "Activity" over cards that fill the list.
       val document = UidDesignFiles.decode(File(root, "site/designs/wear-list.uid").readText())
       setContent {

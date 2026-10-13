@@ -227,6 +227,9 @@ What that means for each consumer:
 - **Behaviour tests** assert what the builder does, so they belong on small catalogs built in the
   test, not on a real catalog's content. Tests that still read a synthesised golden move to
   synthetic catalogs as that golden is deleted (step 5 below).
+- **Catalog integration tests** compose the captured delivery pair through the serving executor.
+  Wear canvas setup, Remote canvas palette checks, and seed-template validation use that path,
+  keeping their rendering and source-generation assertions against a served published catalog.
 - **The `catalog-cutover/` captures** exist only to compare a catalog's published file with the
   Kotlin catalog it replaces. They are deleted with the shadow machinery, not refreshed into a
   permanent fixture.

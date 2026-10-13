@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.WearWidgetSample
@@ -20,7 +19,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * documents nobody authored, so nothing else catches their mistakes).
  */
 class WearWidgetSampleTemplatesTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+  private val catalog = publishedTestCatalog("remote-m3")
   private val reference =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject

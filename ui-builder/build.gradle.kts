@@ -178,6 +178,14 @@ kotlin {
   }
 }
 
+// JVM tests exercise the exact captured delivery files without fetching the network.
+tasks.withType<Test>().configureEach {
+  systemProperty(
+    "compose.uiBuilder.catalogDir",
+    rootProject.file("ui-builder-runtime/src/test/resources/catalog-cutover").absolutePath,
+  )
+}
+
 /**
  * Order preview discovery after this module's wasmJs and Compose-resources tasks.
  *
