@@ -119,6 +119,77 @@ class RemoteComponentExportTest {
     assertFalse("lambdaAction {}" in source, source)
   }
 
+  private fun remoteDocument(components: String, nodes: String) =
+    json
+      .decodeFromString<DesignDocumentV1>(
+        """
+        {
+          "schema": "compose-ui-builder-document/v1-candidate",
+          "id": "doc", "title": "Doc", "revision": 0,
+          "catalogPin": {"systemId": "remote-m3", "catalogRevision": "candidate",
+            "capabilityDigest": "candidate", "nativeRuntimeId": "candidate"},
+          "environment": {"widthDp": 192, "heightDp": 192, "density": 2.0, "theme": "dark",
+            "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr"},
+          "roots": ["place"],
+          "components": {$components},
+          "nodes": {$nodes}
+        }
+        """
+      )
+      .toUiBuilderDocument()
+
+  @Test
+  fun `two nodes that spell the same intent do not share a parameter`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"pair": {"name": "KitPair", "root": "column"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "pair"}},
+          "column": {"id": "column", "componentId": "layout/column",
+            "slots": {"children": ["card-one", "card_one"]}},
+          "card-one": {"id": "card-one", "componentId": "remote-m3/remote-card",
+            "eventBindings": {"click": []}},
+          "card_one": {"id": "card_one", "componentId": "remote-m3/remote-card",
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertEquals(1, Regex("onCardOneClick: ").findAll(source).count(), source)
+    assertEquals(1, Regex("onClick = onCardOneClick").findAll(source).count(), source)
+  }
+
+  @Test
+  fun `a placed component's intent is forwarded through the component that places it`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """
+          "outer": {"name": "KitOuter", "root": "column"},
+          "card": {"name": "KitCardRemote", "root": "card"}
+          """,
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "outer"}},
+          "column": {"id": "column", "componentId": "layout/column",
+            "slots": {"children": ["inner"]}},
+          "inner": {"id": "inner", "componentId": "design/component-instance",
+            "component": {"componentKey": "card"}},
+          "card": {"id": "card", "componentId": "remote-m3/remote-card",
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertEquals(2, Regex("onCardClick: ").findAll(source).count(), source)
+    assertTrue("onCardClick = onCardClick" in source, source)
+    assertFalse("lambdaAction {}" in source, source)
+  }
+
   @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))

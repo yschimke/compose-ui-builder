@@ -743,6 +743,9 @@ internal class RemoteContentEmitter(
     target.captures.values.forEach { capture ->
       capture.supply()?.let { arguments += "${capture.name} = $it" }
     }
+    target.intents.forEach { (key, intent) ->
+      arguments += "$intent = ${forwardedIntent(node, key, intent)}"
+    }
     val wrapper = node.copy(componentId = "layout/box", component = null)
     val modifier = wrapper.modifierExpression(INDENT.repeat(depth)) ?: "RemoteModifier"
     usesModifier = true
@@ -1543,10 +1546,44 @@ internal class RemoteContentEmitter(
     val words = (node.id.split(INTENT_WORD_BREAK) + event).filter(String::isNotEmpty)
     val name = "on" + words.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
     if (!name.matches(Regex("on[A-Z][A-Za-z0-9]*"))) return null
+    return allocateIntent(current, "${node.id}:$event", name)
+  }
+
+  /**
+   * [name] as [current]'s intent for [key], or null when another parameter (a binding, a capture,
+   * or a different intent: `card-one` and `card_one` both spell `onCardOneClick`) already has it.
+   */
+  private fun allocateIntent(current: FunctionBody, key: String, name: String): String? {
+    current.intents[key]?.let {
+      return it
+    }
     val taken =
-      current.bindings.fields.values.map { it.name } + current.captures.values.map { it.name }
+      current.bindings.fields.values.map { it.name } +
+        current.captures.values.map { it.name } +
+        current.intents.values
     if (name in taken) return null
-    return current.intents.getOrPut("${node.id}:$event") { name }
+    current.intents[key] = name
+    return name
+  }
+
+  /**
+   * The value a placement passes for its target's [intent]: the enclosing component's own intent of
+   * the same name (`onCardClick`, or `onPlaceCardClick` when that is taken), so the catalog still
+   * supplies it; `lambdaAction {}` outside a component, or when neither name is free.
+   */
+  private fun forwardedIntent(node: UiBuilderNode, key: String, intent: String): String {
+    val current = function?.takeIf { namedBindings } ?: return lambdaActionExpression()
+    val forwardKey = "${node.id}>$key"
+    val words = node.id.split(INTENT_WORD_BREAK).filter(String::isNotEmpty)
+    val prefixed =
+      "on" +
+        words.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) } +
+        intent.removePrefix("on")
+    return allocateIntent(current, forwardKey, intent)
+      ?: prefixed
+        .takeIf { it.matches(Regex("on[A-Z][A-Za-z0-9]*")) }
+        ?.let { allocateIntent(current, forwardKey, it) }
+      ?: lambdaActionExpression()
   }
 
   private val INTENT_WORD_BREAK = Regex("[^A-Za-z0-9]+")
