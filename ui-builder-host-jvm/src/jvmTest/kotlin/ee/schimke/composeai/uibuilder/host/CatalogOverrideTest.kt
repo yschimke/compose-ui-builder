@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,16 +13,22 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class CatalogOverrideTest {
-  private val packaged =
-    checkNotNull(javaClass.getResource("/wear-m3-capabilities-v1.json")).readText()
+  private val published by lazy { OfflineCatalog.WEAR_M3.capabilityJson() }
 
   @Test
-  fun `a session authors against the file instead of the packaged catalog`() {
-    val file = write(packaged.replace("\"Wear screen · ScreenScaffold\"", "\"Scaffold from disk\""))
+  fun `a session authors against the file instead of the published catalog`() {
+    val original =
+      CapabilityCatalogParser.parse(published)
+        .componentsById
+        .getValue("wear-m3/screen-scaffold")
+        .displayName
+    val file = write(published.replace("\"$original\"", "\"Scaffold from disk\""))
 
     val override = CatalogOverride.read(file)
 
@@ -40,8 +47,8 @@ class CatalogOverrideTest {
   }
 
   @Test
-  fun `an override for another catalog leaves the packaged one in place`() {
-    val override = CatalogOverride.read(write(packaged))
+  fun `an override for another catalog leaves the published one in place`() {
+    val override = CatalogOverride.read(write(published))
 
     OfflineUiBuilderSession(
         Files.createTempDirectory("override-other"),
@@ -52,12 +59,12 @@ class CatalogOverrideTest {
   }
 
   @Test
-  fun `a catalog this host does not package is refused, naming the ones it does`() {
+  fun `an unknown catalog is refused, naming the ones this host supports`() {
     val failure =
       assertFailsWith<IllegalArgumentException> {
-        CatalogOverride.read(write(packaged.replace("\"wear-m3\"", "\"glimmer\"")))
+        CatalogOverride.read(write(published.replace("\"wear-m3\"", "\"unknown-catalog\"")))
       }
-    assertContains(failure.message.orEmpty(), "glimmer")
+    assertContains(failure.message.orEmpty(), "unknown-catalog")
     assertContains(failure.message.orEmpty(), "m3-catalog")
   }
 
@@ -73,14 +80,20 @@ class CatalogOverrideTest {
   fun `a stored design follows a regenerated catalog's revision instead of failing its pin`() =
     runBlocking {
       val workspace = Files.createTempDirectory("override-repin")
-      // Created against the packaged catalog, so pinned to its revision.
+      // Created against the published catalog, so pinned to its revision.
       OfflineUiBuilderSession(workspace, catalogSystemId = "wear-m3").use { session ->
         withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
       }
+      val revision =
+        Json.parseToJsonElement(published)
+          .jsonObject
+          .getValue("benchmark")
+          .jsonObject
+          .getValue("catalogRevision")
+          .jsonPrimitive
+          .content
       val regenerated =
-        CatalogOverride.read(
-          write(packaged.replace("\"wear-screen-scaffold-v1\"", "\"wear-screen-scaffold-v2\""))
-        )
+        CatalogOverride.read(write(published.replace("\"$revision\"", "\"revised-catalog\"")))
 
       OfflineUiBuilderSession(workspace, catalogSystemId = "wear-m3", catalogOverride = regenerated)
         .use { session ->
@@ -92,7 +105,7 @@ class CatalogOverrideTest {
               .toUiBuilderDocument()
               .catalogPin
           assertEquals(
-            "wear-screen-scaffold-v2",
+            "revised-catalog",
             pin["catalogRevision"]?.jsonPrimitive?.contentOrNull,
           )
         }

@@ -134,7 +134,7 @@ class DesktopLaunchOptionsTest {
     val file = java.nio.file.Files.createTempFile("wear", ".json")
     java.nio.file.Files.writeString(
       file,
-      checkNotNull(javaClass.getResource("/wear-m3-capabilities-v1.json")).readText(),
+      OfflineCatalog.WEAR_M3.capabilityJson(),
     )
 
     val options = DesktopLaunchOptions.parse(arrayOf("--catalog-file", file.toString()))

@@ -7,16 +7,15 @@ import java.nio.file.Path
 import kotlinx.serialization.json.Json
 
 /**
- * A capability catalog read from disk in place of the packaged one with the same system id, so a
- * catalog repository can try a regenerated `*-capabilities-v1.json` without rebuilding the editor.
- * The packaged seeds and templates still apply; palette, properties and validation come from the
- * file.
+ * A capability catalog read from disk in place of the published one with the same system id, so a
+ * catalog repository can try a regenerated capability file without rebuilding the editor. The
+ * published seeds and templates still apply; palette, properties and validation come from the file.
  */
 class CatalogOverride private constructor(val systemId: String, val text: String) {
   companion object {
     /**
      * Reads and checks [path]: it must decode as a released capability catalog, parse as the
-     * editor's catalog, and name a system id this host packages.
+     * editor's catalog, and name a system id this host supports.
      */
     fun read(path: Path): CatalogOverride {
       val text = Files.readString(path)
