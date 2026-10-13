@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlinx.serialization.json.JsonArray
@@ -435,7 +436,7 @@ private fun wearText(value: String): StarterNode =
 /** A Remote Material 3 label, declared by the published Remote catalog. */
 private fun remoteText(value: String): StarterNode =
   StarterNode(
-    componentId = "remote-m3/remote-text",
+    componentId = REMOTE_TEXT_COMPONENT_ID,
     properties = mapOf("text" to starterLiteral("string", value)),
   )
 
