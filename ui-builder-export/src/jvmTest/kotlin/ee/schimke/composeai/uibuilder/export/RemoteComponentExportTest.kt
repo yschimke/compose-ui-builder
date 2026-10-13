@@ -308,6 +308,55 @@ class RemoteComponentExportTest {
   }
 
   @Test
+  fun `a button's colour roles fill the library's colours factory`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitTonalButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button"}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {
+              "containerColor": {"type": "colorToken", "value": "surfaceContainer"},
+              "contentColor": {"type": "colorToken", "value": "onSurface"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "colors = RemoteButtonDefaults.buttonColors(containerColor = " +
+        "RemoteMaterialTheme.colorScheme.surfaceContainer, contentColor = " +
+        "RemoteMaterialTheme.colorScheme.onSurface)" in source,
+      source,
+    )
+    assertTrue(
+      "import androidx.wear.compose.remote.material3.RemoteButtonDefaults" in source,
+      source,
+    )
+  }
+
+  @Test
+  fun `a colour role that is not a colour is refused`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button"}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {"containerColor": {"type": "colorToken", "value": "not a role"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
+  }
+
+  @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())

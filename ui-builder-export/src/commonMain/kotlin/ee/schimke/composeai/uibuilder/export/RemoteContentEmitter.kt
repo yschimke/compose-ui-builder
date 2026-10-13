@@ -1001,6 +1001,9 @@ internal class RemoteContentEmitter(
           authored != null -> remoteValue(node, parameter, authored)
           parameter.typeFqn == REMOTE_BORDER_STROKE_FQN && node.has(BORDER_COLOR_PROPERTY) ->
             borderStroke(node, parameter) ?: return emptyList()
+          REMOTE_COLOR_BUNDLES[parameter.typeFqn]?.roles?.any { node.has(it) } == true ->
+            colorBundle(node, REMOTE_COLOR_BUNDLES.getValue(parameter.typeFqn.orEmpty()))
+              ?: return emptyList()
           parameter.typeFqn == ACTION_FQN &&
             (!parameter.hasDefault ||
               eventActions(
@@ -2659,6 +2662,28 @@ internal class RemoteContentEmitter(
         "RemoteMaterialTheme.colorScheme.$color".also { usesTheme = true }
       else -> null
     }
+  }
+
+  /**
+   * A `…Colors` parameter from the node's colour roles, through the library's factory:
+   * `RemoteButtonDefaults.buttonColors(containerColor = …, contentColor = …)`. The roles are the
+   * factory's own parameter names; any the node leaves out keep the factory's default. Null, with a
+   * refusal, when a role is not a colour.
+   */
+  private fun colorBundle(node: UiBuilderNode, bundle: RemoteColorBundle): String? {
+    val arguments =
+      bundle.roles.mapNotNull { role ->
+        val authored = node.properties[role] ?: return@mapNotNull null
+        val color = remoteColor(authored)
+        if (color == null) {
+          refusals += "nodes.${node.id}.$role: expected a colour literal or a theme role"
+          return null
+        }
+        "$role = $color"
+      }
+    usedComponentImports += bundle.defaultsFqn
+    return "${bundle.defaultsFqn.substringAfterLast('.')}.${bundle.factory}" +
+      "(${arguments.joinToString()})"
   }
 
   /**
@@ -4359,6 +4384,63 @@ private const val REMOTE_BORDER_STROKE_FQN =
   "androidx.wear.compose.remote.material3.RemoteBorderStroke"
 private const val BORDER_COLOR_PROPERTY = "borderColor"
 private const val BORDER_WIDTH_PROPERTY = "borderWidthDp"
+
+/**
+ * A `remote-material3` colours type and the factory that builds one from theme roles: the factory
+ * lives on [defaultsFqn], and [roles] are its parameter names, which a node spells as properties.
+ */
+private class RemoteColorBundle(
+  val defaultsFqn: String,
+  val factory: String,
+  val roles: List<String>,
+)
+
+private const val REMOTE_M3_PACKAGE = "androidx.wear.compose.remote.material3"
+
+private val REMOTE_COLOR_BUNDLES: Map<String, RemoteColorBundle> =
+  mapOf(
+    "$REMOTE_M3_PACKAGE.RemoteButtonColors" to
+      RemoteColorBundle(
+        "$REMOTE_M3_PACKAGE.RemoteButtonDefaults",
+        "buttonColors",
+        listOf(
+          "containerColor",
+          "contentColor",
+          "secondaryContentColor",
+          "iconColor",
+          "disabledContainerColor",
+          "disabledContentColor",
+          "disabledSecondaryContentColor",
+          "disabledIconColor",
+        ),
+      ),
+    "$REMOTE_M3_PACKAGE.RemoteTextButtonColors" to
+      RemoteColorBundle(
+        "$REMOTE_M3_PACKAGE.RemoteTextButtonDefaults",
+        "textButtonColors",
+        listOf("containerColor", "contentColor", "disabledContainerColor", "disabledContentColor"),
+      ),
+    "$REMOTE_M3_PACKAGE.RemoteIconButtonColors" to
+      RemoteColorBundle(
+        "$REMOTE_M3_PACKAGE.RemoteIconButtonDefaults",
+        "iconButtonColors",
+        listOf("containerColor", "contentColor", "disabledContainerColor", "disabledContentColor"),
+      ),
+    "$REMOTE_M3_PACKAGE.RemoteCardColors" to
+      RemoteColorBundle(
+        "$REMOTE_M3_PACKAGE.RemoteCardDefaults",
+        "cardColors",
+        listOf(
+          "containerColor",
+          "contentColor",
+          "appNameColor",
+          "timeColor",
+          "titleColor",
+          "subtitleColor",
+        ),
+      ),
+  )
+
 /** A colour scheme role's name, as `RemoteMaterialTheme.colorScheme` spells its members. */
 private val COLOR_ROLE = Regex("[a-z][A-Za-z0-9]*")
 /**
