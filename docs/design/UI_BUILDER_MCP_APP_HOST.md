@@ -140,6 +140,10 @@ archive **packages**: `m3-catalog`, `wear-m3` or `remote-m3`. The editor reads
 editor's Wasm came from, so if the editor loaded, its catalogs load too. Nothing in the flow calls a
 hosted catalog. With a loopback asset origin (below), the whole editor works offline.
 
+VS Code and IntelliJ host-bridge editors now supply capabilities from each catalog's published
+source. The MCP App shell still leaves `catalogBase` unset, so the web archive must package all
+three capability files until MCP App hosts have a published capability route.
+
 A design pinned to any other catalog opens with an error that names the catalog. The editor does
 not open it against the wrong components. `McpAppCatalogs` accepts an optional hosted base
 (`composeUiBuilderMcpApp.catalogBase`) and tries it only for unpackaged catalogs. The shell leaves

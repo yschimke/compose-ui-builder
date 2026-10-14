@@ -148,6 +148,8 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           "skiko.wasm",
           "m3-catalog-capabilities-v1.json",
           "jetcaster-discover-operations-v1.json",
+          "wear-m3-capabilities-v1.json",
+          "remote-m3-capabilities-v1.json",
           "fonts/fonts.json",
           // Material icon vectors; the browser build draws icons from these, not compiled code.
           "icons/icons-0.json",
@@ -159,11 +161,6 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           mcpAppShellPath,
         )
       val missing = required - names.toSet()
-      val forbidden =
-        setOf("wear-m3-capabilities-v1.json", "remote-m3-capabilities-v1.json")
-      check(names.none(forbidden::contains)) {
-        "web archive still packages catalog capability goldens: ${names.filter(forbidden::contains)}"
-      }
       check(missing.isEmpty()) { "UI-builder web archive is missing: ${missing.sorted()}" }
       check(names.size == names.toSet().size) { "UI-builder web archive contains duplicate paths" }
       val unsafe =

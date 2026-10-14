@@ -458,6 +458,10 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
+      // MCP App hosts still read these from the archive until they have a published capability
+      // route. Host-bridge editors receive their catalog from the host (HostBridgeApp.kt).
+      "wear-m3-capabilities-v1.json",
+      "remote-m3-capabilities-v1.json",
     )
   }
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
