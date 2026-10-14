@@ -49,10 +49,20 @@ object ScreenExportGate {
      */
     data class Emitted(
       val source: String,
-      val assetPlaceholders: List<ScreenDocumentProjection.AssetPlaceholder>,
+      val assetPlaceholders: List<ScreenDocumentProjection.AssetPlaceholder> = emptyList(),
     ) : Outcome {
-      /** The published `Emitted(String)` descriptor, kept for hosts compiled against it. */
+      /**
+       * The published constructor without [assetPlaceholders], kept for binaries compiled against
+       * it.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
       constructor(source: String) : this(source, emptyList())
+
+      /**
+       * The published `copy` without [assetPlaceholders], kept for binaries compiled against it.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(source: String = this.source): Emitted = Emitted(source, assetPlaceholders)
     }
 
     /**
@@ -61,9 +71,19 @@ object ScreenExportGate {
      * its projection, a variable-font text), as opposed to a call site the component record cannot
      * prove; a host reports the two under different codes.
      */
-    data class Refused(val reasons: List<String>, val documentReasons: List<String>) : Outcome {
-      /** The published `Refused(List)` descriptor, kept for hosts compiled against it. */
+    data class Refused(
+      val reasons: List<String>,
+      val documentReasons: List<String> = emptyList(),
+    ) : Outcome {
+      /**
+       * The published constructor without [documentReasons], kept for binaries compiled against it.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
       constructor(reasons: List<String>) : this(reasons, emptyList())
+
+      /** The published `copy` without [documentReasons], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(reasons: List<String> = this.reasons): Refused = Refused(reasons, documentReasons)
     }
   }
 
