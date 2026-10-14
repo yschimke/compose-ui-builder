@@ -508,10 +508,25 @@ try {
 } catch (error) {
   failures.push(`focused canvas: ${error.message.split('\n')[0]}`);
 }
-failures.push(...pageErrors.map((it) => `page error: ${it}`));
-if (pageErrors.some((it) => it.includes('404'))) {
-  failures.push(...missingResources.map((url) => `404 resource: ${url}`));
+// This fake host has no published catalog route. The editor must try it, receive a 404, and
+// open the packaged M3 catalog instead. Chromium logs that expected response as a console error.
+const expectedFallbackPath = '/api/ui-builder/v1/catalog-capabilities/m3-catalog-capabilities-v1.json';
+const unexpectedMissing = missingResources.filter(
+  (url) => new URL(url).pathname !== expectedFallbackPath,
+);
+let expectedFallbackErrors = missingResources.length - unexpectedMissing.length;
+for (const error of pageErrors) {
+  if (
+    unexpectedMissing.length === 0 &&
+    /^Failed to load resource:.*status of 404/.test(error) &&
+    expectedFallbackErrors > 0
+  ) {
+    expectedFallbackErrors--;
+  } else {
+    failures.push(`page error: ${error}`);
+  }
 }
+failures.push(...unexpectedMissing.map((url) => `404 resource: ${url}`));
 console.log(failures.length === 0 ? 'ok   mcp-app host round trip, focused canvas and comment' : `FAIL mcp-app host\n  ${failures.join('\n  ')}`);
 await browser.close();
 for (const it of [assets, sandbox, hostServer]) it.server.close();
