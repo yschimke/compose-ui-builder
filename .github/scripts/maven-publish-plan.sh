@@ -452,7 +452,7 @@ def shared_verdict(tag, files):
 # Ported from yschimke/compose-ai-tools#5971. `src/testFixtures` is NOT one: `java-test-fixtures`
 # publishes it as a variant. `--no-renames` keeps a main source moved into a test directory visible
 # as a deletion from main.
-TEST_SOURCE = re.compile(r"(^|/)src/(?!testFixtures/)(test[A-Za-z]*|[a-z][A-Za-z]*Test[A-Za-z]*)/")
+TEST_SOURCE = re.compile(r"(^|/)src/(?!testFixtures/)(test[A-Za-z0-9]*|[a-z][A-Za-z0-9]*Test[A-Za-z0-9]*)/")
 
 def changed_since(version, directories):
     """Did anything published from `directories` move between the tag for `version` and head?"""

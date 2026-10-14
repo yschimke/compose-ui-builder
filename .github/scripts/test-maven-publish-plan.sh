@@ -275,6 +275,9 @@ change_module_test_only() {
   echo 'class AlphaTest' > alpha/src/test/kotlin/AlphaTest.kt
   echo 'class GammaTest' > lib/gamma/src/jvmTest/kotlin/GammaTest.kt
   echo 'class InternalTest' > internal/src/commonTest/kotlin/InternalTest.kt
+  # A target name with digits, as the KMP native targets have.
+  mkdir -p lib/gamma/src/iosArm64Test/kotlin
+  echo 'class GammaArmTest' > lib/gamma/src/iosArm64Test/kotlin/GammaArmTest.kt
 }
 check module_test_only ""
 
