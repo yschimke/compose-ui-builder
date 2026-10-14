@@ -38,7 +38,7 @@ public data class PublishedCatalogLocation(
     get() = "https://raw.githubusercontent.com/$repository/design-artifacts/$deliverySystem"
 
   public companion object {
-    /** The catalogs [OfflineCatalog] offers, by id. */
+    /** The catalogs offline hosts offer, by id. */
     public val DEFAULTS: Map<String, PublishedCatalogLocation> =
       listOf(
           PublishedCatalogLocation("m3-catalog", "yschimke/m3-catalog-out", "m3-catalog"),

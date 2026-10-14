@@ -166,10 +166,17 @@ kotlin {
       implementation(project.dependencies.platform(libs.composeai.daemon.bom))
       implementation(libs.composeai.data.preview.overrides.runtime)
       implementation(libs.composeai.preview.annotations)
+      // The JVM previews use the same published catalog store as desktop and IDE hosts. Exclude
+      // the render bundle: this module builds the previews packaged inside that bundle.
+      implementation(project(":ui-builder-runtime")) {
+        exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
+      }
     }
-    getByName("jvmMain")
-      .resources
-      .srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
+    getByName("jvmMain").resources.apply {
+      srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
+      // Runtime previews compose these catalogs from their published delivery files.
+      exclude("wear-m3-capabilities-v1.json", "remote-m3-capabilities-v1.json")
+    }
     getByName("jvmMain").resources.srcDir(stageWearDeviceFonts)
     getByName("jvmTest") {
       kotlin.srcDir(stageBehaviorCompileFixture)
