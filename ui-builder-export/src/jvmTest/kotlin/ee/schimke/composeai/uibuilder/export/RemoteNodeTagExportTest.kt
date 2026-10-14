@@ -141,6 +141,16 @@ class RemoteNodeTagExportTest {
     assertEquals(listOf("a", "b"), NativeNodeTags.nodeIds("[Play, uib-node:a, uib-node:b]"))
     assertEquals(listOf("a"), NativeNodeTags.nodeIds(listOf("Play", "uib-node:a")))
     assertEquals(listOf("a", "b"), NativeNodeTags.nodeIds(listOf("[uib-node:a]", "uib-node:b")))
+  }
+
+  @Test
+  fun `an id holding the separators round-trips and is never mistaken for a shorter one`() {
+    val ids = listOf("row, 1", "list[0]", "50% off", "two\nlines", "plain")
+    // As a semantics node reports them: an authored description beside each tag, joined.
+    val joined = "Play, " + ids.joinToString(", ") { NativeNodeTags.tag(it) }
+    assertEquals(ids, NativeNodeTags.nodeIds(joined))
+    assertEquals(ids, NativeNodeTags.nodeIds("[$joined]"))
+    assertEquals(listOf("row"), NativeNodeTags.nodeIds(NativeNodeTags.tag("row")))
     assertTrue(NativeNodeTags.nodeIds("Play").isEmpty())
     assertTrue(NativeNodeTags.nodeIds("uib-node:").isEmpty())
     assertTrue(NativeNodeTags.nodeIds("").isEmpty())
