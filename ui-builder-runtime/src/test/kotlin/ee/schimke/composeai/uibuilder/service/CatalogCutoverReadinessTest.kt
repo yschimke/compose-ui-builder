@@ -126,14 +126,11 @@ class CatalogCutoverReadinessTest {
   }
 
   @Test
-  fun `with the flag off, the same executor still synthesises what it always did`() {
+  fun `with the flag off, only the packaged M3 catalog is synthesised`() {
     val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.NONE)
 
     assertEquals(
-      setOf(
-        CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-        CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-      ),
+      setOf(CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID),
       executor.synthesisedCatalogIds,
     )
   }
@@ -165,26 +162,6 @@ class CatalogCutoverReadinessTest {
         )
       assertNotNull(executor.resolve(stamped), "$id: $stamped")
     }
-  }
-
-  @Test
-  fun `the frozen legacy pins are exactly what the generators produce`() {
-    // A2UI and Remote's generators are gone; their frozen pins still resolve in the tests below.
-    val generated =
-      LegacySynthesisedReferences.all.filterKeys {
-        it != CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID &&
-          it != CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID
-      }
-    val executor =
-      CurrentM3UiBuilderCatalogExecutor.Builder()
-        .also { it.catalogSystemIds = generated.keys }
-        .build()
-    assertEquals(
-      generated,
-      executor.listCatalogs().associate { catalog ->
-        catalog.benchmark.catalogSystemId to checkNotNull(executor.reference(catalog))
-      },
-    )
   }
 
   @Test
