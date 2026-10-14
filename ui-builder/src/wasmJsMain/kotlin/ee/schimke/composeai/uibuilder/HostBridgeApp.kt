@@ -163,9 +163,9 @@ private fun hostBridgeRole(): HostBridgeRole =
   if (hostBridgeRoleName() == "preview") HostBridgeRole.Preview else HostBridgeRole.Editor
 
 /**
- * What a host sends to open a design. [capabilities] is the pinned catalog's capability JSON
- * (`<systemId>-capabilities-v1.json` from this archive's root). [document] is `DesignDocumentV1`
- * JSON, or empty for a new file, in which case [seed] says what to start it as.
+ * What a host sends to open a design. [capabilities] is the pinned catalog's capability JSON from
+ * the host's published catalog source. [document] is `DesignDocumentV1` JSON, or empty for a new
+ * file, in which case [seed] says what to start it as.
  */
 @Serializable
 internal data class HostOpenMessage(

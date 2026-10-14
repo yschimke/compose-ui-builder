@@ -458,8 +458,8 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
-      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and pass
-      // the pinned one to the editor (see HostBridgeApp.kt), so all three offline catalogs work.
+      // MCP App hosts still read these from the archive until they have a published capability
+      // route. Host-bridge editors receive their catalog from the host (HostBridgeApp.kt).
       "wear-m3-capabilities-v1.json",
       "remote-m3-capabilities-v1.json",
     )
