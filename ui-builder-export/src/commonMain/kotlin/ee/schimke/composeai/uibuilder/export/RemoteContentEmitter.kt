@@ -157,6 +157,26 @@ internal class RemoteContentEmitter(
    * profile; a layout outside it is then an error on [diagnostics], not only a comment.
    */
   private val glanceWearWidget: Boolean = false,
+  /**
+   * Whether every placed node carries its [NativeNodeTags.tag] as a content description, for the
+   * native preview lane to read each node's bounds back from the played semantics tree. Never set
+   * for an export a person keeps: a screen reader would read the tag aloud.
+   *
+   * Written *first* in the node's `RemoteModifier` chain. The player applies a component's
+   * semantics operations in document order, and Compose collapses one layout node's semantics so
+   * the outermost `contentDescription` wins and a `clearAndSetSemantics` drops everything inside
+   * it; ahead of the node's own semantics the tag survives both. The node keeps its own `semantics`
+   * or `clearAndSetSemantics` call, and every property the tag does not set (role, state, enabled),
+   * but in the played tree its own content description is shadowed by the tag.
+   *
+   * Only nodes written with a `RemoteModifier` are tagged: layouts, text, icons, images, buttons
+   * and the record's other components, canvases, a component placement (with the placement's id)
+   * and a loop (with the loop's id; each row's template node carries the template's id). Draw
+   * operations inside a canvas, a theme wrapper, and anything a record writes without a `modifier`
+   * parameter have no chain to carry one, and are not tagged. Nodes inside a component definition
+   * carry the definition's node ids, which every placement shares.
+   */
+  private val tagNodes: Boolean = false,
 ) {
   /**
    * What the written source carries but cannot say for itself: a dependency it needs, a setting the
@@ -3808,7 +3828,8 @@ internal class RemoteContentEmitter(
         listOf(modifierCall("fillMaxSize()"))
       } else emptyList()
     val parts =
-      frame +
+      listOfNotNull(if (tagNodes) nodeTagCall(id) else null) +
+        frame +
         leading +
         modifiers.flatMap { element -> modifierCalls(element) } +
         listOfNotNull(click)
@@ -3822,6 +3843,16 @@ internal class RemoteContentEmitter(
     }
     val continuation = "\n$pad$INDENT$INDENT."
     return parts.joinToString(continuation, prefix = "RemoteModifier.")
+  }
+
+  /** `semantics { contentDescription = "uib-node:<id>".rs }`; see [tagNodes]. */
+  private fun nodeTagCall(nodeId: String): String {
+    usesRemoteString = true
+    return semanticsCall(
+        mapOf("contentDescription" to "\"${NativeNodeTags.tag(nodeId).escaped()}\".rs"),
+        "nodes.$nodeId",
+      )
+      .single()
   }
 
   /**

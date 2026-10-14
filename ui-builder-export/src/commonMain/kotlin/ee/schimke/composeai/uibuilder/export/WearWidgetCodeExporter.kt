@@ -44,17 +44,32 @@ object WearWidgetCodeExporter {
   /**
    * @param packageName the package the emitted file declares, or null for the pane's snippet; the
    *   two differ by exactly this line, written after `@file:Suppress`.
+   * @param tagNodes whether every placed Remote node carries its [NativeNodeTags.tag] as a
+   *   `semantics { contentDescription = … }`, for the native preview lane to read node bounds back
+   *   from the played semantics tree. Never for a kept export.
    */
   fun export(
     document: UiBuilderDocument,
     packageName: String? = null,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     components: Map<String, ComponentRecord> = emptyMap(),
+    tagNodes: Boolean = false,
   ): Result =
-    when (val outcome = generate(document, packageName, assets, bundled = null, components)) {
+    when (
+      val outcome = generate(document, packageName, assets, bundled = null, components, tagNodes)
+    ) {
       is Outcome.Refused -> Result.Refused(outcome.reasons)
       is Outcome.Generated -> Result.Emitted(outcome.source, outcome.diagnostics)
     }
+
+  /** The published `export` without `tagNodes`, kept for binaries compiled against it. */
+  @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+  fun export(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    components: Map<String, ComponentRecord> = emptyMap(),
+  ): Result = export(document, packageName, assets, components, tagNodes = false)
 
   /**
    * The same widget as a project fragment: readable source, with pictures shipped as files. Same
@@ -111,6 +126,7 @@ object WearWidgetCodeExporter {
     assets: WidgetAssetBytes,
     bundled: WidgetAssetContents?,
     components: Map<String, ComponentRecord> = emptyMap(),
+    tagNodes: Boolean = false,
   ): Outcome {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -148,6 +164,7 @@ object WearWidgetCodeExporter {
           components = components,
           frameFillingRoot = contentIds.singleOrNull(),
           glanceWearWidget = true,
+          tagNodes = tagNodes,
         )
         .let { probe ->
           probe.background(sizedRoot)
@@ -172,6 +189,7 @@ object WearWidgetCodeExporter {
           components = components,
           frameFillingRoot = contentIds.singleOrNull(),
           glanceWearWidget = true,
+          tagNodes = tagNodes,
         )
       val background = emitter.background(sizedRoot)
       emitter.themeTypography(sizedRoot, depth = 2)
