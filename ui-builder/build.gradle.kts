@@ -181,6 +181,7 @@ kotlin {
     getByName("jvmTest") {
       kotlin.srcDir(stageBehaviorCompileFixture)
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
+      resources.exclude("wear-m3-capabilities-v1.json", "remote-m3-capabilities-v1.json")
     }
   }
 }
