@@ -30,7 +30,21 @@ public object InlineRemoteContentExporter {
       val functionName: String,
       val source: String,
       val diagnostics: List<ExportDiagnosticV1> = emptyList(),
-    ) : Result
+    ) : Result {
+      /** The published constructor without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      public constructor(
+        functionName: String,
+        source: String,
+      ) : this(functionName, source, emptyList())
+
+      /** The published `copy` without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      public fun copy(
+        functionName: String = this.functionName,
+        source: String = this.source,
+      ): Emitted = Emitted(functionName, source, diagnostics)
+    }
 
     public data class Refused(val reasons: List<String>) : Result
   }

@@ -30,7 +30,15 @@ object LauncherWidgetCodeExporter {
       val source: String,
       /** What the source needs but cannot say for itself; see [ExportDiagnosticCodes]. */
       val diagnostics: List<ExportDiagnosticV1> = emptyList(),
-    ) : Result
+    ) : Result {
+      /** The published constructor without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(source: String) : this(source, emptyList())
+
+      /** The published `copy` without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(source: String = this.source): Emitted = Emitted(source, diagnostics)
+    }
 
     data class Refused(val reasons: List<String>) : Result
   }
