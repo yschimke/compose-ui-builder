@@ -23,15 +23,21 @@
     <title>Compose UI Builder</title>
     <base href="__COMPOSE_UI_BUILDER_ASSET_BASE__" />
     <script>
-      // Selects McpAppHostApp (see Main.kt). `assetBase` is the only origin besides the page's the
-      // editor may fetch from; `catalogBase` is left unset, so a design pinned to a catalog this
-      // archive does not package is refused by name rather than fetched (McpAppCatalogs.kt).
+      // The host's device-presets URL identifies the server that serves published catalogs. If
+      // it is absent, try the asset origin; McpAppCatalogs falls back to packaged catalogs when
+      // that route is unavailable. BrowserRequestUrl allows only these declared URL roots.
       // `layout` is the editor the panel opens in, `focused` (the canvas alone) or `full`; the
       // person can switch from the file bar either way (McpAppLayout.kt).
+      const assetBase = "__COMPOSE_UI_BUILDER_ASSET_BASE__";
+      const devicePresets = "__COMPOSE_UI_BUILDER_DEVICE_PRESETS__";
+      const catalogHost = devicePresets.startsWith("__")
+        ? assetBase
+        : new URL(devicePresets, assetBase).href;
       globalThis.composeUiBuilderMcpApp = {
-        assetBase: "__COMPOSE_UI_BUILDER_ASSET_BASE__",
+        assetBase,
+        catalogBase: new URL("/api/ui-builder/v1/catalog-capabilities/", catalogHost).href,
         layout: "__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__",
-        devicePresets: "__COMPOSE_UI_BUILDER_DEVICE_PRESETS__",
+        devicePresets,
         version: "@UI_BUILDER_VERSION@",
       };
     </script>
