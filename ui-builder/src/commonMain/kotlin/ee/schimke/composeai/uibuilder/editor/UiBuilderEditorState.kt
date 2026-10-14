@@ -64,6 +64,7 @@ import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.exportRecord
 import ee.schimke.composeai.uibuilder.frameGeometry
 import ee.schimke.composeai.uibuilder.packComponentsById
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import ee.schimke.composeai.uibuilder.reference.PLACED_PIECE_WIDTH_FRACTION
 import ee.schimke.composeai.uibuilder.reference.REFERENCE_FONT_SIZE_PROPERTY
 import ee.schimke.composeai.uibuilder.reference.ReferenceFit
@@ -1963,6 +1964,8 @@ class UiBuilderEditorReducer(
         // The server export's refusals, appended since capability diagnostics answer different
         // questions.
         export?.refusals.orEmpty() +
+        // Not refusals: what the written source needs or leaves out, as the export says too.
+        export?.notices(document).orEmpty() +
         undeclaredPropertyProblems(document) +
         // Not a refusal: the property commits but changes nothing visible (see #485). Same notice
         // the served export attaches.
@@ -2220,7 +2223,11 @@ class UiBuilderEditorReducer(
       // It generates; the record gate would still refuse it, which is why these designs have their
       // own emitter.
       is RecordFreeExport.Generated.Emitted ->
-        ExportOutcome(dedicated = true, reasons = emptyList())
+        ExportOutcome(
+          dedicated = true,
+          reasons = emptyList(),
+          diagnostics = recordFree.diagnostics,
+        )
       null ->
         ExportOutcome(
           dedicated = false,
@@ -2242,7 +2249,12 @@ class UiBuilderEditorReducer(
    * @param dedicated whether a `RecordFreeExport` emitter owns the design rather than the
    *   record-driven `ScreenGenerator`.
    */
-  private class ExportOutcome(val dedicated: Boolean, val reasons: List<String>) {
+  private class ExportOutcome(
+    val dedicated: Boolean,
+    val reasons: List<String>,
+    /** What the emitted source carries beside it; the served export's diagnostics too. */
+    val diagnostics: List<ExportDiagnosticV1> = emptyList(),
+  ) {
     /**
      * Whether this replaces the capability exporter's "no symbol"/"no emitter" answer: always for a
      * dedicated emitter, for the record path only when it generates.
@@ -2259,6 +2271,17 @@ class UiBuilderEditorReducer(
           componentId = null,
         )
       }
+
+    /** [diagnostics] as advisories: the export still writes, so none of them blocks it. */
+    fun notices(document: UiBuilderDocument): List<EditorProblem> = diagnostics.map {
+      EditorProblem(
+        code = it.code,
+        message = it.message,
+        nodeId = it.nodeId?.takeIf(document.nodes::containsKey),
+        componentId = it.nodeId?.let(document.nodes::get)?.componentId,
+        blocking = false,
+      )
+    }
   }
 
   /**

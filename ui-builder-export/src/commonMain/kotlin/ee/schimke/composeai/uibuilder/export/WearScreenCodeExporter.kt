@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -24,7 +25,26 @@ object WearScreenCodeExporter {
      *   [screenIdentifier]; the native preview lane imports it. Without previews it names a wrapper
      *   adding the `AppScaffold` and frozen `TimeText`, with the body as `<Screen>Content`.
      */
-    data class Emitted(val source: String, val screenName: String) : Result
+    data class Emitted(
+      val source: String,
+      val screenName: String,
+      /** What the source needs but cannot say for itself; see [ExportDiagnosticCodes]. */
+      val diagnostics: List<ExportDiagnosticV1> = emptyList(),
+    ) : Result {
+      /** The published constructor without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(
+        source: String,
+        screenName: String,
+      ) : this(source, screenName, emptyList())
+
+      /** The published `copy` without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(
+        source: String = this.source,
+        screenName: String = this.screenName,
+      ): Emitted = Emitted(source, screenName, diagnostics)
+    }
 
     data class Refused(val reasons: List<String>) : Result
   }
@@ -251,6 +271,7 @@ object WearScreenCodeExporter {
     return Result.Emitted(
       screenName = name,
       source = joinKotlinFiles(screenSource, variableFontFiles),
+      diagnostics = emitter.diagnostics,
     )
   }
 

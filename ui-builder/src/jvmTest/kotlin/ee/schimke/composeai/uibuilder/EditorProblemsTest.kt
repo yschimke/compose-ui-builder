@@ -7,6 +7,9 @@ import ee.schimke.composeai.uibuilder.codegen.validateDocumentForExport
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.ExportDiagnosticCodes
+import ee.schimke.composeai.uibuilder.export.MaterialIconArtifacts
+import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -197,6 +200,49 @@ class EditorProblemsTest {
       reported.any { it.code == "COMPOSE_EXPORT_REFUSED" && "holds one body" in it.message },
       reported.toString(),
     )
+  }
+
+  /**
+   * What the emitted widget carries beside its source is listed too, against its node, and never as
+   * a blocker: the export still writes it (compose-preview-server #1666).
+   */
+  @Test
+  fun `a widget export's diagnostics are listed as advisories on their node`() {
+    val widget =
+      weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
+    val rootId = widget.roots.single()
+    val root = widget.nodes.getValue(rootId)
+    val glyph =
+      UiBuilderNode(
+        id = "glyph",
+        componentId = REMOTE_ICON_COMPONENT_ID,
+        properties =
+          JsonObject(
+            mapOf(
+              "imageVector" to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive("pauseCircle"))
+                )
+            )
+          ),
+      )
+    val withGlyph =
+      widget.copy(
+        nodes =
+          widget.nodes +
+            ("glyph" to glyph) +
+            (rootId to root.copy(slots = root.slots + ("content" to listOf("glyph"))))
+      )
+
+    val reported =
+      problems(withGlyph).single {
+        it.code == ExportDiagnosticCodes.MATERIAL_ICONS_EXTENDED_REQUIRED
+      }
+
+    assertEquals("glyph", reported.nodeId)
+    assertEquals(REMOTE_ICON_COMPONENT_ID, reported.componentId)
+    assertTrue(!reported.blocking, "the export still writes the widget")
+    assertTrue(MaterialIconArtifacts.EXTENDED_ARTIFACT in reported.message, reported.message)
   }
 
   @Test

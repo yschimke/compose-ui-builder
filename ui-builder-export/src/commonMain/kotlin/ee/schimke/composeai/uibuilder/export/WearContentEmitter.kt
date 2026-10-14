@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -24,6 +25,16 @@ internal class WearContentEmitter(
   /** See [WearScreenCodeExporter.export]. */
   private val packComponents: Map<String, ComponentRecord> = emptyMap(),
 ) {
+  /**
+   * What the written source needs but cannot say for itself (an icon from
+   * `material-icons-extended`); see [ExportDiagnosticCodes]. Unlike [refusals], these do not stop
+   * the export.
+   */
+  val diagnostics: List<ExportDiagnosticV1>
+    get() = collectedDiagnostics.distinct()
+
+  private val collectedDiagnostics = mutableListOf<ExportDiagnosticV1>()
+
   private var usesText = false
   private var usesTextOverflow = false
   private var usesColumn = false
@@ -389,6 +400,9 @@ internal class WearContentEmitter(
                 "which is not one of " +
                 ScreenDocumentProjection.ICON_MEMBERS.keys.sorted().joinToString(", ")
             )
+        MaterialIconArtifacts.diagnostic(nodeId, node.componentId, "iconKey", key)?.let {
+          collectedDiagnostics += it
+        }
         // The vector is `androidx.compose.material.icons`, which Wear and mobile Compose share —
         // one of the very few symbols that really is the same on both. `Icon` itself is Wear's.
         usesIcon = true

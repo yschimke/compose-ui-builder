@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 
 /**
  * Generates the Kotlin a Wear widget design becomes: a `GlanceWearWidget`, its Remote Compose
@@ -16,7 +17,19 @@ object WearWidgetCodeExporter {
 
   /** What a design generates, or why it does not. */
   sealed interface Result {
-    data class Emitted(val source: String) : Result
+    data class Emitted(
+      val source: String,
+      /** What the source needs but cannot say for itself; see [ExportDiagnosticCodes]. */
+      val diagnostics: List<ExportDiagnosticV1> = emptyList(),
+    ) : Result {
+      /** The published constructor without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(source: String) : this(source, emptyList())
+
+      /** The published `copy` without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(source: String = this.source): Emitted = Emitted(source, diagnostics)
+    }
 
     data class Refused(val reasons: List<String>) : Result
   }
@@ -40,7 +53,7 @@ object WearWidgetCodeExporter {
   ): Result =
     when (val outcome = generate(document, packageName, assets, bundled = null, components)) {
       is Outcome.Refused -> Result.Refused(outcome.reasons)
-      is Outcome.Generated -> Result.Emitted(outcome.source)
+      is Outcome.Generated -> Result.Emitted(outcome.source, outcome.diagnostics)
     }
 
   /**
@@ -82,6 +95,7 @@ object WearWidgetCodeExporter {
       val source: String,
       val files: List<WidgetBundleFile>,
       val parameters: List<RemoteContentEmitter.ImageParameter>,
+      val diagnostics: List<ExportDiagnosticV1>,
     ) : Outcome
 
     data class Refused(val reasons: List<String>) : Outcome
@@ -133,6 +147,7 @@ object WearWidgetCodeExporter {
           bundled = bundled,
           components = components,
           frameFillingRoot = contentIds.singleOrNull(),
+          glanceWearWidget = true,
         )
         .let { probe ->
           probe.background(sizedRoot)
@@ -156,6 +171,7 @@ object WearWidgetCodeExporter {
           bundled = bundled,
           components = components,
           frameFillingRoot = contentIds.singleOrNull(),
+          glanceWearWidget = true,
         )
       val background = emitter.background(sizedRoot)
       emitter.themeTypography(sizedRoot, depth = 2)
@@ -304,6 +320,8 @@ object WearWidgetCodeExporter {
           )
         },
       parameters = parameters,
+      // An adaptive widget writes most nodes once per size, so the same notice arrives twice.
+      diagnostics = emitters.flatMap { it.diagnostics }.distinct(),
     )
   }
 

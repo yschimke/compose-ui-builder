@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -25,7 +26,19 @@ object LauncherWidgetCodeExporter {
 
   /** What a design generates, or why it does not. */
   sealed interface Result {
-    data class Emitted(val source: String) : Result
+    data class Emitted(
+      val source: String,
+      /** What the source needs but cannot say for itself; see [ExportDiagnosticCodes]. */
+      val diagnostics: List<ExportDiagnosticV1> = emptyList(),
+    ) : Result {
+      /** The published constructor without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(source: String) : this(source, emptyList())
+
+      /** The published `copy` without [diagnostics], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(source: String = this.source): Emitted = Emitted(source, diagnostics)
+    }
 
     data class Refused(val reasons: List<String>) : Result
   }
@@ -173,7 +186,7 @@ object LauncherWidgetCodeExporter {
         appendLine(it)
       }
     }
-    return Result.Emitted(source)
+    return Result.Emitted(source, emitter.diagnostics)
   }
 
   private fun UiBuilderDocument.environmentDp(key: String): Int? {
