@@ -506,6 +506,12 @@ object CapabilityCatalogParser {
     if (property.name == "weight") {
       return numberEditor(0.1, 100.0, 0.1)
     }
+    // A Remote Compose length (`RemoteDp`) keeps its parameter's own name rather than a `…Dp`
+    // suffix, so its range comes from the names the records give one: a stroke, a gap, a border, a
+    // radius, an inset.
+    if (property.name in REMOTE_DP_PROPERTY_NAMES && property.isNumber()) {
+      return numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0)
+    }
     // A colour property gets a colour control, by the same name rule `PropertyValueKinds` uses to
     // decide what a value means, so the editor never writes a spelling the reducers refuse.
     if (PropertyValueKinds.isColour(property.name)) return colorEditor()
@@ -537,6 +543,16 @@ object CapabilityCatalogParser {
 
   /** The range the renderer and the Compose exporter both round trip for a dimension. */
   private const val MAXIMUM_AUTHORED_DP = 4096.0
+
+  /** The `RemoteDp` parameters `remote-material3` declares, by the name the catalog keeps. */
+  private val REMOTE_DP_PROPERTY_NAMES =
+    setOf("strokeWidth", "gapSize", "border", "indicatorRadius", "padding", "spacing")
+
+  private fun PropertyCapability.isNumber(): Boolean =
+    ((jsonType as? kotlinx.serialization.json.JsonArray)?.map {
+        (it as? kotlinx.serialization.json.JsonPrimitive)?.content
+      } ?: listOf((jsonType as? kotlinx.serialization.json.JsonPrimitive)?.content))
+      .any { it == "number" || it == "integer" }
 
   /**
    * The bound on a slider's own numbers (design units, not dp): wide enough for real use, finite so

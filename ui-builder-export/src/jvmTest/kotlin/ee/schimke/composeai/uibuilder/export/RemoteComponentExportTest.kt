@@ -191,6 +191,218 @@ class RemoteComponentExportTest {
   }
 
   @Test
+  fun `an outlined card's border is a RemoteBorderStroke from its border colour and width`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"card": {"name": "KitOutlinedCardRemote", "root": "card"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "card"}},
+          "card": {"id": "card", "componentId": "remote-m3/remote-outlined-card",
+            "properties": {"borderColor": {"type": "colorToken", "value": "outline"},
+              "borderWidthDp": {"type": "int", "value": 2}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "border = RemoteBorderStroke(2.rdp, RemoteMaterialTheme.colorScheme.outline)" in source,
+      source,
+    )
+    assertTrue("import androidx.wear.compose.remote.material3.RemoteBorderStroke" in source, source)
+  }
+
+  @Test
+  fun `a record's RemoteDp and RemoteColor parameters take numbers and theme roles`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button"}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {"border": {"type": "int", "value": 1},
+              "borderColor": {"type": "colorToken", "value": "outline"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue("border = 1.rdp" in source, source)
+    assertTrue("borderColor = RemoteMaterialTheme.colorScheme.outline" in source, source)
+  }
+
+  @Test
+  fun `a progress indicator binds its progress, enabled state and stroke width`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"ring": {"name": "KitRing", "root": "ring"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "ring", "arguments": {
+              "progress": {"type": "float", "value": 0.6},
+              "enabled": {"type": "bool", "value": true},
+              "strokeWidth": {"type": "int", "value": 8}}}},
+          "ring": {"id": "ring", "componentId": "remote-m3/remote-circular-progress-indicator",
+            "properties": {"progress": {"type": "binding", "value": "progress"},
+              "enabled": {"type": "binding", "value": "enabled"},
+              "strokeWidth": {"type": "binding", "value": "strokeWidth"}}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "strokeWidth: androidx.compose.remote.creation.compose.state.RemoteDp" in source,
+      source,
+    )
+    assertTrue("strokeWidth = strokeWidth" in source, source)
+    assertTrue("progress = progress" in source, source)
+  }
+
+  @Test
+  fun `an indeterminate progress indicator calls the overload without progress`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"ring": {"name": "KitRing", "root": "ring"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "ring"}},
+          "ring": {"id": "ring", "componentId": "remote-m3/remote-circular-progress-indicator",
+            "properties": {"indeterminate": {"type": "bool", "value": true},
+              "strokeWidth": {"type": "int", "value": 8}}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue("RemoteCircularProgressIndicator(" in source, source)
+    assertTrue("strokeWidth = 8.rdp" in source, source)
+    assertFalse("progress =" in source, source)
+    assertFalse("enabled =" in source, source)
+  }
+
+  @Test
+  fun `an indeterminate progress indicator refuses a progress value`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"ring": {"name": "KitRing", "root": "ring"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "ring"}},
+          "ring": {"id": "ring", "componentId": "remote-m3/remote-circular-progress-indicator",
+            "properties": {"indeterminate": {"type": "bool", "value": true},
+              "progress": {"type": "float", "value": 0.5}}}
+          """,
+        )
+      )
+    assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
+  }
+
+  @Test
+  fun `a button's colour roles fill the library's colours factory`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitTonalButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button"}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {
+              "containerColor": {"type": "colorToken", "value": "surfaceContainer"},
+              "contentColor": {"type": "colorToken", "value": "onSurface"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "colors = RemoteButtonDefaults.buttonColors(containerColor = " +
+        "RemoteMaterialTheme.colorScheme.surfaceContainer, contentColor = " +
+        "RemoteMaterialTheme.colorScheme.onSurface)" in source,
+      source,
+    )
+    assertTrue(
+      "import androidx.wear.compose.remote.material3.RemoteButtonDefaults" in source,
+      source,
+    )
+  }
+
+  @Test
+  fun `a colour role that is not a colour is refused`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button"}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {"containerColor": {"type": "colorToken", "value": "not a role"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
+  }
+
+  @Test
+  fun `a bound colour takes a theme role from its placement`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button", "arguments": {
+              "borderColor": {"type": "colorToken", "value": "outline"}}}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-button",
+            "properties": {"borderColor": {"type": "binding", "value": "borderColor"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "borderColor: androidx.compose.remote.creation.compose.state.RemoteColor" in source,
+      source,
+    )
+  }
+
+  @Test
+  fun `a page indicator writes its radius and padding in dp`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"dots": {"name": "KitDots", "root": "dots"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "dots"}},
+          "dots": {"id": "dots", "componentId": "remote-m3/remote-horizontal-page-indicator",
+            "properties": {"pageCount": {"type": "int", "value": 3},
+              "indicatorRadius": {"type": "int", "value": 3},
+              "padding": {"type": "int", "value": 2}}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue("indicatorRadius = 3.rdp" in source, source)
+    assertTrue("padding = 2.rdp" in source, source)
+  }
+
+  @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
