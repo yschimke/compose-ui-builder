@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.113.0](https://github.com/yschimke/compose-ui-builder/compare/v3.112.0...v3.113.0) (2026-10-14)
+
+
+### Features
+
+* **export:** an action-free Remote event is an Action parameter of its component ([#808](https://github.com/yschimke/compose-ui-builder/issues/808)) ([b8e7f09](https://github.com/yschimke/compose-ui-builder/commit/b8e7f09164f002f4277d4397867fa30f1b065917))
+* **export:** Remote colour bundles, borders, dp and theme-colour arguments, and the indeterminate ring ([#813](https://github.com/yschimke/compose-ui-builder/issues/813)) ([46923e4](https://github.com/yschimke/compose-ui-builder/commit/46923e41ed7a66014ca803cada64c556ca7b4309))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.57.0 ([#810](https://github.com/yschimke/compose-ui-builder/issues/810)) ([6458db5](https://github.com/yschimke/compose-ui-builder/commit/6458db550d3d666473f2a53bb0ab6bc79ae752aa))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.31.0 ([#815](https://github.com/yschimke/compose-ui-builder/issues/815)) ([3881d4e](https://github.com/yschimke/compose-ui-builder/commit/3881d4e62bad5152e6812898f868b44f485c04b5))
+* **ui-builder:** seed Remote labels from published catalog ([#806](https://github.com/yschimke/compose-ui-builder/issues/806)) ([d6cd73e](https://github.com/yschimke/compose-ui-builder/commit/d6cd73ee288a8171a92d5fdacc5948b17fe52b31))
+
 ## [3.112.0](https://github.com/yschimke/compose-ui-builder/compare/v3.111.0...v3.112.0) (2026-10-13)
 
 
