@@ -34,7 +34,7 @@ kotlin {
       // PublishedUiBuilderCatalog: the offline host composes each catalog from what it publishes,
       // exactly as a preview server does. Not the render bundle — that is the frontend's own
       // packaged previews, which a host of the editor neither needs nor may carry.
-      implementation(project(":ui-builder-runtime")) {
+      api(project(":ui-builder-runtime")) {
         exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
       }
     }
