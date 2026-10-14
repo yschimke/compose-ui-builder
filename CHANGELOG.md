@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.114.0](https://github.com/yschimke/compose-ui-builder/compare/v3.113.0...v3.114.0) (2026-10-14)
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.16.2 ([#820](https://github.com/yschimke/compose-ui-builder/issues/820)) ([4e50714](https://github.com/yschimke/compose-ui-builder/commit/4e5071402807862a8b1c9f19d047ab8cfa3aa9b9))
+* **export:** report extended-only icons, widget-profile layouts and dropped settings as diagnostics ([#827](https://github.com/yschimke/compose-ui-builder/issues/827)) ([13802c9](https://github.com/yschimke/compose-ui-builder/commit/13802c9afe72d92efc8a482d6af55bb7bb2c4f43))
+
 ## [3.113.0](https://github.com/yschimke/compose-ui-builder/compare/v3.112.0...v3.113.0) (2026-10-14)
 
 
