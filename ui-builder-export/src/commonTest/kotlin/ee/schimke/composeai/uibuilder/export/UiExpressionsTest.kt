@@ -115,6 +115,55 @@ class UiExpressionsTest {
   }
 
   @Test
+  fun `two colours mix by a fraction, theme roles resolved where the theme is known`() {
+    assertEquals(UiValueKind.COLOR, typed("lerp(theme.primary, #FF000000, progress)").kind)
+    val roles = mapOf("primary" to "#FFFFFFFF")
+    fun mix(text: String, progress: String) =
+      UiExpressions.evaluate(
+        typed(text),
+        UiExpressions.Environment(mapOf("progress" to progress), colorRoles = roles::get),
+      )
+    assertEquals("#FFFFFFFF", mix("lerp(theme.primary, #FF000000, progress)", "0"))
+    assertEquals("#FF000000", mix("lerp(theme.primary, #FF000000, progress)", "1"))
+    assertEquals("#FF808080", mix("lerp(theme.primary, #FF000000, progress)", "0.5"))
+    // A role the environment cannot resolve has no channels: the nearer end stands in for it.
+    assertEquals("surface", mix("lerp(theme.surface, theme.primary, progress)", "0.2"))
+    val wrapped =
+      UiExpressions.evaluateWrapped(
+        typed("lerp(theme.surface, #FF000000, progress)"),
+        UiExpressions.Environment(),
+      )
+    assertEquals(UiExpressions.COLOR_TOKEN, wrapped["type"]?.jsonPrimitive?.content)
+  }
+
+  @Test
+  fun `transparent is a colour token but no theme role`() {
+    val clear =
+      parse("lerp(theme.primary, #FFFFFFFF, progress)")
+        .toString()
+        .replace("\"primary\"", "\"transparent\"")
+    val expr =
+      assertIs<UiExpressions.Checked.Ok>(
+          UiExpressions.check(kotlinx.serialization.json.Json.parseToJsonElement(clear), scope)
+        )
+        .expr
+    assertEquals(
+      "#00000000",
+      UiExpressions.evaluate(expr, UiExpressions.Environment(mapOf("progress" to "0"))),
+    )
+    assertEquals(false, UiExpressions.isThemeRole("transparent"))
+  }
+
+  @Test
+  fun `a theme role round-trips through formula text`() {
+    val text = "lerp(theme.primary, theme.primaryDim, progress)"
+    assertEquals(text, UiExpressions.format(parse(text)))
+    assertIs<UiExpressions.Checked.Issue>(
+      UiExpressions.check(parse("lerp(theme.primary, 1.0, progress)"), scope)
+    )
+  }
+
+  @Test
   fun `an animated value round-trips through formula text`() {
     val text = "tween(select(on, 1.0, 0.5), 300, \"overshoot\")"
     assertEquals(text, UiExpressions.format(parse(text)))

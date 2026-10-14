@@ -753,8 +753,10 @@ internal class RemoteContentEmitter(
           val previousBindings = bindings
           val previousFunction = function
           val previousScope = scope
+          val previousArguments = placementArguments
           bindings = created.bindings
           function = created
+          placementArguments = supplied
           scope = "RemoteBox"
           usesBox = true
           try {
@@ -762,6 +764,7 @@ internal class RemoteContentEmitter(
           } finally {
             bindings = previousBindings
             function = previousFunction
+            placementArguments = previousArguments
             scope = previousScope
             defining -= key
           }
@@ -1733,10 +1736,10 @@ internal class RemoteContentEmitter(
   private fun computed(value: JsonElement, expected: UiValueKind, where: String): String? {
     val documentScope = UiExpressions.Scope.of(document)
     val scope =
-      if (drawBindings.isEmpty()) documentScope
+      if (drawBindings.isEmpty() && componentArgumentKinds().isEmpty()) documentScope
       else
         UiExpressions.Scope(documentScope.stateKinds) { key ->
-          if (key in drawBindings) UiValueKind.FLOAT else null
+          if (key in drawBindings) UiValueKind.FLOAT else componentArgumentKinds()[key]
         }
     val checked = UiExpressions.check(value, scope, where)
     val expr =
@@ -1787,10 +1790,17 @@ internal class RemoteContentEmitter(
             usesRemoteString = true
             "\"${expr.value.content.escaped()}\".rs"
           }
-          UiValueKind.COLOR -> {
-            usesColorLiteral = true
-            "${expr.value.content.argbLiteral()}.rc"
-          }
+          UiValueKind.COLOR ->
+            if (expr.value.content == TRANSPARENT_TOKEN) {
+              usesColorLiteral = true
+              "Color(0x00000000).rc"
+            } else if (UiExpressions.isThemeRole(expr.value.content)) {
+              usesTheme = true
+              "RemoteMaterialTheme.colorScheme.${expr.value.content}"
+            } else {
+              usesColorLiteral = true
+              "${expr.value.content.argbLiteral()}.rc"
+            }
         }
       is UiExpressions.Expr.State ->
         if (expr.kind == UiValueKind.COLOR) {
@@ -1800,6 +1810,7 @@ internal class RemoteContentEmitter(
       // A draw loop's index is the lambda parameter the loop hands its body.
       is UiExpressions.Expr.Binding ->
         drawBindings[expr.key]
+          ?: componentArgument(expr, where)
           ?: run {
             refusals +=
               "$where: a row field inside an expression needs a typed loop lowering; bind the " +
@@ -1811,6 +1822,58 @@ internal class RemoteContentEmitter(
         expr.value.remote
       }
       is UiExpressions.Expr.Call -> lowerCall(expr, where)
+    }
+
+  /**
+   * The arguments the placement being emitted supplies, read while its component's body is written:
+   * an expression inside the component may name one (`lerp(theme.primary, theme.primaryDim, @on)`),
+   * and the argument's literal type is the parameter's.
+   */
+  private var placementArguments: JsonObject? = null
+
+  /** The kinds of [placementArguments] an expression may read, inside a component only. */
+  private fun componentArgumentKinds(): Map<String, UiValueKind> {
+    val arguments = placementArguments ?: return emptyMap()
+    if (function == null || bindings?.row != null) return emptyMap()
+    return arguments
+      .mapNotNull { (key, value) ->
+        (value as? JsonObject)
+          ?.plainString("type")
+          ?.let(UiExpressions::kindOfWrapper)
+          ?.takeIf { it != UiValueKind.INT }
+          ?.let { key to it }
+      }
+      .toMap()
+  }
+
+  /**
+   * A component argument read inside an expression, as the component's parameter of the matching
+   * Remote type; the placement supplies it like any other binding. Null where [expr] is not one.
+   */
+  private fun componentArgument(expr: UiExpressions.Expr.Binding, where: String): String? {
+    if (expr.key !in componentArgumentKinds()) return null
+    val type =
+      when (expr.kind) {
+        UiValueKind.FLOAT -> REMOTE_FLOAT_FQN
+        UiValueKind.BOOL -> REMOTE_BOOLEAN_FQN
+        UiValueKind.STRING -> REMOTE_STRING_FQN
+        UiValueKind.COLOR -> REMOTE_COLOR_FQN
+        UiValueKind.INT -> return null
+      }
+    val reference =
+      JsonObject(mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive(expr.key)))
+    return bound(reference, type, where) { argumentLiteral(it, expr.kind) }
+  }
+
+  /** A placement's literal argument as the Remote value of [kind]. */
+  private fun argumentLiteral(value: JsonElement, kind: UiValueKind): String? =
+    when (kind) {
+      UiValueKind.FLOAT -> value.numberOrNull()?.floatLiteral()
+      UiValueKind.BOOL -> value.boolOrNull()?.let { "$it.rb".also { usesRemoteBoolean = true } }
+      UiValueKind.STRING ->
+        value.stringOrNull()?.let { "\"${it.escaped()}\".rs".also { usesRemoteString = true } }
+      UiValueKind.COLOR -> remoteColor(value)
+      UiValueKind.INT -> null
     }
 
   private fun lowerCall(expr: UiExpressions.Expr.Call, where: String): String? {
@@ -1851,7 +1914,11 @@ internal class RemoteContentEmitter(
       UiExpressions.Op.COS -> math("cos", f(0))
       UiExpressions.Op.TAN -> math("tan", f(0))
       UiExpressions.Op.POW -> math("pow", f(0), f(1))
-      UiExpressions.Op.LERP -> math("lerp", f(0), f(1), f(2))
+      UiExpressions.Op.LERP ->
+        if (expr.kind == UiValueKind.COLOR) {
+          usedComponentImports += "$REMOTE_STATE_PACKAGE.tween"
+          "tween(${args[0]}, ${args[1]}, ${f(2)})"
+        } else math("lerp", f(0), f(1), f(2))
       UiExpressions.Op.TO_INT ->
         if (kinds[0] == UiValueKind.INT) args[0] else "${args[0]}.toRemoteInt()"
       UiExpressions.Op.TO_FLOAT -> f(0)
@@ -2723,7 +2790,10 @@ internal class RemoteContentEmitter(
     val arguments =
       bundle.roles.mapNotNull { role ->
         val authored = node.properties[role] ?: return@mapNotNull null
-        val color = remoteColor(authored)
+        val color =
+          if (UiExpressions.isComputed(authored))
+            computed(authored, UiValueKind.COLOR, "nodes.${node.id}.$role") ?: return null
+          else remoteColor(authored)
         if (color == null) {
           refusals += "nodes.${node.id}.$role: expected a colour literal or a theme role"
           return null

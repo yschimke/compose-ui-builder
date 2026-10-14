@@ -42,6 +42,54 @@ class CanvasNodeResolutionTest {
     assertEquals(true, resolved.value("selected").boolean)
   }
 
+  @Test
+  fun `a colour expression may read a theme-colour argument`() {
+    val node =
+      UiBuilderNode(
+        id = "button",
+        componentId = "catalog/button",
+        properties =
+          JsonObject(
+            mapOf(
+              "containerColor" to
+                JsonObject(
+                  mapOf(
+                    "type" to JsonPrimitive("expr"),
+                    "op" to JsonPrimitive("lerp"),
+                    "args" to
+                      kotlinx.serialization.json.JsonArray(
+                        listOf(
+                          wrapper("binding", "base"),
+                          wrapper("color", "#FF000000"),
+                          JsonObject(
+                            mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(0))
+                          ),
+                        )
+                      ),
+                  )
+                )
+            )
+          ),
+      )
+
+    val resolved =
+      resolveCanvasNode(
+        node = node,
+        arguments = JsonObject(mapOf("base" to wrapper("colorToken", "primary"))),
+        state = emptyMap(),
+        mapping = null,
+        expressions =
+          CanvasExpressions(
+            emptyMap(),
+            ee.schimke.composeai.uibuilder.export.UiExpressions.Clock.DEFAULT,
+          ),
+      )
+
+    val colour = resolved.properties.getValue("containerColor") as JsonObject
+    assertEquals("colorToken", (colour.getValue("type") as JsonPrimitive).content)
+    assertEquals("primary", resolved.value("containerColor").content)
+  }
+
   private fun wrapper(type: String, value: String) =
     JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 
