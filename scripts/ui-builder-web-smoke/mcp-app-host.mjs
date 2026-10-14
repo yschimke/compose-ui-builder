@@ -55,9 +55,19 @@ function listen(handler) {
   );
 }
 
+// The hosted-catalog route the shell points `catalogBase` at when the host names no device-presets
+// URL (ui-builder-mcp-app.html). The server answers it with the published capability catalogs;
+// here those are the same files the archive packages, so the hosted path is the one exercised and
+// the packaged fallback (whose 404 the browser would log as a console error) is not.
+const HOSTED_CATALOGS = '/api/ui-builder/v1/catalog-capabilities/';
+
 // The editor archive, as the MCP server would serve it: any origin may load it.
 const assets = await listen(async (request, response) => {
-  const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
+  let pathname = decodeURIComponent(new URL(request.url, 'http://x').pathname);
+  if (pathname.startsWith(HOSTED_CATALOGS)) {
+    pathname = '/' + pathname.slice(HOSTED_CATALOGS.length);
+  }
+  const path = normalize(pathname);
   const file = join(root, path);
   if (!file.startsWith(root)) return response.writeHead(403).end();
   try {
