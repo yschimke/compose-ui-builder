@@ -42,11 +42,49 @@ object ScreenExportGate {
    * and neither should run the generator twice.
    */
   sealed interface Outcome {
-    /** The Kotlin the export would write. */
-    data class Emitted(val source: String) : Outcome
+    /**
+     * The Kotlin the export would write, and the pictures it draws with a placeholder painter in
+     * place of their bytes ([ScreenDocumentProjection.AssetPlaceholder]), so a host can say so
+     * beside the file rather than ship the substitution silently.
+     */
+    data class Emitted(
+      val source: String,
+      val assetPlaceholders: List<ScreenDocumentProjection.AssetPlaceholder> = emptyList(),
+    ) : Outcome {
+      /**
+       * The published constructor without [assetPlaceholders], kept for binaries compiled against
+       * it.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(source: String) : this(source, emptyList())
 
-    /** Every unexpressible thing found, not the first — a builder wants the whole list. */
-    data class Refused(val reasons: List<String>) : Outcome
+      /**
+       * The published `copy` without [assetPlaceholders], kept for binaries compiled against it.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(source: String = this.source): Emitted = Emitted(source, assetPlaceholders)
+    }
+
+    /**
+     * Every unexpressible thing found, not the first — a builder wants the whole list.
+     * [documentReasons] is the part of [reasons] that is the design's own fault (its root frame,
+     * its projection, a variable-font text), as opposed to a call site the component record cannot
+     * prove; a host reports the two under different codes.
+     */
+    data class Refused(
+      val reasons: List<String>,
+      val documentReasons: List<String> = emptyList(),
+    ) : Outcome {
+      /**
+       * The published constructor without [documentReasons], kept for binaries compiled against it.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(reasons: List<String>) : this(reasons, emptyList())
+
+      /** The published `copy` without [documentReasons], kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(reasons: List<String> = this.reasons): Refused = Refused(reasons, documentReasons)
+    }
   }
 
   /**
@@ -117,7 +155,8 @@ object ScreenExportGate {
     val resolvable = record.callableAliases()
     val unwrapped =
       when (val unwrapped = ScreenRootFrame.unwrap(document, structure)) {
-        is ScreenRootFrame.Unwrapped.Refused -> return Outcome.Refused(unwrapped.reasons)
+        is ScreenRootFrame.Unwrapped.Refused ->
+          return Outcome.Refused(unwrapped.reasons, documentReasons = unwrapped.reasons)
         is ScreenRootFrame.Unwrapped.Document -> unwrapped
       }
     val framed = unwrapped.document
@@ -143,7 +182,8 @@ object ScreenExportGate {
       is ScreenDocumentProjection.Outcome.Refused ->
         Outcome.Refused(
           (projected.reasons + unprovenComponents(framed, record, exportProjections.keys))
-            .distinct()
+            .distinct(),
+          documentReasons = projected.reasons.distinct(),
         )
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
@@ -173,8 +213,10 @@ object ScreenExportGate {
               val joined =
                 variableFonts.join(generated.source, projected.variableFontTexts, PACKAGE_NAME)
             ) {
-              is VariableFontExport.Joined.Emitted -> Outcome.Emitted(joined.source)
-              is VariableFontExport.Joined.Refused -> Outcome.Refused(joined.reasons)
+              is VariableFontExport.Joined.Emitted ->
+                Outcome.Emitted(joined.source, projected.assetPlaceholders)
+              is VariableFontExport.Joined.Refused ->
+                Outcome.Refused(joined.reasons, documentReasons = joined.reasons)
             }
         }
     }
@@ -236,7 +278,10 @@ object ScreenExportGate {
         )
     ) {
       is ScreenDocumentProjection.Outcome.Refused ->
-        Outcome.Refused((projected.reasons + unprovenComponents(document, record)).distinct())
+        Outcome.Refused(
+          (projected.reasons + unprovenComponents(document, record)).distinct(),
+          documentReasons = projected.reasons.distinct(),
+        )
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
           val generated =
@@ -253,7 +298,8 @@ object ScreenExportGate {
             )
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
-          is ScreenGenerator.Result.Emitted -> Outcome.Emitted(generated.source)
+          is ScreenGenerator.Result.Emitted ->
+            Outcome.Emitted(generated.source, projected.assetPlaceholders)
         }
     }
   }
