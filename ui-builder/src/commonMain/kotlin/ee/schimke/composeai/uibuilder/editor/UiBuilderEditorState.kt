@@ -131,8 +131,14 @@ class UiBuilderEditorReducer(
     catalog.exportRecord(catalogRecord ?: embeddedComponentRecord())
   }
 
-  /** Pack components a record-free (Wear screen) design may hold; see [packComponentsById]. */
-  private val packComponents by lazy { catalog.packComponentsById() }
+  /** Served catalog components and packs that a record-free Wear screen may hold. */
+  private val recordFreeComponents by lazy {
+    catalogRecord
+      ?.components
+      ?.flatMap { record -> record.componentIds.map { it to record } }
+      ?.toMap()
+      .orEmpty() + catalog.packComponentsById()
+  }
 
   /** The catalog's published export projections; see [CatalogExportProjections]. */
   private val exportProjections by lazy { CatalogExportProjections.from(catalog.statusSemantics) }
@@ -2161,12 +2167,12 @@ class UiBuilderEditorReducer(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray?,
   ): EditorGeneratedCode = runCatching {
-    // Wear widgets and Wear screens have no component record, so ask `RecordFreeExport` first — the
-    // same call the server's export makes. No package: the pane is pasted into a file that has one.
+    // Wear widgets and Wear screens use a dedicated emitter, including served catalog records.
+    // No package: the pane is pasted into a file that has one.
     RecordFreeExport.generate(
         document,
         catalog.platform,
-        packComponents = packComponents,
+        packComponents = recordFreeComponents,
         assets = document.widgetAssetBytes(assetBytes),
       )
       ?.let { recordFree ->
@@ -2214,7 +2220,7 @@ class UiBuilderEditorReducer(
         RecordFreeExport.generate(
           document,
           catalog.platform,
-          packComponents = packComponents,
+          packComponents = recordFreeComponents,
           assets = document.widgetAssetBytes(assetBytes),
         )
     ) {
