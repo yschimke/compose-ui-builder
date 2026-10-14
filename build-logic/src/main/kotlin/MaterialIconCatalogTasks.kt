@@ -18,7 +18,15 @@ private data class MaterialIconEntry(
   val expression: String,
   val importName: String,
   val canonical: Boolean,
+  /**
+   * The artifact the vector ships in: [CORE_ARTIFACT] or [EXTENDED_ARTIFACT]. A generated file
+   * naming an extended icon compiles only where `material-icons-extended` is on the classpath.
+   */
+  val artifact: String,
 )
+
+private const val CORE_ARTIFACT = "core"
+private const val EXTENDED_ARTIFACT = "extended"
 
 private fun RegularFileProperty.readInventory(): List<MaterialIconEntry> =
   get()
@@ -27,8 +35,18 @@ private fun RegularFileProperty.readInventory(): List<MaterialIconEntry> =
     .filterNot { it.isBlank() || it.startsWith("#") }
     .map { line ->
       val fields = line.split('\t')
-      check(fields.size == 5) { "Malformed Material icon inventory row: $line" }
-      MaterialIconEntry(fields[0], fields[1], fields[2], fields[3], fields[4].toBooleanStrict())
+      check(fields.size == 6) { "Malformed Material icon inventory row: $line" }
+      check(fields[5] == CORE_ARTIFACT || fields[5] == EXTENDED_ARTIFACT) {
+        "Unknown Material icon artifact in inventory row: $line"
+      }
+      MaterialIconEntry(
+        fields[0],
+        fields[1],
+        fields[2],
+        fields[3],
+        fields[4].toBooleanStrict(),
+        fields[5],
+      )
     }
 
 abstract class GenerateMaterialIconInventory : DefaultTask() {
@@ -54,6 +72,9 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
           "(filled|outlined|rounded|sharp|twotone)/([A-Za-z0-9_]+)Kt\\.class"
       )
     val canonical = jars.flatMap { jar ->
+      val artifact =
+        if (jar.name.startsWith("material-icons-core-desktop-")) CORE_ARTIFACT
+        else EXTENDED_ARTIFACT
       ZipFile(jar).use { zip ->
         zip
           .entries()
@@ -95,6 +116,7 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
               expression = "Icons.$receiver.$member",
               importName = packageName.replace('/', '.') + ".$member",
               canonical = true,
+              artifact = artifact,
             )
           }
           .toList()
@@ -122,7 +144,7 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
           "# Generated from ${jars.joinToString { it.name }} by " +
             "generateMaterialIconInventory. Do not edit."
         )
-        appendLine("# key\tlabel\tIcons member\textension property import\tcanonical")
+        appendLine("# key\tlabel\tIcons member\textension property import\tcanonical\tartifact")
         entries.forEach { entry ->
           appendLine(
             listOf(
@@ -131,6 +153,7 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
                 entry.expression,
                 entry.importName,
                 entry.canonical.toString(),
+                entry.artifact,
               )
               .joinToString("\t")
           )
@@ -366,6 +389,18 @@ abstract class GenerateMaterialIconExportSource : DefaultTask() {
             appendLine("    putAll(generatedMaterialIconMembersChunk$it())")
           }
           appendLine("  }")
+          appendLine("}")
+          appendLine()
+          appendLine(
+            "// The keys whose vector ships in material-icons-core; every other key needs " +
+              "material-icons-extended."
+          )
+          appendLine("internal val GeneratedMaterialIconCoreKeys: Set<String> by lazy {")
+          appendLine("  setOf(")
+          entries
+            .filter { it.artifact == CORE_ARTIFACT }
+            .forEach { appendLine("    ${it.key.quoted()},") }
+          appendLine("  )")
           appendLine("}")
         }
       )

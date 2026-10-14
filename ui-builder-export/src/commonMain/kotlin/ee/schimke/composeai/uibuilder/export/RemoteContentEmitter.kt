@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import kotlinx.serialization.json.*
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -150,7 +152,23 @@ internal class RemoteContentEmitter(
    * and inline exports keep their established spelling.
    */
   private val namedBindings: Boolean = false,
+  /**
+   * Whether the body is a Glance Wear widget's, whose capture admits only the Glance Wear widget
+   * profile; a layout outside it is then an error on [diagnostics], not only a comment.
+   */
+  private val glanceWearWidget: Boolean = false,
 ) {
+  /**
+   * What the written source carries but cannot say for itself: a dependency it needs, a setting the
+   * call has no parameter for, a layout that throws when captured. Unlike [refusals] these do not
+   * stop the export; the caller hands them on as the artifact's diagnostics, so an author is told
+   * before the compiler or the device does.
+   */
+  val diagnostics: List<ExportDiagnosticV1>
+    get() = collectedDiagnostics.distinct()
+
+  private val collectedDiagnostics = mutableListOf<ExportDiagnosticV1>()
+
   /**
    * The caller's record layered over the embedded [RemoteMaterial3.records]; the caller's wins, so
    * built-in palette widgets export without a host-supplied record.
@@ -247,6 +265,7 @@ internal class RemoteContentEmitter(
   private var usesAlignment = false
   private var usesDp = false
   private var usesTextAlign = false
+  private var usesTextOverflow = false
   private var usesFontVariation = false
   private var usesLocalTextStyle = false
   private var usesRemoteBoolean = false
@@ -444,12 +463,13 @@ internal class RemoteContentEmitter(
       // first that fits the host. In the Glance Wear widget profile, unlike its siblings below.
       "layout/fit-box" -> container(node, depth, "RemoteFitBox", fitBoxArguments(node, pad))
       // Glance Wear's `GlanceWearProfiles` does not admit LAYOUT_FLOW or LAYOUT_COLLAPSIBLE_*, so
-      // these compile but fail the native render; the comment above the generated call says so.
+      // these compile but fail the native render; the comment above the generated call says so,
+      // and inside a widget so does an error on [diagnostics].
       "layout/flow-row" ->
-        outsideWidgetProfile(depth, "LAYOUT_FLOW") +
+        outsideWidgetProfile(node, depth, "LAYOUT_FLOW", "RemoteFlowRow") +
           container(node, depth, "RemoteFlowRow", flowRowArguments(node, pad))
       "layout/collapsible-column" ->
-        outsideWidgetProfile(depth, "LAYOUT_COLLAPSIBLE_COLUMN") +
+        outsideWidgetProfile(node, depth, "LAYOUT_COLLAPSIBLE_COLUMN", "RemoteCollapsibleColumn") +
           container(
             node,
             depth,
@@ -457,7 +477,7 @@ internal class RemoteContentEmitter(
             collapsibleArguments(node, pad, vertical = true),
           )
       "layout/collapsible-row" ->
-        outsideWidgetProfile(depth, "LAYOUT_COLLAPSIBLE_ROW") +
+        outsideWidgetProfile(node, depth, "LAYOUT_COLLAPSIBLE_ROW", "RemoteCollapsibleRow") +
           container(
             node,
             depth,
@@ -2767,8 +2787,30 @@ internal class RemoteContentEmitter(
         else -> scope
       }
 
-  /** The comment written above a layout a Glance Wear widget document cannot carry. */
-  private fun outsideWidgetProfile(depth: Int, operation: String): List<String> {
+  /**
+   * The comment written above a layout a Glance Wear widget document cannot carry. Inside a widget
+   * it is also an error on [diagnostics] at [node]: the file compiles, so nothing else would say so
+   * before the capture throws.
+   */
+  private fun outsideWidgetProfile(
+    node: UiBuilderNode,
+    depth: Int,
+    operation: String,
+    symbol: String,
+  ): List<String> {
+    if (glanceWearWidget) {
+      collectedDiagnostics +=
+        ExportDiagnosticV1(
+          severity = DiagnosticSeverityV1.ERROR,
+          code = ExportDiagnosticCodes.OUTSIDE_WIDGET_PROFILE,
+          message =
+            "`${node.componentId}` `${node.id}` is written as `$symbol` ($operation), which is " +
+              "outside the Glance Wear widget profile: the file compiles, but capturing this " +
+              "widget on Android throws \"Operation … is not supported\"; use `layout/row` or " +
+              "`layout/column` instead",
+          nodeId = node.id,
+        )
+    }
     val pad = INDENT.repeat(depth)
     return listOf(
       "$pad// $operation is outside the Glance Wear widget profile.",
@@ -2858,13 +2900,7 @@ internal class RemoteContentEmitter(
       usesArrangement = true
       return "RemoteArrangement.$distributed"
     }
-    val alignment =
-      when (word) {
-        "center" -> if (horizontal) "CenterHorizontally" else "CenterVertically"
-        "end" -> if (horizontal) "End" else null
-        "bottom" -> if (horizontal) null else "Bottom"
-        else -> null
-      }
+    val alignment = arrangementAlignment(word, horizontal)
     if (spacing == null && alignment == null) return null
     usesArrangement = true
     return when {
@@ -2875,6 +2911,43 @@ internal class RemoteContentEmitter(
         "RemoteArrangement.spacedBy(${spacing.dpLiteral()}, RemoteAlignment.$alignment)"
       }
     }
+  }
+
+  /** The `RemoteAlignment` an aligned arrangement word names, or null for the axis's start. */
+  private fun arrangementAlignment(word: String, horizontal: Boolean): String? =
+    when (word) {
+      "center" -> if (horizontal) "CenterHorizontally" else "CenterVertically"
+      "end" -> if (horizontal) "End" else null
+      "bottom" -> if (horizontal) null else "Bottom"
+      else -> null
+    }
+
+  /**
+   * A row's or column's main-axis arrangement: [arrangement] for its word and a literal spacing, or
+   * `spacedBy` over the bound value when the spacing is a binding, aligned by the same word. A
+   * `space*` word ignores the gap either way, as on the canvas.
+   */
+  private fun mainAxisArrangement(
+    node: UiBuilderNode,
+    wordProperty: String,
+    spacingProperty: String,
+    horizontal: Boolean,
+  ): String? {
+    val value = node.properties[spacingProperty]
+    val word = node.properties[wordProperty]?.stringOrNull().orEmpty()
+    if ((value as? JsonObject)?.plainString("type") != "binding" || word.startsWith("space")) {
+      return arrangement(node, wordProperty, spacingProperty, horizontal)
+    }
+    val path = "nodes.${node.id}.$spacingProperty"
+    val spacing =
+      bound(value, "kotlin.Float", path) { primitiveArgument(it, "kotlin.Float", path) }
+        ?: return null
+    usesDp = true
+    usesArrangement = true
+    val alignment =
+      arrangementAlignment(word, horizontal) ?: return "RemoteArrangement.spacedBy($spacing.rdp)"
+    usesAlignment = true
+    return "RemoteArrangement.spacedBy($spacing.rdp, RemoteAlignment.$alignment)"
   }
 
   /**
@@ -2988,21 +3061,8 @@ internal class RemoteContentEmitter(
   private fun columnArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
-    node.properties["verticalSpacingDp"]?.let { value ->
-      val expression =
-        if ((value as? JsonObject)?.plainString("type") == "binding") {
-          bound(value, "kotlin.Float", "nodes.${node.id}.verticalSpacingDp") {
-              primitiveArgument(it, "kotlin.Float", "nodes.${node.id}.verticalSpacingDp")
-            }
-            ?.let {
-              usesDp = true
-              "$it.rdp"
-            }
-        } else value.numberOrNull()?.takeIf { it != 0f }?.dpLiteral()
-      if (expression != null) {
-        usesArrangement = true
-        arguments += "verticalArrangement = RemoteArrangement.spacedBy($expression)"
-      }
+    mainAxisArrangement(node, "verticalArrangement", "verticalSpacingDp", horizontal = false)?.let {
+      arguments += "verticalArrangement = $it"
     }
     (crossAxisAlignment(node, "alignHorizontal") ?: node.canvasHorizontalAlignment())
       .takeIf { it != "start" }
@@ -3027,22 +3087,8 @@ internal class RemoteContentEmitter(
   private fun rowArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
-    node.properties["horizontalSpacingDp"]?.let { value ->
-      val expression =
-        if ((value as? JsonObject)?.plainString("type") == "binding") {
-          bound(value, "kotlin.Float", "nodes.${node.id}.horizontalSpacingDp") {
-              primitiveArgument(it, "kotlin.Float", "nodes.${node.id}.horizontalSpacingDp")
-            }
-            ?.let {
-              usesDp = true
-              "$it.rdp"
-            }
-        } else value.numberOrNull()?.takeIf { it != 0f }?.dpLiteral()
-      if (expression != null) {
-        usesArrangement = true
-        arguments += "horizontalArrangement = RemoteArrangement.spacedBy($expression)"
-      }
-    }
+    mainAxisArrangement(node, "horizontalArrangement", "horizontalSpacingDp", horizontal = true)
+      ?.let { arguments += "horizontalArrangement = $it" }
     (crossAxisAlignment(node, "alignVertical") ?: node.canvasVerticalAlignment())
       .takeIf { it != "top" }
       ?.let {
@@ -3167,7 +3213,45 @@ internal class RemoteContentEmitter(
         arguments += "textAlign = TextAlign.${it.replaceFirstChar(Char::uppercaseChar)}"
       }
     node.properties["maxLines"]?.intOrNull()?.let { arguments += "maxLines = $it" }
+    node.properties["overflow"]
+      ?.stringOrNull()
+      ?.takeIf { it.isNotEmpty() }
+      ?.let { overflow ->
+        val member = TEXT_OVERFLOW_MEMBERS[overflow]
+        if (member == null) {
+          notWritten(node, "overflow", "`$overflow` is not a `TextOverflow` this export names")
+        } else {
+          usesTextOverflow = true
+          arguments += "overflow = TextOverflow.$member"
+        }
+      }
+    // Offered on `m3/text` but with no lowering here yet: said on the node rather than dropped.
+    UNWRITTEN_TEXT_SETTINGS.forEach { (property, neutral) ->
+      val value = node.properties[property]?.stringOrNull()?.takeIf { it.isNotEmpty() }
+      val number = value?.toFloatOrNull()
+      val unchanged =
+        value == neutral || (number != null && number == (neutral?.toFloatOrNull() ?: 0f))
+      if (value != null && !unchanged) {
+        notWritten(node, property, "`RemoteText` is not written with it by this export")
+      }
+    }
     return call("RemoteText", arguments, pad)
+  }
+
+  /**
+   * A warning on [diagnostics] that [node]'s [property] is set and the source leaves it out,
+   * because [reason]. For settings with no Remote spelling, which would otherwise vanish silently.
+   */
+  private fun notWritten(node: UiBuilderNode, property: String, reason: String) {
+    collectedDiagnostics +=
+      ExportDiagnosticV1(
+        severity = DiagnosticSeverityV1.WARNING,
+        code = ExportDiagnosticCodes.SETTING_NOT_WRITTEN,
+        message =
+          "`${node.componentId}` `${node.id}` sets `$property`, but $reason, so the generated " +
+            "source leaves it out and the widget draws without it",
+        nodeId = node.id,
+      )
   }
 
   /**
@@ -3276,6 +3360,9 @@ internal class RemoteContentEmitter(
               "icon keys this builder resolves"
           return null
         }
+    MaterialIconArtifacts.diagnostic(node.id, node.componentId, "imageVector", key)?.let {
+      collectedDiagnostics += it
+    }
     val path = member.split(".")
     usedComponentImports += "androidx.wear.compose.remote.material3.RemoteIcon"
     usedComponentImports += "androidx.compose.material.icons.Icons"
@@ -3604,6 +3691,7 @@ internal class RemoteContentEmitter(
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
     if (usesContentScale) imports += "androidx.compose.ui.layout.ContentScale"
     if (usesTextAlign) imports += "androidx.compose.ui.text.style.TextAlign"
+    if (usesTextOverflow) imports += "androidx.compose.ui.text.style.TextOverflow"
     if (usesFontVariation) imports += "androidx.compose.ui.text.font.FontVariation"
     if (usesLocalTextStyle) imports += "androidx.wear.compose.remote.material3.LocalRemoteTextStyle"
     // Widget-only imports; inline remote content in a screen needs none of these.
@@ -4279,6 +4367,31 @@ private fun String.pictureExtension(): String =
  * Where a box puts a child that neither it nor the child aligns: Compose's `Alignment.TopStart`.
  */
 private const val DEFAULT_BOX_ALIGNMENT = "topStart"
+
+/** `RemoteText`'s `overflow`, by the catalog's word. */
+private val TEXT_OVERFLOW_MEMBERS =
+  mapOf(
+    "clip" to "Clip",
+    "ellipsis" to "Ellipsis",
+    "visible" to "Visible",
+    "startEllipsis" to "StartEllipsis",
+    "middleEllipsis" to "MiddleEllipsis",
+  )
+
+/**
+ * Text settings the catalog offers on `m3/text` that [RemoteContentEmitter] does not write, each
+ * with the value that changes nothing (null when only absence does). Any other value is a warning.
+ */
+private val UNWRITTEN_TEXT_SETTINGS: Map<String, String?> =
+  mapOf(
+    "fontWeight" to "normal",
+    "fontStyle" to "normal",
+    "textDecoration" to "none",
+    "lineHeightSp" to null,
+    "letterSpacingSp" to null,
+    "minLines" to "1",
+    "softWrap" to "true",
+  )
 
 private fun String.remoteAlignment(): String =
   when (this) {

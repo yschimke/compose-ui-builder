@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 
 /**
  * The designs whose Kotlin comes from a dedicated emitter rather than a component record: Wear
@@ -157,7 +158,8 @@ object RecordFreeExport {
           frameSizes = frameSizes.takeIf { it.isNotEmpty() },
         )
     ) {
-      is LauncherWidgetCodeExporter.Result.Emitted -> Generated.Emitted(result.source)
+      is LauncherWidgetCodeExporter.Result.Emitted ->
+        Generated.Emitted(result.source, diagnostics = result.diagnostics)
       is LauncherWidgetCodeExporter.Result.Refused -> Generated.Refused(result.reasons)
     }
   }
@@ -214,7 +216,8 @@ object RecordFreeExport {
       return when (
         val result = LauncherWidgetCodeExporter.export(document, packageName, packComponents)
       ) {
-        is LauncherWidgetCodeExporter.Result.Emitted -> Generated.Emitted(result.source)
+        is LauncherWidgetCodeExporter.Result.Emitted ->
+          Generated.Emitted(result.source, diagnostics = result.diagnostics)
         is LauncherWidgetCodeExporter.Result.Refused -> Generated.Refused(result.reasons)
       }
     }
@@ -223,7 +226,7 @@ object RecordFreeExport {
         InlineRemoteContentExporter.exportRoots(document, packageName, packComponents, assets)
     ) {
       is InlineRemoteContentExporter.Result.Emitted ->
-        Generated.Emitted(result.source, result.functionName)
+        Generated.Emitted(result.source, result.functionName, result.diagnostics)
       is InlineRemoteContentExporter.Result.Refused -> Generated.Refused(result.reasons)
     }
   }
@@ -428,8 +431,32 @@ object RecordFreeExport {
     /**
      * @param composableName the function the file declares, which the native preview lane imports
      *   and wraps in a `@Preview`. Null for a Wear widget, which declares a `WearWidgetDocument`.
+     * @param diagnostics what the source needs but cannot say for itself, node by node: a
+     *   dependency, a setting it leaves out, a layout that throws when captured (see
+     *   [ExportDiagnosticCodes]). The artifact's diagnostics, where a refusal's reasons would be.
      */
-    data class Emitted(val source: String, val composableName: String? = null) : Generated
+    data class Emitted(
+      val source: String,
+      val composableName: String? = null,
+      val diagnostics: List<ExportDiagnosticV1> = emptyList(),
+    ) : Generated {
+      /**
+       * The published two-field constructor and its default, kept for binaries compiled against
+       * them.
+       */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      constructor(
+        source: String,
+        composableName: String? = null,
+      ) : this(source, composableName, emptyList())
+
+      /** The published two-field `copy`, kept for binaries compiled against it. */
+      @Deprecated("Binary compatibility only", level = DeprecationLevel.HIDDEN)
+      fun copy(
+        source: String = this.source,
+        composableName: String? = this.composableName,
+      ): Emitted = Emitted(source, composableName, diagnostics)
+    }
 
     data class Refused(val reasons: List<String>) : Generated
   }
@@ -695,13 +722,14 @@ object RecordFreeExport {
 
   private fun WearWidgetCodeExporter.Result.generated(): Generated =
     when (this) {
-      is WearWidgetCodeExporter.Result.Emitted -> Generated.Emitted(source)
+      is WearWidgetCodeExporter.Result.Emitted ->
+        Generated.Emitted(source, diagnostics = diagnostics)
       is WearWidgetCodeExporter.Result.Refused -> Generated.Refused(reasons)
     }
 
   private fun WearScreenCodeExporter.Result.generated(): Generated =
     when (this) {
-      is WearScreenCodeExporter.Result.Emitted -> Generated.Emitted(source, screenName)
+      is WearScreenCodeExporter.Result.Emitted -> Generated.Emitted(source, screenName, diagnostics)
       is WearScreenCodeExporter.Result.Refused -> Generated.Refused(reasons)
     }
 }

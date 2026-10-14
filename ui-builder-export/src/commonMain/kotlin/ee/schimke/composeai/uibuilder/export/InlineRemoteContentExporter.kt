@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 
 /**
  * Generates the `@RemoteComposable` function a [REMOTE_COMPOSE_INLINE_COMPONENT_ID] subtree is: a
@@ -22,8 +23,14 @@ public object InlineRemoteContentExporter {
     /**
      * @property functionName the `@RemoteComposable` function the body was written into.
      * @property source the function, its imports, and the header comment naming the design.
+     * @property diagnostics what the source needs but cannot say for itself; see
+     *   [ExportDiagnosticCodes].
      */
-    public data class Emitted(val functionName: String, val source: String) : Result
+    public data class Emitted(
+      val functionName: String,
+      val source: String,
+      val diagnostics: List<ExportDiagnosticV1> = emptyList(),
+    ) : Result
 
     public data class Refused(val reasons: List<String>) : Result
   }
@@ -171,6 +178,7 @@ public object InlineRemoteContentExporter {
             appendLine(it)
           }
         },
+      diagnostics = emitter.diagnostics,
     )
   }
 
@@ -235,6 +243,7 @@ public object InlineRemoteContentExporter {
             appendLine(it)
           }
         },
+      diagnostics = emitter.diagnostics,
     )
   }
 
