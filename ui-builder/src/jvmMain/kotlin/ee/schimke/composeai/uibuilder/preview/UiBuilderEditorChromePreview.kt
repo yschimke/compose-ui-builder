@@ -361,12 +361,13 @@ fun UiBuilderNewDesignPreview() {
         )
         .map { choice ->
           choice.withTemplatePreviews(
-            CapabilityCatalogParser.parse(
-              UiBuilderDocument::class
-                .java
-                .getResource("/${choice.systemId}-capabilities-v1.json")!!
-                .readText()
-            ),
+            // Wear and Remote M3 are no longer packaged as fixtures; they come from their
+            // published delivery branches like the other JVM previews.
+            UiBuilderDocument::class
+              .java
+              .getResource("/${choice.systemId}-capabilities-v1.json")
+              ?.let { CapabilityCatalogParser.parse(it.readText()) }
+              ?: publishedPreviewCatalog(choice.systemId),
             Json.parseToJsonElement(
                 UiBuilderDocument::class
                   .java
