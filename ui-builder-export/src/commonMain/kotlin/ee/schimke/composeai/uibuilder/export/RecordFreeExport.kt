@@ -372,6 +372,10 @@ object RecordFreeExport {
    * record-driven generator owns.
    *
    * @param packageName the package the file declares, or null for a snippet (the Code pane).
+   * @param tagNodes whether each node says which design node it is, for the native preview lane: a
+   *   Wear screen's composables carry `Modifier.testTag("<node id>")`, and a widget's Remote nodes
+   *   carry [NativeNodeTags.tag] as a content description, since a `RemoteModifier` has no test
+   *   tag.
    * @param previews whether a Wear screen's file carries its preview fan-out; the native preview
    *   lane passes `false` (see [WearScreenCodeExporter.export]).
    * @param packComponents pack components a Wear screen may hold, by id, as records; widgets take
@@ -406,13 +410,14 @@ object RecordFreeExport {
     variableFonts: VariableFontExport,
   ): Generated? =
     when {
-      // No [tagNodes] for a widget: Remote Compose nodes have no modifiers to tag, and the native
-      // lane reaches widgets through [nativePreview].
+      // A widget's [tagNodes] are content descriptions rather than test tags (see
+      // [NativeNodeTags]); the native lane's own widget source comes from [nativePreview].
       document.isWearWidget() ->
         // A widget takes no pack components (Jetpack Compose cannot play as Remote Compose); the
         // parameter carries its own catalog's record instead, for `RemoteContentEmitter`'s
         // fallback.
-        WearWidgetCodeExporter.export(document, packageName, assets, packComponents).generated()
+        WearWidgetCodeExporter.export(document, packageName, assets, packComponents, tagNodes)
+          .generated()
       document.isWearScreen() ->
         WearScreenCodeExporter.export(
             document,
@@ -669,6 +674,21 @@ object RecordFreeExport {
     assets: WidgetAssetBytes,
     shape: WearWidgetHostShape,
     components: Map<String, ComponentRecord>,
+  ): NativePreview? = nativePreview(document, packageName, assets, shape, components, false)
+
+  /**
+   * As above, with [tagNodes]: every placed Remote node carries its [NativeNodeTags.tag] as a
+   * content description, so the lane can read each node's bounds from the played semantics tree and
+   * recover its id with [NativeNodeTags.nodeIds]. A separate overload to keep the published
+   * descriptors above.
+   */
+  fun nativePreview(
+    document: DesignDocumentV1,
+    packageName: String,
+    assets: WidgetAssetBytes,
+    shape: WearWidgetHostShape,
+    components: Map<String, ComponentRecord>,
+    tagNodes: Boolean,
   ): NativePreview? {
     if (!isWearWidget(document)) return null
     return runCatching {
@@ -680,6 +700,7 @@ object RecordFreeExport {
             assets,
             shape,
             components,
+            tagNodes = tagNodes,
           )
       ) {
         is WearWidgetNativePreviewExporter.Result.Emitted ->

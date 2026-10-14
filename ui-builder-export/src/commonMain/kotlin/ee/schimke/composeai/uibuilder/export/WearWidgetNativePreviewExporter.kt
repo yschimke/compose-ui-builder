@@ -11,8 +11,9 @@ import ee.schimke.composeai.discovery.ComponentRecord
  * `WearWidgetBrush`, and the selected host shape's `WearWidgetParams` (padding and radius from
  * `hostSpec`). The server writes the preview entry.
  *
- * Nodes are not tagged: Remote Compose has no semantics tree, so a widget frame has no clickable
- * overlay.
+ * With `tagNodes`, every placed node carries its [NativeNodeTags.tag] as a content description,
+ * which the Compose Multiplatform player turns into a semantics node with that component's bounds:
+ * the widget counterpart of the `testTag` a Compose screen's native source carries.
  */
 internal object WearWidgetNativePreviewExporter {
 
@@ -47,6 +48,7 @@ internal object WearWidgetNativePreviewExporter {
     shape: WearWidgetHostShape = WearWidgetHostShape.Default,
     components: Map<String, ComponentRecord> = emptyMap(),
     adaptiveSize: WearWidgetScaffoldSize = WearWidgetScaffoldSize.Large,
+    tagNodes: Boolean = false,
   ): Result {
     // A render is one container, so an adaptive design renders as the fixed design it becomes at
     // [adaptiveSize] — Large by default, the size the canvas edits at because it shows every slot.
@@ -72,6 +74,7 @@ internal object WearWidgetNativePreviewExporter {
             inlineContentImages = true,
             components = components,
             frameFillingRoot = contentIds.singleOrNull(),
+            tagNodes = tagNodes,
           )
           .let { probe ->
             probe.background(root)
@@ -92,6 +95,7 @@ internal object WearWidgetNativePreviewExporter {
         inlineContentImages = true,
         components = components,
         frameFillingRoot = contentIds.singleOrNull(),
+        tagNodes = tagNodes,
       )
     val background = emitter.background(root)
     val typography = emitter.themeTypography(root, depth = 2)
