@@ -123,10 +123,9 @@ the real components, the way `m3-catalog`'s canvas draws the same Material 3 its
 that is not a gap somebody could close with more work in this repository. Every capability note in
 the `wear-m3` catalog says so rather than implying parity.
 
-Two things follow. The catalog is built from the M3 one — once synthesised in Kotlin, now
-published as `wear-m3-catalog`'s `ui-builder.policy.json`
-([cutover](UI_BUILDER_CATALOG_CUTOVER.md)) — because everything except the two Wear containers
-genuinely is borrowed Material 3. And the
+Two things follow. The catalog is *synthesised* from the packaged M3 one (by `WearM3Catalog.kt`, a
+Kotlin generator since deleted — see the [cutover](UI_BUILDER_CATALOG_CUTOVER.md) for what
+replaced it), because everything except the two Wear containers genuinely is borrowed Material 3. And the
 question "what does this actually look like on a watch" belongs to the **native render lane**, which
 compiles the design against the catalog's own bundle and renders it with real Compose — the lane
 `ServeUiBuilderNativePreview` exists for, and whose own KDoc names Android as the thing the Wasm
