@@ -268,6 +268,34 @@ check unrelated_file ""
 change_catalog_sibling_only() { sed -i 's/composeai-contracts = "3.0.0"/composeai-contracts = "3.1.0"/' gradle/libs.versions.toml; }
 check catalog_sibling_only ""
 
+# A test-only change in a module publishes nothing: no artifact carries a test source set. Covers
+# `src/test`, a KMP `src/<target>Test` set, and an unpublished module that a published one packs.
+change_module_test_only() {
+  mkdir -p alpha/src/test/kotlin lib/gamma/src/jvmTest/kotlin internal/src/commonTest/kotlin
+  echo 'class AlphaTest' > alpha/src/test/kotlin/AlphaTest.kt
+  echo 'class GammaTest' > lib/gamma/src/jvmTest/kotlin/GammaTest.kt
+  echo 'class InternalTest' > internal/src/commonTest/kotlin/InternalTest.kt
+  # A target name with digits, as the KMP native targets have.
+  mkdir -p lib/gamma/src/iosArm64Test/kotlin
+  echo 'class GammaArmTest' > lib/gamma/src/iosArm64Test/kotlin/GammaArmTest.kt
+}
+check module_test_only ""
+
+# ...but `src/testFixtures` is published as a variant by `java-test-fixtures`, so it counts.
+change_module_test_fixtures() {
+  mkdir -p alpha/src/testFixtures/kotlin
+  echo 'class AlphaFixture' > alpha/src/testFixtures/kotlin/AlphaFixture.kt
+}
+check module_test_fixtures "compose-preview-alpha compose-preview-beta"
+
+# A test change beside a main change still publishes the module.
+change_module_test_and_main() {
+  mkdir -p alpha/src/test/kotlin alpha/src/main/kotlin
+  echo 'class AlphaTest' > alpha/src/test/kotlin/AlphaTest.kt
+  echo 'class Alpha' > alpha/src/main/kotlin/Alpha.kt
+}
+check module_test_and_main "compose-preview-alpha compose-preview-beta"
+
 # Release wiring lives in root-tasks.gradle.kts, outside the shared set.
 change_root_tasks() { echo 'tasks.register("printPublishedProjectPaths")' >> root-tasks.gradle.kts; }
 check root_tasks ""
