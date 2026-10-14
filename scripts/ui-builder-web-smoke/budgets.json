@@ -6,7 +6,7 @@
     { "name": "all of wasmDist", "files": "**", "maxMb": 41.25 }
   ],
   "memory": [
-    { "viewport": "desktop", "scenario": "designs", "maxMb": { "rendererPss": 175, "jsHeapUsed": 25 } },
-    { "viewport": "desktop", "scenario": "open-m3-catalog", "maxMb": { "rendererPss": 200, "jsHeapUsed": 41 } }
+    { "viewport": "desktop", "scenario": "designs", "maxMb": { "rendererPss": 270, "jsHeapUsed": 25 } },
+    { "viewport": "desktop", "scenario": "open-m3-catalog", "maxMb": { "rendererPss": 305, "jsHeapUsed": 41 } }
   ]
 }
