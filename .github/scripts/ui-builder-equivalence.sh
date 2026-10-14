@@ -2,15 +2,12 @@
 #
 # Is a catalog repository ready to describe itself?
 #
-# Two of the three catalogs the UI builder serves are written in Kotlin in THIS repository —
-# synthesised at startup from the packaged Material 3 one — and the plan in
-# docs/design/UI_BUILDER_CATALOG_CONTRACT.md moves that description into the repositories that own
-# the components. The phases are ordered so those repositories publish first and this one cuts over
-# afterwards, which turns "is wear-m3-catalog ready?" from a judgement into a question somebody can
-# answer. This script is how it gets answered.
+# The Wear and Remote catalogs used to be synthesised from Kotlin in this repository. Their frozen
+# capability snapshots remain as historical parity baselines and MCP App offline assets while the
+# published catalogs own the live definitions.
 #
 # It compares the CATALOG-LEVEL facts a catalog states against the same facts in the frozen golden —
-# the JSON `SynthesisedCatalogGoldenTest` writes out of the generator that runs today. Where they
+# the committed JSON snapshots. Where they
 # agree, the catalog can describe itself; where they differ, either the catalog is wrong or the
 # difference is deliberate and belongs in the reviewed-difference list beside it.
 #
@@ -155,7 +152,7 @@ fi
 
 if [[ ! -f "${golden}" ]]; then
   echo "ui-builder-equivalence: no golden at ${golden}." >&2
-  echo "  Run scripts/regenerate-goldens.sh" >&2
+  echo "  Restore the committed snapshot or update the offline asset in a reviewed change." >&2
   exit 2
 fi
 

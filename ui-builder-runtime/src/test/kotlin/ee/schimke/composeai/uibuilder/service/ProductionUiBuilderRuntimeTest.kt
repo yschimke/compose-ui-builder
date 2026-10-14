@@ -327,7 +327,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `an asset key is refused unless the catalog's registry lists it`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("m3-catalog"))
     val catalog = catalogs.listCatalogs().single()
     fun image(key: UiValueV1) =
       DesignNodeV1(id = "photo", componentId = "asset/image", properties = mapOf("assetKey" to key))
@@ -358,10 +358,9 @@ class ProductionUiBuilderRuntimeTest {
       catalogs.validateWrite(catalog, image(StringValueV1("editor.placeholder")), "assetKey")
     )
 
-    // The registry is inherited by every catalog this build still synthesises.
+    // The registry is also available to the catalog-owned Wear definition.
     val everyCatalog =
-      CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("m3-catalog", "wear-m3"))
-        .listCatalogs()
+      PublishedCatalogFixtures.executor(linkedSetOf("m3-catalog", "wear-m3")).listCatalogs()
     everyCatalog.forEach { each ->
       assertEquals(
         setOf(
@@ -373,10 +372,11 @@ class ProductionUiBuilderRuntimeTest {
         CurrentM3UiBuilderCatalogExecutor.declaredAssetKeys(each),
         each.benchmark.catalogSystemId,
       )
-      // The roles the catalog tells a reader about are the roles the executor refuses against.
-      assertEquals(
-        CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS,
-        CurrentM3UiBuilderCatalogExecutor.declaredColorTokens(each),
+      // The published Wear policy chooses its own supported colour roles.
+      val roles = assertNotNull(CurrentM3UiBuilderCatalogExecutor.declaredColorTokens(each))
+      assertTrue(roles.isNotEmpty(), each.benchmark.catalogSystemId)
+      assertTrue(
+        CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS.containsAll(roles),
         each.benchmark.catalogSystemId,
       )
     }

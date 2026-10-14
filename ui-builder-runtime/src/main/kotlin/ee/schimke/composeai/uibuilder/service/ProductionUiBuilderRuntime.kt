@@ -213,10 +213,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .also { it.exportCapabilities = exportCapabilities }
       .build()
   private val synthesisers: Map<String, () -> CatalogCapabilityV1> =
-    mapOf(
-      DEFAULT_CATALOG_SYSTEM_ID to { baseCatalog },
-      WEAR_M3_CATALOG_SYSTEM_ID to { wearM3Catalog(baseCatalog) },
-    )
+    mapOf(DEFAULT_CATALOG_SYSTEM_ID to { baseCatalog })
 
   /**
    * The Kotlin catalogs this build synthesises, excluding owned catalogs so their generators never
@@ -1027,9 +1024,9 @@ internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   )
 
 /**
- * The note a shared foundation component carries on a Wear palette, shared by `wearM3Catalog` and
- * [composeFoundationCatalog] (compared by `ComposeFoundationFaithfulnessTest`). Lives here because
- * `ui-builder-catalog-literals.sh` restricts which files may name a catalog.
+ * The note a shared foundation component carries on a Wear palette, added by
+ * [composeFoundationCatalog]. Lives here because `ui-builder-catalog-literals.sh` restricts which
+ * files may name a catalog.
  */
 internal const val WEAR_FOUNDATION_NOTE: String =
   "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
