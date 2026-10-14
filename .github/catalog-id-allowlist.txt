@@ -22,7 +22,7 @@
 9 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/host/PublishedCatalogStore.kt
 1 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ComposeFoundationCatalog.kt
 4 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ProductionUiBuilderRuntime.kt
-4 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/RemoteM3Catalog.kt
+1 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/RemoteComposeFoundation.kt
 62 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/WearM3Catalog.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteComposeSources.kt
 38 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/StarterContent.kt

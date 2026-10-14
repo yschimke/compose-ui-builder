@@ -215,7 +215,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val synthesisers: Map<String, () -> CatalogCapabilityV1> =
     mapOf(
       DEFAULT_CATALOG_SYSTEM_ID to { baseCatalog },
-      REMOTE_M3_CATALOG_SYSTEM_ID to { remoteM3Catalog(baseCatalog) },
       WEAR_M3_CATALOG_SYSTEM_ID to { wearM3Catalog(baseCatalog) },
     )
 

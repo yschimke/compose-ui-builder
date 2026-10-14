@@ -187,14 +187,15 @@ class WearM3ScreenCatalogTest {
   fun `a published catalog wins over the synthesised one of the same id, and says so`() {
     val executor =
       CurrentM3UiBuilderCatalogExecutor(
-        catalogSystemIds = setOf("wear-m3", "remote-m3"),
+        catalogSystemIds = setOf("wear-m3", "m3-catalog"),
         published = mapOf("wear-m3" to testCatalog(id = "wear-m3")),
       )
 
-    // Per catalog and reversible: `wear-m3` reads its published file, `remote-m3` keeps the Kotlin,
+    // Per catalog and reversible: `wear-m3` reads its published file, `m3-catalog` keeps the
+    // Kotlin,
     // and the source of each is answerable rather than inferred from the shelf's contents.
     assertEquals(
-      mapOf("wear-m3" to "published", "remote-m3" to "synthesised"),
+      mapOf("wear-m3" to "published", "m3-catalog" to "synthesised"),
       executor.catalogSources,
     )
     val wear = executor.listCatalogs().first { it.benchmark.catalogSystemId == "wear-m3" }

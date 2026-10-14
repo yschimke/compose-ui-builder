@@ -5,13 +5,12 @@ import java.io.File
 import kotlinx.serialization.json.Json
 
 /**
- * `wear-m3` and `remote-m3` as committed capability fixtures, and `a2ui-catalog` as its own
- * published file, handed to the executor as published catalogs — what production does (no
- * deployment runs the synthesised generators).
+ * `wear-m3` as a committed capability fixture, and `remote-m3` and `a2ui-catalog` as their own
+ * published files, handed to the executor as published catalogs.
  *
- * The composed fixture (`docs/design/fixtures/ui-builder/<id>-capabilities-v1.json`, written by
- * `SynthesisedCatalogGoldenTest`) rather than the policy pair, because composing needs the record
- * reader that `checkUiBuilderRuntimeBoundary` keeps off this module.
+ * Wear uses its composed fixture (`docs/design/fixtures/ui-builder/<id>-capabilities-v1.json`,
+ * written by `SynthesisedCatalogGoldenTest`). The other catalogs compose the published policy and
+ * record, so tests follow their owned definitions.
  */
 internal object PublishedCatalogFixtures {
 
@@ -26,8 +25,11 @@ internal object PublishedCatalogFixtures {
     )
 
   fun catalog(systemId: String): CatalogCapabilityV1 =
-    if (systemId == CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID)
-      // No golden: this build has no generator for it, so it is a2ui-catalog's own published file.
+    if (
+      systemId == CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID ||
+        systemId == CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID
+    )
+      // No Kotlin generator: compose the catalog's published policy and record.
       CatalogCutoverFixtures.catalog(systemId)
     else json.decodeFromString(file(systemId).readText())
 
