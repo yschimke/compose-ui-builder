@@ -1771,7 +1771,10 @@ internal class RemoteContentEmitter(
             "\"${expr.value.content.escaped()}\".rs"
           }
           UiValueKind.COLOR ->
-            if (UiExpressions.isThemeRole(expr.value.content)) {
+            if (expr.value.content == TRANSPARENT_TOKEN) {
+              usesColorLiteral = true
+              "Color(0x00000000).rc"
+            } else if (UiExpressions.isThemeRole(expr.value.content)) {
               usesTheme = true
               "RemoteMaterialTheme.colorScheme.${expr.value.content}"
             } else {
@@ -1814,14 +1817,11 @@ internal class RemoteContentEmitter(
     if (function == null || bindings?.row != null) return emptyMap()
     return arguments
       .mapNotNull { (key, value) ->
-        when ((value as? JsonObject)?.plainString("type")) {
-          "float" -> UiValueKind.FLOAT
-          "bool" -> UiValueKind.BOOL
-          "string" -> UiValueKind.STRING
-          "color",
-          UiExpressions.COLOR_TOKEN -> UiValueKind.COLOR
-          else -> null
-        }?.let { key to it }
+        (value as? JsonObject)
+          ?.plainString("type")
+          ?.let(UiExpressions::kindOfWrapper)
+          ?.takeIf { it != UiValueKind.INT }
+          ?.let { key to it }
       }
       .toMap()
   }

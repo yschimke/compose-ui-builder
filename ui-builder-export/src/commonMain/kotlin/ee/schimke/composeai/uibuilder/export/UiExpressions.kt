@@ -667,8 +667,21 @@ object UiExpressions {
     return JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value.toJson(expr.kind)))
   }
 
-  /** A colour value that names a theme role (`primary`) rather than spelling `#AARRGGBB`. */
-  fun isThemeRole(color: String): Boolean = THEME_ROLE.matches(color)
+  /**
+   * A colour value that names a theme role (`primary`) rather than spelling `#AARRGGBB`.
+   * `transparent` is a `colorToken` too, but no role: it is the literal `#00000000`.
+   */
+  fun isThemeRole(color: String): Boolean = THEME_ROLE.matches(color) && color != TRANSPARENT
+
+  /**
+   * The kind a typed wrapper carries: its wire name, and `colorToken` (a theme role or
+   * `transparent`) as a colour.
+   */
+  fun kindOfWrapper(type: String): UiValueKind? =
+    if (type == COLOR_TOKEN) UiValueKind.COLOR else UiValueKind.fromWire(type)
+
+  /** [color] with `transparent` spelled as the literal it stands for. */
+  private fun literalColor(color: String): String = if (color == TRANSPARENT) "#00000000" else color
 
   /**
    * [from] mixed toward [to] by [fraction], channel by channel, as the player's colour tween. A
@@ -705,7 +718,9 @@ object UiExpressions {
           UiValueKind.BOOL -> expr.value.content.toBoolean()
           UiValueKind.STRING -> expr.value.content
           UiValueKind.COLOR ->
-            expr.value.content.let { if (isThemeRole(it)) environment.colorRoles(it) ?: it else it }
+            literalColor(expr.value.content).let {
+              if (isThemeRole(it)) environment.colorRoles(it) ?: it else it
+            }
         }
       is Expr.State -> coerce(environment.state[expr.variable], expr.kind)
       is Expr.Binding -> coerce(environment.bindings(expr.key)?.contentOrNull, expr.kind)
@@ -719,7 +734,7 @@ object UiExpressions {
       UiValueKind.INT -> raw?.toDoubleOrNull()?.toInt() ?: 0
       UiValueKind.BOOL -> raw == "true"
       UiValueKind.STRING -> raw.orEmpty()
-      UiValueKind.COLOR -> raw ?: "#00000000"
+      UiValueKind.COLOR -> raw?.let(::literalColor) ?: "#00000000"
     }
 
   private fun call(expr: Expr.Call, values: List<Any>): Any {
@@ -824,6 +839,8 @@ object UiExpressions {
 
   /** A colour scheme role's name, as the Remote theme's `colorScheme` spells its members. */
   private val THEME_ROLE = Regex("[a-z][A-Za-z0-9]*")
+
+  private const val TRANSPARENT = "transparent"
 
   /** The wrapper for a theme role as a colour: `{"type": "colorToken", "value": "primary"}`. */
   const val COLOR_TOKEN: String = "colorToken"

@@ -137,6 +137,24 @@ class UiExpressionsTest {
   }
 
   @Test
+  fun `transparent is a colour token but no theme role`() {
+    val clear =
+      parse("lerp(theme.primary, #FFFFFFFF, progress)")
+        .toString()
+        .replace("\"primary\"", "\"transparent\"")
+    val expr =
+      assertIs<UiExpressions.Checked.Ok>(
+          UiExpressions.check(kotlinx.serialization.json.Json.parseToJsonElement(clear), scope)
+        )
+        .expr
+    assertEquals(
+      "#00000000",
+      UiExpressions.evaluate(expr, UiExpressions.Environment(mapOf("progress" to "0"))),
+    )
+    assertEquals(false, UiExpressions.isThemeRole("transparent"))
+  }
+
+  @Test
   fun `a theme role round-trips through formula text`() {
     val text = "lerp(theme.primary, theme.primaryDim, progress)"
     assertEquals(text, UiExpressions.format(parse(text)))

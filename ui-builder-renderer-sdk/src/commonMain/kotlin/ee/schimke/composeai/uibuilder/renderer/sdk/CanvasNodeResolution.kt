@@ -59,7 +59,7 @@ class CanvasExpressions(
       UiExpressions.Scope(stateKinds) { key ->
         ((arguments[key] as? JsonObject)?.get("type") as? JsonPrimitive)
           ?.contentOrNull
-          ?.let(UiValueKind::fromWire)
+          ?.let(UiExpressions::kindOfWrapper)
       }
     val environment =
       UiExpressions.Environment(

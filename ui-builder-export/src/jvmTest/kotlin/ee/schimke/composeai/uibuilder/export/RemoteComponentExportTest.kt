@@ -435,6 +435,35 @@ class RemoteComponentExportTest {
   }
 
   @Test
+  fun `a transparent colour token in an expression is the transparent literal`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitTextButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button", "arguments": {
+              "on": {"type": "float", "value": 0}}}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-text-button",
+            "properties": {
+              "containerColor": {"type": "expr", "op": "lerp", "args": [
+                {"type": "colorToken", "value": "transparent"},
+                {"type": "colorToken", "value": "primary"},
+                {"type": "binding", "value": "on"}]}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue(
+      "tween(Color(0x00000000).rc, RemoteMaterialTheme.colorScheme.primary, on)" in source,
+      source,
+    )
+    assertFalse("colorScheme.transparent" in source, source)
+  }
+
+  @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
