@@ -403,6 +403,38 @@ class RemoteComponentExportTest {
   }
 
   @Test
+  fun `a colour tween across a component argument is the player's colour tween`() {
+    val result =
+      InlineRemoteContentExporter.exportComponents(
+        remoteDocument(
+          """"button": {"name": "KitTextButtonRemote", "root": "button"}""",
+          """
+          "place": {"id": "place", "componentId": "design/component-instance",
+            "component": {"componentKey": "button", "arguments": {
+              "on": {"type": "float", "value": 0}}}},
+          "button": {"id": "button", "componentId": "remote-m3/remote-text-button",
+            "properties": {
+              "containerColor": {"type": "expr", "op": "lerp", "args": [
+                {"type": "colorToken", "value": "primary"},
+                {"type": "colorToken", "value": "primaryDim"},
+                {"type": "binding", "value": "on"}]},
+              "contentColor": {"type": "colorToken", "value": "onPrimary"}},
+            "eventBindings": {"click": []}}
+          """,
+        )
+      )
+    val source =
+      assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    assertTrue("on: androidx.compose.remote.creation.compose.state.RemoteFloat" in source, source)
+    assertTrue(
+      "containerColor = tween(RemoteMaterialTheme.colorScheme.primary, " +
+        "RemoteMaterialTheme.colorScheme.primaryDim, on)" in source,
+      source,
+    )
+    assertTrue("import androidx.compose.remote.creation.compose.state.tween" in source, source)
+  }
+
+  @Test
   fun `a root that is not a placement is refused`() {
     val result = InlineRemoteContentExporter.exportComponents(document(root = "frame"))
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())

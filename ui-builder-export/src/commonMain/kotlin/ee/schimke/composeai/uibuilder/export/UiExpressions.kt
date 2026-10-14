@@ -6,6 +6,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.round
+import kotlin.math.roundToLong
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tan
@@ -299,7 +300,7 @@ object UiExpressions {
   }
 
   /** The literal wrappers an expression may take as operands. */
-  val OPERAND_LITERALS: Set<String> = setOf("float", "int", "bool", "string", "color")
+  val OPERAND_LITERALS: Set<String> = setOf("float", "int", "bool", "string", "color", COLOR_TOKEN)
 
   /** A typed tree, or the located reason [value] does not type. */
   sealed interface Checked {
@@ -330,7 +331,8 @@ object UiExpressions {
       "int",
       "bool",
       "string",
-      "color" -> literal(type, obj["value"] as? JsonPrimitive, where)
+      "color",
+      COLOR_TOKEN -> literal(type, obj["value"] as? JsonPrimitive, where)
       "state" -> {
         val variable =
           (obj["variable"] as? JsonPrimitive)?.contentOrNull
@@ -381,10 +383,11 @@ object UiExpressions {
         "int" -> !value.isString && value.content.toIntOrNull() != null
         "bool" -> !value.isString && value.booleanOrNull != null
         "string" -> value.isString
+        COLOR_TOKEN -> value.isString && THEME_ROLE.matches(value.content)
         else -> value.isString && COLOR_LITERAL.matches(value.content)
       }
     if (!ok) throw ExpressionIssue("$where: `${value.content}` is not a $type")
-    return Expr.Literal(UiValueKind.fromWire(type)!!, value)
+    return Expr.Literal(UiValueKind.fromWire(type) ?: UiValueKind.COLOR, value)
   }
 
   /** The easings `tween` names, as the player's `RemoteEasing` constants. */
@@ -454,7 +457,14 @@ object UiExpressions {
       Op.TAN,
       Op.TO_FLOAT -> if (numeric(0)) UiValueKind.FLOAT else fail()
       Op.POW -> if (numeric(0, 1)) UiValueKind.FLOAT else fail()
-      Op.LERP -> if (numeric(0, 1, 2)) UiValueKind.FLOAT else fail()
+      // Two colours mixed by a fraction, as the player's colour `tween(from, to, fraction)`.
+      Op.LERP ->
+        when {
+          numeric(0, 1, 2) -> UiValueKind.FLOAT
+          kinds[0] == UiValueKind.COLOR && kinds[1] == UiValueKind.COLOR && numeric(2) ->
+            UiValueKind.COLOR
+          else -> fail()
+        }
       Op.TO_INT -> if (numeric(0)) UiValueKind.INT else fail()
       Op.EQ,
       Op.NE ->
@@ -506,6 +516,8 @@ object UiExpressions {
     val state: Map<String, String?> = emptyMap(),
     val bindings: (String) -> JsonPrimitive? = { null },
     val clock: Clock = Clock.DEFAULT,
+    /** A theme role's colour as `#AARRGGBB`, where the caller knows the theme. */
+    val colorRoles: (String) -> String? = { null },
   )
 
   /** A wall-clock instant broken into the fields the player publishes. */
@@ -643,14 +655,45 @@ object UiExpressions {
     }
   }
 
-  /** The literal [expr] evaluates to, wrapped as its kind's property wrapper. */
-  fun evaluateWrapped(expr: Expr, environment: Environment): JsonObject =
-    JsonObject(
-      mapOf(
-        "type" to JsonPrimitive(expr.kind.wire),
-        "value" to evaluate(expr, environment).toJson(expr.kind),
-      )
-    )
+  /**
+   * The literal [expr] evaluates to, wrapped as its kind's property wrapper. A colour the
+   * environment could not resolve stays a theme role, wrapped as a `colorToken` for the canvas to.
+   */
+  fun evaluateWrapped(expr: Expr, environment: Environment): JsonObject {
+    val value = evaluate(expr, environment)
+    val type =
+      if (expr.kind == UiValueKind.COLOR && isThemeRole(value.toString())) COLOR_TOKEN
+      else expr.kind.wire
+    return JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value.toJson(expr.kind)))
+  }
+
+  /** A colour value that names a theme role (`primary`) rather than spelling `#AARRGGBB`. */
+  fun isThemeRole(color: String): Boolean = THEME_ROLE.matches(color)
+
+  /**
+   * [from] mixed toward [to] by [fraction], channel by channel, as the player's colour tween. A
+   * role the environment could not resolve has no channels, so the nearer end stands in for it.
+   */
+  private fun mixColors(from: String, to: String, fraction: Double): String {
+    val t = fraction.coerceIn(0.0, 1.0)
+    fun argb(color: String): Long? =
+      color
+        .takeIf { COLOR_LITERAL.matches(it) }
+        ?.drop(1)
+        ?.let { if (it.length == 6) "FF$it" else it }
+        ?.toLong(16)
+    val a = argb(from)
+    val b = argb(to)
+    if (a == null || b == null) return if (t < 0.5) from else to
+    val mixed =
+      (0 until 4).fold(0L) { acc, channel ->
+        val shift = 24 - channel * 8
+        val x = (a shr shift) and 0xFF
+        val y = (b shr shift) and 0xFF
+        acc or ((x + (y - x) * t).roundToLong().coerceIn(0, 255) shl shift)
+      }
+    return "#" + mixed.toString(16).uppercase().padStart(8, '0')
+  }
 
   /** Evaluate [expr] the way the player would at [environment]. */
   fun evaluate(expr: Expr, environment: Environment): Any =
@@ -660,8 +703,9 @@ object UiExpressions {
           UiValueKind.FLOAT -> expr.value.content.toFloat().toDouble()
           UiValueKind.INT -> expr.value.content.toInt()
           UiValueKind.BOOL -> expr.value.content.toBoolean()
-          UiValueKind.STRING,
-          UiValueKind.COLOR -> expr.value.content
+          UiValueKind.STRING -> expr.value.content
+          UiValueKind.COLOR ->
+            expr.value.content.let { if (isThemeRole(it)) environment.colorRoles(it) ?: it else it }
         }
       is Expr.State -> coerce(environment.state[expr.variable], expr.kind)
       is Expr.Binding -> coerce(environment.bindings(expr.key)?.contentOrNull, expr.kind)
@@ -706,7 +750,10 @@ object UiExpressions {
       Op.SIN -> num(sin(d(0)))
       Op.COS -> num(cos(d(0)))
       Op.TAN -> num(tan(d(0)))
-      Op.LERP -> num(d(0) + (d(1) - d(0)) * d(2))
+      Op.LERP ->
+        if (expr.kind == UiValueKind.COLOR)
+          mixColors(values[0] as String, values[1] as String, d(2))
+        else num(d(0) + (d(1) - d(0)) * d(2))
       Op.TO_INT -> d(0).toInt()
       Op.TO_FLOAT -> num(d(0))
       Op.EQ -> values[0].normalised() == values[1].normalised()
@@ -774,6 +821,12 @@ object UiExpressions {
   private const val MAX_DEPTH = 32
 
   private val COLOR_LITERAL = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")
+
+  /** A colour scheme role's name, as the Remote theme's `colorScheme` spells its members. */
+  private val THEME_ROLE = Regex("[a-z][A-Za-z0-9]*")
+
+  /** The wrapper for a theme role as a colour: `{"type": "colorToken", "value": "primary"}`. */
+  const val COLOR_TOKEN: String = "colorToken"
 }
 
 /** The kinds an expression can produce, by their wrapper names. */
@@ -791,6 +844,9 @@ enum class UiValueKind(val wire: String) {
     fun fromWire(wire: String): UiValueKind? = entries.firstOrNull { it.wire == wire }
   }
 }
+
+/** How a formula spells a theme role as a colour: `theme.primary`. */
+private const val THEME_PREFIX = "theme."
 
 private object FormulaPrinter {
   private const val UNARY = 7
@@ -833,6 +889,7 @@ private object FormulaPrinter {
       "string" ->
         "\"" + primitive?.content.orEmpty().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
       "color" -> primitive?.content.orEmpty()
+      UiExpressions.COLOR_TOKEN -> THEME_PREFIX + primitive?.content.orEmpty()
       "state" -> (obj["variable"] as? JsonPrimitive)?.content.orEmpty()
       "binding" -> "@" + primitive?.content.orEmpty()
       UiExpressions.SYSTEM -> primitive?.content.orEmpty()
@@ -984,6 +1041,8 @@ private class FormulaParser(private val text: String, private val stateNames: Se
             }
             call(op.wire, *args.toTypedArray())
           }
+          name.startsWith(THEME_PREFIX) ->
+            literal(UiExpressions.COLOR_TOKEN, JsonPrimitive(name.removePrefix(THEME_PREFIX)))
           name in UiExpressions.SYSTEM_VALUES ->
             JsonObject(
               mapOf("type" to JsonPrimitive(UiExpressions.SYSTEM), "value" to JsonPrimitive(name))
