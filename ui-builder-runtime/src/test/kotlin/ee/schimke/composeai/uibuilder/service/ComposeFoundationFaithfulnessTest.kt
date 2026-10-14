@@ -14,13 +14,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `compose-foundation` donates exactly what the synthesised catalogs donate — component for
- * component, note for note, shelf for shelf.
+ * `compose-foundation` donates exactly what the remaining synthesised catalogs donate — component
+ * for component, note for note, shelf for shelf.
  *
- * Proves the extraction equal to `remoteM3Catalog`/`wearM3Catalog` while both still exist, before
- * those generators are deleted; afterwards this test goes with them and
- * `SynthesisedCatalogGoldenTest`'s fixtures take over. The per-platform sets are not
- * interchangeable (e.g. Wear must not get `layout/lazy-grid`).
+ * Proves the extraction equal to `wearM3Catalog` while its generator still exists. The per-platform
+ * sets are not interchangeable (e.g. Wear must not get `layout/lazy-grid`).
  */
 class ComposeFoundationFaithfulnessTest {
 
@@ -29,7 +27,6 @@ class ComposeFoundationFaithfulnessTest {
       catalogSystemIds =
         linkedSetOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         )
     )
@@ -77,7 +74,7 @@ class ComposeFoundationFaithfulnessTest {
 
   /**
    * Holds by construction (mobile's curation is the identity); here to catch a future mobile
-   * curation. The wear and remote-compose cases are the real checks.
+   * curation. The wear case is the real check.
    */
   @Test
   fun `the mobile foundation donates what the packaged catalog donates`() {
@@ -87,11 +84,6 @@ class ComposeFoundationFaithfulnessTest {
   @Test
   fun `the wear foundation donates what wear-m3 donates`() {
     assertDonatesTheSame(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
-  }
-
-  @Test
-  fun `the remote-compose foundation donates what remote-m3 donates`() {
-    assertDonatesTheSame(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
   }
 
   /**
@@ -105,7 +97,6 @@ class ComposeFoundationFaithfulnessTest {
       listOf(
         DEFAULT_CATALOG_SYSTEM_ID,
         CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
       )) {
       val old = synthesised(systemId)
       val new = foundationFor(old)
@@ -116,7 +107,6 @@ class ComposeFoundationFaithfulnessTest {
         "$systemId: the foundation's asset registry differs, so a donated asset/image validates " +
           "against different keys",
       )
-      // Per donated component: `remote-m3`'s menu also shelves its own `remote-m3/lottie`.
       for (componentId in new.components.map { it.componentId }) {
         assertEquals(
           old.statusSemantics.shelfOf(componentId),
@@ -139,12 +129,11 @@ class ComposeFoundationFaithfulnessTest {
 
   /** The premise: the platforms donate different vocabularies, so these tests are not vacuous. */
   @Test
-  fun `the three platforms really do donate different vocabularies`() {
+  fun `the two remaining platforms donate different vocabularies`() {
     val sets =
       listOf(
           DEFAULT_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
         )
         .map { systemId ->
           foundationFor(synthesised(systemId)).components.map { it.componentId }.toSet()

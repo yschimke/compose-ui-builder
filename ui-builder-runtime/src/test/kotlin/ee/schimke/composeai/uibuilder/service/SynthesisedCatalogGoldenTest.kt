@@ -12,12 +12,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * `wear-m3` and `remote-m3`, as checked-in JSON: a record of what the Kotlin generators produce
+ * `wear-m3` as checked-in JSON: a record of what the Kotlin generator produces
  * ([`UI_BUILDER_CATALOG_CONTRACT.md`](../../../../../../../../docs/design/UI_BUILDER_CATALOG_CONTRACT.md)),
  * giving catalog repositories a readable description and the equivalence gate a left-hand side. The
  * runtime still constructs these catalogs.
  *
- * A failure means `wearM3Catalog`/`remoteM3Catalog` or the packaged Material 3 catalog changed. Run
+ * A failure means `wearM3Catalog` or the packaged Material 3 catalog changed. Run
  * `scripts/regenerate-goldens.sh` (which passes `-PuiBuilderGoldens=write`; a Gradle property
  * because `-D` does not reach the forked test JVM) and read the diff.
  */
@@ -28,7 +28,6 @@ class SynthesisedCatalogGoldenTest {
       catalogSystemIds =
         setOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         )
     )
@@ -39,22 +38,13 @@ class SynthesisedCatalogGoldenTest {
   }
 
   @Test
-  fun `the remote-m3 catalog matches its checked-in golden`() {
-    assertGolden(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
-  }
-
-  @Test
-  fun `both goldens declare their own catalog id and platform`() {
+  fun `the golden declares its own catalog id and platform`() {
     // Cheap, and it is the pair of fields the whole contract turns on: a catalog is identified by
     // its id and grouped by its platform WORD, and a golden that agreed with the other one about
     // either would be a golden of the wrong catalog.
     val wear = catalog(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
-    val remote = catalog(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
-
     assertEquals("wear-m3", wear["benchmark"]?.let { (it as JsonObject) }?.catalogSystemId())
-    assertEquals("remote-m3", remote["benchmark"]?.let { (it as JsonObject) }?.catalogSystemId())
     assertEquals("wear", wear.platform())
-    assertEquals("remote-compose", remote.platform())
   }
 
   private fun assertGolden(systemId: String) {

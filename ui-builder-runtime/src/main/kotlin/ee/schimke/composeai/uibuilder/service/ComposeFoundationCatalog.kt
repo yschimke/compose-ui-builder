@@ -118,7 +118,7 @@ private val FOUNDATION_CURATIONS =
             "asset/image",
             *REMOTE_DRAW_IDS.toTypedArray(),
           ),
-        // The same narrowing `remoteM3Catalog` applies, from the one place it is written.
+        // Narrow to the Remote emitter's supported vocabulary.
         curate = { component -> component.narrowedForRemoteAuthoring().withWidgetProfileNote() },
         menu = { base -> remoteM3ComponentMenu(base.statusSemantics) },
       ),

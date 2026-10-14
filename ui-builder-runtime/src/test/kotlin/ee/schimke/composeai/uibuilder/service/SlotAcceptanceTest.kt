@@ -113,7 +113,7 @@ class SlotAcceptanceTest {
 
   /**
    * A slot naming a trait no component in its catalog carries can never be filled from the palette.
-   * None remain; `shape/radial-gradient` stays out (see `remoteM3Catalog`).
+   * None remain; `shape/radial-gradient` stays out of Remote authoring.
    */
   @Test
   fun `every trait a slot names is carried by some component`() {
@@ -212,7 +212,7 @@ class SlotAcceptanceTest {
                 componentId = "remote-m3/widget-container-small",
                 slots = mapOf("background" to listOf("text"), "content" to emptyList()),
               ),
-            "text" to base.nodes.getValue("text"),
+            "text" to base.nodes.getValue("text").copy(componentId = "remote-m3/remote-text"),
           ),
       )
     val issue = executor.validate(document, catalog)
