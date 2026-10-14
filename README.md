@@ -2,17 +2,6 @@
 
 Auto-generated from `main`. Browse inline or compare against PR branches.
 
-> [!WARNING]
-> 1 preview(s) failed to render in the latest update (1 retained from the prior baseline). See **Render Failures** below.
-
-## Render Failures
-
-The render task completed but no PNG was produced for these previews. Entries with a prior baseline keep their previous image; the rest are absent from the gallery until a successful render lands.
-
-| Preview | Module | Function | Source | Baseline |
-|---------|--------|----------|--------|----------|
-| `ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPreview` | ui-builder | `UiBuilderNewDesignPreview` | `src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt` | retained |
-
 ## ui-builder
 
 | Preview | Image |
@@ -114,6 +103,7 @@ The render task completed but no PNG was produced for these previews. Entries wi
 | `UiBuilderNativeOverlayPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNativeOverlayPreview-14daa051.png" width="150" /> |
 | `UiBuilderNativeRenderPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNativeRenderPreview-f573ca58.png" width="150" /> |
 | `UiBuilderNavigationActionPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNavigationActionPreview-29521779.png" width="150" /> |
+| `UiBuilderNewDesignPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNewDesignPreview-7e7db055.png" width="150" /> |
 | `UiBuilderPreviewModePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderPreviewModePreview-2241e963.png" width="150" /> |
 | `UiBuilderRemoteComposePalettePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderRemoteComposePalettePreview-0a85c982.png" width="150" /> |
 | `UiBuilderRenderComparisonPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderRenderComparisonPreview-30a90bc2.png" width="150" /> |
