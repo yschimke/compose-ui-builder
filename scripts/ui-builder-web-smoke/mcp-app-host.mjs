@@ -511,9 +511,11 @@ try {
 // This fake host has no published catalog route. The editor must try it, receive a 404, and
 // open the packaged M3 catalog instead. Chromium logs that expected response as a console error.
 const expectedFallbackPath = '/api/ui-builder/v1/catalog-capabilities/m3-catalog-capabilities-v1.json';
-const unexpectedMissing = missingResources.filter(
-  (url) => new URL(url).pathname !== expectedFallbackPath,
-);
+const assetOrigin = new URL(assetBase).origin;
+const unexpectedMissing = missingResources.filter((url) => {
+  const requested = new URL(url);
+  return requested.origin !== assetOrigin || requested.pathname !== expectedFallbackPath;
+});
 let expectedFallbackErrors = missingResources.length - unexpectedMissing.length;
 for (const error of pageErrors) {
   if (
