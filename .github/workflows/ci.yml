@@ -177,12 +177,12 @@ jobs:
         with:
           rw-token: ${{ github.event_name == 'push' && (secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN) || '' }}
           ro-token: ${{ secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN_RO || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN_RO }}
-      # Binaryen only on `main`: a pull request proves the archive assembles and verifies from the
-      # production link, which is already dead-code eliminated, without the ~6-minute `wasm-opt`
-      # pass whose output only `main` publishes (`ProductionWasm.kt` in build-logic).
-      - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-web:verifyUiBuilderWebArchive
-        env:
-          WASM_OPT: ${{ github.event_name != 'pull_request' }}
+      # Through Binaryen on pull requests too (`ProductionWasm.kt` in build-logic), so the bytes
+      # `ui-builder-web-smoke` measures are the shipped ones and the size budgets and function-size
+      # check can fail before merge. Without it a pull request measured an unoptimised module, the
+      # budgets ran on `main` only, and the Kotlin 2.4.21 bump went over budget after it had merged.
+      # It costs a pull request about two to three minutes of `wasm-opt`.
+      - run: ./gradlew :ui-builder-web:verifyUiBuilderWebArchive
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ui-builder-wasm-dist
@@ -215,8 +215,8 @@ jobs:
         with:
           rw-token: ${{ github.event_name == 'push' && (secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN) || '' }}
           ro-token: ${{ secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN_RO || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN_RO }}
-      # Binaryen only on `main`, as in `web-archive`. The editor-marker check still holds without it:
-      # dead-code elimination is the production link's, not Binaryen's.
+      # Binaryen only on `main`: nothing measures this module's size, and the editor-marker check
+      # holds without it (dead-code elimination is the production link's, not Binaryen's).
       - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-renderer:verifyRendererRuntime
         env:
           WASM_OPT: ${{ github.event_name != 'pull_request' }}
@@ -309,23 +309,22 @@ jobs:
       # No function in the shipped module may grow past 200 KB. Binaryen inlined generated tables
       # (Material 3 locale strings, the icon builders) into single 328 KB and 686 KB functions, and
       # V8 held 312 MB for six seconds compiling one; `wasmNoInlinePatterns` in
-      # ui-builder/build.gradle.kts keeps them apart and this fails the day one slips back. It bites
-      # on `main` only: pull requests package the module without Binaryen (`WASM_OPT` above), where
-      # nothing is inlined and the largest function is ~100 KB.
+      # ui-builder/build.gradle.kts keeps them apart and this fails the day one slips back, on the
+      # pull request that does it now that `web-archive` runs Binaryen there too.
       - run: node wasm-functions.mjs ../../ui-builder/build/wasmDist/uiBuilder.wasm
         working-directory: scripts/ui-builder-web-smoke
       # Size budgets for the editor bundle (`budgets.json`): `uiBuilder.wasm`, `skiko.wasm`, the
       # scripts and all of `wasmDist`, raw and gzipped. The web archive adds only its 107-byte
-      # manifest and the 6 KB MCP App shell to that. `main` only, like the memory budgets below: a
-      # pull request's module is not Binaryen-optimised, so its sizes are not the shipped ones.
-      - if: github.event_name != 'pull_request'
-        run: node budgets.mjs ../../ui-builder/build/wasmDist
+      # manifest and the 6 KB MCP App shell to that. On pull requests as well as `main`: the module
+      # is Binaryen-optimised on both, so these are the shipped sizes and an overrun fails before
+      # merge. (The memory budgets below stay on `main`, where they take three runs per screen.)
+      - run: node budgets.mjs ../../ui-builder/build/wasmDist
         working-directory: scripts/ui-builder-web-smoke
       - run: npx playwright install --with-deps chromium
         working-directory: scripts/ui-builder-web-smoke
       # The same regression seen from the browser: open a Material 3 design and fail when one Wasm
-      # TurboFan compile holds over 128 MB (48 MB today, 312 MB before the inlining rules). Like the
-      # check above, it can only fail on `main`'s Binaryen-optimised module. On `main` it also
+      # TurboFan compile holds over 128 MB (48 MB today, 312 MB before the inlining rules), on pull
+      # requests and `main` alike now that both get the Binaryen-optimised module. On `main` it also
       # measures the designs screen, three runs each, against the memory budgets in `budgets.json`
       # (settled renderer PSS and JS heap); a pull request keeps the one quick run.
       - run: node memory.mjs ../../ui-builder/build/wasmDist ../../build/web-memory
