@@ -266,6 +266,11 @@ const expect = (condition, message) => {
 };
 const page = await browser.newPage({ viewport: { width: 1600, height: 960 }, locale: 'en-US' });
 const pageErrors = [];
+const missingResources = [];
+const recordMissingResource = (response) => {
+  if (response.status() === 404) missingResources.push(response.url());
+};
+page.on('response', recordMissingResource);
 page.on('pageerror', (error) => pageErrors.push(String(error)));
 page.on('console', (message) => {
   if (message.type() === 'error' && !IGNORED_CONSOLE.some((it) => it.test(message.text()))) {
@@ -375,6 +380,7 @@ const FOCUSED = {
   focusedCanvas: [513, 28],
 };
 const panel = await browser.newPage({ viewport: { width: 1100, height: 900 }, locale: 'en-US' });
+panel.on('response', recordMissingResource);
 panel.on('pageerror', (error) => pageErrors.push(String(error)));
 panel.on('console', (message) => {
   if (message.type() === 'error' && !IGNORED_CONSOLE.some((it) => it.test(message.text()))) {
@@ -503,6 +509,9 @@ try {
   failures.push(`focused canvas: ${error.message.split('\n')[0]}`);
 }
 failures.push(...pageErrors.map((it) => `page error: ${it}`));
+if (pageErrors.some((it) => it.includes('404'))) {
+  failures.push(...missingResources.map((url) => `404 resource: ${url}`));
+}
 console.log(failures.length === 0 ? 'ok   mcp-app host round trip, focused canvas and comment' : `FAIL mcp-app host\n  ${failures.join('\n  ')}`);
 await browser.close();
 for (const it of [assets, sandbox, hostServer]) it.server.close();
