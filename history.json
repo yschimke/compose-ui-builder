@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "1316c7e0eee189ce6d6ad5361e219f09cc5f3784",
+    "generatedFrom": "db899b4ba7d6cf171414d57f174b4b90eb8a4349",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -132,6 +132,13 @@
         "ui-builder/ee.schimke.composeai.uibuilder.preview.CatalogRuntimeRoutingPreviewKt.CatalogRuntimeRoutingPreview": {
             "path": "renders/ui-builder/CatalogRuntimeRoutingPreview-00544b46.png",
             "versions": [
+                {
+                    "blob": "5d0dc3f99d9e081764383bdd7d191f6a9628a770",
+                    "commit": "db899b4ba7d6cf171414d57f174b4b90eb8a4349",
+                    "date": "2026-10-15T21:03:31Z",
+                    "sourceSha": "080f22b3",
+                    "commits": 1
+                },
                 {
                     "blob": "bbda6dc9c5cbfd3f03198c2e392ca0e97c0df7e0",
                     "commit": "e5c8c7d7c5cf0901752f13132a95f8ebc02f77f2",
@@ -273,7 +280,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 20,
+            "observations": 21,
             "unstable": false,
             "flapCount": 1
         },
@@ -4548,6 +4555,15 @@
             "path": "renders/ui-builder/UiBuilderUnexportablePalettePreview-2c6c35dc.png",
             "versions": [
                 {
+                    "blob": "61b0bbbbfecc371f3a565df0940592d32539da1d",
+                    "commit": "db899b4ba7d6cf171414d57f174b4b90eb8a4349",
+                    "date": "2026-10-15T21:03:31Z",
+                    "sourceSha": "080f22b3",
+                    "sinceCommit": "310089217746c4ecc60a07b55b2c8b365cc08b21",
+                    "commits": 2,
+                    "occurrences": 2
+                },
+                {
                     "blob": "ed303b2da986582d28fbe7fc84a706d6ae16eda2",
                     "commit": "1316c7e0eee189ce6d6ad5361e219f09cc5f3784",
                     "date": "2026-10-15T19:00:15Z",
@@ -4568,13 +4584,6 @@
                     "commit": "da33d3dc522ea5609af2acc080ce78f3c71f4dad",
                     "date": "2026-10-15T18:46:23Z",
                     "sourceSha": "a242dea4",
-                    "commits": 1
-                },
-                {
-                    "blob": "61b0bbbbfecc371f3a565df0940592d32539da1d",
-                    "commit": "310089217746c4ecc60a07b55b2c8b365cc08b21",
-                    "date": "2026-10-15T18:38:14Z",
-                    "sourceSha": "d53f206f",
                     "commits": 1
                 },
                 {
@@ -4890,9 +4899,9 @@
                     "commits": 1
                 }
             ],
-            "observations": 175,
+            "observations": 176,
             "unstable": true,
-            "flapCount": 133
+            "flapCount": 134
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
             "path": "renders/ui-builder/UiBuilderVariantStripPreview-f5ba4732.png",
@@ -7675,6 +7684,13 @@
             "path": "renders/ui-builder/WearWidgetCodePanePreview-59a2e9f9.png",
             "versions": [
                 {
+                    "blob": "ae3353f802f8fc9727d2791827b1d856a2e31d98",
+                    "commit": "db899b4ba7d6cf171414d57f174b4b90eb8a4349",
+                    "date": "2026-10-15T21:03:31Z",
+                    "sourceSha": "080f22b3",
+                    "commits": 1
+                },
+                {
                     "blob": "4ffcef17dae6edb0c7d67224e2cbe836a29c13e3",
                     "commit": "e5c8c7d7c5cf0901752f13132a95f8ebc02f77f2",
                     "date": "2026-10-15T18:30:44Z",
@@ -7766,7 +7782,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 13,
+            "observations": 14,
             "unstable": false,
             "flapCount": 1
         },
