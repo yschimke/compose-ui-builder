@@ -228,6 +228,10 @@ private fun LiveSessionApp(
     }
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
   var authoritativeDocument by remember { mutableStateOf<DesignDocumentV1?>(null) }
+  // Whether this design has been served. Until it is (the New design screen, an open still in
+  // flight, or one refused for access), the design's own routes have nothing to answer but 404, so
+  // nothing below asks them.
+  val designServed = authoritativeDocument != null
   // The durable cursor the server last answered with; recorded as part of a fork point when a
   // design is taken offline.
   var authoritativeSequence by remember { mutableStateOf(0L) }
@@ -242,8 +246,13 @@ private fun LiveSessionApp(
   var sessionStatus by remember { mutableStateOf("Connecting…") }
   var designVisibility by
     remember(config.designId) { mutableStateOf<DesignVisibilityPayload?>(null) }
-  LaunchedEffect(config.designId, localSession) {
-    if (localSession == null && !config.startWithNewDesign && config.designVisibilitySupported) {
+  LaunchedEffect(config.designId, localSession, designServed) {
+    if (
+      designServed &&
+        localSession == null &&
+        !config.startWithNewDesign &&
+        config.designVisibilitySupported
+    ) {
       while (true) {
         try {
           designVisibility =
@@ -386,8 +395,13 @@ private fun LiveSessionApp(
   var agentPreferences by agentPreferencesState
   var activeAgents by
     remember(config.designId) { mutableStateOf<List<UiBuilderCollaborator>?>(null) }
-  LaunchedEffect(config.designId, localSession, config.selectors.revision) {
-    if (localSession != null || config.startWithNewDesign || config.selectors.revision != null)
+  LaunchedEffect(config.designId, localSession, config.selectors.revision, designServed) {
+    if (
+      !designServed ||
+        localSession != null ||
+        config.startWithNewDesign ||
+        config.selectors.revision != null
+    )
       return@LaunchedEffect
     while (true) {
       try {
@@ -578,7 +592,8 @@ private fun LiveSessionApp(
   // Moved on by a publish from this editor: the library it lists and the drift it reports both
   // changed, and nothing else would tell this page to read them again.
   var libraryGeneration by remember { mutableStateOf(0) }
-  LaunchedEffect(config.designId, pinnedRevision, libraryGeneration) {
+  LaunchedEffect(config.designId, pinnedRevision, libraryGeneration, designServed) {
+    if (!designServed) return@LaunchedEffect
     componentDrift = loadComponentDrift(config.designId, pinnedRevision)
   }
   // What the project shares, read once per design: the shelf only has to be as fresh as the
@@ -606,13 +621,14 @@ private fun LiveSessionApp(
   // Nothing is persisted until this has finished; otherwise the editor's empty initial state would
   // overwrite the stored reference.
   var referenceLoaded by remember(config.designId) { mutableStateOf(false) }
-  LaunchedEffect(config.designId, config.localStorage) {
+  LaunchedEffect(config.designId, config.localStorage, designServed) {
     // Local designs have no server to store reference pictures, and `localStorage` is too small for
     // them.
     if (config.localStorage) {
       referenceStatus = LOCAL_REFERENCE_UNAVAILABLE
       return@LaunchedEffect
     }
+    if (!designServed) return@LaunchedEffect
     installReferenceBridge()
     restoredReference = references.load()
     storedReference =
@@ -641,13 +657,14 @@ private fun LiveSessionApp(
 
   // One socket for the life of the design; it sends the current board on connect. The load below is
   // only the fallback for hosts that refuse the upgrade (a snapshot, not a feed).
-  DisposableEffect(config.designId, config.localStorage) {
+  DisposableEffect(config.designId, config.localStorage, designServed) {
     // A discussion is a thing several people have, and a design only this browser holds has nobody
     // to have it with. The panel stays, empty, saying so.
     if (config.localStorage) {
       commentStatus = LOCAL_COMMENTS_UNAVAILABLE
       return@DisposableEffect onDispose {}
     }
+    if (!designServed) return@DisposableEffect onDispose {}
     val watch =
       commentHost.watch(
         onBoard = { board ->
@@ -661,8 +678,8 @@ private fun LiveSessionApp(
       )
     onDispose { watch.close() }
   }
-  LaunchedEffect(config.designId, config.localStorage) {
-    if (config.localStorage) return@LaunchedEffect
+  LaunchedEffect(config.designId, config.localStorage, designServed) {
+    if (config.localStorage || !designServed) return@LaunchedEffect
     commentHost.load()?.let { board ->
       // Only if the socket has not already delivered something newer: the two race by design and
       // the sequence is what settles it, rather than whichever answer happened to arrive last.
@@ -706,8 +723,8 @@ private fun LiveSessionApp(
   var reviewAvailable by remember(config.designId) { mutableStateOf(false) }
   var reviewStatus by remember(config.designId) { mutableStateOf<String?>(null) }
   val reviewedRevision = latestEditorDocument?.revision ?: document?.revision
-  LaunchedEffect(config.designId, config.localStorage, reviewedRevision) {
-    if (config.localStorage) return@LaunchedEffect
+  LaunchedEffect(config.designId, config.localStorage, reviewedRevision, designServed) {
+    if (config.localStorage || !designServed) return@LaunchedEffect
     reviewHost.load()?.let {
       review = it
       reviewAvailable = true
@@ -724,8 +741,14 @@ private fun LiveSessionApp(
   var suggestionsAvailable by remember(config.designId) { mutableStateOf(false) }
   var suggestionStatus by remember(config.designId) { mutableStateOf<String?>(null) }
   var suggestionsGeneration by remember(config.designId) { mutableStateOf(0) }
-  LaunchedEffect(config.designId, config.localStorage, reviewedRevision, suggestionsGeneration) {
-    if (config.localStorage) return@LaunchedEffect
+  LaunchedEffect(
+    config.designId,
+    config.localStorage,
+    reviewedRevision,
+    suggestionsGeneration,
+    designServed,
+  ) {
+    if (config.localStorage || !designServed) return@LaunchedEffect
     while (true) {
       val listed = suggestionHost.list()
       if (listed == null) {
