@@ -68,7 +68,7 @@
     "functionName": "CatalogRuntimeRoutingPreview",
     "module": "ui-builder",
     "renderBasename": "CatalogRuntimeRoutingPreview-00544b46.png",
-    "sha256": "3e19b7d90d36b4cbade0e818b5fd449eb0021a7777ef40039ad09687aad2447a",
+    "sha256": "d4a2b9765bb55309916320591a00d1ce8cb1bb5f84fdc4ea0f674a9694d51442",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/CatalogRuntimeRoutingPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.ComponentPackPreviewsKt.ComponentPacksPanelPreview": {
@@ -1276,7 +1276,7 @@
     "functionName": "WearWidgetCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearWidgetCodePanePreview-59a2e9f9.png",
-    "sha256": "0f293ac187336503d2a285ae023454af11446f7631023a3c3559b44074b3ef4d",
+    "sha256": "2b239bda1e2b2c78504156a41933b7462047b6a03a577029b1c75fcee7a565cd",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearWidgetSamplePreviewKt.WearWidgetHostShapesPreview": {
