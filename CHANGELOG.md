@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.115.0](https://github.com/yschimke/compose-ui-builder/compare/v3.114.0...v3.115.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **runtime:** retire Wear M3 Kotlin catalog generator ([#846](https://github.com/yschimke/compose-ui-builder/issues/846))
+* **runtime:** retire Remote M3 Kotlin catalog generator ([#842](https://github.com/yschimke/compose-ui-builder/issues/842))
+
+### Features
+
+* **export:** mix theme colours by a fraction, the Remote colour tween ([#835](https://github.com/yschimke/compose-ui-builder/issues/835)) ([6f5bab2](https://github.com/yschimke/compose-ui-builder/commit/6f5bab28191138bb0ebadc01b9a829e2941f3b49))
+* **export:** name placeholder pictures and document refusals on the gate outcome ([#848](https://github.com/yschimke/compose-ui-builder/issues/848)) ([547d2e9](https://github.com/yschimke/compose-ui-builder/commit/547d2e99ede46bf2a1f41a0a50cc73ef7175b23f))
+* **mcp-app:** load hosted catalogs with bundled fallback ([#845](https://github.com/yschimke/compose-ui-builder/issues/845)) ([f3672c3](https://github.com/yschimke/compose-ui-builder/commit/f3672c3d90b6d4d57bf5e38b14220d56e6803a8d))
+* **runtime:** retire Remote M3 Kotlin catalog generator ([#842](https://github.com/yschimke/compose-ui-builder/issues/842)) ([de6ae70](https://github.com/yschimke/compose-ui-builder/commit/de6ae70fca5a86e691baad706a09deb3909ed448))
+* **runtime:** retire Wear M3 Kotlin catalog generator ([#846](https://github.com/yschimke/compose-ui-builder/issues/846)) ([77eee69](https://github.com/yschimke/compose-ui-builder/commit/77eee693fc2a9d5a48d6e64838c59d14b3b10a46))
+* tag Remote Compose nodes for the native lane's bounds ([#834](https://github.com/yschimke/compose-ui-builder/issues/834)) ([3fe2a01](https://github.com/yschimke/compose-ui-builder/commit/3fe2a01405025eaf5c2dc8c2863647f98f224258))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.32.0 ([#831](https://github.com/yschimke/compose-ui-builder/issues/831)) ([0b6c463](https://github.com/yschimke/compose-ui-builder/commit/0b6c463904497eb537bf6511b598da24b6f2fd66))
+* **preview:** load Wear and Remote M3 from published catalogs in the new-design preview ([#850](https://github.com/yschimke/compose-ui-builder/issues/850)) ([166729c](https://github.com/yschimke/compose-ui-builder/commit/166729c7f08c87f9ec2a095c6392a8ce39eea492))
+
 ## [3.114.0](https://github.com/yschimke/compose-ui-builder/compare/v3.113.0...v3.114.0) (2026-10-14)
 
 
