@@ -935,6 +935,16 @@ private fun RenderNode(
           modifier = measured,
           indicatorColor = node.wearColor("indicatorColor"),
           trackColor = node.wearColor("trackColor"),
+          curved =
+            if (node.componentId == REMOTE_CURVED_PROGRESS_INDICATOR)
+              CurvedArc(
+                startAngle = node.float("startAngle", 135f),
+                sweepAngle = node.float("sweepAngle", 90f),
+                strokeWidthDp = node.float("strokeWidth", 8f),
+                paddingDp = node.float("padding", 2f),
+                reverseDirection = node.bool("reverseDirection", false),
+              )
+            else null,
         )
       "wear-m3/page-indicator" ->
         WearCanvasPageIndicator(
@@ -3142,3 +3152,6 @@ internal const val DEFAULT_SELECTED_DATE = "2024-05-16"
 internal const val DEFAULT_PICKED_HOUR = 10
 
 internal const val DEFAULT_PICKED_MINUTE = 30
+
+/** Draws as a determinate [CurvedArc] although its canvas adapter is Wear's `arc` variant. */
+internal const val REMOTE_CURVED_PROGRESS_INDICATOR = "remote-m3/remote-curved-progress-indicator"

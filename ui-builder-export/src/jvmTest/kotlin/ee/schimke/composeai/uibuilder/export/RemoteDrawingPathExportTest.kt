@@ -84,10 +84,10 @@ class RemoteDrawingPathExportTest {
     assertContains(
       source,
       "withTransform({ scale(96.rdp.toPx() / 24.rf, 96.rdp.toPx() / 24.rf); " +
-        "clipPath(RemotePath(\"M12 2 L22 22 L2 22 Z\")); " +
+        "clipPath(remotePathOf(\"M12 2 L22 22 L2 22 Z\")); " +
         "scale(24.rf / 96.rdp.toPx(), 24.rf / 96.rdp.toPx()) }) {",
     )
-    assertContains(source, "import androidx.compose.remote.creation.RemotePath")
+    assertContains(source, "import androidx.compose.remote.creation.compose.path.RemotePath")
   }
 
   @Test
@@ -130,12 +130,55 @@ class RemoteDrawingPathExportTest {
   }
 
   @Test
+  fun `a path is built as the RemotePath the draw scope takes, once per file`() {
+    val source =
+      exported(
+        document(
+          """"leaf":{"id":"leaf","componentId":"draw/path","properties":{
+            "pathData":{"type":"string","value":"M2 2 A10 10 0 0 1 22 2 Z"},
+            "color":{"type":"color","value":"#FFFF0000"}}},
+          "stem":{"id":"stem","componentId":"draw/path","properties":{
+            "pathData":{"type":"string","value":"M12 2 L12 22"},
+            "color":{"type":"color","value":"#FF00FF00"}}}""",
+          "\"leaf\", \"stem\"",
+        ),
+        "PathTypes",
+      )
+
+    // `RemoteDrawScope.drawPath` takes the compose path's `RemotePath`, which has no string
+    // constructor; the core writer's `androidx.compose.remote.creation.RemotePath` does, and an
+    // export that wrote it did not compile.
+    assertContains(source, "drawPath(remotePathOf(\"M2 2 A10 10 0 0 1 22 2 Z\"), ")
+    assertContains(source, "import androidx.compose.remote.creation.compose.path.RemotePath")
+    assertContains(source, "import androidx.compose.ui.graphics.vector.PathParser")
+    assertContains(source, "import androidx.compose.ui.graphics.PathSegment")
+    assertTrue("import androidx.compose.remote.creation.RemotePath\n" !in source, source)
+    assertEquals(1, Regex("private fun remotePathOf\\(").findAll(source).count(), source)
+  }
+
+  @Test
+  fun `a file with no path carries no path helper`() {
+    val source =
+      exported(
+        document(
+          """"dot":{"id":"dot","componentId":"draw/circle","properties":{
+            "color":{"type":"color","value":"#FFFF0000"}}}""",
+          "\"dot\"",
+        ),
+        "NoPath",
+      )
+
+    assertTrue("remotePathOf" !in source, source)
+    assertTrue("PathParser" !in source, source)
+  }
+
+  @Test
   fun `a morph is a drawTweenPath driven by its progress`() {
     val source = exported(morph, "Morph")
 
     assertContains(
       source,
-      "drawTweenPath(RemotePath(\"M4 12 Q12 12 20 12\"), RemotePath(\"M4 12 Q12 22 20 12\"), " +
+      "drawTweenPath(remotePathOf(\"M4 12 Q12 12 20 12\"), remotePathOf(\"M4 12 Q12 22 20 12\"), " +
         "tween = clamp(open, 0.rf, 1.rf), paint = paintMouth)",
     )
   }

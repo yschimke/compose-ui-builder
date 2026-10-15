@@ -28,8 +28,8 @@ import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialogContent
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppCard
-import androidx.wear.compose.material3.ArcProgressIndicator
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ArcProgressIndicator
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ButtonGroup
 import androidx.wear.compose.material3.Card
@@ -406,6 +406,11 @@ internal fun WearCanvasProgressIndicator(
   modifier: Modifier = Modifier,
   indicatorColor: Color = Color.Unspecified,
   trackColor: Color = Color.Unspecified,
+  /**
+   * Set for `RemoteCurvedProgressIndicator`, which shares the `arc` variant but is determinate;
+   * see [CurvedArc]. Null for Wear's own `ArcProgressIndicator`, which is indeterminate.
+   */
+  curved: CurvedArc? = null,
 ) {
   val clamped = progress.coerceIn(0f, 1f)
   // The design's two colours over the library's own: `Unspecified` is "Wear's default" to
@@ -430,9 +435,24 @@ internal fun WearCanvasProgressIndicator(
         enabled = enabled,
         colors = colors,
       )
-    // `ArcProgressIndicator` takes angles, not a progress fraction, so this draws the library's
-    // indeterminate arc rather than faking a determinate one.
-    "arc" -> ArcProgressIndicator(modifier = modifier, colors = colors)
+    "arc" ->
+      if (curved != null) {
+        // `RemoteCurvedProgressIndicator`, which the export and the device preview draw as a
+        // determinate arc. Drawing Wear's indeterminate `ArcProgressIndicator` for it showed an
+        // animation that a one-frame PNG export at a frozen clock drew as nothing, and never at
+        // the authored progress.
+        CurvedArcProgress(
+          progress = clamped,
+          arc = curved,
+          indicator = if (enabled) colors.indicatorBrush else colors.disabledIndicatorBrush,
+          track = if (enabled) colors.trackBrush else colors.disabledTrackBrush,
+          modifier = modifier,
+        )
+      } else {
+        // Wear's own arc takes angles, not a progress fraction, and the wear-m3 export writes it,
+        // so this draws the library's indeterminate arc rather than faking a determinate one.
+        ArcProgressIndicator(modifier = modifier, colors = colors)
+      }
     // `circular` and anything unrecognised. A default rather than a refusal: an unknown enum is a
     // document the validator should be complaining about, not a reason for the canvas to go blank.
     else ->
@@ -961,5 +981,47 @@ internal fun WearCanvasButton(
           transformation = transformation,
         )
       }
+  }
+}
+
+/**
+ * `RemoteCurvedProgressIndicator`'s geometry, with its defaults: the track runs [sweepAngle]
+ * degrees clockwise from [startAngle] (three o'clock is 0), inset from the smaller side by
+ * [paddingDp] and half the stroke; the indicator covers `progress` of it, from the far end when
+ * [reverseDirection].
+ */
+internal data class CurvedArc(
+  val startAngle: Float = 135f,
+  val sweepAngle: Float = 90f,
+  val strokeWidthDp: Float = 8f,
+  val paddingDp: Float = 2f,
+  val reverseDirection: Boolean = false,
+)
+
+/** [CurvedArc]'s track and its determinate indicator, both with round caps, as the player draws. */
+@Composable
+internal fun CurvedArcProgress(
+  progress: Float,
+  arc: CurvedArc,
+  indicator: androidx.compose.ui.graphics.Brush,
+  track: androidx.compose.ui.graphics.Brush,
+  modifier: Modifier = Modifier,
+) {
+  androidx.compose.foundation.Canvas(modifier.fillMaxSize()) {
+    val stroke = arc.strokeWidthDp.dp.toPx()
+    val radius = size.minDimension / 2f - arc.paddingDp.dp.toPx() - stroke / 2f
+    if (radius <= 0f) return@Canvas
+    val topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius)
+    val box = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f)
+    val style =
+      androidx.compose.ui.graphics.drawscope.Stroke(
+        width = stroke,
+        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+      )
+    drawArc(track, arc.startAngle, arc.sweepAngle, false, topLeft, box, style = style)
+    val sweep = arc.sweepAngle * progress
+    if (sweep <= 0f) return@Canvas
+    val start = if (arc.reverseDirection) arc.startAngle + arc.sweepAngle - sweep else arc.startAngle
+    drawArc(indicator, start, sweep, false, topLeft, box, style = style)
   }
 }
