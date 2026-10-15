@@ -1089,7 +1089,11 @@ private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
  * Semantic actions target inspected Compose nodes by stable id; the sibling overlay remains
  * pointer-inert and outside the renderer's Compose tree.
  */
-private fun mountSandboxRenderer(runtimeId: String, documentJson: String, authoring: Boolean): Unit =
+private fun mountSandboxRenderer(
+  runtimeId: String,
+  documentJson: String,
+  authoring: Boolean,
+): Unit =
   js(
     """(async function () {
       const UNDRAWN_KEY = 'undrawn';
