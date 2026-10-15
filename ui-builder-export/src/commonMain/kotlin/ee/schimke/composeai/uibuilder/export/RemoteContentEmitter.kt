@@ -2272,14 +2272,14 @@ internal class RemoteContentEmitter(
           refusals += "nodes.${node.id}.pathData: a path needs SVG path data to draw"
           return emptyList()
         }
-        usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+        usesRemotePath = true
         usesRemoteFloat = true
         val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
         val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
         lines +=
           "${pad}withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / $viewportHeight, " +
             "RemoteOffset(0.rf, 0.rf)) }) {"
-        lines += "$pad${INDENT}drawPath(RemotePath(\"${data.escaped()}\"), $paint)"
+        lines += "$pad${INDENT}drawPath(remotePathOf(\"${data.escaped()}\"), $paint)"
         lines += "$pad}"
       }
       UiDrawing.MORPH -> {
@@ -2291,7 +2291,7 @@ internal class RemoteContentEmitter(
               "the same count of numbers"
           return emptyList()
         }
-        usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+        usesRemotePath = true
         usesRemoteFloat = true
         // Clamped to 0..1 as the canvas clamps it: the player's tween is `from + (to - from) * t`
         // and extrapolates past either end.
@@ -2312,8 +2312,8 @@ internal class RemoteContentEmitter(
           "${pad}withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / $viewportHeight, " +
             "RemoteOffset(0.rf, 0.rf)) }) {"
         lines +=
-          "$pad${INDENT}drawTweenPath(RemotePath(\"${from.escaped()}\"), " +
-            "RemotePath(\"${to.escaped()}\"), tween = $progress, paint = $paint)"
+          "$pad${INDENT}drawTweenPath(remotePathOf(\"${from.escaped()}\"), " +
+            "remotePathOf(\"${to.escaped()}\"), tween = $progress, paint = $paint)"
         lines += "$pad}"
       }
       "draw/text" -> {
@@ -2361,7 +2361,7 @@ internal class RemoteContentEmitter(
           return emptyList()
         }
         val text = drawText(node) ?: return emptyList()
-        usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+        usesRemotePath = true
         usesRemoteFloat = true
         // The path is in dp, so the drawing is scaled by one dp's pixels; the paint's text size
         // is divided by the same, so the glyphs come out the size authored.
@@ -2369,7 +2369,7 @@ internal class RemoteContentEmitter(
         val density = "${1f.dpLiteral()}.toPx()"
         lines += "${pad}withTransform({ scale($density, $density, RemoteOffset(0.rf, 0.rf)) }) {"
         lines +=
-          "$pad${INDENT}drawTextOnPath($text, RemotePath(\"${data.escaped()}\"), " +
+          "$pad${INDENT}drawTextOnPath($text, remotePathOf(\"${data.escaped()}\"), " +
             "hOffset = ${dp("startDp")}, vOffset = ${dp("offsetDp")}, paint = $paint)"
         lines += "$pad}"
       }
@@ -2426,7 +2426,7 @@ internal class RemoteContentEmitter(
         if (clipPath != null) {
           // Scale into the path's viewport, clip, and scale back out, so the clip has the
           // viewport's shape while enclosed operations keep canvas coordinates.
-          usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+          usesRemotePath = true
           val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
           val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
           val op =
@@ -2436,7 +2436,7 @@ internal class RemoteContentEmitter(
             } else ""
           return block(
             "withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / " +
-              "$viewportHeight); clipPath(RemotePath(\"${clipPath.escaped()}\")$op); " +
+              "$viewportHeight); clipPath(remotePathOf(\"${clipPath.escaped()}\")$op); " +
               "scale($viewportWidth / ${extent.width}, $viewportHeight / ${extent.height}) })"
           )
         }
@@ -3697,7 +3697,10 @@ internal class RemoteContentEmitter(
    * level after the preview.
    */
   val declarations: List<String>
-    get() = functions.values.map { it.declaration() } + lottieDeclarations.toList()
+    get() =
+      functions.values.map { it.declaration() } +
+        lottieDeclarations.toList() +
+        listOfNotNull(REMOTE_PATH_HELPER.takeIf { usesRemotePath })
 
   private val lottieDeclarations = mutableListOf<String>()
 
@@ -3728,6 +3731,7 @@ internal class RemoteContentEmitter(
     if (usesRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteRow"
     if (usesLottie) imports += "com.google.android.horologist.remotecompose.lottie.LottieAnimation"
     if (usesRemoteFloat) imports += "androidx.compose.remote.creation.compose.state.rf"
+    if (usesRemotePath) imports += REMOTE_PATH_HELPER_IMPORTS
     if (usesRemoteTextUnit) imports += "androidx.compose.remote.creation.compose.state.rsp"
     if (usesRemoteBoolean) imports += "androidx.compose.remote.creation.compose.state.rb"
     if (usesCombinedAction)
@@ -3845,6 +3849,8 @@ internal class RemoteContentEmitter(
   private var usesCustomComponent = false
   private var usesLottie = false
   private var usesRemoteFloat = false
+  /** A path is drawn, clipped to or tweened, so the file carries [REMOTE_PATH_HELPER]. */
+  private var usesRemotePath = false
   private var usesSp = false
   private var usesFractionalSp = false
   private var usesHorizontalGradient = false
@@ -4720,3 +4726,40 @@ internal fun kotlinx.serialization.json.JsonElement.numberOrNull(): Float? =
 
 internal fun kotlinx.serialization.json.JsonElement.intOrNull(): Int? =
   (this as? JsonObject)?.get("value")?.jsonPrimitive?.intOrNull
+
+/**
+ * SVG path data as the `RemotePath` `RemoteDrawScope` draws:
+ * `androidx.compose.remote.creation.compose.path`'s, which has no string constructor, not
+ * `androidx.compose.remote.creation.RemotePath`, the core writer's, which does but which no draw
+ * call takes. Compose's `PathParser` reads the data, arcs and smooth curves included, and its
+ * segments are replayed, as the catalog's device preview does.
+ */
+internal val REMOTE_PATH_HELPER: String =
+  """
+  private fun remotePathOf(pathData: String): RemotePath {
+    val path = RemotePath()
+    val segments = PathParser().parsePathString(pathData).toPath().iterator()
+    while (segments.hasNext()) {
+      val segment = segments.next()
+      val p = segment.points
+      when (segment.type) {
+        PathSegment.Type.Move -> path.moveTo(p[0], p[1])
+        PathSegment.Type.Line -> path.lineTo(p[2], p[3])
+        PathSegment.Type.Quadratic -> path.quadTo(p[2], p[3], p[4], p[5])
+        PathSegment.Type.Conic -> path.conicTo(p[2], p[3], p[4], p[5], segment.weight)
+        PathSegment.Type.Cubic -> path.cubicTo(p[2], p[3], p[4], p[5], p[6], p[7])
+        PathSegment.Type.Close -> path.close()
+        PathSegment.Type.Done -> Unit
+      }
+    }
+    return path
+  }
+  """
+    .trimIndent()
+
+internal val REMOTE_PATH_HELPER_IMPORTS: List<String> =
+  listOf(
+    "androidx.compose.remote.creation.compose.path.RemotePath",
+    "androidx.compose.ui.graphics.PathSegment",
+    "androidx.compose.ui.graphics.vector.PathParser",
+  )

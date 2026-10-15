@@ -26,7 +26,7 @@
 32 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/WearFoundationMenu.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteComposeSources.kt
 38 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/StarterContent.kt
-28 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt
+29 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt
 30 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/capability/CapabilityCatalog.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/capability/DesignTokens.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/CanvasPopOut.kt

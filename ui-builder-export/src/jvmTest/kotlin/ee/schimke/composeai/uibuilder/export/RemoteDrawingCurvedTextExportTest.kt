@@ -88,7 +88,7 @@ class RemoteDrawingCurvedTextExportTest {
     )
     assertContains(
       source,
-      "drawTextOnPath(\"along the way\".rs, RemotePath(\"M8 80 Q48 8 88 80\"), " +
+      "drawTextOnPath(\"along the way\".rs, remotePathOf(\"M8 80 Q48 8 88 80\"), " +
         "hOffset = 4.rf, vOffset = 0.rf, paint = paintLabel)",
     )
     assertContains(source, "textSize = 14.rsp.toPx() / 1.rdp.toPx()")
