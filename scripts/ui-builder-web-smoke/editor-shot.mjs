@@ -83,6 +83,18 @@ try {
     { timeout: 120_000 },
   );
   await page.waitForTimeout(options.settle);
+  // What the editor's canvases said they did not draw as themselves: the text form of a red box,
+  // which a screenshot alone leaves for someone to notice.
+  const undrawn = await page.evaluate(() => globalThis.__uiBuilderUndrawn ?? null);
+  if (undrawn === null) {
+    console.log('undrawn: not reported (an editor that predates the report)');
+  } else {
+    for (const [key, nodes] of Object.entries(undrawn)) {
+      if (nodes.length === 0) continue;
+      const list = nodes.map((it) => `${it.nodeId} (${it.componentId}, ${it.reason})`).join(', ');
+      console.log(`undrawn in ${key}: ${list}`);
+    }
+  }
   if (replacement) {
     console.log(replaced > 0 ? `replaced the document ${replaced}×` : 'the document was never sent');
     // The editor draws a swapped revision against the catalog the host sent with the current one.

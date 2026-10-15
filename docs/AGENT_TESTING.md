@@ -331,6 +331,30 @@ surfaces come from the catalog runtime (`remote-m3-catalog`'s `SemanticCanvas` a
 `RemoteM3DevicePreview`), not from this repository's `UiBuilderRenderer`, which draws the canvas.
 When the two panes disagree, look in the catalog runtime first.
 
+### Undrawn nodes: when a canvas cannot be trusted
+
+A canvas that draws a diagnostic or a labelled stand-in instead of a component now says so, rather
+than leaving a red box for someone to notice:
+
+- The renderer SDK records the node (`UiBuilderUndrawnNodes`, reason `unsupported` or `stand-in`):
+  automatically for a placement whose component is gone, and from a runtime's own fallback through
+  `ReportUndrawn()`.
+- A catalog runtime sends the list as `undrawn` beside its `rendered` / `inspectionUpdated`
+  inspection; an empty list means it drew everything, and a missing key means it predates the report.
+- The editor's status bar shows `N not drawn here: <components>`, red when any is unsupported, and
+  the web build publishes the record on `globalThis.__uiBuilderUndrawn["<designId>@<revision>"]`,
+  which `editor-shot.mjs` prints.
+
+[`runtime-coverage.mjs`](../scripts/ui-builder-web-smoke/runtime-coverage.mjs) is the gate built on
+it: it puts a catalog's own designs through its runtime's authoring canvas, using the editor's
+sandbox shell (`?rendererRuntimeId=<id>&rendererDocument=/<path>`), and fails on any unsupported
+node, or on a runtime that does not report.
+
+```sh
+node scripts/ui-builder-web-smoke/runtime-coverage.mjs \
+  ui-builder/build/wasmDist path/to/unpacked-runtime path/to/designs/*.uid
+```
+
 ## Sandbox gotchas
 
 1. **HTTP 429 from Maven Central** during dependency resolution, on a different artifact each time.

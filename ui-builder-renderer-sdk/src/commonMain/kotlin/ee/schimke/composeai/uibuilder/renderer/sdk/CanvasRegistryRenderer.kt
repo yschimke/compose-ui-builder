@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -14,6 +15,8 @@ internal constructor(
   val prepared: PreparedCanvasNode,
   val state: Map<String, String?>,
   val renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit,
+  private val report: (nodeId: String, componentId: String, reason: String) -> Unit = { _, _, _ ->
+  },
 ) {
   val node: UiBuilderNode
     get() = entry.node
@@ -23,6 +26,19 @@ internal constructor(
 
   val adapterId: String
     get() = entry.adapterId
+
+  /**
+   * Say that this node is not drawn as itself: call it from the branch that draws a diagnostic
+   * ([UiBuilderUndrawnNode.UNSUPPORTED]) or a labelled stand-in ([UiBuilderUndrawnNode.STAND_IN]).
+   * The editor and the catalog runtime protocol report it, so a canvas that disagrees with the
+   * export says so instead of relying on someone noticing a red box.
+   */
+  @Composable
+  fun ReportUndrawn(reason: String = UiBuilderUndrawnNode.UNSUPPORTED) {
+    val nodeId = node.id
+    val componentId = node.componentId
+    SideEffect { report(nodeId, componentId, reason) }
+  }
 
   fun slot(name: String): List<String> = node.slots[name].orEmpty()
 
@@ -101,10 +117,15 @@ fun CanvasDocumentScope.RenderCanvasNode(
     entry.renderStructure(
       modifier = prepared.modifier,
       renderChild = renderChild,
-      missingComponent = missingComponent,
+      // A placement whose component is gone draws a diagnostic, so it is undrawn here.
+      missingComponent = { label, next ->
+        val node = entry.node
+        SideEffect { recordUndrawn(node.id, node.componentId, UiBuilderUndrawnNode.UNSUPPORTED) }
+        missingComponent(label, next)
+      },
     )
   ) {
     return
   }
-  fallback(CanvasNodeFallbackScope(entry, prepared, state, renderChild))
+  fallback(CanvasNodeFallbackScope(entry, prepared, state, renderChild, ::recordUndrawn))
 }

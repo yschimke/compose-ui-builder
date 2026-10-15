@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererActionV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererMessageV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -327,6 +328,16 @@ class CatalogRuntimeProtocolEndpoint(
               snapshot,
             ),
           )
+          // Beside the inspection rather than in it: the inspection is the contracts' wire type,
+          // and a host that predates this ignores the key. Always present, so a host can tell a
+          // runtime that drew everything from one that does not report.
+          put(
+            UNDRAWN_PAYLOAD_KEY,
+            RUNTIME_PROTOCOL_JSON.encodeToJsonElement(
+              ListSerializer(UiBuilderUndrawnNode.serializer()),
+              UiBuilderUndrawnNodes.forGeneration(snapshot.generation.key),
+            ),
+          )
         },
     )
 
@@ -468,7 +479,14 @@ class CatalogRuntimeHostSession(
     if (response.type == "rendered" && expected is Pending.Inspection) {
       completedRender = response.requestId to expected.document
     }
+    if (expected is Pending.Inspection) recordUndrawn(response, expected.document)
     return response
+  }
+
+  /** What the runtime said it did not draw, kept with the rest of this generation's. */
+  private fun recordUndrawn(response: CatalogRuntimeMessage, document: DocumentRef) {
+    val key = undrawnGenerationKey(document.id, document.revision)
+    undrawnNodesOf(response)?.forEach { UiBuilderUndrawnNodes.record(key, it) }
   }
 
   /**
@@ -488,6 +506,7 @@ class CatalogRuntimeHostSession(
     val snapshot = validatedInspection(response.payload) ?: return null
     if (snapshot.documentId != document.id || snapshot.documentRevision != document.revision)
       return null
+    recordUndrawn(response, document)
     return response
   }
 
@@ -621,3 +640,24 @@ internal val RUNTIME_DOCUMENT_JSON = Json(RUNTIME_PROTOCOL_JSON) { ignoreUnknown
 
 /** How many request ids a runtime remembers to refuse a replay. */
 internal const val ACCEPTED_REQUEST_ID_HISTORY = 1024
+
+/** The `rendered` / `inspectionUpdated` payload key listing [UiBuilderUndrawnNode]s. */
+const val UNDRAWN_PAYLOAD_KEY: String = "undrawn"
+
+/**
+ * The nodes a runtime reported it did not draw in [message], or null when the runtime does not
+ * report them (it predates [UNDRAWN_PAYLOAD_KEY], or the payload is malformed): "nothing undrawn"
+ * and "not reported" are different answers.
+ */
+fun undrawnNodesOf(message: CatalogRuntimeMessage): List<UiBuilderUndrawnNode>? {
+  val element = message.payload[UNDRAWN_PAYLOAD_KEY] ?: return null
+  return try {
+    RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+        ListSerializer(UiBuilderUndrawnNode.serializer()),
+        element,
+      )
+      .take(MAX_INSPECTION_NODES)
+  } catch (_: Exception) {
+    null
+  }
+}

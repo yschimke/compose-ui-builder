@@ -1,0 +1,41 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "undrawn-probe",
+  "title": "Undrawn probe",
+  "revision": 1,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 360,
+    "heightDp": 240,
+    "density": 2.0,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr"
+  },
+  "stateVariables": {},
+  "roots": ["column"],
+  "nodes": {
+    "column": {
+      "id": "column",
+      "componentId": "layout/column",
+      "properties": {},
+      "modifiers": [],
+      "slots": { "children": ["mystery"] },
+      "eventBindings": {}
+    },
+    "mystery": {
+      "id": "mystery",
+      "componentId": "nowhere/mystery",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    }
+  }
+}

@@ -209,6 +209,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasRenderNode
 import ee.schimke.composeai.uibuilder.renderer.sdk.LocalCanvasAdapterRegistry
 import ee.schimke.composeai.uibuilder.renderer.sdk.RenderCanvasNode
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderDrawCanvas
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderModifierPlan
@@ -1958,22 +1959,26 @@ private fun RenderNode(
         )
       // A pack's component: declared by the catalog and drawn here as its name and place, since the
       // browser cannot link the classes that draw it. The caption names its source catalog.
-      in nativeOnly ->
+      in nativeOnly -> {
+        ReportUndrawn(UiBuilderUndrawnNode.STAND_IN)
         NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
           node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
         }
+      }
       // Checked against the component id, not the adapter id, so a component whose catalog names an
       // adapter this build lacks draws a placeholder rather than an error (contract item 17).
       else ->
         if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
           // On the palette and exportable, but this canvas has no case for it (no branch, or an
           // adapter this build doesn't ship).
+          ReportUndrawn(UiBuilderUndrawnNode.STAND_IN)
           NativeOnlyPlaceholder(node, measured) {
             // Keep the children (e.g. an icon inside an icon button) visible.
             node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
           }
         } else {
           // Not the catalog's at all. Now the only thing this says, and it is true when it says it.
+          ReportUndrawn(UiBuilderUndrawnNode.UNSUPPORTED)
           UnsupportedComponentDiagnostic(node.componentId, measured)
         }
     }

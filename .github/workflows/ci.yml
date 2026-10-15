@@ -220,6 +220,12 @@ jobs:
       - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-renderer:verifyRendererRuntime
         env:
           WASM_OPT: ${{ github.event_name != 'pull_request' }}
+      # For `ui-builder-web-smoke`'s coverage gate, which draws designs through this runtime.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-builder-renderer-runtime
+          path: ui-builder-renderer/build/wasmRendererDist
+          if-no-files-found: error
 
   # The check the ruleset requires. It must run whatever its `needs` did, rather than be skipped,
   # because a skipped required check reads as passing; so it runs unless the workflow was cancelled
@@ -289,7 +295,7 @@ jobs:
   # It opens the editor `web-archive` built rather than building its own: a second
   # `:ui-builder:wasmFrontendDist` was the same 10-minute production link and `wasm-opt` again.
   ui-builder-web-smoke:
-    needs: web-archive
+    needs: [web-archive, renderer-runtime]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -299,6 +305,10 @@ jobs:
         with:
           name: ui-builder-wasm-dist
           path: ui-builder/build/wasmDist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-builder-renderer-runtime
+          path: ui-builder-renderer/build/wasmRendererDist
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.22.0
@@ -336,6 +346,18 @@ jobs:
           MEMORY_BUDGETS: ${{ github.event_name != 'pull_request' && 'budgets.json' || '' }}
           MEMORY_VIEWPORT: desktop
       - run: node smoke.mjs ../../ui-builder/build/wasmDist ../../build/web-smoke
+        working-directory: scripts/ui-builder-web-smoke
+      # A canvas that cannot draw a component says so (`undrawn` beside the runtime's inspection),
+      # and this gate fails on it: a Material 3 design through this repository's runtime must be
+      # drawn whole, and a probe holding a component no catalog has must be caught.
+      - run: |
+          node runtime-coverage.mjs ../../ui-builder/build/wasmDist \
+            ../../ui-builder-renderer/build/wasmRendererDist ../../site/designs/google-gmail-tablet.uid
+          if node runtime-coverage.mjs ../../ui-builder/build/wasmDist \
+              ../../ui-builder-renderer/build/wasmRendererDist fixtures/undrawn-probe.uid; then
+            echo "::error title=Runtime coverage::the probe's unknown component was not reported"
+            exit 1
+          fi
         working-directory: scripts/ui-builder-web-smoke
       # The same editor as an MCP App in a fake host: open, no-op, select, save, external edit.
       - run: node mcp-app-host.mjs ../../ui-builder/build/wasmDist ../../docs/design/fixtures/ui-builder/state-actions.uid ../../build/web-smoke

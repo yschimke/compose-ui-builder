@@ -6,6 +6,9 @@
 
 package ee.schimke.composeai.uibuilder
 
+import kotlinx.serialization.builtins.ListSerializer
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -129,6 +132,14 @@ private external fun suppressBrowserContextMenu()
 
 fun main() {
   recordStartupMark("kotlin-start")
+  // Which nodes a canvas did not draw as themselves, where a harness or an agent driving the page
+  // can read them: `globalThis.__uiBuilderUndrawn["<designId>@<revision>"]`.
+  UiBuilderUndrawnNodes.listener = { key, nodes ->
+    publishUndrawn(
+      key,
+      Json.encodeToString(ListSerializer(UiBuilderUndrawnNode.serializer()), nodes),
+    )
+  }
   restoreOpenRouterPageAtBoot()
   stripPageToken()
   val rendererRuntimeId = sandboxRendererRuntimeId()
@@ -137,9 +148,18 @@ fun main() {
     // nothing when it is done; the boot screen would sit on top of it.
     dismissBootScreen()
     MainScope().launch {
-      val fixture =
-        Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
-      val fixtureDocument = UiBuilderReducer.replay(fixture).document
+      // A document to draw instead of the Jetcaster fixture: a same-origin path, so a coverage gate
+      // can put a catalog's own designs through its runtime and read what it did not draw.
+      val documentPath = sandboxRendererDocumentPath()
+      val fixtureDocument =
+        if (documentPath.isNotEmpty()) {
+          Json { ignoreUnknownKeys = true }
+            .decodeFromString(UiBuilderDocument.serializer(), fetchText(documentPath))
+        } else {
+          val fixture =
+            Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
+          UiBuilderReducer.replay(fixture).document
+        }
       // The checked-in benchmark carries the placeholder `candidate` pin; this test-only transport
       // fixture gives it the runtime the test shell selected. Production documents arrive pinned.
       val document =
@@ -305,6 +325,15 @@ private external fun showWebGlRequiredMessage()
   }"""
 )
 private external fun sandboxRendererRuntimeId(): String
+
+/** `?rendererDocument=`, a same-origin path only; anything else is ignored. */
+@JsFun(
+  """() => {
+    const value = new URLSearchParams(globalThis.location.search).get('rendererDocument') || '';
+    return /^\/[A-Za-z0-9._\/-]+$/.test(value) && !value.split('/').includes('..') ? value : '';
+  }"""
+)
+private external fun sandboxRendererDocumentPath(): String
 
 @Composable
 internal fun CatalogRuntimeCanvas(
@@ -1030,6 +1059,7 @@ private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
 private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit =
   js(
     """(async function () {
+      const UNDRAWN_KEY = 'undrawn';
        const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
       const response = await fetch(root + 'runtime-manifest.json', {
         credentials: 'same-origin', headers: { Accept: 'application/json' }
@@ -1203,6 +1233,13 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
            request('renderDocument', renderPayload());
         } else if (message.type === 'rendered') {
           drawOverlay(message.payload.inspection);
+          // What the runtime did not draw as itself (absent from runtimes that predate it), where a
+          // coverage gate reads it: an unsupported node here is a canvas disagreeing with export.
+          const undrawn = message.payload[UNDRAWN_KEY];
+          if (Array.isArray(undrawn)) {
+            (globalThis.__uiBuilderUndrawn ??= {})[message.payload.inspection.generation.key] =
+              undrawn;
+          }
           document.documentElement.dataset.uiBuilderSandboxReady = 'true';
         } else if (message.type === 'actionDispatched') {
           drawOverlay(message.payload.inspection);
@@ -2522,6 +2559,9 @@ internal fun markReady() {
 
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
 private external fun markReadyAttribute()
+
+@JsFun("(key, json) => { (globalThis.__uiBuilderUndrawn ??= {})[key] = JSON.parse(json); }")
+private external fun publishUndrawn(key: String, json: String)
 
 /**
  * Takes away the boot screen `index.html` draws before any script runs. Done here (not in
