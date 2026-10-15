@@ -32,6 +32,26 @@ class CatalogRuntimeAdapterFallbackTest {
       onNodeWithText("Hello palette").assertExists()
     }
 
+  /**
+   * `placeholder` is the one non-builder adapter name a catalog writes to say it does not draw the
+   * component here (the Wear catalog does, for `wear-m3/transforming-lazy-column`). It must keep
+   * the stand-in, even for a component this canvas has a case for.
+   */
+  @Test
+  fun `the placeholder adapter keeps the stand-in`() =
+    runDesktopComposeUiTest(width = 300, height = 120) {
+      setContent {
+        CompositionLocalProvider(
+          LocalUiBuilderCatalogComponentIds provides setOf("m3/text"),
+          LocalUiBuilderCanvasAdapters provides mapOf("m3/text" to "placeholder"),
+        ) {
+          UiBuilderSurface(document = document, editorOverlay = false)
+        }
+      }
+      onNodeWithText("Hello palette").assertDoesNotExist()
+      onNodeWithText("text").assertExists()
+    }
+
   private val document =
     decodeProductionRendererDocument(
       """
