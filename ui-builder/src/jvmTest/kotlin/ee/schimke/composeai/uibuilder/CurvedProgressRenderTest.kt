@@ -49,20 +49,37 @@ class CurvedProgressRenderTest {
       assertTrue(none < 20, "no progress still drew $none red samples")
     }
 
-  private fun androidx.compose.ui.test.ComposeUiTest.redSamples(): Int {
-    val pixels = onRoot().captureToImage().toPixelMap()
-    var red = 0
-    for (x in 0 until pixels.width) for (y in 0 until pixels.height) {
-      val pixel = pixels[x, y]
-      if (pixel.isNear(Color.Red)) red++
+  @Test
+  fun `the track stops gapAngleDegrees short of the indicator`() =
+    runDesktopComposeUiTest(width = 432, height = 248) {
+      var gap by mutableStateOf(0f)
+      setContent {
+        ProductionUiBuilderSurface(decodeProductionRendererDocument(document(0.5f, gap)))
+      }
+      waitForIdle()
+      val flush = samples(Color.Blue)
+      gap = 90f
+      waitForIdle()
+      val gapped = samples(Color.Blue)
+
+      assertTrue(gapped < flush * 3 / 4, "a 90° gap left $gapped of $flush track samples")
     }
-    return red
+
+  private fun androidx.compose.ui.test.ComposeUiTest.redSamples(): Int = samples(Color.Red)
+
+  private fun androidx.compose.ui.test.ComposeUiTest.samples(color: Color): Int {
+    val pixels = onRoot().captureToImage().toPixelMap()
+    var count = 0
+    for (x in 0 until pixels.width) for (y in 0 until pixels.height) {
+      if (pixels[x, y].isNear(color)) count++
+    }
+    return count
   }
 
   private fun Color.isNear(other: Color): Boolean =
     abs(red - other.red) < 0.1f && abs(green - other.green) < 0.1f && abs(blue - other.blue) < 0.1f
 
-  private fun document(progress: Float) =
+  private fun document(progress: Float, gap: Float = 2f) =
     """
     {"schema":"compose-ui-builder-document/v1-candidate","id":"curved","title":"Curved",
      "revision":1,
@@ -80,6 +97,7 @@ class CurvedProgressRenderTest {
           "progress":{"type":"float","value":$progress},
           "startAngle":{"type":"float","value":-90},
           "sweepAngle":{"type":"float","value":360},
+          "gapAngleDegrees":{"type":"float","value":$gap},
           "indicatorColor":{"type":"color","value":"#FFFF0000"},
           "trackColor":{"type":"color","value":"#FF0000FF"}},
         "modifiers":[{"type":"size","widthDp":80,"heightDp":80}],

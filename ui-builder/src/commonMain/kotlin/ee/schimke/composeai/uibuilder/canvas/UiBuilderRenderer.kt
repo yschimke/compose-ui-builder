@@ -943,6 +943,7 @@ private fun RenderNode(
                 strokeWidthDp = node.float("strokeWidth", 8f),
                 paddingDp = node.float("padding", 2f),
                 reverseDirection = node.bool("reverseDirection", false),
+                gapAngleDegrees = node.float("gapAngleDegrees", 2f),
               )
             else null,
         )

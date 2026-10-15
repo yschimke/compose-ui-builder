@@ -996,9 +996,14 @@ internal data class CurvedArc(
   val strokeWidthDp: Float = 8f,
   val paddingDp: Float = 2f,
   val reverseDirection: Boolean = false,
+  val gapAngleDegrees: Float = 2f,
 )
 
-/** [CurvedArc]'s track and its determinate indicator, both with round caps, as the player draws. */
+/**
+ * [CurvedArc]'s determinate indicator and the track beyond it, both with round caps, as the player
+ * draws. `dotFadeOutFraction` and `dotCollapsible`, which only shape a near-empty indicator, are
+ * not reproduced.
+ */
 @Composable
 internal fun CurvedArcProgress(
   progress: Float,
@@ -1018,11 +1023,14 @@ internal fun CurvedArcProgress(
         width = stroke,
         cap = androidx.compose.ui.graphics.StrokeCap.Round,
       )
-    drawArc(track, arc.startAngle, arc.sweepAngle, false, topLeft, box, style = style)
-    val sweep = arc.sweepAngle * progress
-    if (sweep <= 0f) return@Canvas
-    val start =
+    val sweep = arc.sweepAngle * progress.coerceIn(0f, 1f)
+    // The track covers what the indicator does not, `gapAngleDegrees` clear of its end.
+    val gap = if (sweep > 0f) arc.gapAngleDegrees else 0f
+    val trackSweep = arc.sweepAngle - sweep - gap
+    val indicatorStart =
       if (arc.reverseDirection) arc.startAngle + arc.sweepAngle - sweep else arc.startAngle
-    drawArc(indicator, start, sweep, false, topLeft, box, style = style)
+    val trackStart = if (arc.reverseDirection) arc.startAngle else arc.startAngle + sweep + gap
+    if (trackSweep > 0f) drawArc(track, trackStart, trackSweep, false, topLeft, box, style = style)
+    if (sweep > 0f) drawArc(indicator, indicatorStart, sweep, false, topLeft, box, style = style)
   }
 }
