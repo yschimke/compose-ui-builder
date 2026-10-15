@@ -306,6 +306,19 @@ so a ring drawn with defaults stays inside; angles are clockwise from three o'cl
   as `expression.asRemoteDp().toPx()`, a theme colour read into a local above the canvas because
   `RemoteMaterialTheme.colorScheme` is a composable read and the draw lambda is not.
 
+A canvas can instead draw in a **viewport**: `viewportWidth` and `viewportHeight` (literal numbers
+above 0) set the space its operations are authored in, and `viewportMode` how that space maps onto
+the canvas: `fit` (the default) scales evenly and centres so the whole viewport shows, `fill`
+scales evenly to cover the canvas, centred, and clips the overflow, `stretch` scales each way to
+the canvas. Operation numbers that are dp elsewhere are then viewport units, stroke widths and
+text sizes included, and "the whole canvas" a defaulted box spans is the viewport. It is how the
+RemoteCompose-Examples corpus draws its charts and gauges — a chart authored at 500 × 400 shows
+correctly at any size — and what the Python authoring library calls a `viewport`. The Remote
+writer wraps the operations in one `withTransform({ translate(…); scale(s, s) })` over the canvas's
+size (`clipRect` first for `fill`); the canvas stand-in applies the same transform from
+`UiDrawing.Viewport.transform`. A viewport with one side, or a side that is state or a formula, is
+refused: it is the document's coordinate space, fixed when it is written.
+
 A path clip keeps its operations in canvas coordinates: it scales into its viewport, clips, and
 scales back out, all inside the one `withTransform` block, so only the clip has the viewport's shape.
 A morph's two paths must tween — the same commands in order with the same count of numbers — which

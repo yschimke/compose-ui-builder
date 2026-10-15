@@ -73,11 +73,17 @@ internal fun remoteDrawComponent(
     return derived(
       displayName = "Canvas",
       notes =
-        "RemoteCanvas: draws its operations in order, in dp from its top-left. Give it a size; " +
-          "an unsized canvas draws in whatever space its parent gives it.",
+        "RemoteCanvas: draws its operations in order, in dp from its top-left, or in its " +
+          "viewport's units when it has one. Give it a size; an unsized canvas draws in " +
+          "whatever space its parent gives it.",
       traits = listOf("RemoteAuthorable"),
       slots = listOf(opsSlot),
-      properties = emptyList(),
+      // The viewport is the document's coordinate space, fixed when it is written: literal only.
+      properties =
+        UiDrawing.CANVAS_PROPERTIES.map(::drawProperty).map { property ->
+          if (property.name == "viewportMode") property
+          else property.newBuilder().also { it.jsonType = JsonPrimitive("number") }.build()
+        },
       modifiers = true,
     )
   }

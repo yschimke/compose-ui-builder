@@ -50,6 +50,37 @@ class DrawCanvasRenderTest {
       assertTrue(green > 10, "no stroked circle drawn ($green green samples)")
     }
 
+  /**
+   * Red samples (every second pixel each way, at density 2: one per dp²) of a 200 × 100 rectangle
+   * filling a viewport of that size, on the 80dp canvas in [viewportMode].
+   */
+  private fun viewportRed(viewportMode: String): Int {
+    var red = 0
+    runDesktopComposeUiTest(width = 600, height = 400) {
+      setContent {
+        ProductionUiBuilderSurface(
+          decodeProductionRendererDocument(VIEWPORT_DOCUMENT.replace("MODE", viewportMode))
+        )
+      }
+      val pixels = onRoot().captureToImage().toPixelMap()
+      for (x in 0 until pixels.width step 2) {
+        for (y in 0 until pixels.height step 2) {
+          if (pixels[x, y].isNear(Color.Red)) red++
+        }
+      }
+    }
+    return red
+  }
+
+  @Test
+  fun `a canvas viewport scales its operations onto the canvas`() {
+    // Stretched, the viewport's rectangle covers the 80 × 80 canvas; fitted, 80 × 40 of it.
+    val stretched = viewportRed("stretch")
+    val fitted = viewportRed("fit")
+    assertTrue(stretched in 5_600..7_200, "stretched viewport drew $stretched red samples")
+    assertTrue(fitted in 2_800..3_600, "fitted viewport drew $fitted red samples")
+  }
+
   private fun Color.isNear(other: Color): Boolean =
     kotlin.math.abs(red - other.red) < 0.1f &&
       kotlin.math.abs(green - other.green) < 0.1f &&
@@ -81,6 +112,32 @@ class DrawCanvasRenderTest {
           "style":{"type":"enum","value":"stroke"},
           "strokeWidthDp":{"type":"float","value":4},
           "color":{"type":"color","value":"#FF00FF00"}},
+          "modifiers":[],"slots":{},"eventBindings":{}}}}
+      """
+        .trimIndent()
+
+    /** An 80dp canvas drawing in a 200 × 100 viewport, filled by one red rectangle. */
+    val VIEWPORT_DOCUMENT =
+      """
+      {"schema":"compose-ui-builder-document/v1-candidate","id":"viewport","title":"Viewport",
+       "revision":1,
+       "catalogPin":{"systemId":"remote-m3","catalogRevision":"candidate",
+         "capabilityDigest":"candidate","nativeRuntimeId":"candidate"},
+       "environment":{"widthDp":216,"heightDp":124,"density":2.0,"theme":"dark",
+         "locale":"en-US","fontScale":1.0,"layoutDirection":"ltr"},
+       "stateVariables":{},"roots":["widget"],
+       "nodes":{
+        "widget":{"id":"widget","componentId":"remote-m3/widget-container-large",
+          "properties":{},"modifiers":[],
+          "slots":{"background":[],"content":["canvas"]},"eventBindings":{}},
+        "canvas":{"id":"canvas","componentId":"draw/canvas","properties":{
+          "viewportWidth":{"type":"float","value":200},
+          "viewportHeight":{"type":"float","value":100},
+          "viewportMode":{"type":"enum","value":"MODE"}},
+          "modifiers":[{"type":"size","widthDp":80,"heightDp":80}],
+          "slots":{"ops":["fill"]},"eventBindings":{}},
+        "fill":{"id":"fill","componentId":"draw/rect","properties":{
+          "color":{"type":"color","value":"#FFFF0000"}},
           "modifiers":[],"slots":{},"eventBindings":{}}}}
       """
         .trimIndent()

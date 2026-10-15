@@ -2118,16 +2118,58 @@ internal class RemoteContentEmitter(
     usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteCanvas"
     val hoisted = mutableListOf<String>()
     val previous = canvasExtent
-    canvasExtent = node.statedExtent()
-    val body =
+    val stated = node.statedExtent()
+    val viewport = UiDrawing.Viewport.of(node)
+    if (viewport == null && (node.has("viewportWidth") || node.has("viewportHeight"))) {
+      refusals +=
+        "nodes.${node.id}.viewportWidth: a canvas's viewport needs viewportWidth and " +
+          "viewportHeight, both literal numbers above 0"
+      return emptyList()
+    }
+    // Inside a viewport the operations' "whole canvas" is the viewport, in its own units.
+    canvasExtent =
+      viewport?.let {
+        CanvasExtent("${it.width.dpLiteral()}.toPx()", "${it.height.dpLiteral()}.toPx()")
+      } ?: stated
+    val opsDepth = if (viewport == null) depth + 1 else depth + 2
+    val ops =
       try {
-        node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, depth + 1, hoisted) }
+        node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, opsDepth, hoisted) }
       } finally {
         canvasExtent = previous
+      }
+    val body =
+      if (viewport == null) ops
+      else {
+        val inner = INDENT.repeat(depth + 1)
+        listOf(inner + viewportTransform(viewport, stated) + " {") + ops + listOf("$inner}")
       }
     val modifier = node.modifierExpression(pad)
     val head = if (modifier == null) "RemoteCanvas {" else "RemoteCanvas(modifier = $modifier) {"
     return hoisted.map { pad + it } + listOf(pad + head) + body + listOf("$pad}")
+  }
+
+  /**
+   * The transform that draws [viewport]'s units on a canvas of [canvas]'s size: `RemoteCanvas`'s
+   * `scale` is about the origin, so `fit` and `fill` centre with a translate first. `fill` clips
+   * what overflows the canvas.
+   */
+  private fun viewportTransform(viewport: UiDrawing.Viewport, canvas: CanvasExtent): String {
+    usesRemoteFloat = true
+    val width = "${viewport.width.dpLiteral()}.toPx()"
+    val height = "${viewport.height.dpLiteral()}.toPx()"
+    val sx = "(${canvas.width} / $width)"
+    val sy = "(${canvas.height} / $height)"
+    if (viewport.mode == "stretch") return "withTransform({ scale($sx, $sy) })"
+    val pick = if (viewport.mode == "fill") "max" else "min"
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.$pick"
+    val scale = "$pick($sx, $sy)"
+    val x = "((${canvas.width} - $width * $scale) / 2.rf)"
+    val y = "((${canvas.height} - $height * $scale) / 2.rf)"
+    val clip =
+      if (viewport.mode == "fill") "clipRect(0.rf, 0.rf, ${canvas.width}, ${canvas.height}); "
+      else ""
+    return "withTransform({ ${clip}translate($x, $y); scale($scale, $scale) })"
   }
 
   /**

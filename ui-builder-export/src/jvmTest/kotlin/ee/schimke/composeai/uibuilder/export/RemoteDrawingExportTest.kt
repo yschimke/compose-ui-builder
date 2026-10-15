@@ -122,6 +122,95 @@ class RemoteDrawingExportTest {
     assertTrue("colorScheme.transparent" !in source, source)
   }
 
+  private fun withViewport(vararg properties: Pair<String, String>): UiBuilderDocument {
+    val canvas = document.nodes.getValue("canvas")
+    val viewport =
+      Json.parseToJsonElement(
+        properties.joinToString(",", "{", "}") { (name, value) -> "\"$name\":$value" }
+      ) as JsonObject
+    return document.copy(nodes = document.nodes + ("canvas" to canvas.copy(properties = viewport)))
+  }
+
+  @Test
+  fun `a viewport scales its units evenly onto the canvas, centred`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            withViewport(
+              "viewportWidth" to """{"type":"float","value":200}""",
+              "viewportHeight" to """{"type":"float","value":100}""",
+            ),
+            packageName = "proof.draw",
+          )
+        )
+        .source
+        .also {
+          File("build/draw-proof").apply { mkdirs() }.resolve("ViewportWidget.kt").writeText(it)
+        }
+
+    val scale = "min((96.rdp.toPx() / 200.rdp.toPx()), (96.rdp.toPx() / 100.rdp.toPx()))"
+    assertContains(
+      source,
+      "withTransform({ translate(((96.rdp.toPx() - 200.rdp.toPx() * $scale) / 2.rf), " +
+        "((96.rdp.toPx() - 100.rdp.toPx() * $scale) / 2.rf)); scale($scale, $scale) }) {",
+    )
+    // The operations' whole canvas is the viewport: the defaulted arc box spans 200 × 100 units.
+    assertContains(source, "size = RemoteSize((200.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf)")
+    assertContains(source, "import androidx.compose.remote.creation.compose.state.min")
+    assertTrue(
+      source.indexOf("RemoteCanvas(") < source.indexOf("withTransform({ translate") &&
+        source.indexOf("withTransform({ translate") < source.indexOf("drawArc("),
+      source,
+    )
+  }
+
+  @Test
+  fun `a stretched viewport scales each way and a filled one clips its overflow`() {
+    fun source(mode: String) =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            withViewport(
+              "viewportWidth" to """{"type":"float","value":200}""",
+              "viewportHeight" to """{"type":"float","value":100}""",
+              "viewportMode" to """{"type":"enum","value":"$mode"}""",
+            )
+          )
+        )
+        .source
+
+    assertContains(
+      source("stretch"),
+      "withTransform({ scale((96.rdp.toPx() / 200.rdp.toPx()), (96.rdp.toPx() / 100.rdp.toPx())) })",
+    )
+    val filled = source("fill")
+    assertContains(filled, "withTransform({ clipRect(0.rf, 0.rf, 96.rdp.toPx(), 96.rdp.toPx()); ")
+    assertContains(
+      filled,
+      "max((96.rdp.toPx() / 200.rdp.toPx()), (96.rdp.toPx() / 100.rdp.toPx()))",
+    )
+  }
+
+  @Test
+  fun `a viewport with one side, or a computed one, is refused`() {
+    for (properties in
+      listOf(
+        arrayOf("viewportWidth" to """{"type":"float","value":200}"""),
+        arrayOf(
+          "viewportWidth" to """{"type":"float","value":200}""",
+          "viewportHeight" to """{"type":"state","variable":"progress"}""",
+        ),
+      )) {
+      val refused =
+        assertIs<WearWidgetCodeExporter.Result.Refused>(
+          WearWidgetCodeExporter.export(withViewport(*properties))
+        )
+      assertTrue(
+        refused.reasons.any { "nodes.canvas.viewportWidth" in it },
+        refused.reasons.toString(),
+      )
+    }
+  }
+
   @Test
   fun `an operation outside a canvas is refused by name`() {
     val stray =
