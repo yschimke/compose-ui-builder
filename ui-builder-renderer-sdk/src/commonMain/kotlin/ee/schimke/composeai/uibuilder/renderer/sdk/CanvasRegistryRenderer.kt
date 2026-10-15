@@ -2,7 +2,6 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -17,6 +16,7 @@ internal constructor(
   val renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit,
   private val report: (nodeId: String, componentId: String, reason: String) -> Unit = { _, _, _ ->
   },
+  private val forget: (nodeId: String) -> Unit = {},
 ) {
   val node: UiBuilderNode
     get() = entry.node
@@ -37,7 +37,12 @@ internal constructor(
   fun ReportUndrawn(reason: String = UiBuilderUndrawnNode.UNSUPPORTED) {
     val nodeId = node.id
     val componentId = node.componentId
-    SideEffect { report(nodeId, componentId, reason) }
+    // Withdrawn when this branch leaves the composition (the node is drawn as itself again, or
+    // gone), so the report is what is on screen now rather than everything that ever was.
+    DisposableEffect(nodeId, componentId, reason) {
+      report(nodeId, componentId, reason)
+      onDispose { forget(nodeId) }
+    }
   }
 
   fun slot(name: String): List<String> = node.slots[name].orEmpty()
@@ -120,12 +125,17 @@ fun CanvasDocumentScope.RenderCanvasNode(
       // A placement whose component is gone draws a diagnostic, so it is undrawn here.
       missingComponent = { label, next ->
         val node = entry.node
-        SideEffect { recordUndrawn(node.id, node.componentId, UiBuilderUndrawnNode.UNSUPPORTED) }
+        DisposableEffect(node.id, node.componentId) {
+          recordUndrawn(node.id, node.componentId, UiBuilderUndrawnNode.UNSUPPORTED)
+          onDispose { forgetUndrawn(node.id) }
+        }
         missingComponent(label, next)
       },
     )
   ) {
     return
   }
-  fallback(CanvasNodeFallbackScope(entry, prepared, state, renderChild, ::recordUndrawn))
+  fallback(
+    CanvasNodeFallbackScope(entry, prepared, state, renderChild, ::recordUndrawn, ::forgetUndrawn)
+  )
 }

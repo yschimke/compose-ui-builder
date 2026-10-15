@@ -69,6 +69,12 @@ internal constructor(
     UiBuilderUndrawnNodes.record(undrawnKey, UiBuilderUndrawnNode(nodeId, componentId, reason))
   }
 
+  /** [recordUndrawn]'s node is drawn as itself again, or left the composition. */
+  fun forgetUndrawn(nodeId: String) {
+    if (undrawnKey.isEmpty()) return
+    UiBuilderUndrawnNodes.forget(undrawnKey, nodeId)
+  }
+
   fun recordNodeBounds(path: UiBuilderInstancePath, coordinates: LayoutCoordinates) =
     recordBounds(path, coordinates)
 

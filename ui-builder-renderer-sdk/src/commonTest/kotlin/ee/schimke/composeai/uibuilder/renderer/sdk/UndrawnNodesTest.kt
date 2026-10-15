@@ -70,6 +70,48 @@ class UndrawnNodesTest {
   }
 
   @Test
+  fun `a runtime's later list replaces its earlier one, so a node drawn again is not reported`() {
+    val document = document()
+    val key = undrawnGenerationKey(document.id, document.revision)
+    val (endpoint, host) = session()
+    val render = render(endpoint, host, document)
+    UiBuilderUndrawnNodes.record(
+      key,
+      UiBuilderUndrawnNode("canvas", "draw/canvas", UiBuilderUndrawnNode.UNSUPPORTED),
+    )
+    val first = endpoint.rendered(render.requestId, snapshot(document))
+    UiBuilderUndrawnNodes.clear()
+    host.accept("null", true, endpoint.encode(first))
+    assertEquals(1, UiBuilderUndrawnNodes.forGeneration(key).size)
+
+    // The runtime's state changed and the canvas drew everything; its next update says so.
+    val update =
+      first.copy(
+        type = INSPECTION_UPDATED,
+        payload =
+          JsonObject(
+            first.payload +
+              (UNDRAWN_PAYLOAD_KEY to kotlinx.serialization.json.JsonArray(emptyList()))
+          ),
+      )
+    assertNotNull(host.accept("null", true, endpoint.encode(update)))
+    assertEquals(emptyList(), UiBuilderUndrawnNodes.forGeneration(key))
+  }
+
+  @Test
+  fun `a forgotten node is no longer reported`() {
+    val key = undrawnGenerationKey("design", 1)
+    UiBuilderUndrawnNodes.record(
+      key,
+      UiBuilderUndrawnNode("a", "x/y", UiBuilderUndrawnNode.STAND_IN),
+    )
+
+    UiBuilderUndrawnNodes.forget(key, "a")
+
+    assertEquals(emptyList(), UiBuilderUndrawnNodes.forGeneration(key))
+  }
+
+  @Test
   fun `the listener hears a generation's whole list`() {
     val heard = mutableListOf<Pair<String, List<UiBuilderUndrawnNode>>>()
     UiBuilderUndrawnNodes.listener = { key, nodes -> heard += key to nodes }

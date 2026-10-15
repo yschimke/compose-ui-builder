@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { classify, parseArgs, report } from './runtime-coverage-lib.mjs';
+import { classify, expectUnsupported, parseArgs, report } from './runtime-coverage-lib.mjs';
 
 test('parses the build, the runtime, the designs and the allowances', () => {
   const options = parseArgs(['dist', 'runtime', 'a.uid', 'b.uid', '--allow', 'x/y']);
@@ -37,4 +37,22 @@ test('the report lists failures first', () => {
     classify('b.uid', [{ nodeId: 'c', componentId: 'draw/canvas', reason: 'unsupported' }]),
   ]);
   assert.deepEqual(text.split('\n').map((line) => line.slice(0, 10)), ['FAIL b.uid', 'ok   a.uid']);
+});
+
+test('an unknown reason fails rather than passing silently', () => {
+  const result = classify('dial.uid', [{ nodeId: 'c', componentId: 'x/y', reason: 'unsupportd' }]);
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /unknown reasons "unsupportd"/);
+});
+
+test('a negative control passes only on exactly the expected component', () => {
+  const probe = { nodeId: 'mystery', componentId: 'nowhere/mystery', reason: 'unsupported' };
+  const expected = new Set(['nowhere/mystery']);
+
+  assert.deepEqual(expectUnsupported([classify('probe.uid', [probe])], expected), []);
+  // A runtime that did not report, or refused the design, is not the detection being tested.
+  assert.match(expectUnsupported([classify('probe.uid', undefined)], expected).join(), /did not report nowhere\/mystery/);
+  const other = { nodeId: 'z', componentId: 'other/thing', reason: 'unsupported' };
+  assert.match(expectUnsupported([classify('probe.uid', [probe, other])], expected).join(), /also reported other\/thing/);
+  assert.equal(parseArgs(['d', 'r', 'p.uid', '--expect-unsupported', 'nowhere/mystery']).expect.has('nowhere/mystery'), true);
 });

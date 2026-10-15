@@ -483,10 +483,13 @@ class CatalogRuntimeHostSession(
     return response
   }
 
-  /** What the runtime said it did not draw, kept with the rest of this generation's. */
+  /**
+   * What the runtime said it did not draw: its whole list for the generation, so it replaces the
+   * last one and a node drawn again stops being reported.
+   */
   private fun recordUndrawn(response: CatalogRuntimeMessage, document: DocumentRef) {
-    val key = undrawnGenerationKey(document.id, document.revision)
-    undrawnNodesOf(response)?.forEach { UiBuilderUndrawnNodes.record(key, it) }
+    val nodes = undrawnNodesOf(response) ?: return
+    UiBuilderUndrawnNodes.replace(undrawnGenerationKey(document.id, document.revision), nodes)
   }
 
   /**

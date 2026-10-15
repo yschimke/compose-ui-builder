@@ -385,14 +385,25 @@ internal fun CatalogRuntimeCanvas(
   var capabilities by remember(surfaceId) { mutableStateOf(emptySet<String>()) }
   // Why the runtime drew nothing, or empty while it has not refused; shown in the pane.
   var runtimeError by remember(surfaceId) { mutableStateOf("") }
+  var lastUndrawn by remember(surfaceId) { mutableStateOf("") }
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
+    lastUndrawn = ""
     // Keep listening while this revision is on screen: actions like reveal or wheel move the
     // runtime's lists, and only its replies tell the editor where rows went.
     while (true) {
       capabilities =
         readCatalogRuntimeCapabilities(surfaceId).split(',').filter { it.isNotBlank() }.toSet()
       runtimeError = readCatalogRuntimeError(surfaceId)
+      // What the runtime did not draw, the whole list for its generation: replaces what an earlier
+      // reply said, so a node that is drawn again stops being reported.
+      val undrawn = readCatalogRuntimeUndrawn(surfaceId)
+      if (undrawn.isNotEmpty() && undrawn != lastUndrawn) {
+        lastUndrawn = undrawn
+        runCatching { inspectionJson.decodeFromString(RuntimeUndrawn.serializer(), undrawn) }
+          .getOrNull()
+          ?.let { UiBuilderUndrawnNodes.replace(it.key, it.nodes) }
+      }
       val encoded = readCatalogRuntimeInspection(surfaceId)
       if (encoded.isNotEmpty() && encoded != lastInspection) {
         lastInspection = encoded
@@ -922,6 +933,16 @@ private fun updateCatalogRuntimeSurface(
       const onMessage = (event) => {
         if (controller.disposed || event.source !== frame.contentWindow ||
             event.origin !== 'null' || typeof event.data !== 'string') return;
+        // The runtime's whole list of nodes it did not draw for this generation, beside the
+        // inspection (absent from runtimes that predate it). Kotlin reads it like the inspection.
+        const keepUndrawn = (payload) => {
+          if (Array.isArray(payload?.undrawn)) {
+            host.__uiBuilderUndrawnJson = JSON.stringify({
+              key: payload.inspection.generation.key,
+              nodes: payload.undrawn,
+            });
+          }
+        };
         let message;
         try { message = JSON.parse(event.data); } catch { return; }
         if (!manifest || message.schema !== 'compose-ui-builder-renderer/v' + manifest.protocolVersion ||
@@ -936,6 +957,7 @@ private fun updateCatalogRuntimeSurface(
               !validInspection(message.payload?.inspection, renderedRef)) return;
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          keepUndrawn(message.payload);
           controller.drawOverlay();
           return;
         }
@@ -967,6 +989,7 @@ private fun updateCatalogRuntimeSurface(
           globalThis.composeUiBuilderBoot?.mark?.('preview-rendered');
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          keepUndrawn(message.payload);
           delete host.__uiBuilderRuntimeError;
           renderedRef = { documentId: expected.documentId, documentRevision: expected.documentRevision };
           controller.drawOverlay();
@@ -977,6 +1000,7 @@ private fun updateCatalogRuntimeSurface(
               renderedRef.documentRevision !== expected.documentRevision) return;
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          keepUndrawn(message.payload);
           controller.drawOverlay();
         } else if (message.type === 'error' && expected.type !== 'dispatchAction') {
           // Only a refused initialize or render leaves the pane blank; a refused reveal or wheel
@@ -1020,6 +1044,13 @@ private fun updateCatalogRuntimeSurface(
 
 private fun readCatalogRuntimeInspection(surfaceId: String): String =
   js("document.getElementById(surfaceId)?.__uiBuilderInspectionJson || ''")
+
+/** `{"key": "<id>@<revision>", "nodes": [...]}`, the runtime's last `undrawn` list, or empty. */
+private fun readCatalogRuntimeUndrawn(surfaceId: String): String =
+  js("document.getElementById(surfaceId)?.__uiBuilderUndrawnJson || ''")
+
+@kotlinx.serialization.Serializable
+private class RuntimeUndrawn(val key: String, val nodes: List<UiBuilderUndrawnNode>)
 
 private fun readCatalogRuntimeError(surfaceId: String): String =
   js(

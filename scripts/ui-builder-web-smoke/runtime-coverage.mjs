@@ -13,7 +13,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { basename, extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
-import { classify, parseArgs, report } from './runtime-coverage-lib.mjs';
+import { classify, expectUnsupported, parseArgs, report } from './runtime-coverage-lib.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 const wasmDist = resolve(options.wasmDist);
@@ -102,6 +102,17 @@ try {
 }
 
 console.log(report(results));
+if (options.expect.size > 0) {
+  // A negative control: these designs must fail, and only for the expected components.
+  const problems = expectUnsupported(results, options.expect);
+  for (const problem of problems) console.log(`FAIL ${problem}`);
+  console.log(
+    problems.length === 0
+      ? `${runtimeId} reported exactly ${[...options.expect].join(', ')} as unsupported`
+      : `${runtimeId} did not report the expected unsupported components`,
+  );
+  process.exit(problems.length === 0 ? 0 : 1);
+}
 const failed = results.filter((it) => !it.ok).length;
 console.log(`${results.length - failed}/${results.length} designs drawn by ${runtimeId}`);
 process.exit(failed === 0 ? 0 : 1);

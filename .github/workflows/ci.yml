@@ -353,11 +353,11 @@ jobs:
       - run: |
           node runtime-coverage.mjs ../../ui-builder/build/wasmDist \
             ../../ui-builder-renderer/build/wasmRendererDist ../../site/designs/google-gmail-tablet.uid
-          if node runtime-coverage.mjs ../../ui-builder/build/wasmDist \
-              ../../ui-builder-renderer/build/wasmRendererDist fixtures/undrawn-probe.uid; then
-            echo "::error title=Runtime coverage::the probe's unknown component was not reported"
-            exit 1
-          fi
+          # The negative control: passes only when the probe fails for exactly its unknown
+          # component, so a timeout or a runtime that stopped reporting cannot pass for it.
+          node runtime-coverage.mjs ../../ui-builder/build/wasmDist \
+            ../../ui-builder-renderer/build/wasmRendererDist fixtures/undrawn-probe.uid \
+            --expect-unsupported nowhere/mystery
         working-directory: scripts/ui-builder-web-smoke
       # The same editor as an MCP App in a fake host: open, no-op, select, save, external edit.
       - run: node mcp-app-host.mjs ../../ui-builder/build/wasmDist ../../docs/design/fixtures/ui-builder/state-actions.uid ../../build/web-smoke

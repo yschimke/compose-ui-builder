@@ -59,6 +59,24 @@ object UiBuilderUndrawnNodes {
     changed(key)
   }
 
+  /** The node is drawn as itself again, or has left the composition: stop reporting it. */
+  fun forget(key: String, nodeId: String) {
+    val nodes = byGeneration[key] ?: return
+    if (nodes.remove(nodeId) == null) return
+    changed(key)
+  }
+
+  /**
+   * A generation's whole list as another process reported it, e.g. a catalog runtime's reply, which
+   * always sends everything it did not draw: what it no longer lists is drawn again.
+   */
+  fun replace(key: String, nodes: List<UiBuilderUndrawnNode>) {
+    val next = nodes.associateByTo(mutableMapOf()) { it.nodeId }
+    if (byGeneration[key] == next) return
+    byGeneration[key] = next
+    changed(key)
+  }
+
   private fun changed(key: String) {
     while (byGeneration.size > MAX_GENERATIONS) byGeneration.remove(byGeneration.keys.first())
     changes.intValue++
