@@ -28,8 +28,8 @@ import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialogContent
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppCard
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ArcProgressIndicator
+import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ButtonGroup
 import androidx.wear.compose.material3.Card
@@ -407,8 +407,8 @@ internal fun WearCanvasProgressIndicator(
   indicatorColor: Color = Color.Unspecified,
   trackColor: Color = Color.Unspecified,
   /**
-   * Set for `RemoteCurvedProgressIndicator`, which shares the `arc` variant but is determinate;
-   * see [CurvedArc]. Null for Wear's own `ArcProgressIndicator`, which is indeterminate.
+   * Set for `RemoteCurvedProgressIndicator`, which shares the `arc` variant but is determinate; see
+   * [CurvedArc]. Null for Wear's own `ArcProgressIndicator`, which is indeterminate.
    */
   curved: CurvedArc? = null,
 ) {
@@ -1021,7 +1021,8 @@ internal fun CurvedArcProgress(
     drawArc(track, arc.startAngle, arc.sweepAngle, false, topLeft, box, style = style)
     val sweep = arc.sweepAngle * progress
     if (sweep <= 0f) return@Canvas
-    val start = if (arc.reverseDirection) arc.startAngle + arc.sweepAngle - sweep else arc.startAngle
+    val start =
+      if (arc.reverseDirection) arc.startAngle + arc.sweepAngle - sweep else arc.startAngle
     drawArc(indicator, start, sweep, false, topLeft, box, style = style)
   }
 }
