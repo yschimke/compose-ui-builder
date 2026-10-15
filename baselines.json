@@ -68,7 +68,7 @@
     "functionName": "CatalogRuntimeRoutingPreview",
     "module": "ui-builder",
     "renderBasename": "CatalogRuntimeRoutingPreview-00544b46.png",
-    "sha256": "a05b053f448e3da7d13580d1a5d9c73425cec2be8285921948b60d071067b3bf",
+    "sha256": "3e19b7d90d36b4cbade0e818b5fd449eb0021a7777ef40039ad09687aad2447a",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/CatalogRuntimeRoutingPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.ComponentPackPreviewsKt.ComponentPacksPanelPreview": {
@@ -892,7 +892,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "3bee729f5df1c6e7fe3e1a2ccfcaaf3974ae0cfbfe8c3dd161f0571a0c1b9403",
+    "sha256": "e1250f170a8e07c110e69c89f28639e9a969cca407163bcc0782145ad88976bc",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
