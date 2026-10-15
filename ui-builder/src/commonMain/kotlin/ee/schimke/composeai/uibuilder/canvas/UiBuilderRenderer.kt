@@ -754,7 +754,15 @@ private fun RenderNode(
       }
       return@RenderCanvasNode
     }
-    when (adapterId) {
+    // A catalog may name the adapter its own runtime registers (`material3/Button`,
+    // `widget-container`) rather than a builder id. Every case below is shaped like a component id,
+    // so such a name never matches one: draw the component under its own id instead, or each of
+    // that catalog's palette thumbnails is the dashed placeholder. `placeholder` is the exception:
+    // a catalog names it to declare the component undrawable here, so it keeps the stand-in.
+    val caseId =
+      if (adapterId == PLACEHOLDER_ADAPTER || BUILDER_CASE_ID.matches(adapterId)) adapterId
+      else node.componentId
+    when (caseId) {
       // Both container sizes, framed in the viewed host shape. The footprint comes from `hostSpec`
       // so this canvas and the native render agree (see [WearWidgetHostSpec]).
       "remote-m3/widget-container-small",
@@ -2189,6 +2197,15 @@ private const val WEAR_XL_ROUND_DP = 240
  * [LocalUiBuilderCanvasAdapters]), so it has no `wear-m3/` id.
  */
 private const val ROUND_SCREEN_FRAME = "frame/round-screen"
+
+/**
+ * The shape of every adapter id the in-process canvas has a case for: a builder component id
+ * (`wear-m3/text`, `frame/round-screen`). A catalog runtime's own adapter names do not have it.
+ */
+private val BUILDER_CASE_ID = Regex("[a-z0-9-]+/[a-z0-9-]+")
+
+/** The adapter a catalog names to declare a component it does not draw on this canvas. */
+private const val PLACEHOLDER_ADAPTER = "placeholder"
 
 /**
  * Wear's large card corner (`MaterialTheme.shapes.large`, 26dp), as a number because
