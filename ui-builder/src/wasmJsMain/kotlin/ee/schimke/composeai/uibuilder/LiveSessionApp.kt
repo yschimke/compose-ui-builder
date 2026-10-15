@@ -628,8 +628,10 @@ private fun LiveSessionApp(
       referenceStatus = LOCAL_REFERENCE_UNAVAILABLE
       return@LaunchedEffect
     }
-    if (!designServed) return@LaunchedEffect
+    // Local to the page and needed by the paste listener below, which is armed from the start: only
+    // the stored picture has to wait for the design.
     installReferenceBridge()
+    if (!designServed) return@LaunchedEffect
     restoredReference = references.load()
     storedReference =
       restoredReference?.let {
