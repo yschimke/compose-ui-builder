@@ -299,6 +299,36 @@ On 2026-10-01 it loaded to `data-ui-builder-ready` from a sandbox after two fixe
 
 If it still sticks at the boot screen, do not spend long on it: use option 1.
 
+### Seeing a hosted design in the editor
+
+`ui_builder_view` shows the export with overlays, not the editor: not the authoring canvas, whose
+pixels come from the catalog runtime, and not the device previews beside it. When a report says
+"it looks wrong in the editor", look at the editor itself with
+[`editor-shot.mjs`](../scripts/ui-builder-web-smoke/editor-shot.mjs). As of 2026-10-15 it boots the
+deployed editor from a sandbox in about 10 s.
+
+```sh
+# A private design: ask for a read grant; the person who owns it approves the printed link.
+compose-preview auth request --server https://ui.coo.ee --capability ui-builder-read \
+  --label "look at <design-id> in the editor" --no-wait
+export UI_BUILDER_TOKEN=$(compose-preview auth token --server https://ui.coo.ee)
+
+node scripts/ui-builder-web-smoke/editor-shot.mjs https://ui.coo.ee/<design-id> editor.png
+```
+
+The grant is sent as `Authorization: Bearer` on the design's origin, so the editor opens the
+design as its owner sees it. Leave `UI_BUILDER_TOKEN` unset for a public design. `--document FILE`
+swaps the design's document in the host's replies for a past revision (the `document` from
+`ui_builder_get_design` with `revision`), so the editor draws a revision it would not otherwise
+open. Nothing is saved. `--steps '[["click",1373,371],["wait",2000],["shot","panel.png"]]'` drives
+the page first; `--viewport 412x915` is a phone width.
+
+That is how the remote-m3 `draw/canvas` gap was found: in revision 20 of a Wear widget, the device
+previews drew the dials and the authoring canvas drew a red `draw/canvas` box for each. Both
+surfaces come from the catalog runtime (`remote-m3-catalog`'s `SemanticCanvas` and
+`RemoteM3DevicePreview`), not from this repository's `UiBuilderRenderer`, which draws the canvas.
+When the two panes disagree, look in the catalog runtime first.
+
 ## Sandbox gotchas
 
 1. **HTTP 429 from Maven Central** during dependency resolution, on a different artifact each time.
