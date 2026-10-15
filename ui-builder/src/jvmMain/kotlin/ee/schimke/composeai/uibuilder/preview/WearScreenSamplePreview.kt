@@ -101,11 +101,7 @@ fun WearScreenCodePanePreview() {
  * The catalog the Wear screen previews author against: the Wear golden kept beside the renderer's
  * fixtures, which carries every component used and the frame geometry the renderer reads.
  */
-private val wearScreenPreviewCatalog by lazy {
-  ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-    previewResource("/wear-m3-capabilities-v1.json")
-  )
-}
+private val wearScreenPreviewCatalog by lazy { publishedPreviewCatalog("wear-m3") }
 
 /**
  * The frame and adapter the catalog declares, provided as the editor does for every surface (see

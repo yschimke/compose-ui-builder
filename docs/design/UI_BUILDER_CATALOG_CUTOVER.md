@@ -247,14 +247,14 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 
 | Here | Lines | Owned copy | Delete when |
 | --- | --- | --- | --- |
-| `WearM3Catalog.kt` (`wearM3Catalog`, `wearDesignTokens`) | 1,684 | wear-m3-catalog's `ui-builder.policy.json` + record | `wear-m3` owned for a release |
-| `RemoteM3Catalog.kt` | 802 | remote-m3-catalog's `remote-catalog/ui-builder.policy.json` | `remote-m3` owned for a release |
+| ~~`WearM3Catalog.kt`~~ (generator deleted; Wear foundation menu retained) | 1,684 | wear-m3-catalog's `ui-builder.policy.json` + record | — a host serving `wear-m3` must publish it; legacy pins remain in `LegacySynthesisedReferences` |
+| ~~`RemoteM3Catalog.kt`~~ (generator deleted; shared Remote Compose foundation retained) | 802 | remote-m3-catalog's `remote-catalog/ui-builder.policy.json` | — a host serving `remote-m3` now has to publish it; the legacy pin remains in `LegacySynthesisedReferences` |
 | ~~`A2uiCatalog.kt`~~ (deleted, with its golden) | 897 | a2ui-catalog's `ui-builder.policy.json` | — a host serving `a2ui-catalog` now has to publish it; its legacy pin resolves through `LegacySynthesisedReferences` |
 | `UiBuilderTemplates.kt`'s Wear screen, Wear list and widget builders, `WearWidgetSample`, `AdaptiveWearWidget.newDocument` | ~800 | `ui-builder/designs/*.json` in wear-m3-catalog and remote-m3-catalog (round-trip tested there) | the matching catalog owned |
 | `AdaptiveScreenTemplates` | 491 | m3-catalog's `ui-builder/designs/*.json` | `m3-catalog` owned, after its `adaptive-navigation` ledger row |
 | `UiBuilderNewDesignSeed`'s `when`s, `newDesignCatalog`'s table, `NEW_DESIGN_CATALOG_ORDER`, `NewDesignTypes.kt`'s built-in card words and default row (the catalog's `newDesign.description` and `.primary` replace them) | ~250 | the catalog-owned readers above | all catalogs owned |
 | `synthesisers`, `LEGACY_*` fallbacks in `ProductionUiBuilderRuntime` | — | — | all catalogs owned; `LegacySynthesisedReferences` **stays** (it is the only record of those pins) |
-| `docs/design/fixtures/ui-builder/{wear-m3,remote-m3,a2ui-catalog}-capabilities-v1.json` goldens and their `--strict` gates | — | the catalog-cutover fixtures | together with their generator, as contract phase 5 says. The editor's behaviour tests are on `SyntheticCatalogs` (`a2ui`, `wear`, `remote`). The a2ui golden is left with its writer and the web smoke script. Wear policy coverage moved to wear-m3-catalog's `WearPublishedPolicyAdapterCoverageTest`; property readership is covered by its `WearAdapterPropertyParityTest`. `CatalogOverrideTest` and `DesktopLaunchOptionsTest` now read the composed published catalog through `PublishedCatalogStore`. The wear and remote goldens are still read by the other canvas tests that draw (`WearCatalogAdapters`, `WearUnrolledListAlignmentTest`, `DrawCanvasRenderTest`, `TimeTextCanvasRenderTest`, `RemoteThemeCanvasRenderTest`), which move to `ui-builder-wear-adapters`; by the built-in template checks (`RemoteClockDesignsTest`, `WearWidgetSampleTemplatesTest`, `SeedTemplateCatalogReadinessTest`), which go with those templates; by `StarterContentTest`'s Remote Material 3 checks, a contract between the builder's own tables and remote-m3's catalog; and by the jvmMain previews and the host bridge archive |
+| `docs/design/fixtures/ui-builder/{wear-m3,remote-m3}-capabilities-v1.json` snapshots | — | catalog-owned published policies and records | Retained as historical parity baselines and MCP App offline assets; the live runtime reads published catalogs. The strict equivalence gate still compares owned policy against these baselines. |
 | `LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
 | `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
@@ -265,16 +265,14 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 not knowledge of somebody else's catalog. The packaged `m3-catalog` capability no longer counts as
 that floor — it is a copy of a catalog, and goes with the other goldens.
 
-**Gaps that block those deletions**, found by reading what the catalogs publish instead of the
-Kotlin catalogs:
+**Remaining capability and snapshot work**, found by reading what the catalogs publish:
 
-- wear-m3 and remote-m3 publish no design tokens or theme schemes, so an owned catalog loses the
-  Theme panel's tokens.
+- Wear now publishes the design tokens in its frozen snapshot. Remote publishes no design tokens;
+  neither catalog declares theme schemes, so the Theme panel follows those published definitions.
 - No published catalog declares a per-component SVG capability, so the desktop's in-process SVG
   export (`DesktopExportHost`) refuses a catalog read from where it publishes.
-- The host-bridge web archive ships the wear-m3 and remote-m3 goldens for IDE hosts that read them
-  from the unpacked archive; those hosts have to take catalogs from their own runtime source
-  (`PublishedCatalogStore`) before the goldens can go.
+- The MCP App still bundles Wear and Remote capability snapshots for offline use. IDE hosts and JVM
+  previews now read their published runtime source through `PublishedCatalogStore`.
 
 ### What stays here, by design
 

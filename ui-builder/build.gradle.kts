@@ -166,10 +166,17 @@ kotlin {
       implementation(project.dependencies.platform(libs.composeai.daemon.bom))
       implementation(libs.composeai.data.preview.overrides.runtime)
       implementation(libs.composeai.preview.annotations)
+      // The JVM previews use the same published catalog store as desktop and IDE hosts. Exclude
+      // the render bundle: this module builds the previews packaged inside that bundle.
+      implementation(project(":ui-builder-runtime")) {
+        exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
+      }
     }
-    getByName("jvmMain")
-      .resources
-      .srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
+    getByName("jvmMain").resources.apply {
+      srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
+      // Runtime previews compose these catalogs from their published delivery files.
+      exclude("wear-m3-capabilities-v1.json", "remote-m3-capabilities-v1.json")
+    }
     getByName("jvmMain").resources.srcDir(stageWearDeviceFonts)
     getByName("jvmTest") {
       kotlin.srcDir(stageBehaviorCompileFixture)
@@ -458,8 +465,8 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
-      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and pass
-      // the pinned one to the editor (see HostBridgeApp.kt), so all three offline catalogs work.
+      // MCP App hosts still read these from the archive until they have a published capability
+      // route. Host-bridge editors receive their catalog from the host (HostBridgeApp.kt).
       "wear-m3-capabilities-v1.json",
       "remote-m3-capabilities-v1.json",
     )

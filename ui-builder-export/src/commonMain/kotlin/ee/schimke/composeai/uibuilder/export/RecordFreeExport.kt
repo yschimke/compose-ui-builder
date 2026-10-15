@@ -5,10 +5,10 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 
 /**
- * The designs whose Kotlin comes from a dedicated emitter rather than a component record: Wear
- * widgets ([WearWidgetCodeExporter]) and Wear screens ([WearScreenCodeExporter]), whose catalogs
- * deliberately have no record. One place so the Code pane, the server's export and the
- * `composeCode` capability agree.
+ * The designs whose Kotlin comes from a dedicated emitter: Wear widgets ([WearWidgetCodeExporter])
+ * and Wear screens ([WearScreenCodeExporter]). The Wear screen emitter also uses served component
+ * records for catalog-owned rows outside its built-in vocabulary. One place so the Code pane, the
+ * server's export and the `composeCode` capability agree.
  */
 object RecordFreeExport {
 

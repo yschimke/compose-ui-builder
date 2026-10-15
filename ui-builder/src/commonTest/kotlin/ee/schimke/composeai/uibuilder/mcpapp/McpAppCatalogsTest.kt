@@ -18,14 +18,39 @@ class McpAppCatalogsTest {
     )
 
   @Test
-  fun `a packaged catalog is read from the editor's own assets, once`() {
+  fun `a packaged catalog prefers the hosted definition and caches it`() {
     val catalogs = catalogs(hosted = "https://catalogs.example/")
 
     val first = runImmediate { catalogs.resolve("wear-m3") }
     runImmediate { catalogs.resolve("wear-m3") }
 
-    assertEquals(McpAppCatalogs.Source.Bundled, first.source)
-    assertEquals(listOf("wear-m3-capabilities-v1.json"), fetched)
+    assertEquals(McpAppCatalogs.Source.Hosted, first.source)
+    assertEquals(listOf("https://catalogs.example/wear-m3-capabilities-v1.json"), fetched)
+  }
+
+  @Test
+  fun `a packaged catalog remains available when the host is down`() {
+    val catalogs =
+      McpAppCatalogs(
+        fetchAsset = { path ->
+          fetched += path
+          if (path.startsWith("https://")) error("host down")
+          "bundled capability"
+        },
+        hostedBaseUrl = "https://catalogs.example/",
+      )
+
+    val resolved = runImmediate { catalogs.resolve("remote-m3") }
+
+    assertEquals(McpAppCatalogs.Source.Bundled, resolved.source)
+    assertEquals("bundled capability", resolved.capabilitiesJson)
+    assertEquals(
+      listOf(
+        "https://catalogs.example/remote-m3-capabilities-v1.json",
+        "remote-m3-capabilities-v1.json",
+      ),
+      fetched,
+    )
   }
 
   @Test
@@ -44,6 +69,21 @@ class McpAppCatalogsTest {
     }
 
     assertEquals(McpAppCatalogs.Source.Hosted, resolved.source)
+    assertEquals(listOf("https://catalogs.example/glimmer-capabilities-v1.json"), fetched)
+  }
+
+  @Test
+  fun `an unpackaged catalog does not fall back to an unrelated bundle`() {
+    val catalogs =
+      McpAppCatalogs(
+        fetchAsset = { path ->
+          fetched += path
+          error("host down")
+        },
+        hostedBaseUrl = "https://catalogs.example/",
+      )
+
+    assertFailsWith<IllegalStateException> { runImmediate { catalogs.resolve("glimmer") } }
     assertEquals(listOf("https://catalogs.example/glimmer-capabilities-v1.json"), fetched)
   }
 

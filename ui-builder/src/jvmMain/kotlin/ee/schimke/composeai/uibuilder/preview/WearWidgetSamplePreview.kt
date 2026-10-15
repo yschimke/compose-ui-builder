@@ -16,7 +16,6 @@ import ee.schimke.composeai.uibuilder.ProvideProductionCatalog
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -157,12 +156,7 @@ fun WearWidgetCodePanePreview() {
  * The catalog the widget previews author against: the packaged `remote-m3` one, which carries the
  * widget containers and `remote-m3/remote-text` (drawn by the `wear-m3/text` adapter it names).
  */
-private val wearWidgetPreviewCatalog by lazy {
-  CapabilityCatalogParser.parse(
-    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/remote-m3-capabilities-v1.json"))
-      .readText()
-  )
-}
+private val wearWidgetPreviewCatalog by lazy { publishedPreviewCatalog("remote-m3") }
 
 /**
  * Every background `WearWidgetBrush` can carry, in the Small container: the host default, a solid

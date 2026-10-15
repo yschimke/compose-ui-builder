@@ -133,17 +133,18 @@ compose-agent-plugins' `harness-notes` for the MCP App tools.
 
 ## Catalogs, and what happens offline
 
-The IntelliJ project session calls `OfflineCatalog.forSystem(document.catalogPin.systemId)`. The
-editor follows the same rule. The design's `catalogPin.systemId` picks one of the catalogs the
-archive **packages**: `m3-catalog`, `wear-m3` or `remote-m3`. The editor reads
-`<systemId>-capabilities-v1.json` from the archive's own origin. That origin is the same one the
-editor's Wasm came from, so if the editor loaded, its catalogs load too. Nothing in the flow calls a
-hosted catalog. With a loopback asset origin (below), the whole editor works offline.
+The design's `catalogPin.systemId` selects a published catalog at the host's
+`/api/ui-builder/v1/catalog-capabilities/` route. The shell derives that origin from its device
+presets URL, or from the asset origin when no device presets URL was supplied. `McpAppCatalogs`
+tries the hosted capability first, then reads the archive's bundled copy if the host is down or
+does not serve that catalog. The archive packages `m3-catalog`, `wear-m3` and `remote-m3`, so those
+designs continue to open offline with the bundled definition.
 
-A design pinned to any other catalog opens with an error that names the catalog. The editor does
-not open it against the wrong components. `McpAppCatalogs` accepts an optional hosted base
-(`composeUiBuilderMcpApp.catalogBase`) and tries it only for unpackaged catalogs. The shell leaves
-it unset today, because nothing serves arbitrary catalogs' capability JSON under a stable URL yet.
+VS Code and IntelliJ host-bridge editors also supply capabilities from each catalog's published
+source. The MCP App archive keeps its three bundled capability files for offline fallback.
+
+An unbundled catalog requires the host route. If that request fails, the editor does not open the
+design against another catalog's components.
 
 ## The bundle: one small HTML document, assets under `resourceDomains`
 
@@ -157,7 +158,7 @@ over a stdio pipe.
 So the resource is a **small shell** (about 5 KB), `mcp-app/ui-builder-mcp-app.html` in the web archive:
 
 - `<base href="__COMPOSE_UI_BUILDER_ASSET_BASE__">` and
-  `globalThis.composeUiBuilderMcpApp = { assetBase, layout, devicePresets, version }`. The version
+  `globalThis.composeUiBuilderMcpApp = { assetBase, catalogBase, layout, devicePresets, version }`. The version
   is written in at build time. The asset base is the placeholder a server **must** fill in: an
   absolute URL, ending in `/`, of the unpacked archive's root. The layout,
   `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__`, and the device presets,

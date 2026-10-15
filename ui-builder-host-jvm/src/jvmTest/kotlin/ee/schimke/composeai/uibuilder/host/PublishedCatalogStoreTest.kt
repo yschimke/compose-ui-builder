@@ -67,10 +67,9 @@ class PublishedCatalogStoreTest {
   fun `the flat cache from earlier hosts still opens offline`() {
     val cache = Files.createTempDirectory("legacy-cache")
     val location = PublishedCatalogLocation.DEFAULTS.getValue("wear-m3")
-    val published = checkNotNull(fromCaptures.fetch("${location.baseUrl}/ui-builder.json"))
     for (path in
       listOf("ui-builder.json", "components.json") +
-        PublishedCatalogStore.templatePaths(published)) {
+        listOf("ui-builder/designs/wear-screen.json", "ui-builder/designs/wear-list.json")) {
       val target = cache.resolve("wear-m3").resolve(path)
       Files.createDirectories(target.parent)
       Files.writeString(target, checkNotNull(fromCaptures.fetch("${location.baseUrl}/$path")))

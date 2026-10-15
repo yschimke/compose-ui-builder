@@ -85,12 +85,6 @@ tasks.withType<Test>().configureEach {
   providers.gradleProperty("uiBuilderSlotAcceptanceUpdate").orNull?.let {
     systemProperty("uiBuilderSlotAcceptanceUpdate", it)
   }
-  // `SynthesisedCatalogGoldenTest` rewrites the frozen goldens when asked. A Gradle property
-  // because
-  // `-D` reaches the Gradle JVM, not the forked test JVM.
-  providers.gradleProperty("uiBuilderGoldens").orNull?.let {
-    systemProperty("ui.builder.goldens", it)
-  }
   // The committed goldens the tests read by path, declared as inputs so a golden-only change
   // re-runs the test instead of hitting the up-to-date or build cache.
   inputs

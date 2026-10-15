@@ -14,11 +14,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
-import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasRenderer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
-import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.helloWidgetUiBuilderDocument
 
 /**
@@ -72,9 +70,4 @@ private val STAND_IN_CATALOG_RUNTIME: UiBuilderCanvasRenderer =
 private val RUNTIME_MARK = Color(0xffd6008f)
 
 /** The published `remote-m3` capability catalog, the one a widget design is pinned to. */
-private val remoteM3PreviewCatalog by lazy {
-  CapabilityCatalogParser.parse(
-    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/remote-m3-capabilities-v1.json"))
-      .readText()
-  )
-}
+private val remoteM3PreviewCatalog by lazy { publishedPreviewCatalog("remote-m3") }

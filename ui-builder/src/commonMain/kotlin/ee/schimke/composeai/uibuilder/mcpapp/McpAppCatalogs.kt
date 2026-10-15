@@ -3,12 +3,11 @@ package ee.schimke.composeai.uibuilder.mcpapp
 /**
  * Which capability catalog a design opened in an MCP App host is edited against. As in the IntelliJ
  * project session (`OfflineCatalog.forSystem(document.catalogPin.systemId)`), the design's
- * `catalogPin.systemId` picks one of the catalogs **packaged with the editor**
- * (`<systemId>-capabilities-v1.json` at the archive root, loaded from the editor's origin, so it
- * works offline); any other pin is refused by name.
+ * `catalogPin.systemId` selects the catalog. When a host supplies [hostedBaseUrl], its current
+ * published capability is preferred. Packaged catalogs remain an offline fallback.
  *
- * A host may name a [hostedBaseUrl] (`composeUiBuilderMcpApp.catalogBase`) serving catalogs the
- * archive doesn't package, tried only for those.
+ * A host may name a [hostedBaseUrl] (`composeUiBuilderMcpApp.catalogBase`) for catalogs the archive
+ * does not package too; those require the host to be available.
  */
 class McpAppCatalogs(
   private val fetchAsset: suspend (String) -> String,
@@ -30,21 +29,27 @@ class McpAppCatalogs(
       return it
     }
     require(SAFE_ID.matches(systemId)) { "the design names an invalid catalog id '$systemId'" }
+    val hosted = hostedBaseUrl?.takeIf { it.isNotBlank() }
     val resolved =
-      when {
-        systemId in BUNDLED ->
-          Resolved(systemId, fetchAsset(capabilitiesFile(systemId)), Source.Bundled)
-        !hostedBaseUrl.isNullOrBlank() ->
+      if (hosted != null) {
+        try {
           Resolved(
             systemId,
-            fetchAsset(hostedBaseUrl.trimEnd('/') + "/" + capabilitiesFile(systemId)),
+            fetchAsset(hosted.trimEnd('/') + "/" + capabilitiesFile(systemId)),
             Source.Hosted,
           )
-        else ->
-          throw IllegalArgumentException(
-            "the design is pinned to catalog '$systemId', which this editor does not package " +
-              "(it packages ${BUNDLED.sorted().joinToString()}) and no hosted catalog is configured"
-          )
+        } catch (error: Exception) {
+          if (error is kotlin.coroutines.cancellation.CancellationException) throw error
+          if (systemId !in BUNDLED) throw error
+          Resolved(systemId, fetchAsset(capabilitiesFile(systemId)), Source.Bundled)
+        }
+      } else if (systemId in BUNDLED) {
+        Resolved(systemId, fetchAsset(capabilitiesFile(systemId)), Source.Bundled)
+      } else {
+        throw IllegalArgumentException(
+          "the design is pinned to catalog '$systemId', which this editor does not package " +
+            "(it packages ${BUNDLED.sorted().joinToString()}) and no hosted catalog is configured"
+        )
       }
     cache[systemId] = resolved
     return resolved

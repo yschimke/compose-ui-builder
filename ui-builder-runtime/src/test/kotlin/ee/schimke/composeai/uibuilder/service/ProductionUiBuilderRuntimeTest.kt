@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder.service
 
-import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -302,7 +301,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `a container image key is refused unless the registry lists it, as an asset key is`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("remote-m3"))
+    val catalogs = PublishedCatalogFixtures.executor(linkedSetOf("remote-m3"))
     val catalog = catalogs.listCatalogs().single()
     fun card(key: UiValueV1) =
       DesignNodeV1(
@@ -328,7 +327,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `an asset key is refused unless the catalog's registry lists it`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("m3-catalog"))
     val catalog = catalogs.listCatalogs().single()
     fun image(key: UiValueV1) =
       DesignNodeV1(id = "photo", componentId = "asset/image", properties = mapOf("assetKey" to key))
@@ -359,12 +358,9 @@ class ProductionUiBuilderRuntimeTest {
       catalogs.validateWrite(catalog, image(StringValueV1("editor.placeholder")), "assetKey")
     )
 
-    // The registry is the catalog's, and every catalog derived from the base one inherits it.
+    // The registry is also available to the catalog-owned Wear definition.
     val everyCatalog =
-      CurrentM3UiBuilderCatalogExecutor(
-          catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3", "wear-m3")
-        )
-        .listCatalogs()
+      PublishedCatalogFixtures.executor(linkedSetOf("m3-catalog", "wear-m3")).listCatalogs()
     everyCatalog.forEach { each ->
       assertEquals(
         setOf(
@@ -376,10 +372,11 @@ class ProductionUiBuilderRuntimeTest {
         CurrentM3UiBuilderCatalogExecutor.declaredAssetKeys(each),
         each.benchmark.catalogSystemId,
       )
-      // The roles the catalog tells a reader about are the roles the executor refuses against.
-      assertEquals(
-        CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS,
-        CurrentM3UiBuilderCatalogExecutor.declaredColorTokens(each),
+      // The published Wear policy chooses its own supported colour roles.
+      val roles = assertNotNull(CurrentM3UiBuilderCatalogExecutor.declaredColorTokens(each))
+      assertTrue(roles.isNotEmpty(), each.benchmark.catalogSystemId)
+      assertTrue(
+        CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS.containsAll(roles),
         each.benchmark.catalogSystemId,
       )
     }
@@ -394,8 +391,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `only explicitly enabled catalogs get independent exact pins`() {
-    val catalogs =
-      CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))
+    val catalogs = PublishedCatalogFixtures.executor(linkedSetOf("m3-catalog", "remote-m3"))
 
     assertEquals(
       listOf("m3-catalog", "remote-m3"),
@@ -424,31 +420,10 @@ class ProductionUiBuilderRuntimeTest {
         )
     val remoteCatalog = assertNotNull(catalogs.resolve(remoteDocument.catalogPin))
     assertNull(catalogs.validate(remoteDocument, remoteCatalog))
-    assertEquals(
-      listOf(
-        "remote-m3/widget-container-small",
-        "remote-m3/widget-container-large",
-        "remote-m3/widget-container-adaptive",
-        "remote-m3/lottie",
-        "layout/box",
-        "layout/column",
-        "layout/row",
-        "layout/for-each",
-        "layout/flow-row",
-        "layout/fit-box",
-        "layout/collapsible-column",
-        "layout/collapsible-row",
-        "m3/text",
-        "remote-compose/document",
-        "remote-compose/custom",
-        "shape/linear-gradient",
-        "asset/image",
-        *ee.schimke.composeai.uibuilder.export.UiDrawing.COMPONENT_IDS.toTypedArray(),
-        ee.schimke.composeai.uibuilder.export.UiTimeText.ID,
-        ee.schimke.composeai.uibuilder.export.UiRemoteTheme.ID,
-      ) + RemoteMaterial3.components.map { it.componentId },
-      remoteCatalog.components.map { it.componentId },
+    assertTrue(
+      remoteCatalog.components.any { it.componentId == "remote-m3/widget-container-small" }
     )
+    assertTrue(remoteCatalog.components.none { it.componentId == "m3/button" })
     assertEquals(
       "UNKNOWN_COMPONENT",
       catalogs

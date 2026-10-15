@@ -147,7 +147,6 @@ maven-publish = "0.37.0"
 # enumValue codecs and payload-callback events (compose-ai-tools#5914, #5919), which the structured
 # editor, the export gate and the renderer SDK's `callback()` overloads read. Contracts 3.30.0.
 composeai-tools = "2.60.1"
-composeai-tools-platform = "2.60.1"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -332,7 +331,7 @@ composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-prot
 # Consuming modules import them as platforms. `docs/design/PREVIEW_SERVER_SPLIT.md` requires these
 # to resolve by coordinate from a repository rather than from an included build, so a BOM that is
 # missing from Central is a build failure here rather than something silently satisfied locally.
-composeai-tools-bom = { module = "ee.schimke.composeai:compose-ai-tools-bom", version.ref = "composeai-tools-platform" }
+composeai-tools-bom = { module = "ee.schimke.composeai:compose-ai-tools-bom", version.ref = "composeai-tools" }
 composeai-contracts-bom = { module = "ee.schimke.composeai:compose-preview-contracts-bom", version.ref = "composeai-contracts" }
 composeai-daemon-bom = { module = "ee.schimke.composeai:compose-preview-daemon-bom", version.ref = "composeai-preview-daemon" }
 composeai-rc-players-bom = { module = "ee.schimke.composeai:rc-players-bom", version.ref = "rc-players" }

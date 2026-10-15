@@ -14,27 +14,24 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `compose-foundation` donates exactly what the synthesised catalogs donate — component for
- * component, note for note, shelf for shelf.
+ * `compose-foundation` donates exactly what the served catalogs donate — component for component,
+ * note for note, shelf for shelf.
  *
- * Proves the extraction equal to `remoteM3Catalog`/`wearM3Catalog` while both still exist, before
- * those generators are deleted; afterwards this test goes with them and
- * `SynthesisedCatalogGoldenTest`'s fixtures take over. The per-platform sets are not
+ * Checks the foundation against the catalog-owned Wear definition. The per-platform sets are not
  * interchangeable (e.g. Wear must not get `layout/lazy-grid`).
  */
 class ComposeFoundationFaithfulnessTest {
 
   private val executor =
-    CurrentM3UiBuilderCatalogExecutor(
+    PublishedCatalogFixtures.executor(
       catalogSystemIds =
         linkedSetOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         )
     )
 
-  private fun synthesised(systemId: String): CatalogCapabilityV1 =
+  private fun served(systemId: String): CatalogCapabilityV1 =
     executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
 
   /** What a donor is read for: its builder-namespace components, in its own order. */
@@ -52,17 +49,17 @@ class ComposeFoundationFaithfulnessTest {
       .associateBy { it.componentId }
 
   /**
-   * The foundation for a synthesised catalog's platform, derived from the served packaged catalog
+   * The foundation for a served catalog's platform, derived from the served packaged catalog
    * (`baseCatalog` is private). The only difference, the `remoteCompose` property filter, applies
    * uniformly to both sides.
    */
   private fun foundationFor(catalog: CatalogCapabilityV1) =
-    synthesised(DEFAULT_CATALOG_SYSTEM_ID).let { base ->
+    served(DEFAULT_CATALOG_SYSTEM_ID).let { base ->
       composeFoundationCatalog(base, catalog.platform, packagedSeams(base))
     }
 
   private fun assertDonatesTheSame(systemId: String) {
-    val old = synthesised(systemId)
+    val old = served(systemId)
     val new = foundationFor(old)
 
     // Component by component: order decides insert-panel placement, and notes and modifier lists
@@ -77,7 +74,7 @@ class ComposeFoundationFaithfulnessTest {
 
   /**
    * Holds by construction (mobile's curation is the identity); here to catch a future mobile
-   * curation. The wear and remote-compose cases are the real checks.
+   * curation. The wear case is the real check.
    */
   @Test
   fun `the mobile foundation donates what the packaged catalog donates`() {
@@ -89,34 +86,33 @@ class ComposeFoundationFaithfulnessTest {
     assertDonatesTheSame(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
   }
 
-  @Test
-  fun `the remote-compose foundation donates what remote-m3 donates`() {
-    assertDonatesTheSame(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
-  }
-
   /**
    * The donor's asset registry and its shelves with their order, both read by
    * `withBuilderVocabulary`.
    */
   @Test
   fun `every foundation carries the donor's asset registry and shelves`() {
-    val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY
     for (systemId in
       listOf(
         DEFAULT_CATALOG_SYSTEM_ID,
         CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
       )) {
-      val old = synthesised(systemId)
+      val old = served(systemId)
       val new = foundationFor(old)
 
       assertEquals(
-        old.statusSemantics[registryKey],
-        new.statusSemantics[registryKey],
+        CurrentM3UiBuilderCatalogExecutor.declaredAssetKeys(old),
+        CurrentM3UiBuilderCatalogExecutor.declaredAssetKeys(new),
         "$systemId: the foundation's asset registry differs, so a donated asset/image validates " +
           "against different keys",
       )
-      // Per donated component: `remote-m3`'s menu also shelves its own `remote-m3/lottie`.
+      assertEquals(
+        old.platform,
+        new.platform,
+        "$systemId: the foundation declares another platform",
+      )
+      // The published Wear catalog owns its shelf names and ordering.
+      if (systemId == CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID) continue
       for (componentId in new.components.map { it.componentId }) {
         assertEquals(
           old.statusSemantics.shelfOf(componentId),
@@ -129,31 +125,24 @@ class ComposeFoundationFaithfulnessTest {
         new.statusSemantics.shelfOrder(),
         "$systemId: a new shelf would be inserted in a different place",
       )
-      assertEquals(
-        old.platform,
-        new.platform,
-        "$systemId: the foundation declares another platform",
-      )
     }
   }
 
   /** The premise: the platforms donate different vocabularies, so these tests are not vacuous. */
   @Test
-  fun `the three platforms really do donate different vocabularies`() {
+  fun `the two remaining platforms donate different vocabularies`() {
     val sets =
       listOf(
           DEFAULT_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
         )
         .map { systemId ->
-          foundationFor(synthesised(systemId)).components.map { it.componentId }.toSet()
+          foundationFor(served(systemId)).components.map { it.componentId }.toSet()
         }
 
     assertEquals(sets.size, sets.distinct().size, "two platforms donate the same set")
     // The one that matters: a watch must not be offered what its exporter refuses by name.
-    val wear =
-      foundationFor(synthesised(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID))
+    val wear = foundationFor(served(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID))
     val offered = wear.components.map { it.componentId }
     assertTrue("layout/box" in offered, "a Wear palette with no box on it")
     for (refused in listOf("layout/lazy-grid", "layout/scaffold", "shape/radial-gradient")) {
@@ -170,7 +159,7 @@ class ComposeFoundationFaithfulnessTest {
    */
   @Test
   fun `the a2ui foundation donates nothing`() {
-    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+    val base = served(DEFAULT_CATALOG_SYSTEM_ID)
 
     assertEquals(
       emptyList(),
@@ -181,7 +170,7 @@ class ComposeFoundationFaithfulnessTest {
   /** An unknown platform gets the mobile vocabulary, which is where the fallback always pointed. */
   @Test
   fun `a platform the foundation has never heard of falls back to mobile`() {
-    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+    val base = served(DEFAULT_CATALOG_SYSTEM_ID)
 
     assertEquals(
       composeFoundationCatalog(
@@ -196,15 +185,14 @@ class ComposeFoundationFaithfulnessTest {
 
   /**
    * Deliberate change: the donor is chosen by declared platform, not catalog id, so the palette
-   * agrees with the exporter. The id is still consulted when no platform is declared (see
-   * `WearM3ScreenCatalogTest`).
+   * agrees with the exporter. An undeclared platform now uses the mobile foundation.
    */
   @Test
-  fun `a declared platform beats the id, and no declaration still falls back to it`() {
+  fun `a declared Wear platform selects Wear and no declaration uses mobile`() {
     val wearVocabulary =
-      synthesised(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID).donated().map {
-        it.componentId
-      }
+      foundationFor(served(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID))
+        .components
+        .map { it.componentId }
 
     fun vocabularyOf(catalog: CatalogCapabilityV1) =
       CurrentM3UiBuilderCatalogExecutor(
@@ -219,16 +207,16 @@ class ComposeFoundationFaithfulnessTest {
 
     assertEquals(
       wearVocabulary.toSortedSet(),
-      vocabularyOf(stub()).toSortedSet(),
-      "a published catalog that declares no platform stopped falling back to its id",
+      vocabularyOf(stub(platform = "wear")).toSortedSet(),
+      "a published catalog's Wear declaration did not select the Wear foundation",
     )
     assertEquals(
-      foundationFor(synthesised(DEFAULT_CATALOG_SYSTEM_ID))
+      foundationFor(served(DEFAULT_CATALOG_SYSTEM_ID))
         .components
         .map { it.componentId }
         .toSortedSet(),
-      vocabularyOf(stub(platform = "mobile")).toSortedSet(),
-      "the catalog's own declaration lost to its id",
+      vocabularyOf(stub()).toSortedSet(),
+      "an undeclared platform no longer uses the mobile foundation",
     )
   }
 
@@ -238,7 +226,7 @@ class ComposeFoundationFaithfulnessTest {
    */
   @Test
   fun `a seam remote-m3 declares itself wins over the packaged one`() {
-    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+    val base = served(DEFAULT_CATALOG_SYSTEM_ID)
     val packaged = packagedSeams(base).getValue("remote-compose/document")
     val remoteM3Owned =
       packaged
@@ -275,7 +263,7 @@ class ComposeFoundationFaithfulnessTest {
    */
   @Test
   fun `a seam no source declares is left off the palette`() {
-    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+    val base = served(DEFAULT_CATALOG_SYSTEM_ID)
 
     val foundation = composeFoundationCatalog(base, "wear", emptyMap())
 

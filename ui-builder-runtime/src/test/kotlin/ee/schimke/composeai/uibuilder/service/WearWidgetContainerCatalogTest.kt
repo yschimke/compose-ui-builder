@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_COMPONENT_IDS
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
@@ -16,7 +17,7 @@ import kotlin.test.assertTrue
  */
 class WearWidgetContainerCatalogTest {
   private val catalog =
-    CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))
+    PublishedCatalogFixtures.executor(linkedSetOf("m3-catalog", "remote-m3"))
       .listCatalogs()
       .single { it.benchmark.catalogSystemId == "remote-m3" }
 
@@ -120,27 +121,9 @@ class WearWidgetContainerCatalogTest {
     val accepted =
       catalog.components.filter { slotAccepts(content, it) }.map { it.componentId }.toSet()
 
-    assertEquals(
-      setOf(
-        "asset/image",
-        "layout/box",
-        "layout/collapsible-column",
-        "layout/collapsible-row",
-        "layout/column",
-        "layout/fit-box",
-        "layout/flow-row",
-        "layout/for-each",
-        "layout/row",
-        "m3/text",
-        "remote-compose/custom",
-        "remote-m3/lottie",
-        // The canvas, not its operations: those enter only a canvas's `ops` slot.
-        "draw/canvas",
-        "remote-m3/remote-time-text",
-        "remote-m3/remote-material-theme",
-      ) + RemoteMaterial3.components.map { it.componentId },
-      accepted,
-    )
+    assertTrue(accepted.isNotEmpty())
+    assertEquals(emptySet(), accepted - REMOTE_CONTENT_COMPONENT_IDS)
+    assertTrue("draw/canvas" in accepted)
     assertTrue("draw/rect" !in accepted)
     assertTrue("m3/surface" !in accepted)
     assertTrue("shape/linear-gradient" !in accepted)
