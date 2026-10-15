@@ -26,7 +26,7 @@ ktfmt = "0.27.0"
 ktfmt-cli = "0.64"
 # Also consumed by compose-preview-ide through its pinned source version catalog.
 intellij-platform-gradle = "2.19.0"
-compose-multiplatform = "1.12.1"
+compose-multiplatform = "1.12.2"
 # Material 3 stable 1.9.0 implements an older CustomStyle ABI and fails in text fields
 # against the 1.12 foundation runtime. This release targets foundation 1.12.0-beta01.
 material3-compose = "1.12.0-alpha03"
