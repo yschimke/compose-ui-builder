@@ -153,8 +153,9 @@ fun main() {
       val documentPath = sandboxRendererDocumentPath()
       val fixtureDocument =
         if (documentPath.isNotEmpty()) {
-          Json { ignoreUnknownKeys = true }
-            .decodeFromString(UiBuilderDocument.serializer(), fetchText(documentPath))
+          // Read as the editor reads a `.uid` file: its optional fields, components and
+          // collections, not only a fully expanded document.
+          UidDesignFiles.decode(fetchText(documentPath))
         } else {
           val fixture =
             Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject

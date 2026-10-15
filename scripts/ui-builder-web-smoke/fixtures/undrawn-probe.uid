@@ -18,7 +18,6 @@
     "fontScale": 1.0,
     "layoutDirection": "ltr"
   },
-  "stateVariables": {},
   "roots": ["column"],
   "nodes": {
     "column": {

@@ -70,19 +70,30 @@ try {
   for (const name of designs.keys()) {
     const page = await browser.newPage({ locale: 'en-US' });
     const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
+    // The shell throws before the runtime starts when it cannot read a design; fail on that at
+    // once rather than waiting out the timeout.
+    let failed;
+    const pageFailed = new Promise((_, reject) => (failed = reject));
+    pageFailed.catch(() => {});
+    page.on('pageerror', (error) => {
+      errors.push(error.message);
+      failed(new Error(`the page threw: ${error.message}`));
+    });
     const url =
       `${base}/?rendererRuntimeId=${encodeURIComponent(runtimeId)}` +
       `&rendererDocument=${encodeURIComponent(`/coverage/${name}`)}`;
     try {
       await page.goto(url, { waitUntil: 'load', timeout: 120_000 });
-      await page.waitForFunction(
-        () =>
-          document.documentElement.dataset.uiBuilderSandboxReady === 'true' ||
-          globalThis.__uiBuilderSandboxLastError !== undefined,
-        null,
-        { timeout: Number(process.env.COVERAGE_TIMEOUT_MS ?? 120_000) },
-      );
+      await Promise.race([
+        page.waitForFunction(
+          () =>
+            document.documentElement.dataset.uiBuilderSandboxReady === 'true' ||
+            globalThis.__uiBuilderSandboxLastError !== undefined,
+          null,
+          { timeout: Number(process.env.COVERAGE_TIMEOUT_MS ?? 120_000) },
+        ),
+        pageFailed,
+      ]);
       const { undrawn, error } = await page.evaluate(() => {
         const key = globalThis.__uiBuilderSandboxInspection?.generation?.key;
         return {
@@ -96,7 +107,8 @@ try {
         results.push(classify(name, undrawn, options.allow));
       }
     } catch (error) {
-      results.push({ design: name, ok: false, reason: `${error.message}${errors.length ? `; ${errors.join('; ')}` : ''}`, unsupported: [], standIns: [] });
+      const others = errors.filter((it) => !error.message.includes(it));
+      results.push({ design: name, ok: false, reason: `${error.message}${others.length ? `; ${others.join('; ')}` : ''}`, unsupported: [], standIns: [] });
     } finally {
       await page.close();
     }
