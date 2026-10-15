@@ -25,10 +25,16 @@ import java.io.Closeable
  * [onBehalfOfActorId] is the human a delegated credential (e.g. an approved agent grant) acts for.
  * It only widens access checks via [accessIdentities]; everything the actor writes stays under
  * [actorId], so audit and presence still name the agent.
+ *
+ * [mayDeleteForPrincipal] is the host's statement that the human who approved the delegation also
+ * allowed it to delete (the `ui-builder-destructive` grant capability). Without it a delegate
+ * deletes only the designs it created itself; with it, any design its principal owns. It means
+ * nothing without [onBehalfOfActorId], and never extends to sharing or ownership transfer.
  */
 public data class AuthenticatedUiBuilderActor(
   public val actorId: String,
   public val onBehalfOfActorId: String? = null,
+  public val mayDeleteForPrincipal: Boolean = false,
 ) {
   init {
     require(actorId.isNotBlank()) { "authenticated UI-builder actor id must not be blank" }

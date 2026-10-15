@@ -1754,6 +1754,8 @@ public class PersistentUiBuilderService(
     }
     val actions =
       if (design.ownedBy(actor)) DesignAccessActionV1.entries
+      else if (design.access.isDelegateOfOwner(actor))
+        design.access.delegateActions(actor, design.createdByDelegateActorId)
       else DesignAccessActionV1.entries.filter { design.allows(actor, it) }
     return LockedExecution(UiBuilderServiceResponse.DesignActions(designId, actions))
   }

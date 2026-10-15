@@ -196,9 +196,10 @@ class PersistentUiBuilderServiceTest {
       error(execute(service, owner, UiBuilderServiceRequest.GetDesignActions("no-such"))).code,
     )
 
-    // A delegate is answered with its principal's reach, as every other authorisation here is.
+    // A delegate is answered with its principal's reach, less what stays with the owner's own
+    // credential: sharing always, and deleting unless the principal opted in.
     assertEquals(
-      DesignAccessActionV1.entries,
+      listOf(DesignAccessActionV1.READ, DesignAccessActionV1.WRITE, DesignAccessActionV1.EXPORT),
       assertIs<UiBuilderServiceResponse.DesignActions>(
           execute(
             service,
@@ -1327,6 +1328,18 @@ class PersistentUiBuilderServiceTest {
         .single()
     assertEquals(DesignAccessRoleV1.EDITOR, row.requesterAccess.role)
     assertEquals(delegate.actorId, row.requesterAccess.actorId)
+    assertEquals(
+      listOf(DesignAccessActionV1.READ, DesignAccessActionV1.WRITE, DesignAccessActionV1.EXPORT),
+      row.requesterAccess.allowedActions,
+      "the listing offers no action the service would refuse",
+    )
+    assertEquals(
+      row.requesterAccess.allowedActions,
+      assertIs<UiBuilderServiceResponse.DesignActions>(
+          execute(service, delegate, UiBuilderServiceRequest.GetDesignActions("design"))
+        )
+        .actions,
+    )
     assertIs<UiBuilderServiceResponse.Snapshot>(
       execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design"))
     )
@@ -1338,6 +1351,87 @@ class PersistentUiBuilderServiceTest {
         .access
         .ownerActorId,
       "ownership did not move",
+    )
+  }
+
+  @Test
+  fun `a delegate allowed to delete for its principal trashes any of the principal's designs`() {
+    val service = service()
+    create(service)
+    val delegate =
+      AuthenticatedUiBuilderActor(
+        "agent:abc",
+        onBehalfOfActorId = owner.actorId,
+        mayDeleteForPrincipal = true,
+      )
+
+    val row =
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .single()
+    assertEquals(
+      listOf(
+        DesignAccessActionV1.READ,
+        DesignAccessActionV1.WRITE,
+        DesignAccessActionV1.EXPORT,
+        DesignAccessActionV1.DELETE,
+      ),
+      row.requesterAccess.allowedActions,
+    )
+    // Deleting is all it gains: sharing stays with the owner's own credential.
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            delegate,
+            UiBuilderServiceRequest.UpdateDesignAccess(
+              "design",
+              0,
+              listOf(TransferDesignOwnershipMutationV1(delegate.actorId)),
+            ),
+          )
+        )
+        .code,
+    )
+    // The opt-in is the principal's, so it reaches nobody else's designs.
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            AuthenticatedUiBuilderActor(
+              "agent:abc",
+              onBehalfOfActorId = "someone-else",
+              mayDeleteForPrincipal = true,
+            ),
+            UiBuilderServiceRequest.DeleteDesign("design"),
+          )
+        )
+        .code,
+    )
+    // And without a principal it means nothing.
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            AuthenticatedUiBuilderActor("agent:abc", mayDeleteForPrincipal = true),
+            UiBuilderServiceRequest.DeleteDesign("design"),
+          )
+        )
+        .code,
+    )
+
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("design", RESTORABLE_UNTIL),
+      execute(service, delegate, UiBuilderServiceRequest.DeleteDesign("design")),
+    )
+    assertIs<UiBuilderServiceResponse.DesignRestored>(
+      execute(service, owner, UiBuilderServiceRequest.RestoreDesign("design")),
+      "the owner can still bring it back from the trash",
     )
   }
 
