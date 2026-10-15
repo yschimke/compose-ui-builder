@@ -137,10 +137,11 @@ public sealed interface UiBuilderServiceRequest {
    * every request but [RestoreDesign] and [ListTrash] until [UiBuilderAdminPort.purgeExpiredTrash]
    * removes it, history and access list included, once `trashRetentionMillis` has passed.
    *
-   * Owner only, never a grantee, and never a delegate except on a design that delegate created for
-   * the owner (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs
-   * whose owner is gone. Unservable designs can still be deleted. No protocol shape yet; see
-   * [UiBuilderProtocolMapper.toProtocolRequest].
+   * Owner only, never a grantee. A delegate acting for the owner may delete a design it created for
+   * the owner, or any of the owner's designs when its host set
+   * [AuthenticatedUiBuilderActor.mayDeleteForPrincipal] (`AGENT_ACCESS_GRANTS.md`);
+   * [UiBuilderAdminPort.adminDeleteDesign] covers designs whose owner is gone. Unservable designs
+   * can still be deleted. No protocol shape yet; see [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
 
