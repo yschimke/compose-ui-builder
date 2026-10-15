@@ -55,8 +55,25 @@ internal constructor(
   private val forgetBounds: (UiBuilderInstancePath) -> Unit,
   private val recordText: (UiBuilderInstancePath, TextLayoutResult) -> Unit,
   private val semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
+  /** [UiBuilderUndrawnNodes]' key for the document this scope draws. */
+  private val undrawnKey: String = "",
 ) {
   fun setState(name: String, value: String?) = updateState(name, value)
+
+  /**
+   * The node [nodeId] was not drawn as itself; see [UiBuilderUndrawnNode]. Call it from a side
+   * effect, or use [ReportUndrawn], so composition writes no state.
+   */
+  fun recordUndrawn(nodeId: String, componentId: String, reason: String) {
+    if (undrawnKey.isEmpty()) return
+    UiBuilderUndrawnNodes.record(undrawnKey, UiBuilderUndrawnNode(nodeId, componentId, reason))
+  }
+
+  /** [recordUndrawn]'s node is drawn as itself again, or left the composition. */
+  fun forgetUndrawn(nodeId: String) {
+    if (undrawnKey.isEmpty()) return
+    UiBuilderUndrawnNodes.forget(undrawnKey, nodeId)
+  }
 
   fun recordNodeBounds(path: UiBuilderInstancePath, coordinates: LayoutCoordinates) =
     recordBounds(path, coordinates)
@@ -256,6 +273,7 @@ fun CanvasDocumentHost(
         )
       },
       semanticActions = semanticActions,
+      undrawnKey = undrawnGenerationKey(document.id, document.revision),
     )
 
   Box(

@@ -96,8 +96,11 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
+import ee.schimke.composeai.uibuilder.renderer.sdk.undrawnGenerationKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1708,6 +1711,25 @@ internal fun CanvasStatusBar(
       ) {
         StatusText("Revision ${state.document.revision}")
         StatusText("${state.document.nodes.size} nodes")
+        // Where this canvas disagrees with the export and the device previews: said here, in
+        // words, so a red box or a stand-in is never the only sign that a surface cannot be
+        // trusted.
+        val undrawn =
+          remember(UiBuilderUndrawnNodes.version, state.document) {
+            UiBuilderUndrawnNodes.forGeneration(
+                undrawnGenerationKey(state.document.id, state.document.revision)
+              )
+              .filter { it.nodeId in state.document.nodes }
+          }
+        undrawnStatusLabel(undrawn)?.let { label ->
+          StatusText(
+            label,
+            color =
+              if (undrawn.any { it.reason == UiBuilderUndrawnNode.UNSUPPORTED })
+                MaterialTheme.colorScheme.error
+              else MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
         if (state.selection.size > 1) StatusText("${state.selection.size} selected")
         // Only while dragging; at rest the drop target is meaningless.
         if (dragging) {
@@ -1732,6 +1754,19 @@ internal fun CanvasStatusBar(
       }
     }
   }
+}
+
+/**
+ * `2 not drawn here: draw/canvas` — how many nodes this canvas drew as a diagnostic or a stand-in,
+ * and which components, so the export and the device previews are known to differ. Null when it
+ * drew everything.
+ */
+internal fun undrawnStatusLabel(nodes: List<UiBuilderUndrawnNode>): String? {
+  if (nodes.isEmpty()) return null
+  val components = nodes.map { it.componentId }.distinct().sorted()
+  val named = components.take(3).joinToString(", ")
+  val more = if (components.size > 3) " +${components.size - 3}" else ""
+  return "${nodes.size} not drawn here: $named$more"
 }
 
 @Composable
