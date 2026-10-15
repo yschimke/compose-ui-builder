@@ -6,9 +6,6 @@
 
 package ee.schimke.composeai.uibuilder
 
-import kotlinx.serialization.builtins.ListSerializer
-import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
-import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -94,6 +91,8 @@ import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.coroutines.resume
@@ -109,6 +108,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.yield
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

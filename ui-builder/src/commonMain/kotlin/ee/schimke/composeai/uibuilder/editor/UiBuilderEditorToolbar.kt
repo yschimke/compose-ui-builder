@@ -5,9 +5,6 @@
 
 package ee.schimke.composeai.uibuilder.editor
 
-import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
-import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
-import ee.schimke.composeai.uibuilder.renderer.sdk.undrawnGenerationKey
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -99,8 +96,11 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
+import ee.schimke.composeai.uibuilder.renderer.sdk.undrawnGenerationKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1712,7 +1712,8 @@ internal fun CanvasStatusBar(
         StatusText("Revision ${state.document.revision}")
         StatusText("${state.document.nodes.size} nodes")
         // Where this canvas disagrees with the export and the device previews: said here, in
-        // words, so a red box or a stand-in is never the only sign that a surface cannot be trusted.
+        // words, so a red box or a stand-in is never the only sign that a surface cannot be
+        // trusted.
         val undrawn =
           remember(UiBuilderUndrawnNodes.version, state.document) {
             UiBuilderUndrawnNodes.forGeneration(
