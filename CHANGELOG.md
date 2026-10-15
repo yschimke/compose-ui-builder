@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.116.0](https://github.com/yschimke/compose-ui-builder/compare/v3.115.0...v3.116.0) (2026-10-15)
+
+
+### Features
+
+* **renderer-sdk:** report the nodes a canvas did not draw, and gate on them ([#867](https://github.com/yschimke/compose-ui-builder/issues/867)) ([092a2b5](https://github.com/yschimke/compose-ui-builder/commit/092a2b5d216efc56aff7b31d8b8a181112e40035))
+* **runtime:** let an opted-in delegate delete its principal's designs ([#864](https://github.com/yschimke/compose-ui-builder/issues/864)) ([ab19f59](https://github.com/yschimke/compose-ui-builder/commit/ab19f595a38ed296e0ee8ec2ade36edbca2272b6))
+
+
+### Bug Fixes
+
+* **canvas:** draw catalog components under their own id when the catalog names a runtime-only adapter ([#873](https://github.com/yschimke/compose-ui-builder/issues/873)) ([080f22b](https://github.com/yschimke/compose-ui-builder/commit/080f22b3342cf2b59f5f2232e7a4843f7da2bc77))
+* **deps:** update compose-ai-tools ([#866](https://github.com/yschimke/compose-ui-builder/issues/866)) ([a5b700c](https://github.com/yschimke/compose-ui-builder/commit/a5b700c7ed368c0df9a6d6a79168368ec3b2080b))
+* **deps:** update compose-ai-tools to v2.61.0 ([#859](https://github.com/yschimke/compose-ui-builder/issues/859)) ([182e77c](https://github.com/yschimke/compose-ui-builder/commit/182e77cee7211fb165a9d61933569234b926cd5e))
+* **deps:** update compose-multiplatform to v1.12.2 ([#868](https://github.com/yschimke/compose-ui-builder/issues/868)) ([e335707](https://github.com/yschimke/compose-ui-builder/commit/e3357071750c17ff0a6d2ef48335ce726f7fdaa1))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.35.0 ([#872](https://github.com/yschimke/compose-ui-builder/issues/872)) ([54eb35c](https://github.com/yschimke/compose-ui-builder/commit/54eb35cfca77bc4d32d325f09465a3b8e983c62f))
+* **ui-builder:** export compilable paths and draw the curved progress arc ([#870](https://github.com/yschimke/compose-ui-builder/issues/870)) ([d53f206](https://github.com/yschimke/compose-ui-builder/commit/d53f206f938052e1ae047ce3c78178ce77335487))
+
 ## [3.115.0](https://github.com/yschimke/compose-ui-builder/compare/v3.114.0...v3.115.0) (2026-10-15)
 
 
