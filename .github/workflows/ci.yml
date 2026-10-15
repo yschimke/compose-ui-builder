@@ -301,7 +301,7 @@ jobs:
           path: ui-builder/build/wasmDist
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.21.0
+          node-version: 24.22.0
       - run: npm ci
         working-directory: scripts/ui-builder-web-smoke
       - run: npm test
@@ -372,7 +372,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.21.0
+          node-version: 24.22.0
       - run: npm test
         working-directory: scripts/ui-builder
       # The readiness gate's own tests. A check nobody invokes is indistinguishable from a check
