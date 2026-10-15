@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.117.0](https://github.com/yschimke/compose-ui-builder/compare/v3.116.0...v3.117.0) (2026-10-15)
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.63.0 ([#879](https://github.com/yschimke/compose-ui-builder/issues/879)) ([07ef83f](https://github.com/yschimke/compose-ui-builder/commit/07ef83fdb9c6c48f6d84aab22a9d5c6c5d721aad))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.0 ([#880](https://github.com/yschimke/compose-ui-builder/issues/880)) ([29f736f](https://github.com/yschimke/compose-ui-builder/commit/29f736fa9c131f748313cae4fae038605cb19b7f))
+* **editor:** ask a design's panels only once the design is served ([#876](https://github.com/yschimke/compose-ui-builder/issues/876)) ([8013a1c](https://github.com/yschimke/compose-ui-builder/commit/8013a1cf17cd373b666a5078661fdd864dda625d))
+* **web-smoke:** gate a catalog's own .uid designs on its authoring canvas ([#878](https://github.com/yschimke/compose-ui-builder/issues/878)) ([7a4c7d5](https://github.com/yschimke/compose-ui-builder/commit/7a4c7d5901d0236d452f760b53453758b34fb666))
+
 ## [3.116.0](https://github.com/yschimke/compose-ui-builder/compare/v3.115.0...v3.116.0) (2026-10-15)
 
 
