@@ -36,6 +36,9 @@ const TYPES = {
 };
 
 const runtimePrefix = `/ui-builder/runtime/${runtimeId}/`;
+// The runtime runs in a sandboxed iframe, whose origin is opaque (`null`): its module scripts, wasm
+// and fetches are cross-origin to this server and load only with CORS, as from the real host.
+const CORS = { 'access-control-allow-origin': '*' };
 const server = createServer(async (request, response) => {
   const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
   let file;
@@ -43,14 +46,16 @@ const server = createServer(async (request, response) => {
   else if (path.startsWith('/coverage/')) file = designs.get(path.slice('/coverage/'.length));
   else file = join(wasmDist, path === '/' ? 'index.html' : path);
   if (!file || !(file.startsWith(wasmDist) || file.startsWith(runtimeDir) || [...designs.values()].includes(file))) {
-    response.writeHead(403).end();
+    response.writeHead(403, CORS).end();
     return;
   }
   try {
     const body = await readFile(file);
-    response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(body);
+    response
+      .writeHead(200, { ...CORS, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' })
+      .end(body);
   } catch {
-    response.writeHead(404).end();
+    response.writeHead(404, CORS).end();
   }
 });
 await new Promise((ready) => server.listen(0, '127.0.0.1', ready));
