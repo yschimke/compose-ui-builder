@@ -174,6 +174,7 @@ fun main() {
       mountSandboxRenderer(
         rendererRuntimeId,
         inspectionJson.encodeToString(UiBuilderDocument.serializer(), document),
+        authoring = documentPath.isNotEmpty(),
       )
     }
     return
@@ -1088,7 +1089,7 @@ private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
  * Semantic actions target inspected Compose nodes by stable id; the sibling overlay remains
  * pointer-inert and outside the renderer's Compose tree.
  */
-private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit =
+private fun mountSandboxRenderer(runtimeId: String, documentJson: String, authoring: Boolean): Unit =
   js(
     """(async function () {
       const UNDRAWN_KEY = 'undrawn';
@@ -1170,9 +1171,10 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
          const density = Number.isFinite(authoredDensity) && authoredDensity > 0
            ? authoredDensity : globalThis.devicePixelRatio || 1;
           activeSurface = {
-            // This transport fixture proves semantic scrolling, so it is a device surface. The
-            // editor's separate extent smoke uses authoring-unrolled through CatalogRuntimeCanvas.
-            mode: 'device',
+            // The Jetcaster transport fixture proves semantic scrolling, so it is a device surface.
+            // A coverage run (`?rendererDocument=`) gates the editor's authoring canvas, which a
+            // catalog may draw differently from its device player, so it asks for that.
+            mode: authoring ? 'authoring-unrolled' : 'device',
            widthDp: Math.max(1, frame.clientWidth),
            heightDp: Math.max(1, frame.clientHeight),
            density,

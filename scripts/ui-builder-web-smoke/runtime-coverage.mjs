@@ -94,15 +94,21 @@ try {
         ),
         pageFailed,
       ]);
-      const { undrawn, error } = await page.evaluate(() => {
-        const key = globalThis.__uiBuilderSandboxInspection?.generation?.key;
+      const { undrawn, error, measured } = await page.evaluate(() => {
+        const inspection = globalThis.__uiBuilderSandboxInspection;
+        const key = inspection?.generation?.key;
         return {
           undrawn: key ? globalThis.__uiBuilderUndrawn?.[key] : undefined,
           error: globalThis.__uiBuilderSandboxLastError,
+          measured: (inspection?.nodes ?? []).filter((node) => node.bounds).length,
         };
       });
       if (error) {
         results.push({ design: name, ok: false, reason: `the runtime refused it: ${JSON.stringify(error)}`, unsupported: [], standIns: [] });
+      } else if (measured === 0) {
+        // An empty `undrawn` list from a canvas that laid nothing out is not a canvas that drew
+        // everything: a runtime answering on its device player reports no bounds and no gaps.
+        results.push({ design: name, ok: false, reason: 'the runtime measured no node, so drew nothing to check', unsupported: [], standIns: [] });
       } else {
         results.push(classify(name, undrawn, options.allow));
       }
