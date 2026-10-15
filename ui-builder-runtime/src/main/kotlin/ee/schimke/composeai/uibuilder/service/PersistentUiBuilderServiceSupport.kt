@@ -115,9 +115,12 @@ internal fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Bool
   access.ownedBy(actor)
 
 /**
- * True when this actor may delete the design: its owner, or the delegate that created it acting for
- * that same owner. The one owner-only action a delegate shares, and only on its own creations, so
- * an agent can clean up the probes it made without reaching the rest of its principal's designs.
+ * True when this actor may delete the design: its owner, or a delegate acting for that same owner
+ * that either created the design itself or was allowed to delete for its principal
+ * ([AuthenticatedUiBuilderActor.mayDeleteForPrincipal]). Delete is the one owner-only action a
+ * delegate can share: by default only on its own creations, so an agent can clean up the probes it
+ * made without reaching the rest of its principal's designs, and on all of them only when the human
+ * opted in.
  */
 internal fun DesignAccessControlV1.deletableBy(
   actor: AuthenticatedUiBuilderActor,
@@ -125,8 +128,8 @@ internal fun DesignAccessControlV1.deletableBy(
 ): Boolean =
   ownedBy(actor) ||
     (delegatedByOwner(actor) &&
-      createdByDelegateActorId != null &&
-      sameActor(actor.actorId, createdByDelegateActorId))
+      (actor.mayDeleteForPrincipal ||
+        (createdByDelegateActorId != null && sameActor(actor.actorId, createdByDelegateActorId))))
 
 internal fun PersistedDesignV1.deletableBy(actor: AuthenticatedUiBuilderActor): Boolean =
   access.deletableBy(actor, createdByDelegateActorId)
@@ -141,7 +144,7 @@ internal fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Des
     createdAtEpochMillis,
     updatedAtEpochMillis,
     access.ownerActorId,
-    access.requesterAccess(actor),
+    access.requesterAccess(actor, createdByDelegateActorId),
   )
 
 /**
@@ -161,20 +164,46 @@ internal fun StoredDesignHeaderV3.quarantinedListItem(
     createdAtEpochMillis,
     updatedAtEpochMillis,
     access.ownerActorId,
-    access.requesterAccess(actor),
+    access.requesterAccess(actor, createdByDelegateActorId),
   )
+
+/**
+ * What a delegate acting for the owner may do: everything an editor may, plus delete when
+ * [deletableBy] lets it. Never [DesignAccessActionV1.MANAGE_ACCESS], which stays with the owner's
+ * own credential. Reported exactly, so a listing never offers an action the service then refuses.
+ */
+internal fun DesignAccessControlV1.delegateActions(
+  actor: AuthenticatedUiBuilderActor,
+  createdByDelegateActorId: String?,
+): List<DesignAccessActionV1> =
+  DesignAccessActionV1.entries.filter {
+    when (it) {
+      DesignAccessActionV1.MANAGE_ACCESS -> false
+      DesignAccessActionV1.DELETE -> deletableBy(actor, createdByDelegateActorId)
+      else -> true
+    }
+  }
+
+/** True when this actor acts for the design's owner without being it. */
+internal fun DesignAccessControlV1.isDelegateOfOwner(actor: AuthenticatedUiBuilderActor): Boolean =
+  !ownedBy(actor) && delegatedByOwner(actor)
 
 /**
  * What the asking actor may do here, reported under the actor's own id but resolved through its
  * principal when it has one.
  */
 private fun DesignAccessControlV1.requesterAccess(
-  actor: AuthenticatedUiBuilderActor
+  actor: AuthenticatedUiBuilderActor,
+  createdByDelegateActorId: String?,
 ): DesignActorAccessV1 =
   if (ownedBy(actor))
     DesignActorAccessV1(actor.actorId, DesignAccessRoleV1.OWNER, DesignAccessActionV1.entries)
   else if (delegatedByOwner(actor))
-    DesignActorAccessV1(actor.actorId, DesignAccessRoleV1.EDITOR, DesignAccessActionV1.entries)
+    DesignActorAccessV1(
+      actor.actorId,
+      DesignAccessRoleV1.EDITOR,
+      delegateActions(actor, createdByDelegateActorId),
+    )
   else {
     // A reader who reached the design only because it is public is described by the public grant.
     val grant =

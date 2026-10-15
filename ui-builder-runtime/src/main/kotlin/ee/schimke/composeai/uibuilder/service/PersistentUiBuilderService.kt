@@ -1514,9 +1514,9 @@ public class PersistentUiBuilderService(
 
   /**
    * See [UiBuilderServiceRequest.DeleteDesign]; shares [removeLocked] with [adminDeleteDesign].
-   * Owner only, or the delegate that created the design ([deletableBy]). Unusable designs are
-   * deletable the same way; an unreadable one is checked against its quarantine header, and without
-   * one stays the operator's to retire.
+   * Owner only, or a delegate acting for the owner that created the design or was allowed to delete
+   * for its principal ([deletableBy]). Unusable designs are deletable the same way; an unreadable
+   * one is checked against its quarantine header, and without one stays the operator's to retire.
    */
   private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId]
@@ -1754,6 +1754,8 @@ public class PersistentUiBuilderService(
     }
     val actions =
       if (design.ownedBy(actor)) DesignAccessActionV1.entries
+      else if (design.access.isDelegateOfOwner(actor))
+        design.access.delegateActions(actor, design.createdByDelegateActorId)
       else DesignAccessActionV1.entries.filter { design.allows(actor, it) }
     return LockedExecution(UiBuilderServiceResponse.DesignActions(designId, actions))
   }
