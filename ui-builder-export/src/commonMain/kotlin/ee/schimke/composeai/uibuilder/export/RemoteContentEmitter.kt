@@ -1913,6 +1913,32 @@ internal class RemoteContentEmitter(
       UiExpressions.Op.SIN -> math("sin", f(0))
       UiExpressions.Op.COS -> math("cos", f(0))
       UiExpressions.Op.TAN -> math("tan", f(0))
+      UiExpressions.Op.ASIN -> math("asin", f(0))
+      UiExpressions.Op.ACOS -> math("acos", f(0))
+      UiExpressions.Op.ATAN -> math("atan", f(0))
+      UiExpressions.Op.ATAN2 -> math("atan2", f(0), f(1))
+      UiExpressions.Op.DEGREES -> math("toDeg", f(0))
+      UiExpressions.Op.RADIANS -> math("toRad", f(0))
+      UiExpressions.Op.EXP -> math("exp", f(0))
+      UiExpressions.Op.LN -> math("ln", f(0))
+      // The Remote `log` is base 10.
+      UiExpressions.Op.LOG10 -> math("log", f(0))
+      UiExpressions.Op.SIGN -> math("sign", f(0))
+      // Written out rather than the player's FRACT, which truncates: `fract(-0.25)` is 0.75 here.
+      UiExpressions.Op.FRACT -> "(${f(0)} - ${math("floor", f(0))})"
+      UiExpressions.Op.STEP ->
+        "${f(1)}.isGreaterThanOrEqualTo(${f(0)}).select(${1f.floatLiteral()}, ${0f.floatLiteral()})"
+      UiExpressions.Op.SMOOTHSTEP -> {
+        val t =
+          math(
+            "clamp",
+            "((${f(2)} - ${f(0)}) / (${f(1)} - ${f(0)}))",
+            0f.floatLiteral(),
+            1f.floatLiteral(),
+          )
+        "($t * $t * (${3f.floatLiteral()} - ${2f.floatLiteral()} * $t))"
+      }
+      UiExpressions.Op.HYPOT -> math("sqrt", "(${f(0)} * ${f(0)} + ${f(1)} * ${f(1)})")
       UiExpressions.Op.POW -> math("pow", f(0), f(1))
       UiExpressions.Op.LERP ->
         if (expr.kind == UiValueKind.COLOR) {

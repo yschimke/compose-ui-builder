@@ -228,6 +228,8 @@ class UiExpressionsTest {
         "2 ^ 3 ^ 2",
         "(2 ^ 3) ^ 2",
         "sqrt(progress ^ 2 + 1) * 2",
+        "smoothstep(0.2, 0.8, fract(time.animation))",
+        "degrees(atan2(progress, 1.0)) + step(0.5, progress)",
       )) {
       assertEquals(text, UiExpressions.format(parse(text)), text)
     }
@@ -298,6 +300,48 @@ class UiExpressionsTest {
   fun `the preview computes in Float, as the player does`() {
     assertEquals(true, evaluate("16777216.0 + 1.0 == 16777216.0"))
     assertEquals(true, evaluate("1.0 / 10.0 == 0.1"))
+  }
+
+  @Test
+  fun `shaping functions follow their GLSL meaning`() {
+    assertEquals(0.75, evaluate("fract(1.75)"))
+    // Not a truncation: the fraction of a negative number still runs 0 up to 1.
+    assertEquals(0.75, evaluate("fract(-0.25)"))
+    assertEquals(1.0, evaluate("step(0.5, 0.5)"))
+    assertEquals(0.0, evaluate("step(0.5, 0.25)"))
+    assertEquals(0.0, evaluate("smoothstep(0.0, 1.0, -1.0)"))
+    assertEquals(0.5, evaluate("smoothstep(0.0, 1.0, 0.5)"))
+    assertEquals(1.0, evaluate("smoothstep(0.0, 1.0, 2.0)"))
+    assertEquals(0.15625, evaluate("smoothstep(2.0, 6.0, 3.0)"))
+    assertEquals(-1.0, evaluate("sign(-3.5)"))
+    assertEquals(0.0, evaluate("sign(0)"))
+    assertEquals(5.0, evaluate("hypot(3, 4)"))
+  }
+
+  @Test
+  fun `inverse trig, angles and logarithms evaluate in Float`() {
+    fun close(expected: Double, text: String) {
+      val actual = evaluate(text) as Double
+      assertTrue(kotlin.math.abs(expected - actual) < 1e-5, "$text = $actual, not $expected")
+    }
+    close(kotlin.math.PI / 2, "asin(1.0)")
+    close(0.0, "acos(1.0)")
+    close(kotlin.math.PI / 4, "atan(1.0)")
+    // The angle of (0, -1), y first.
+    close(-kotlin.math.PI / 2, "atan2(-1.0, 0.0)")
+    close(180.0, "degrees(atan2(0.0, -1.0))")
+    close(kotlin.math.PI, "radians(180)")
+    close(kotlin.math.E, "exp(1.0)")
+    close(1.0, "ln(exp(1.0))")
+    close(3.0, "log10(1000)")
+    assertEquals(UiValueKind.FLOAT, typed("sign(count)").kind)
+  }
+
+  @Test
+  fun `the new functions take numbers only`() {
+    for (text in listOf("fract(on)", "step(name, 1)", "smoothstep(0, 1, on)", "atan2(1)")) {
+      assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text)
+    }
   }
 
   @Test

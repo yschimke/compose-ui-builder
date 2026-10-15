@@ -192,6 +192,58 @@ class RemoteExpressionExportTest {
   }
 
   @Test
+  fun `library functions lower to the Remote operator of the same meaning`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            formula(
+              "toString(degrees(atan2(asin(0.5), acos(0.5))) + radians(exp(ln(log10(sign(" +
+                "time.animation))))))"
+            )
+        )
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(
+      source,
+      "(toDeg(atan2(asin(0.5f.rf), acos(0.5f.rf))) + " +
+        "toRad(exp(ln(log(sign(RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)))))))",
+    )
+    for (symbol in listOf("toDeg", "toRad", "atan2", "asin", "acos", "exp", "ln", "log", "sign")) {
+      assertContains(source, "\nandroidx.compose.remote.creation.compose.state.$symbol\n")
+    }
+  }
+
+  @Test
+  fun `shaping functions are written out over public operators`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            formula(
+              "toString(fract(time.animation) + step(0.5, time.animation) + " +
+                "smoothstep(1.0, 3.0, time.animation) + hypot(count, 4))"
+            )
+        )
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    val time = "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)"
+    assertContains(source, "($time - floor($time))")
+    assertContains(source, "$time.isGreaterThanOrEqualTo(0.5f.rf).select(1.rf, 0.rf)")
+    val t = "clamp((($time - 1.rf) / (3.rf - 1.rf)), 0.rf, 1.rf)"
+    assertContains(source, "($t * $t * (3.rf - 2.rf * $t))")
+    assertContains(
+      source,
+      "sqrt((count.toRemoteFloat() * count.toRemoteFloat() + 4.rf * 4.rf))",
+    )
+    for (symbol in listOf("floor", "clamp", "sqrt")) {
+      assertContains(source, "\nandroidx.compose.remote.creation.compose.state.$symbol\n")
+    }
+  }
+
+  @Test
   fun `a tree that does not type is a located refusal, not source`() {
     val (_, refusals) = emit(mapOf("text" to formula("on * 2")))
 

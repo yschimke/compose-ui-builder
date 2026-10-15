@@ -1,12 +1,21 @@
 package ee.schimke.composeai.uibuilder.export
 
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.asin
+import kotlin.math.atan
+import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.floor
+import kotlin.math.ln
+import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.roundToLong
+import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tan
@@ -129,6 +138,29 @@ object UiExpressions {
     SIN("sin", 1..1),
     COS("cos", 1..1),
     TAN("tan", 1..1),
+    /** Radians, as the player's `asin`/`acos`/`atan`. */
+    ASIN("asin", 1..1),
+    ACOS("acos", 1..1),
+    ATAN("atan", 1..1),
+    /** The angle of the point (x, y): `atan2(y, x)`, in radians. */
+    ATAN2("atan2", 2..2),
+    /** Degrees from radians, and back. */
+    DEGREES("degrees", 1..1),
+    RADIANS("radians", 1..1),
+    EXP("exp", 1..1),
+    /** The natural logarithm. */
+    LN("ln", 1..1),
+    LOG10("log10", 1..1),
+    /** -1, 0 or 1. */
+    SIGN("sign", 1..1),
+    /** `x - floor(x)`: 0 up to 1 for any x, so `fract(-0.25)` is 0.75. */
+    FRACT("fract", 1..1),
+    /** `step(edge, x)`: 1 where x is at least edge, otherwise 0. */
+    STEP("step", 2..2),
+    /** `smoothstep(edge0, edge1, x)`: 0 below edge0, 1 above edge1, a smooth curve between. */
+    SMOOTHSTEP("smoothstep", 3..3),
+    /** `sqrt(x * x + y * y)`. */
+    HYPOT("hypot", 2..2),
     LERP("lerp", 3..3),
     TO_INT("toInt", 1..1),
     TO_FLOAT("toFloat", 1..1),
@@ -455,8 +487,22 @@ object UiExpressions {
       Op.SIN,
       Op.COS,
       Op.TAN,
+      Op.ASIN,
+      Op.ACOS,
+      Op.ATAN,
+      Op.DEGREES,
+      Op.RADIANS,
+      Op.EXP,
+      Op.LN,
+      Op.LOG10,
+      Op.SIGN,
+      Op.FRACT,
       Op.TO_FLOAT -> if (numeric(0)) UiValueKind.FLOAT else fail()
-      Op.POW -> if (numeric(0, 1)) UiValueKind.FLOAT else fail()
+      Op.POW,
+      Op.ATAN2,
+      Op.STEP,
+      Op.HYPOT -> if (numeric(0, 1)) UiValueKind.FLOAT else fail()
+      Op.SMOOTHSTEP -> if (numeric(0, 1, 2)) UiValueKind.FLOAT else fail()
       // Two colours mixed by a fraction, as the player's colour `tween(from, to, fraction)`.
       Op.LERP ->
         when {
@@ -765,6 +811,20 @@ object UiExpressions {
       Op.SIN -> num(sin(d(0)))
       Op.COS -> num(cos(d(0)))
       Op.TAN -> num(tan(d(0)))
+      Op.ASIN -> num(asin(d(0)))
+      Op.ACOS -> num(acos(d(0)))
+      Op.ATAN -> num(atan(d(0)))
+      Op.ATAN2 -> num(atan2(d(0), d(1)))
+      Op.DEGREES -> num(d(0) * (180.0 / PI))
+      Op.RADIANS -> num(d(0) * (PI / 180.0))
+      Op.EXP -> num(exp(d(0)))
+      Op.LN -> num(ln(d(0)))
+      Op.LOG10 -> num(log10(d(0)))
+      Op.SIGN -> num(sign(d(0)))
+      Op.FRACT -> num(d(0) - floor(d(0)))
+      Op.STEP -> num(if (d(1) >= d(0)) 1.0 else 0.0)
+      Op.SMOOTHSTEP -> num(smoothstep(d(0), d(1), d(2)))
+      Op.HYPOT -> num(sqrt(d(0) * d(0) + d(1) * d(1)))
       Op.LERP ->
         if (expr.kind == UiValueKind.COLOR)
           mixColors(values[0] as String, values[1] as String, d(2))
@@ -787,6 +847,15 @@ object UiExpressions {
       Op.CONCAT -> values.joinToString("") { it.display() }
       Op.TO_STRING -> values[0].display()
     }
+  }
+
+  /**
+   * Hermite smoothing between two edges, computed as the Remote writer lowers it: `t * t * (3 - 2 *
+   * t)` over `t = clamp((x - edge0) / (edge1 - edge0), 0, 1)`, in Float like the player.
+   */
+  private fun smoothstep(edge0: Double, edge1: Double, x: Double): Double {
+    val t = ((x - edge0).toFloat() / (edge1 - edge0).toFloat()).coerceIn(0f, 1f).toDouble()
+    return t * t * (3.0 - 2.0 * t)
   }
 
   private fun Any.normalised(): Any = if (this is Number) toDouble() else this
