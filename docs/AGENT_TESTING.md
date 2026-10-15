@@ -316,11 +316,13 @@ export UI_BUILDER_TOKEN=$(compose-preview auth token --server https://ui.coo.ee)
 node scripts/ui-builder-web-smoke/editor-shot.mjs https://ui.coo.ee/<design-id> editor.png
 ```
 
-The grant is sent as `Authorization: Bearer` on the design's origin, so the editor opens the
-design as its owner sees it. Leave `UI_BUILDER_TOKEN` unset for a public design. `--document FILE`
+The grant is sent as `Authorization: Bearer` on the design origin's `/api/` and `/mcp` requests
+only, never across a redirect to another origin, so the editor opens the design as its owner sees
+it. Leave `UI_BUILDER_TOKEN` unset for a public design. `--document FILE`
 swaps the design's document in the host's replies for a past revision (the `document` from
 `ui_builder_get_design` with `revision`), so the editor draws a revision it would not otherwise
-open. Nothing is saved. `--steps '[["click",1373,371],["wait",2000],["shot","panel.png"]]'` drives
+open. Nothing is saved. The editor draws it against the catalog the host sent, and the script warns
+when that is not the catalog the revision was pinned to. `--steps '[["click",1373,371],["wait",2000],["shot","panel.png"]]'` drives
 the page first; `--viewport 412x915` is a phone width.
 
 That is how the remote-m3 `draw/canvas` gap was found: in revision 20 of a Wear widget, the device

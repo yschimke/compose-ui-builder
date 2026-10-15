@@ -19,7 +19,13 @@
 //                     ["shot","file.png"]], coordinates in CSS pixels of the viewport.
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
-import { parseArgs, replaceDocument, isDesignReply } from './editor-shot-lib.mjs';
+import {
+  catalogPinKey,
+  isDesignReply,
+  needsGrant,
+  parseArgs,
+  replaceDocument,
+} from './editor-shot-lib.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 const token = process.env.UI_BUILDER_TOKEN || null;
@@ -39,18 +45,27 @@ try {
   // `locale`: under LANG=C.UTF-8 Chromium reports `en-US@posix`, which Intl.Locale rejects.
   const context = await browser.newContext({ viewport: options.viewport, locale: 'en-US' });
   let replaced = 0;
+  const hostPins = new Set();
   await context.route(
     (url) => url.origin === origin,
     async (route) => {
+      const url = route.request().url();
+      const authorize = token !== null && needsGrant(url);
+      const swap = replacement !== null && isDesignReply(url);
+      if (!authorize && !swap) return route.continue();
       const headers = { ...route.request().headers() };
-      if (token) headers.authorization = `Bearer ${token}`;
-      if (!replacement || !isDesignReply(route.request().url())) return route.continue({ headers });
-      const response = await route.fetch({ headers });
-      if (!(response.headers()['content-type'] ?? '').includes('json')) {
+      if (authorize) headers.authorization = `Bearer ${token}`;
+      // Playwright applies these headers to every redirect in the chain, whatever its origin. Take
+      // the first hop only and hand a redirect back to the browser, which routes its target again:
+      // the grant goes with it only if that target is this origin's API too.
+      const response = await route.fetch({ headers, maxRedirects: 0 });
+      if (!swap || !(response.headers()['content-type'] ?? '').includes('json')) {
         return route.fulfill({ response });
       }
       const body = await response.json();
-      replaced += replaceDocument(body, replacement);
+      const result = replaceDocument(body, replacement);
+      replaced += result.replaced;
+      result.hostPins.forEach((pin) => hostPins.add(pin));
       return route.fulfill({ response, json: body });
     },
   );
@@ -70,6 +85,16 @@ try {
   await page.waitForTimeout(options.settle);
   if (replacement) {
     console.log(replaced > 0 ? `replaced the document ${replaced}×` : 'the document was never sent');
+    // The editor draws a swapped revision against the catalog the host sent with the current one.
+    const pin = catalogPinKey(replacement);
+    const others = [...hostPins].filter((it) => it !== pin);
+    if (others.length > 0) {
+      console.error(
+        `warning: --document is pinned to ${pin} but the host sent ${others.join(', ')}; ` +
+          'the editor draws it against the host catalog, so components that changed between ' +
+          'them may draw differently or as unsupported',
+      );
+    }
   }
   for (const [op, a, b] of options.steps) {
     if (op === 'click') await page.mouse.click(a, b);

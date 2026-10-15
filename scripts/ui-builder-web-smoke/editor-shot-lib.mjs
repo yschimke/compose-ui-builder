@@ -48,17 +48,35 @@ export function isDesignReply(url) {
 }
 
 /**
+ * Whether a request carries the grant: the host's API and MCP only. The editor's own files are
+ * public, and keeping the token off them keeps it off any CDN or login page they redirect to.
+ */
+export function needsGrant(url) {
+  const path = new URL(url).pathname;
+  return path.startsWith('/api/') || path === '/mcp' || path.startsWith('/mcp/');
+}
+
+/** A document's catalog pin as one comparable string. */
+export function catalogPinKey(document) {
+  const pin = document?.catalogPin ?? {};
+  return `${pin.systemId}@${pin.catalogRevision}`;
+}
+
+/**
  * Replace every document in [body] that is [document]'s design with [document], keeping the
  * revision the host sent so the editor's sequencing still agrees with the server. Returns how many
- * were replaced.
+ * were replaced and the catalog pins of the documents they replaced, so a caller can say when the
+ * editor will draw [document] against a catalog it was not pinned to.
  */
 export function replaceDocument(body, document) {
   let replaced = 0;
+  const hostPins = [];
   const visit = (value) => {
     if (!value || typeof value !== 'object') return;
     for (const key of Object.keys(value)) {
       const child = value[key];
       if (child && typeof child === 'object' && child.schema === DOCUMENT_SCHEMA && child.id === document.id) {
+        hostPins.push(catalogPinKey(child));
         value[key] = { ...document, revision: child.revision };
         replaced++;
       } else {
@@ -67,5 +85,5 @@ export function replaceDocument(body, document) {
     }
   };
   visit(body);
-  return replaced;
+  return { replaced, hostPins };
 }
