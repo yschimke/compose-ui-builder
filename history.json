@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "40a243a07232d4f01ff71037cf382e921bc0b463",
+    "generatedFrom": "e5c8c7d7c5cf0901752f13132a95f8ebc02f77f2",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -132,6 +132,13 @@
         "ui-builder/ee.schimke.composeai.uibuilder.preview.CatalogRuntimeRoutingPreviewKt.CatalogRuntimeRoutingPreview": {
             "path": "renders/ui-builder/CatalogRuntimeRoutingPreview-00544b46.png",
             "versions": [
+                {
+                    "blob": "bbda6dc9c5cbfd3f03198c2e392ca0e97c0df7e0",
+                    "commit": "e5c8c7d7c5cf0901752f13132a95f8ebc02f77f2",
+                    "date": "2026-10-15T18:30:44Z",
+                    "sourceSha": "092a2b5d",
+                    "commits": 1
+                },
                 {
                     "blob": "8d344fdd579f6a4f40b051644bf214ad84524fb4",
                     "commit": "1749c388b6e4bd161ec280968296c0cbb0fe4b22",
@@ -266,7 +273,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 19,
+            "observations": 20,
             "unstable": false,
             "flapCount": 1
         },
@@ -7645,6 +7652,13 @@
             "path": "renders/ui-builder/WearWidgetCodePanePreview-59a2e9f9.png",
             "versions": [
                 {
+                    "blob": "4ffcef17dae6edb0c7d67224e2cbe836a29c13e3",
+                    "commit": "e5c8c7d7c5cf0901752f13132a95f8ebc02f77f2",
+                    "date": "2026-10-15T18:30:44Z",
+                    "sourceSha": "092a2b5d",
+                    "commits": 1
+                },
+                {
                     "blob": "9c188dc3d9388cb1ccc42a3de6657de607e5ff4b",
                     "commit": "40a243a07232d4f01ff71037cf382e921bc0b463",
                     "date": "2026-10-15T16:29:13Z",
@@ -7729,7 +7743,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 12,
+            "observations": 13,
             "unstable": false,
             "flapCount": 1
         },
