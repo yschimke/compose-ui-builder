@@ -258,7 +258,7 @@ composeai-contracts = "3.35.0"
 # 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
 # of a `time.*` RemoteCanvas needs once time runs. 2.4.0 plays shared elements and a component's own
 # enter/exit across a StateLayout switch (rc-players#604, rc-players#606).
-rc-players = "2.12.0"
+rc-players = "2.13.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.6.0"
