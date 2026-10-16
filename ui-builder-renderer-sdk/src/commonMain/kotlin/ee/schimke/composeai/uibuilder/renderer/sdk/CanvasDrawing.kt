@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -201,6 +202,11 @@ private fun collectSteps(
         },
       blendMode = blendModeOf(node.text("blendMode")),
       gradientColors = gradientColors,
+      gradientStops =
+        UiDrawing.gradientStops(node)
+          ?.takeIf { stops -> stops.size == gradientColors?.size && stops.none { it == null } }
+          ?.map { it!! },
+      geometry = GradientGeometry.of(node),
     )
   when (node.componentId) {
     UiDrawing.GROUP ->
@@ -278,21 +284,80 @@ private class DrawPaint(
   val blendMode: BlendMode = BlendMode.SrcOver,
   /** A gradient's listed colours, evenly spaced, in place of [color] → [gradientColor]. */
   val gradientColors: List<Color>? = null,
+  /** Where each of [gradientColors] sits, 0 to 1; evenly spaced when null. */
+  val gradientStops: List<Float>? = null,
+  val geometry: GradientGeometry = GradientGeometry(),
 ) {
   /**
    * What the shape is filled or stroked with: its colour, or a gradient from it to [gradientColor]
    * laid across the whole canvas, as the exported `RemoteBrush` is.
    */
-  fun brush(extent: Size): Brush {
+  fun brush(extent: Size, unit: Float): Brush {
     val colors = gradientColors ?: listOf(color, gradientColor ?: color)
-    val center = Offset(extent.width / 2f, extent.height / 2f)
+    val stops =
+      (gradientStops ?: colors.indices.map { it / (colors.size - 1).toFloat() })
+        .zip(colors)
+        .toTypedArray()
+    fun length(dp: Float?): Float? = dp?.times(unit)
+    val center =
+      Offset(
+        length(geometry.centerXDp) ?: (extent.width / 2f),
+        length(geometry.centerYDp) ?: (extent.height / 2f),
+      )
+    val tile = geometry.tileMode
     return when (gradient) {
-      "horizontal" -> Brush.horizontalGradient(colors, 0f, extent.width)
-      "vertical" -> Brush.verticalGradient(colors, 0f, extent.height)
-      "radial" -> Brush.radialGradient(colors, center, extent.minDimension / 2f)
-      "sweep" -> Brush.sweepGradient(colors, center)
+      "horizontal" ->
+        Brush.horizontalGradient(
+          *stops,
+          startX = length(geometry.startDp) ?: 0f,
+          endX = length(geometry.endDp) ?: extent.width,
+          tileMode = tile,
+        )
+      "vertical" ->
+        Brush.verticalGradient(
+          *stops,
+          startY = length(geometry.startDp) ?: 0f,
+          endY = length(geometry.endDp) ?: extent.height,
+          tileMode = tile,
+        )
+      "radial" ->
+        Brush.radialGradient(
+          *stops,
+          center = center,
+          radius = length(geometry.radiusDp) ?: (extent.minDimension / 2f),
+          tileMode = tile,
+        )
+      "sweep" -> Brush.sweepGradient(*stops, center = center)
       else -> SolidColor(color)
     }
+  }
+}
+
+/** Where a gradient runs, in dp (a path's viewport units), and what it paints past its ends. */
+private class GradientGeometry(
+  val startDp: Float? = null,
+  val endDp: Float? = null,
+  val centerXDp: Float? = null,
+  val centerYDp: Float? = null,
+  val radiusDp: Float? = null,
+  val tileMode: TileMode = TileMode.Clamp,
+) {
+  companion object {
+    fun of(node: UiBuilderNode): GradientGeometry =
+      GradientGeometry(
+        startDp = node.number("gradientStartDp"),
+        endDp = node.number("gradientEndDp"),
+        centerXDp = node.number("gradientCenterXDp"),
+        centerYDp = node.number("gradientCenterYDp"),
+        radiusDp = node.number("gradientRadiusDp"),
+        tileMode =
+          when (node.text("gradientTileMode")) {
+            "repeated" -> TileMode.Repeated
+            "mirror" -> TileMode.Mirror
+            "decal" -> TileMode.Decal
+            else -> TileMode.Clamp
+          },
+      )
   }
 }
 
@@ -313,7 +378,10 @@ private sealed interface DrawStep {
             node.number("translateYDp")?.dp(this@with) ?: 0f,
           )
           node.number("rotate")?.let { rotate(it, pivot) }
-          node.number("scale")?.let { scale(it, it, pivot) }
+          val both = node.number("scale")
+          val scaleX = node.number("scaleX") ?: both
+          val scaleY = node.number("scaleY") ?: both
+          if (scaleX != null || scaleY != null) scale(scaleX ?: 1f, scaleY ?: 1f, pivot)
         }) {
           children.forEach { it.draw(this, measurer, extent) }
         }
@@ -375,7 +443,7 @@ private sealed interface DrawStep {
             node.number("heightDp")?.dp(this)
               ?: if (boxStated) extent.height - y else extent.height - inset * 2,
           )
-        val brush = paint.brush(extent)
+        val brush = paint.brush(extent, density)
         when (node.componentId) {
           "draw/rect" -> {
             val radius = node.number("cornerRadiusDp")?.dp(this)
@@ -446,7 +514,7 @@ private sealed interface DrawStep {
               val viewportWidth = node.number("viewportWidth")?.takeIf { it > 0f } ?: 24f
               val viewportHeight = node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f
               // The scale applies to the shader too, so a gradient spans the viewport.
-              val viewportBrush = paint.brush(Size(viewportWidth, viewportHeight))
+              val viewportBrush = paint.brush(Size(viewportWidth, viewportHeight), 1f)
               val sx = extent.width / viewportWidth
               val sy = extent.height / viewportHeight
               // It applies to the stroke as well, so the width is divided back out: strokeWidthDp

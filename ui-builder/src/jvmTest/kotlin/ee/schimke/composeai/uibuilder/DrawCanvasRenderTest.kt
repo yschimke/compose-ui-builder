@@ -215,6 +215,21 @@ class DrawCanvasRenderTest {
     assertEquals(literal, computed, "half the 80dp canvas did not draw as 40dp")
   }
 
+  @Test
+  fun `a gradient that ends early holds its end colour past it`() {
+    fun fill(extra: String) =
+      """"fill":{"id":"fill","componentId":"draw/rect","properties":{
+        "gradient":{"type":"enum","value":"horizontal"},
+        "color":{"type":"color","value":"#FFFF0000"},
+        "gradientColor":{"type":"color","value":"#FF0000FF"}$extra},
+        "modifiers":[],"slots":{},"eventBindings":{}}"""
+    val across = countOn(Color.Blue, listOf("fill"), fill(""))
+    val early =
+      countOn(Color.Blue, listOf("fill"), fill(""","gradientEndDp":{"type":"float","value":40}"""))
+    // Clamped, everything past 40dp of the 80dp canvas is the end colour.
+    assertTrue(early > across + 1_000, "blue past the gradient's end: $early, across: $across")
+  }
+
   private fun Color.isNear(other: Color): Boolean =
     kotlin.math.abs(red - other.red) < 0.1f &&
       kotlin.math.abs(green - other.green) < 0.1f &&
