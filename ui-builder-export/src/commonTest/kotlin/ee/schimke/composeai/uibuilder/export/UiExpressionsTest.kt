@@ -230,6 +230,9 @@ class UiExpressionsTest {
         "sqrt(progress ^ 2 + 1) * 2",
         "smoothstep(0.2, 0.8, fract(time.animation))",
         "degrees(atan2(progress, 1.0)) + step(0.5, progress)",
+        "pingPong(time.animation, 2.0) + rand() * device.density",
+        "substring(uppercase(name), 0, count)",
+        "hsv(fract(time.dayOfYear / 365.0), 0.5, 1.0)",
       )) {
       assertEquals(text, UiExpressions.format(parse(text)), text)
     }
@@ -261,7 +264,9 @@ class UiExpressionsTest {
     )
     assertNotNull(
       UiExpressions.shapeIssue(
-        JsonObject(mapOf("type" to JsonPrimitive("system"), "value" to JsonPrimitive("time.year")))
+        JsonObject(
+          mapOf("type" to JsonPrimitive("system"), "value" to JsonPrimitive("time.nanoOfSecond"))
+        )
       )
     )
   }
@@ -351,6 +356,83 @@ class UiExpressionsTest {
         "format(1.0, 1, 0)",
         "format(1.0, 1, 10)",
         "format(name, 1)",
+      )) {
+      assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text)
+    }
+  }
+
+  @Test
+  fun `the date reads the fixed time's year, month and day of year`() {
+    val clock = UiExpressions.Clock.of("2024-05-16T12:00:00Z")
+    assertEquals(2024.0, evaluate("time.year", clock = clock))
+    assertEquals(5.0, evaluate("time.month", clock = clock))
+    // 2024 is a leap year: 31 + 29 + 31 + 30 + 16.
+    assertEquals(137.0, evaluate("time.dayOfYear", clock = clock))
+    assertEquals(0.0, evaluate("time.animationDelta", clock = clock))
+  }
+
+  @Test
+  fun `device values read the document's environment`() {
+    val device =
+      UiExpressions.Device.of(
+        kotlinx.serialization.json.Json.parseToJsonElement(
+          """{"widthDp":216,"heightDp":124,"density":2.5,"fontScale":1.3}"""
+        ) as JsonObject
+      )
+    fun read(text: String) =
+      UiExpressions.evaluate(typed(text), UiExpressions.Environment(device = device))
+    assertEquals(2.5, read("device.density"))
+    assertEquals(1.3, read("device.fontScale"))
+    assertEquals(216.0, read("device.windowWidth"))
+    assertEquals(124.0, read("device.windowHeight"))
+    assertEquals(UiExpressions.Device.DEFAULT, UiExpressions.Device.of(JsonObject(emptyMap())))
+  }
+
+  @Test
+  fun `random draws preview as their middle and ping-pong folds as the player's`() {
+    assertEquals(0.5, evaluate("rand()"))
+    assertEquals(15.0, evaluate("randRange(10, 20)"))
+    assertEquals(3.0, evaluate("pingPong(3, 4)"))
+    assertEquals(3.0, evaluate("pingPong(5, 4)"))
+    assertEquals(1.0, evaluate("pingPong(9, 4)"))
+    assertEquals(1.0, evaluate("pingPong(-1, 4)"))
+    assertEquals(3.0, evaluate("pingPong(-5, 4)"))
+    assertTrue(UiExpressions.isDynamic(typed("rand()")))
+    assertTrue(UiExpressions.isDynamic(typed("randRange(1, 2)")))
+  }
+
+  @Test
+  fun `colours build from their components`() {
+    assertEquals("#FFFF0000", evaluate("hsv(0, 1, 1)"))
+    assertEquals("#FF00FF00", evaluate("hsv(1.0 / 3.0, 1, 1)"))
+    assertEquals("#FFFF0000", evaluate("hsv(1, 1, 1)"))
+    assertEquals("#800000FF", evaluate("rgb(0, 0, 1, 0.5)"))
+    assertEquals("#FFFFFFFF", evaluate("rgb(2, 2, 2)"))
+    assertEquals(UiValueKind.COLOR, typed("hsv(progress, 1, 1)").kind)
+  }
+
+  @Test
+  fun `text transforms change case, trim and cut`() {
+    assertEquals("ADA", evaluate("uppercase(name)", mapOf("name" to "Ada")))
+    assertEquals("ada", evaluate("lowercase(name)", mapOf("name" to "Ada")))
+    assertEquals("x", evaluate("trim(\"  x \")"))
+    assertEquals("el", evaluate("substring(\"hello\", 1, 3)"))
+    assertEquals("lo", evaluate("substring(\"hello\", 3)"))
+    // Past the end is the end, as a preview should not crash on a too-long count.
+    assertEquals("", evaluate("substring(\"hi\", 5)"))
+  }
+
+  @Test
+  fun `the new functions refuse operands of the wrong kind`() {
+    for (text in
+      listOf(
+        "hsv(name, 1, 1)",
+        "rgb(1, 1)",
+        "uppercase(count)",
+        "substring(name, 1.5)",
+        "substring(count, 1)",
+        "rand(1)",
+        "pingPong(name, 1)",
       )) {
       assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text)
     }
