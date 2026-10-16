@@ -382,7 +382,8 @@ internal fun CatalogRuntimeCanvas(
       .toCssColor()
   // What the runtime announced in `initialized`: the editor sends a `revealNode` or a sideways
   // unroll only to a runtime that listed it.
-  var capabilities by remember(surfaceId) { mutableStateOf(emptySet<String>()) }
+  // Per runtime: a surface that moves to another catalog's runtime starts with none.
+  var capabilities by remember(surfaceId, runtimeId) { mutableStateOf(emptySet<String>()) }
   // The developer's preview engine rides in the environment, to a runtime that takes one; read here
   // so changing it re-sends the design.
   val previewEngine = CatalogRuntimePreviewEngine.selected
@@ -766,6 +767,8 @@ private fun updateCatalogRuntimeSurface(
       }
       if (controller) controller.dispose();
       host.replaceChildren();
+      // Until the new runtime announces its own: the last runtime's must not gate this one.
+      delete host.__uiBuilderCapabilities;
       const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
       globalThis.composeUiBuilderBoot?.mark?.('renderer-requested');
       const frame = document.createElement('iframe');

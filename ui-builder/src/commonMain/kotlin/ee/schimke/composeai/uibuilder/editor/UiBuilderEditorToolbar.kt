@@ -217,6 +217,10 @@ internal fun MobileEditorToolbar(
               )
             }
           }
+          // The preview engine, as rows for the same reason, when the page asked for the choice.
+          if (CatalogRuntimePreviewEngine.enabled && CatalogRuntimePreviewEngine.offered) {
+            addAll(previewEngineMenuEntries(labelPrefix = "Engine: ") { expanded = false })
+          }
           if (onNewDesign != null) {
             add(
               UiBuilderMenuEntry.Action("New design") {
@@ -1024,37 +1028,32 @@ private fun PreviewEngineMenu() {
     LocalUiBuilderChrome.current.PopupMenu(
       expanded = open,
       onDismissRequest = { open = false },
-      entries =
-        listOf(
-          UiBuilderMenuEntry.Action(
-            label = "Runtime default",
-            detail = "Whatever the catalog runtime ships with",
-            detailStyle = UiBuilderMenuDetailStyle.Body,
-            selected = selected == null,
-            reserveIconSpace = true,
-            compactLeadingIcon = true,
-            onClick = {
-              CatalogRuntimePreviewEngine.select(null)
-              open = false
-            },
-          )
-        ) +
-          CatalogRuntimePreviewEngine.Engine.entries.map { option ->
-            UiBuilderMenuEntry.Action(
-              label = option.label,
-              detail = option.detail,
-              detailStyle = UiBuilderMenuDetailStyle.Body,
-              selected = option == selected,
-              reserveIconSpace = true,
-              compactLeadingIcon = true,
-              onClick = {
-                CatalogRuntimePreviewEngine.select(option)
-                open = false
-              },
-            )
-          },
+      entries = previewEngineMenuEntries { open = false },
     )
   }
+}
+
+/** The preview engines as menu rows; [onPicked] closes whichever menu holds them. */
+private fun previewEngineMenuEntries(
+  labelPrefix: String = "",
+  onPicked: () -> Unit,
+): List<UiBuilderMenuEntry> {
+  val selected = CatalogRuntimePreviewEngine.selected
+  fun row(label: String, detail: String, engine: CatalogRuntimePreviewEngine.Engine?) =
+    UiBuilderMenuEntry.Action(
+      label = labelPrefix + label,
+      detail = detail,
+      detailStyle = UiBuilderMenuDetailStyle.Body,
+      selected = engine == selected,
+      reserveIconSpace = true,
+      compactLeadingIcon = true,
+      onClick = {
+        CatalogRuntimePreviewEngine.select(engine)
+        onPicked()
+      },
+    )
+  return listOf(row("Runtime default", "Whatever the catalog runtime ships with", null)) +
+    CatalogRuntimePreviewEngine.Engine.entries.map { row(it.label, it.detail, it) }
 }
 
 /**
