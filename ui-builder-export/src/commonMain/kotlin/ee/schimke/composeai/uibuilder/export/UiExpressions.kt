@@ -898,25 +898,23 @@ object UiExpressions {
   }
 
   /**
-   * [value] with exactly [decimals] fraction digits, rounded half to even as the player's
-   * `DecimalFormat` default, and its whole part zero-padded to [minDigits]; no grouping.
+   * [value] with exactly [decimals] fraction digits and its whole part zero-padded to [minDigits],
+   * no grouping, as the player's text-from-float prints it (`StringUtils` in remote-core): the
+   * magnitude has half a unit added, in Float, and is truncated, so a tie rounds away from zero;
+   * and any negative value keeps its sign, so `-0.01` to one decimal is `-0.0`.
    */
   internal fun formatNumber(value: Double, decimals: Int, minDigits: Int): String {
-    val scale = 10.0.pow(decimals)
-    val scaled = abs(value) * scale
-    // Half to even: a tie rounds to the even neighbour, otherwise to the nearest.
-    val floor = floor(scaled)
-    val rounded =
-      when {
-        scaled - floor > 0.5 -> floor + 1
-        scaled - floor < 0.5 -> floor
-        floor % 2.0 == 0.0 -> floor
-        else -> floor + 1
-      }.toLong()
-    val digits = rounded.toString().padStart(decimals + 1, '0')
-    val whole = digits.dropLast(decimals).padStart(minDigits, '0')
-    val fraction = digits.takeLast(decimals)
-    val sign = if (value < 0 && rounded != 0L) "-" else ""
+    val magnitude = abs(value).toFloat()
+    var half = 0.5f
+    repeat(decimals) { half /= 10f }
+    var scale = 1L
+    repeat(decimals) { scale *= 10 }
+    // As the player does: round in Float, then split, and scale only the fractional part.
+    val rounded = magnitude + half
+    val integer = rounded.toLong()
+    val whole = integer.toString().padStart(minDigits, '0')
+    val fraction = ((rounded - integer) * scale).toLong().toString().padStart(decimals, '0')
+    val sign = if (value < 0) "-" else ""
     return sign + whole + if (decimals > 0) ".$fraction" else ""
   }
 

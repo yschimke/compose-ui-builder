@@ -329,11 +329,14 @@ class UiExpressionsTest {
     assertEquals("07.5", evaluate("format(7.5, 1, 2)"))
     assertEquals("42", evaluate("format(41.6, 0)"))
     assertEquals("-0.50", evaluate("format(-0.5, 2)"))
-    // Ties round to the even neighbour, as the player's DecimalFormat default does.
-    assertEquals("2", evaluate("format(2.5, 0)"))
+    // Ties round away from zero: the player adds half a unit to the magnitude and truncates.
+    assertEquals("3", evaluate("format(2.5, 0)"))
     assertEquals("4", evaluate("format(3.5, 0)"))
-    // A negative that rounds to zero prints without a sign.
-    assertEquals("0.0", evaluate("format(-0.01, 1)"))
+    assertEquals("-3", evaluate("format(-2.5, 0)"))
+    // Any negative keeps its sign, even one that rounds to zero, as the player prints it.
+    assertEquals("-0.0", evaluate("format(-0.01, 1)"))
+    // Only the fraction is scaled, after rounding, so a large value keeps the player's digits.
+    assertEquals("1111.611", evaluate("format(1111.6115, 3)"))
     assertEquals("05", evaluate("format(count, 0, 2)", mapOf("count" to "5")))
     assertEquals(UiValueKind.STRING, typed("format(progress, 1)").kind)
   }
