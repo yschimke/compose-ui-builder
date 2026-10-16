@@ -237,6 +237,12 @@ dependencies {
 }
 
 tasks.named<Test>("jvmTest") {
+  // `RemoteJsonImporterTest` imports a RemoteCompose-Examples checkout when given one.
+  providers.gradleProperty("remoteJsonCorpus").orNull?.let {
+    val corpus = rootProject.file(it)
+    inputs.dir(corpus).withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("remoteJsonCorpus", corpus.absolutePath)
+  }
   val classpath = desktopComposeClasspath.incoming.files
   val plugin = composeCompilerPlugin.incoming.files
   inputs
