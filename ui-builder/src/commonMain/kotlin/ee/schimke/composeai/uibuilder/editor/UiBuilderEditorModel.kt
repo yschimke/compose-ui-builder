@@ -19,6 +19,7 @@ import ee.schimke.composeai.uibuilder.export.isLauncherWidget
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -69,6 +70,8 @@ data class EditorPropertyField(
   val control: EditorPropertyControl,
   val value: String,
   val choices: List<String> = emptyList(),
+  /** Literal values behind displayed enum choices, including numeric/string unions. */
+  val choiceValues: Map<String, JsonElement> = emptyMap(),
   val numberBounds: EditorNumberBounds? = null,
   val error: String? = null,
   /** The catalog's notes on the property, written for agents; the inspector folds them away. */

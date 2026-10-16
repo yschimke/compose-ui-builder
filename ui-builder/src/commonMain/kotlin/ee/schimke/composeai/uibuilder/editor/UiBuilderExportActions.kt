@@ -31,6 +31,7 @@ enum class EditorExportFormat(
    * JSON Lines, via the same `json` route as [Json].
    */
   A2uiJson("A2UI JSON", "json"),
+  LovelaceJson("Lovelace JSON", "json"),
 }
 
 /** What the host does with a design's picture; see [EditorExportFormat]. */
@@ -83,6 +84,7 @@ sealed interface EditorExportMenuEntry {
           EditorExportFormat.Png -> "Paste anywhere as a picture"
           EditorExportFormat.Json -> "Editable Remote Compose source"
           EditorExportFormat.Rc -> "Use Download to save the binary document"
+          EditorExportFormat.LovelaceJson -> "Dashboard config for your Home Assistant host"
           EditorExportFormat.A2uiJson -> "The messages an agent sends to draw this surface"
         }
   }
@@ -154,6 +156,7 @@ fun exportFormatsFor(
   json: Boolean = false,
   rc: Boolean = false,
   a2uiJson: Boolean = false,
+  lovelaceJson: Boolean = false,
 ): List<EditorExportFormat> = buildList {
   if (svg) add(EditorExportFormat.Svg)
   if (png) add(EditorExportFormat.Png)
@@ -161,6 +164,7 @@ fun exportFormatsFor(
   if (UiBuilderBuildFeatures.remoteCompose && rc) add(EditorExportFormat.Rc)
   // Not behind the Remote Compose flag: an A2UI design's JSON is its A2UI messages.
   if (a2uiJson) add(EditorExportFormat.A2uiJson)
+  if (lovelaceJson) add(EditorExportFormat.LovelaceJson)
 }
 
 /**

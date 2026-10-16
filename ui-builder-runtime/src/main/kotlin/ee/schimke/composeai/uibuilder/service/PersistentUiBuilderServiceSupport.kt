@@ -860,7 +860,7 @@ internal fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     // rather than silently reading as unsupported. A2UI JSON is not gated by the Remote Compose
     // flag.
     ExportFormatV1.JSON ->
-      (UiBuilderBuildFeatures.remoteCompose || platform == A2UI_PLATFORM) &&
+      (UiBuilderBuildFeatures.remoteCompose || platform in setOf(A2UI_PLATFORM, "lovelace")) &&
         exportCapabilities.remoteJson
     ExportFormatV1.RC -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteDocument
   }

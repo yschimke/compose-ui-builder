@@ -32,7 +32,10 @@ enum class UiBuilderCatalogPlatform(
    * An A2UI surface: a protocol document an agent sends, drawn by whichever client holds the
    * catalog. Its own platform because nothing from any other one can be sent to an A2UI client.
    */
-  A2UI("a2ui", "A2UI");
+  A2UI("a2ui", "A2UI"),
+
+  /** A host-owned Home Assistant dashboard config. */
+  LOVELACE("lovelace", "Home Assistant dashboard");
 
   companion object {
     const val KEY: String = "platform"

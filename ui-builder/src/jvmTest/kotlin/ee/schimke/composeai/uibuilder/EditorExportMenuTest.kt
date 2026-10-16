@@ -18,6 +18,13 @@ import kotlinx.coroutines.runBlocking
  * fails, and a menu that hid PNG from one that can would be the export lane nobody could reach.
  */
 class EditorExportMenuTest {
+  @Test
+  fun `a Lovelace dashboard offers host config through JSON without Remote Compose`() {
+    val formats = exportFormatsFor(svg = false, png = false, lovelaceJson = true)
+    assertEquals(listOf(EditorExportFormat.LovelaceJson), formats)
+    assertEquals("json", formats.single().extension)
+    assertTrue(exportMenuEntries(formats).flatten().any { it.label == "Download Lovelace JSON" })
+  }
 
   @Test
   fun `remote source and document downloads need no image renderer`() {

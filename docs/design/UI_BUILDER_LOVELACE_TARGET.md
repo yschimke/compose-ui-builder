@@ -6,6 +6,15 @@ Home Assistant Lovelace dashboards (views, sections and cards), saved back to Ho
 It came out of work on [harc](https://github.com/yschimke/homeassistant-remotecompose), the
 dashboard-first Home Assistant client.
 
+## Implementation follow-up
+
+The implementation is documented in [Lovelace dashboard implementation](LOVELACE_DASHBOARD_IMPLEMENTATION.md),
+including the supported view/YAML behavior, authorization, hosting, lossless JSON representation,
+preview contract, templates, validation commands and coordinated release order. The older paths
+and proposed open questions below describe the handover baseline; use the implementation note
+and code when they differ. Release and deployed verification evidence is tracked in the linked
+implementation PRs.
+
 ## The ask
 
 UI Builder has two output kinds today: Jetpack Compose (Kotlin) and Remote Compose (`.rc`). This

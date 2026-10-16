@@ -436,11 +436,18 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.TuneDesignToken -> tuneDesignToken(state, event.tokenId)
       is UiBuilderEditorEvent.ImportDesignTokens -> importDesignTokens(state, event.values)
       is UiBuilderEditorEvent.SetStateVariable ->
-        state.apply(
-          state.operationSequence + 1,
-          listOf(DesignOperation.SetStateVariable(event.name, event.declaration)),
-          selectionAfter = state.selectedNodeId,
-        )
+        if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE)
+          state.rejected(
+            state.operationSequence + 1,
+            RejectionCode.INVALID_PROPERTY,
+            "Use the entity picker for Home Assistant values",
+          )
+        else
+          state.apply(
+            state.operationSequence + 1,
+            listOf(DesignOperation.SetStateVariable(event.name, event.declaration)),
+            selectionAfter = state.selectedNodeId,
+          )
       is UiBuilderEditorEvent.RemoveStateVariable ->
         state.apply(
           state.operationSequence + 1,
@@ -790,6 +797,7 @@ class UiBuilderEditorReducer(
     nodeId: String,
     propertyName: String,
   ): Boolean {
+    if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE) return false
     if (state.document.nodes[nodeId] == null) return false
     return state.document.stateVariables.keys.any { variable ->
       val candidate =
@@ -1522,6 +1530,8 @@ class UiBuilderEditorReducer(
             choices =
               property.allowedValues.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } +
                 property.editor?.suggestedValues.orEmpty(),
+            choiceValues =
+              property.allowedValues.filterIsInstance<JsonPrimitive>().associateBy { it.content },
             numberBounds = numberBounds,
             error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
             notes = if (loopRows) "Each row fills the same layout template." else property.notes,
@@ -2149,8 +2159,19 @@ class UiBuilderEditorReducer(
   fun generatedCode(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray? = { null },
-  ): EditorGeneratedCode =
-    screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
+  ): EditorGeneratedCode {
+    if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE) {
+      return when (
+        val result = ee.schimke.composeai.uibuilder.export.LovelaceConfigExporter.export(document)
+      ) {
+        is ee.schimke.composeai.uibuilder.export.LovelaceConfigExporter.Result.Emitted ->
+          EditorGeneratedCode.Source(result.source)
+        is ee.schimke.composeai.uibuilder.export.LovelaceConfigExporter.Result.Refused ->
+          EditorGeneratedCode.Refused(result.reasons)
+      }
+    }
+    return screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
+  }
 
   /**
    * The Kotlin [generatedCode] writes for just [nodeId] and what is under it, for the selection
@@ -4797,6 +4818,10 @@ class UiBuilderEditorReducer(
     sequence: Int,
   ): ComponentPlan {
     fun refuse(reason: String) = ComponentPlan(refusal = reason)
+    if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE)
+      return refuse(
+        "Use Export selected as template in the dashboard toolbar for reusable sections and views"
+      )
     val document = state.document
     val nodeId =
       state.selection.singleOrNull() ?: return refuse("Select one node to make a component of it")

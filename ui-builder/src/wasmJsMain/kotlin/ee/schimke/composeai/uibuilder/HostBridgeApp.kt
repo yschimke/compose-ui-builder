@@ -6,12 +6,14 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import ee.schimke.composeai.uibuilder.canvas.LocalLovelaceCardPreviews
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
@@ -22,11 +24,12 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorTheme
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostAction
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
 import ee.schimke.composeai.uibuilder.editor.fileDesigns
+import ee.schimke.composeai.uibuilder.export.LovelaceConfigExporter
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 
 /**
  * The host bridge: the design belongs to the page that embeds this editor (e.g. a VS Code webview
@@ -57,6 +60,7 @@ import kotlinx.serialization.json.jsonObject
 @Composable
 internal fun HostBridgeApp() {
   val role = remember { hostBridgeRole() }
+  var previews by remember { mutableStateOf(JsonObject(emptyMap())) }
   var opened by remember { mutableStateOf<HostOpenedDesign?>(null) }
   // One count for the host's `open`s and this editor's own design switches, so neither reuses the
   // other's key and keeps an editor whose history was made against another design.
@@ -80,16 +84,26 @@ internal fun HostBridgeApp() {
     var selections = 0
     listenForHostMessages(
       onOpen = { messageJson ->
+        previews = JsonObject(emptyMap())
         runCatching { openHostDesign(messageJson, ++generation) }
           .onSuccess { design ->
             opened = design
             // A seeded design exists only here until the host has it: send it back at once, so
             // the empty file the host opened becomes the design the person is looking at.
-            if (design.seeded && role == HostBridgeRole.Editor) {
-              postHostChanged(encodeHostDesign(design.document))
+            // Lovelace hosts also need an acknowledgement/export after host-side edits and undo.
+            if (
+              role == HostBridgeRole.Editor &&
+                (design.seeded ||
+                  design.catalog.platform ==
+                    ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform.LOVELACE)
+            ) {
+              postHostChanged(encodeHostDesign(design.document), design.requestId)
             }
           }
           .onFailure { postHostError(it.message ?: it::class.simpleName ?: "unreadable design") }
+      },
+      onPreviews = { json ->
+        runCatching { Json.parseToJsonElement(json).jsonObject }.onSuccess { previews = it }
       },
       onSelect = { nodeId -> selectionRequest = EditorSelectionRequest(nodeId, ++selections) },
       onInvoke = { id ->
@@ -102,54 +116,56 @@ internal fun HostBridgeApp() {
   val design = opened ?: return
   // A new `open` is a new design as far as the editor is concerned: its undo history, selection
   // and pending edits were made against the version that was just replaced.
-  key(design.generation) {
-    when (role) {
-      HostBridgeRole.Editor ->
-        UiBuilderEditor(
-          document = design.document,
-          catalog = design.catalog,
-          sessionLabel = design.label,
-          // A switch is a change to the file like any edit: the host is sent the whole file,
-          // and the editor opens the newly active design as it would a fresh `open`.
-          fileDesigns =
-            design.collection?.fileDesigns(
-              onSelect = { id ->
-                runCatching { design.switchTo(id, ++generation) }
-                  .onSuccess { opened = it }
-                  .onFailure { postHostError("Not switched: ${it.message}") }
-              }
-            ),
-          onStateChanged = { state ->
-            publishEditorState(state)
-            design.publishIfChanged(state.document)
-            design.publishSelectionIfChanged(state.selectedNodeId)
-          },
-          onHelp = { postHostOpenLink(UI_BUILDER_GUIDE_URL) },
-          selectionRequest = selectionRequest,
-          hostChrome = hostChrome,
-          onGeneratedCode = ::postHostGeneratedCode,
-          theme = theme,
-          // The IntelliJ split: this tab is the canvas; devices and configurations are the
-          // `preview` role. The layer tree is the host's, so it starts closed.
-          initialPanes = setOf(EditorPane.Editor),
-          availablePanes = setOf(EditorPane.Editor),
-          openDefaultPreview = false,
-          initialInspectorOpen = true,
-        )
-      // Preview pane only, as the IntelliJ Preview tool window runs it; it never publishes and
-      // follows the forwarded `open`s.
-      HostBridgeRole.Preview ->
-        UiBuilderEditor(
-          document = design.document,
-          catalog = design.catalog,
-          sessionLabel = design.label,
-          theme = theme,
-          initialPanes = setOf(EditorPane.Preview),
-          availablePanes = setOf(EditorPane.Preview),
-          openDefaultPreview = false,
-        )
+  CompositionLocalProvider(LocalLovelaceCardPreviews provides previews) {
+    key(design.generation) {
+      when (role) {
+        HostBridgeRole.Editor ->
+          UiBuilderEditor(
+            document = design.document,
+            catalog = design.catalog,
+            sessionLabel = design.label,
+            // A switch is a change to the file like any edit: the host is sent the whole file,
+            // and the editor opens the newly active design as it would a fresh `open`.
+            fileDesigns =
+              design.collection?.fileDesigns(
+                onSelect = { id ->
+                  runCatching { design.switchTo(id, ++generation) }
+                    .onSuccess { opened = it }
+                    .onFailure { postHostError("Not switched: ${it.message}") }
+                }
+              ),
+            onStateChanged = { state ->
+              publishEditorState(state)
+              design.publishIfChanged(state.document)
+              design.publishSelectionIfChanged(state.selectedNodeId)
+            },
+            onHelp = { postHostOpenLink(UI_BUILDER_GUIDE_URL) },
+            selectionRequest = selectionRequest,
+            hostChrome = hostChrome,
+            onGeneratedCode = ::postHostGeneratedCode,
+            theme = theme,
+            // The IntelliJ split: this tab is the canvas; devices and configurations are the
+            // `preview` role. The layer tree is the host's, so it starts closed.
+            initialPanes = setOf(EditorPane.Editor),
+            availablePanes = setOf(EditorPane.Editor),
+            openDefaultPreview = false,
+            initialInspectorOpen = true,
+          )
+        // Preview pane only, as the IntelliJ Preview tool window runs it; it never publishes and
+        // follows the forwarded `open`s.
+        HostBridgeRole.Preview ->
+          UiBuilderEditor(
+            document = design.document,
+            catalog = design.catalog,
+            sessionLabel = design.label,
+            theme = theme,
+            initialPanes = setOf(EditorPane.Preview),
+            availablePanes = setOf(EditorPane.Preview),
+            openDefaultPreview = false,
+          )
+      }
+      LaunchedEffect(Unit) { markReady() }
     }
-    LaunchedEffect(Unit) { markReady() }
   }
 }
 
@@ -173,6 +189,8 @@ internal data class HostOpenMessage(
   val capabilities: String,
   val label: String = "",
   val seed: HostDesignSeed? = null,
+  val lovelaceConfig: String = "",
+  val requestId: String = "",
 )
 
 /**
@@ -194,6 +212,7 @@ internal class HostOpenedDesign(
   val generation: Int,
   val seeded: Boolean,
   private val fileContext: OpenedUidDesign? = null,
+  val requestId: String = "",
 ) {
   private var published: UiBuilderDocument = document
   private var publishedSelection: String? = null
@@ -210,12 +229,13 @@ internal class HostOpenedDesign(
     val context = requireNotNull(fileContext) { "this design is not one of several in a file" }
     val text = context.switchTo(id, published)
     val next = UidDesignFiles.open(text)
-    postHostChanged(text)
+    postHostChanged(text, requestId)
     return HostOpenedDesign(
       document = next.document,
       catalog = catalog,
       label = label,
       generation = generation,
+      requestId = requestId,
       seeded = false,
       fileContext = next,
     )
@@ -239,7 +259,7 @@ internal class HostOpenedDesign(
       runCatching { fileContext?.encode(current) ?: encodeHostDesign(current) }
         .onSuccess { text ->
           published = current
-          postHostChanged(text)
+          postHostChanged(text, requestId)
         }
         .onFailure { postHostError("Not saved: ${it.message}") }
     }
@@ -252,7 +272,22 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
   val seed = message.seed
   val fileContext = message.document.takeIf { it.isNotBlank() }?.let(UidDesignFiles::open)
   val document =
-    if (message.document.isNotBlank()) {
+    if (message.lovelaceConfig.isNotBlank()) {
+      require(
+        catalog.platform == ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform.LOVELACE
+      )
+      LovelaceConfigExporter.import(
+        Json.parseToJsonElement(message.lovelaceConfig).jsonObject,
+        "host-dashboard",
+        buildJsonObject {
+          put("systemId", catalog.benchmark.catalogSystemId)
+          put("catalogRevision", catalog.benchmark.catalogRevision)
+          put("capabilityDigest", "candidate")
+          put("nativeRuntimeId", catalog.benchmark.nativeRuntimeId)
+        },
+        cardComponentIds = catalog.componentsById.keys,
+      )
+    } else if (message.document.isNotBlank()) {
       requireNotNull(fileContext).document
     } else {
       requireNotNull(seed) { "the design file is empty and the host sent no seed" }
@@ -278,6 +313,7 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
     generation = generation,
     seeded = message.document.isBlank(),
     fileContext = fileContext,
+    requestId = message.requestId,
   )
 }
 
@@ -313,12 +349,13 @@ private external fun hostBridgeRoleName(): String
  * itself at top level).
  */
 @JsFun(
-  """(onOpen, onSelect, onInvoke) => {
+  """(onOpen, onSelect, onInvoke, onPreviews) => {
   globalThis.addEventListener('message', (event) => {
     if (event.source !== globalThis.parent) return;
     const data = event.data;
     if (!data) return;
-    if (data.type === 'compose-ui-builder/open') onOpen(JSON.stringify(data));
+    if (data.type === 'compose-ui-builder/lovelace-previews') onPreviews(typeof data.previews === 'string' ? data.previews : JSON.stringify(data.previews ?? {}));
+    else if (data.type === 'compose-ui-builder/open') onOpen(JSON.stringify(data));
     else if (data.type === 'compose-ui-builder/select' && typeof data.nodeId === 'string') {
       onSelect(data.nodeId);
     } else if (data.type === 'compose-ui-builder/invoke' && typeof data.id === 'string') {
@@ -331,6 +368,7 @@ private external fun listenForHostMessages(
   onOpen: (String) -> Unit,
   onSelect: (String) -> Unit,
   onInvoke: (String) -> Unit,
+  onPreviews: (String) -> Unit,
 )
 
 /** `{ type: "compose-ui-builder/chrome", actions: [...] }`, the actions as parsed JSON. */
@@ -365,8 +403,37 @@ private external fun hostMessage(type: String, key: String, value: String): JsAn
 
 private fun postHostReady() = postToHost(readyMessage())
 
-private fun postHostChanged(documentJson: String) =
-  postToHost(hostMessage("compose-ui-builder/changed", "document", documentJson))
+@JsFun(
+  "(type, key, value, requestId) => ({ type, [key]: value, ...(requestId ? {requestId} : {}) })"
+)
+private external fun hostSessionMessage(
+  type: String,
+  key: String,
+  value: String,
+  requestId: String,
+): JsAny
+
+private fun postHostChanged(documentJson: String, requestId: String = "") {
+  postToHost(hostSessionMessage("compose-ui-builder/changed", "document", documentJson, requestId))
+  val document = runCatching { decodeHostDesign(documentJson) }.getOrNull() ?: return
+  if (
+    document.roots.singleOrNull()?.let { document.nodes[it]?.componentId } ==
+      LovelaceConfigExporter.DASHBOARD
+  ) {
+    when (val exported = LovelaceConfigExporter.export(document)) {
+      is LovelaceConfigExporter.Result.Emitted ->
+        postToHost(
+          hostSessionMessage(
+            "compose-ui-builder/lovelace-config",
+            "config",
+            exported.source,
+            requestId,
+          )
+        )
+      is LovelaceConfigExporter.Result.Refused -> postHostError(exported.reasons.joinToString("; "))
+    }
+  }
+}
 
 private fun postHostSelection(nodeId: String) =
   postToHost(hostMessage("compose-ui-builder/selection", "nodeId", nodeId))

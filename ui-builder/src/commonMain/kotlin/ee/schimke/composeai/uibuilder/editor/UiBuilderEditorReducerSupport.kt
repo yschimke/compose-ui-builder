@@ -1020,7 +1020,7 @@ internal fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
       draft.toBooleanStrictOrNull()?.let { PropertyDraft.Valid(JsonPrimitive(it)) }
         ?: PropertyDraft.Invalid("$label must be true or false")
     EditorPropertyControl.Enum ->
-      if (draft in choices) PropertyDraft.Valid(JsonPrimitive(draft))
+      if (draft in choices) PropertyDraft.Valid(choiceValues[draft] ?: JsonPrimitive(draft))
       else PropertyDraft.Invalid("$label must be one of ${choices.joinToString()}")
     EditorPropertyControl.Number -> {
       val bounds = numberBounds ?: return PropertyDraft.Invalid("$label has no safe editor range")

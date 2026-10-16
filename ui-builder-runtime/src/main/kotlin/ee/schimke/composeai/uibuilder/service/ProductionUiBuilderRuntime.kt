@@ -406,7 +406,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
               RemoteDocumentExportSupport.capabilities(
                   catalog.exportCapabilities
                     .newBuilder()
-                    .also { it.composeCode = composeExportFor(systemId) }
+                    .also {
+                      it.composeCode = catalog.platform != "lovelace" && composeExportFor(systemId)
+                    }
                     .build(),
                   json =
                     catalog.platform == "remote-compose" &&
@@ -423,7 +425,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                   // A2UI designs' JSON is A2UI messages, not Remote Compose, so it is offered
                   // wherever the host writes JSON (`remoteJson`), not behind the Remote Compose
                   // authoring flag.
-                  if (catalog.platform != A2UI_PLATFORM) capabilities
+                  if (catalog.platform !in setOf(A2UI_PLATFORM, "lovelace")) capabilities
                   else
                     capabilities
                       .newBuilder()
