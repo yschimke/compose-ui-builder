@@ -2437,6 +2437,7 @@ internal class RemoteContentEmitter(
         lines += "$pad${INDENT}drawPath(remotePathOf(\"${data.escaped()}\"), $paint)"
         lines += "$pad}"
       }
+      UiDrawing.POLYLINE -> lines += polyline(node, paint, pad) ?: return emptyList()
       UiDrawing.MORPH -> {
         val from = node.properties["pathData"]?.stringOrNull().orEmpty()
         val to = node.properties["toPathData"]?.stringOrNull().orEmpty()
@@ -2677,6 +2678,64 @@ internal class RemoteContentEmitter(
         block("withTransform({ ${transforms.joinToString("; ")} })")
       }
     }
+  }
+
+  /**
+   * A [UiDrawing.POLYLINE] as a path built while the document is written: one segment per point,
+   * each point's formulas read with the index bound to that point's number. The coordinates stay
+   * live, so state and time still move the points.
+   */
+  private fun polyline(node: UiBuilderNode, paint: String, pad: String): List<String>? {
+    val where = "nodes.${node.id}"
+    val index = UiDrawing.indexName(node)
+    if (index == null || !UiDrawing.isIndexName(index) || index in drawBindings) {
+      refusals +=
+        "$where.index: the index must be a literal name a formula can read, unused by an " +
+          "enclosing repeat"
+      return null
+    }
+    val authoredCount = node.properties["count"]
+    val count =
+      authoredCount
+        ?.takeUnless { it.isDrawComputed() }
+        ?.numberOrNull()
+        ?.takeIf { it == kotlin.math.floor(it) && it >= 2f && it <= UiDrawing.MAX_POINTS }
+        ?.toInt()
+    if (count == null) {
+      refusals +=
+        "$where.count: a ${UiDrawing.POLYLINE} needs a literal count of points from 2 to " +
+          "${UiDrawing.MAX_POINTS}"
+      return null
+    }
+    val parameter = localName(index)
+    drawBindings[index] = "$parameter.rf"
+    val (x, y) =
+      try {
+        node.drawPx("pointXDp") to node.drawPx("pointYDp")
+      } finally {
+        drawBindings.remove(index)
+      }
+    for ((name, value) in listOf("pointXDp" to x, "pointYDp" to y)) {
+      if (value == null && name !in node.properties) {
+        refusals += "$where.$name: a ${UiDrawing.POLYLINE} needs a formula for each point"
+      }
+    }
+    if (x == null || y == null) return null
+    usesRemoteFloat = true
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.remotePath"
+    val path =
+      localName("path${node.id.remoteIdentifier().replaceFirstChar { it.uppercaseChar() }}")
+    val point = localName("point")
+    return listOfNotNull(
+      "${pad}val $path = remotePath {",
+      "$pad${INDENT}for ($parameter in 0 until $count) {",
+      "$pad$INDENT${INDENT}val $point = RemoteOffset($x, $y)",
+      "$pad$INDENT${INDENT}if ($parameter == 0) moveTo($point) else lineTo($point)",
+      "$pad$INDENT}",
+      if (node.properties["closed"]?.boolOrNull() == true) "$pad${INDENT}close()" else null,
+      "$pad}",
+      "${pad}drawPath($path, $paint)",
+    )
   }
 
   /** A group's scale across and down: `scaleX`/`scaleY`, each falling back to `scale`, then 1. */

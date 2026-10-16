@@ -110,6 +110,10 @@ class CanvasRenderTree(
     arguments: JsonObject,
   ): CanvasRenderNode? = child(parent, nodeId, parent.path.placement().child(nodeId), arguments)
 
+  /** [entry] resolved again with [arguments] in scope, at the same instance path. */
+  internal fun rebound(entry: CanvasRenderNode, arguments: JsonObject) =
+    resolve(entry.node.id, entry.path, entry.ancestors, arguments, entry.canvas) ?: entry
+
   /** [entry] resolved again with the size its canvas draws in, which its operations inherit. */
   internal fun withCanvas(entry: CanvasRenderNode, canvas: UiExpressions.CanvasSize) =
     resolve(entry.node.id, entry.path, entry.ancestors, entry.bindingArguments, canvas) ?: entry
@@ -141,6 +145,12 @@ internal constructor(
   /** The time the render this node belongs to reads; see [CanvasRenderTree.clock]. */
   val clock: UiExpressions.Clock
     get() = tree.clock
+
+  /**
+   * This node resolved again with [arguments] in scope instead of its own, as a polyline reads each
+   * point's index.
+   */
+  fun rebound(arguments: JsonObject): CanvasRenderNode = tree.rebound(this, arguments)
 
   /** Resolve a directly referenced child using this node's argument scope. */
   fun child(nodeId: String): CanvasRenderNode? = tree.child(this, nodeId)

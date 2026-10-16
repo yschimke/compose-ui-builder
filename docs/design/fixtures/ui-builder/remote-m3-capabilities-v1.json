@@ -3480,6 +3480,241 @@
         },
         {
             "code": null,
+            "componentId": "draw/polyline",
+            "displayName": "Polyline",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "count",
+                    "notes": "How many points, from 2 to 256; a literal. Required."
+                },
+                {
+                    "jsonType": "string",
+                    "name": "index",
+                    "notes": "The name `pointXDp` and `pointYDp` read the point's index by, from 0, as `@i` in a formula. `i` when absent."
+                },
+                {
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "pointXDp",
+                    "notes": "Each point across: a formula reading the index, state or time. Required."
+                },
+                {
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "pointYDp",
+                    "notes": "Each point down: a formula reading the index, state or time. Required."
+                },
+                {
+                    "jsonType": "boolean",
+                    "name": "closed",
+                    "notes": "Join the last point back to the first."
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientStops",
+                    "notes": "Where each of gradientColors sits, 0 to 1 along the gradient, separated by commas: one per colour, in order. Evenly spaced when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "gradientStartDp",
+                    "notes": "A horizontal or vertical gradient's start, from the canvas's left or top. The edge when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "gradientEndDp",
+                    "notes": "A horizontal or vertical gradient's end, from the canvas's left or top. The far edge when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "gradientCenterXDp",
+                    "notes": "A radial or sweep gradient's centre across. The canvas's centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "gradientCenterYDp",
+                    "notes": "A radial or sweep gradient's centre down. The canvas's centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "gradientRadiusDp",
+                    "notes": "A radial gradient's radius. Half the canvas's shorter side when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "clamp",
+                        "repeated",
+                        "mirror",
+                        "decal"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradientTileMode",
+                    "notes": "What a horizontal, vertical or radial gradient paints past its ends: its end colours (clamp, the default), the gradient again, the gradient mirrored, or nothing.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "draw/morph",
             "displayName": "Path morph",
             "modifierCapabilities": [],
