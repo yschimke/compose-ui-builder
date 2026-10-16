@@ -195,6 +195,26 @@ class DrawCanvasRenderTest {
     assertEquals(0, erased, "a clear rectangle left red behind")
   }
 
+  @Test
+  fun `an operation sized by the canvas's size draws at that size`() {
+    fun rect(width: String) =
+      """"half":{"id":"half","componentId":"draw/rect","properties":{
+        "widthDp":$width,"color":{"type":"color","value":"#FFFF0000"}},
+        "modifiers":[],"slots":{},"eventBindings":{}}"""
+    val literal = countOn(Color.Red, listOf("half"), rect("""{"type":"float","value":40}"""))
+    val computed =
+      countOn(
+        Color.Red,
+        listOf("half"),
+        rect(
+          """{"type":"expr","op":"div","args":[
+            {"type":"system","value":"canvas.width"},{"type":"int","value":2}]}"""
+        ),
+      )
+    assertTrue(literal > 1_000, "the 40dp rectangle was not drawn ($literal samples)")
+    assertEquals(literal, computed, "half the 80dp canvas did not draw as 40dp")
+  }
+
   private fun Color.isNear(other: Color): Boolean =
     kotlin.math.abs(red - other.red) < 0.1f &&
       kotlin.math.abs(green - other.green) < 0.1f &&

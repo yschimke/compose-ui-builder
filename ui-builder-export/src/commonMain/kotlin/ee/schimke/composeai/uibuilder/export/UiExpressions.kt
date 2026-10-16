@@ -174,8 +174,84 @@ object UiExpressions {
             "RemoteFloat(RemoteContext.FLOAT_DENSITY))",
           imports = CONTEXT_IMPORTS,
         ),
+        // The space a canvas's operations are drawn in, in dp (or its viewport's units): what the
+        // corpus's drawings are written relative to. The Remote writer reads the canvas it is
+        // inside, so [remote] is unused; outside a canvas there is nothing to read.
+        SystemValue(
+          CANVAS_WIDTH,
+          UiValueKind.FLOAT,
+          "Width the canvas draws in, in dp (its viewport's width when it has one)",
+          "",
+        ),
+        SystemValue(
+          CANVAS_HEIGHT,
+          UiValueKind.FLOAT,
+          "Height the canvas draws in, in dp (its viewport's height when it has one)",
+          "",
+        ),
+        // The last touch, as the player loads it: positions and velocities in pixels, here in dp
+        // like every other length; the time on the animation clock.
+        touch("touch.x", "Where the last touch is across, in dp", "FLOAT_TOUCH_POS_X"),
+        touch("touch.y", "Where the last touch is down, in dp", "FLOAT_TOUCH_POS_Y"),
+        touch("touch.velocityX", "The touch's speed across, in dp per second", "FLOAT_TOUCH_VEL_X"),
+        touch("touch.velocityY", "The touch's speed down, in dp per second", "FLOAT_TOUCH_VEL_Y"),
+        context(
+          "touch.time",
+          "When the last touch happened, on the `time.animation` clock",
+          "FLOAT_TOUCH_EVENT_TIME",
+        ),
+        // Sensors the host player feeds; 0 where it has none, and in a preview.
+        context("sensor.light", "Ambient light in lux", "FLOAT_LIGHT"),
+        context("sensor.accelerationX", "Acceleration across, in m/s²", "FLOAT_ACCELERATION_X"),
+        context("sensor.accelerationY", "Acceleration up, in m/s²", "FLOAT_ACCELERATION_Y"),
+        context(
+          "sensor.accelerationZ",
+          "Acceleration out of the screen, in m/s²",
+          "FLOAT_ACCELERATION_Z",
+        ),
+        context(
+          "sensor.rotationX",
+          "Rotation rate about the across axis, in rad/s",
+          "FLOAT_GYRO_ROT_X",
+        ),
+        context(
+          "sensor.rotationY",
+          "Rotation rate about the up axis, in rad/s",
+          "FLOAT_GYRO_ROT_Y",
+        ),
+        context(
+          "sensor.rotationZ",
+          "Rotation rate about the screen's axis, in rad/s",
+          "FLOAT_GYRO_ROT_Z",
+        ),
+        context("sensor.magneticX", "Magnetic field across, in µT", "FLOAT_MAGNETIC_X"),
+        context("sensor.magneticY", "Magnetic field up, in µT", "FLOAT_MAGNETIC_Y"),
+        context("sensor.magneticZ", "Magnetic field out of the screen, in µT", "FLOAT_MAGNETIC_Z"),
       )
       .associateBy { it.id }
+
+  const val CANVAS_WIDTH: String = "canvas.width"
+  const val CANVAS_HEIGHT: String = "canvas.height"
+
+  /** A float the player loads into its context under [constant]. */
+  private fun context(id: String, label: String, constant: String): SystemValue =
+    SystemValue(
+      id,
+      UiValueKind.FLOAT,
+      label,
+      "RemoteFloat(RemoteContext.$constant)",
+      imports = CONTEXT_IMPORTS,
+    )
+
+  /** A touch length the player loads in pixels, read in dp. */
+  private fun touch(id: String, label: String, constant: String): SystemValue =
+    SystemValue(
+      id,
+      UiValueKind.FLOAT,
+      label,
+      "(RemoteFloat(RemoteContext.$constant) / RemoteFloat(RemoteContext.FLOAT_DENSITY))",
+      imports = CONTEXT_IMPORTS,
+    )
 
   private val CONTEXT_IMPORTS: List<String>
     get() =
@@ -696,7 +772,20 @@ object UiExpressions {
     val colorRoles: (String) -> String? = { null },
     /** The device the preview stands for: `device.*` values read it. */
     val device: Device = Device.DEFAULT,
+    /** The space the canvas being drawn draws in, which `canvas.*` reads; null outside one. */
+    val canvas: CanvasSize? = null,
   )
+
+  /** The space a canvas draws its operations in: its size in dp, or its viewport's. */
+  data class CanvasSize(val width: Double, val height: Double)
+
+  /** Whether [expr] reads the canvas it is drawn in, so it can only be evaluated inside one. */
+  fun readsCanvas(expr: Expr): Boolean =
+    when (expr) {
+      is Expr.System -> expr.value.id == CANVAS_WIDTH || expr.value.id == CANVAS_HEIGHT
+      is Expr.Call -> expr.args.any(::readsCanvas)
+      else -> false
+    }
 
   /** The device a preview stands for, from the document's `environment`. */
   data class Device(
@@ -941,8 +1030,14 @@ object UiExpressions {
       is Expr.State -> coerce(environment.state[expr.variable], expr.kind)
       is Expr.Binding -> coerce(environment.bindings(expr.key)?.contentOrNull, expr.kind)
       is Expr.System ->
-        if (expr.value.id.startsWith("device.")) environment.device.read(expr.value.id)
-        else environment.clock.read(expr.value.id)
+        when {
+          expr.value.id == CANVAS_WIDTH -> environment.canvas?.width ?: 0.0
+          expr.value.id == CANVAS_HEIGHT -> environment.canvas?.height ?: 0.0
+          expr.value.id.startsWith("device.") -> environment.device.read(expr.value.id)
+          // Nothing touches a preview, and it has no sensors.
+          expr.value.id.startsWith("touch.") || expr.value.id.startsWith("sensor.") -> 0.0
+          else -> environment.clock.read(expr.value.id)
+        }
       is Expr.Call -> call(expr, expr.args.map { evaluate(it, environment) })
     }
 

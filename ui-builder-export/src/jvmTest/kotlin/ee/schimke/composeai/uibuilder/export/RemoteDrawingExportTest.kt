@@ -255,6 +255,46 @@ class RemoteDrawingExportTest {
     )
   }
 
+  /** The needle reaching to [endX], a formula over the canvas's size, on [canvas]'s modifiers. */
+  private fun needleTo(endX: String, canvasModifiers: String? = null): UiBuilderDocument {
+    val needle = document.nodes.getValue("needle")
+    val canvas = document.nodes.getValue("canvas")
+    val properties =
+      needle.properties + ("endXDp" to UiExpressions.parseFormula(endX, setOf("progress")))
+    return document.copy(
+      nodes =
+        document.nodes +
+          ("needle" to needle.copy(properties = JsonObject(properties))) +
+          ("canvas" to
+            canvas.copy(
+              modifiers =
+                canvasModifiers?.let {
+                  Json.parseToJsonElement(it) as kotlinx.serialization.json.JsonArray
+                } ?: canvas.modifiers
+            ))
+    )
+  }
+
+  @Test
+  fun `the canvas's size reads its stated dp, or its measured size over the density`() {
+    fun emitted(document: UiBuilderDocument, file: String) =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(document, packageName = "proof.draw")
+        )
+        .source
+        .also { File("build/draw-proof").apply { mkdirs() }.resolve(file).writeText(it) }
+
+    val stated = emitted(needleTo("canvas.width / 2"), "CanvasSizeWidget.kt")
+    assertContains(stated, "end = RemoteOffset((96.rf / 2.rf).asRemoteDp().toPx(), 12.rdp.toPx())")
+
+    val measured =
+      emitted(
+        needleTo("canvas.height - 4", canvasModifiers = """[{"type":"fillMaxSize"}]"""),
+        "MeasuredWidget.kt",
+      )
+    assertContains(measured, "((height / 1.rdp.toPx()) - 4.rf).asRemoteDp().toPx()")
+  }
+
   @Test
   fun `a paint's join, blend mode and listed gradient colours are written onto it`() {
     val source =

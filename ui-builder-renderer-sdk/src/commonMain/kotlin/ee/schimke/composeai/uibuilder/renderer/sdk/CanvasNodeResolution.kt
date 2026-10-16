@@ -25,10 +25,12 @@ fun resolveCanvasNode(
   state: Map<String, String?>,
   mapping: CanvasAdapterMappingV1?,
   expressions: CanvasExpressions? = null,
+  /** The space the canvas this node is drawn in draws in, which `canvas.*` reads; null outside. */
+  canvas: UiExpressions.CanvasSize? = null,
 ): UiBuilderNode =
   node
     .withArguments(arguments)
-    .let { expressions?.evaluate(it, arguments, state) ?: it }
+    .let { expressions?.evaluate(it, arguments, state, canvas) ?: it }
     .withPreviewState(state)
     .forCanvas(mapping)
 
@@ -48,6 +50,7 @@ class CanvasExpressions(
     node: UiBuilderNode,
     arguments: JsonObject,
     state: Map<String, String?>,
+    canvas: UiExpressions.CanvasSize? = null,
   ): UiBuilderNode {
     val computed =
       node.properties.values.any(UiExpressions::isComputed) ||
@@ -69,11 +72,13 @@ class CanvasExpressions(
         bindings = { key -> (arguments[key] as? JsonObject)?.get("value") as? JsonPrimitive },
         clock = clock,
         device = device,
+        canvas = canvas,
       )
+    // A read of the canvas's size waits until the canvas, which knows it, resolves the node again.
     fun literal(value: JsonElement): JsonObject? =
-      (UiExpressions.check(value, scope) as? UiExpressions.Checked.Ok)?.let {
-        UiExpressions.evaluateWrapped(it.expr, environment)
-      }
+      (UiExpressions.check(value, scope) as? UiExpressions.Checked.Ok)
+        ?.takeIf { canvas != null || !UiExpressions.readsCanvas(it.expr) }
+        ?.let { UiExpressions.evaluateWrapped(it.expr, environment) }
     return node.copy(
       properties =
         JsonObject(
