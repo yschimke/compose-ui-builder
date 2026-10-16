@@ -6,8 +6,10 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -28,6 +30,22 @@ class DrawCanvasRenderTest {
     }
     val ops = catalog.componentsById.getValue(UiDrawing.CANVAS).slots.single()
     assertTrue(UiDrawing.TRAIT in ops.acceptedTraits, ops.toString())
+  }
+
+  @Test
+  fun `the inspector edits a canvas's viewport`() {
+    val properties =
+      publishedTestCatalog("remote-m3").componentsById.getValue(UiDrawing.CANVAS).propertiesByName
+
+    for (side in listOf("viewportWidth", "viewportHeight")) {
+      val editor = assertNotNull(properties.getValue(side).editor, side)
+      assertEquals(PropertyEditorControl.NUMBER, editor.control, side)
+      assertEquals(UiDrawing.Unit.VIEWPORT.minimum, editor.minimum, side)
+    }
+    assertEquals(
+      PropertyEditorControl.ENUM,
+      assertNotNull(properties.getValue("viewportMode").editor).control,
+    )
   }
 
   @Test
