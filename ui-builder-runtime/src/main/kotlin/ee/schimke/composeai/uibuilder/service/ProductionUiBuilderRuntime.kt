@@ -102,7 +102,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val exportCapabilities = configuration.exportCapabilities
   private val composeExportFor = configuration.composeExportFor
   private val packs = configuration.packs
-  private val published = configuration.published
+  private val published = configuration.published.filterKeys(catalogSystemIds::contains)
   private val nativeRuntimeIds = configuration.nativeRuntimeIds
 
   /** Every served catalog must come from its published definition. */
