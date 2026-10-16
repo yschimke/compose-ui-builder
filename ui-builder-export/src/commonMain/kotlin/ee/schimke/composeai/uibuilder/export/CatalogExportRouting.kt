@@ -27,6 +27,9 @@ public object CatalogExportRouting {
   /** An A2UI surface: the A2UI messages and the Kotlin program that sends them. */
   public const val A2UI: String = "a2ui-program"
 
+  /** A host-owned Lovelace config, exported through JSON only. */
+  public const val LOVELACE: String = "lovelace-config"
+
   /**
    * A phone launcher widget: `LauncherWidgetCodeExporter`'s `RemoteComposeWidget`, rooted on the
    * catalog's own screen root and previewed at its `frame.geometry.sizesDp`, whatever the root is
@@ -48,6 +51,7 @@ public object CatalogExportRouting {
       (WEAR_SCREEN to V1) to UiBuilderCatalogPlatform.WEAR,
       (REMOTE_COMPOSE to V1) to UiBuilderCatalogPlatform.REMOTE_COMPOSE,
       (A2UI to V1) to UiBuilderCatalogPlatform.A2UI,
+      (LOVELACE to V1) to UiBuilderCatalogPlatform.LOVELACE,
       (LAUNCHER_WIDGET to V1) to UiBuilderCatalogPlatform.REMOTE_COMPOSE,
     )
 
@@ -98,9 +102,9 @@ public object CatalogExportRouting {
    */
   public fun exportsCompose(route: Route, builtIn: () -> Boolean): Boolean =
     when (route) {
-      is Route.ComponentRecords,
-      is Route.RecordFree -> true
-      is Route.BuiltIn -> builtIn()
+      is Route.ComponentRecords -> true
+      is Route.RecordFree -> route.platform != UiBuilderCatalogPlatform.LOVELACE
+      is Route.BuiltIn -> route.platform != UiBuilderCatalogPlatform.LOVELACE && builtIn()
       Route.NotDeclared,
       is Route.Unsupported -> false
     }

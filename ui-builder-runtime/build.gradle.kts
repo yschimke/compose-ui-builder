@@ -56,6 +56,11 @@ val externalCatalog =
   providers.gradleProperty("typedCatalogSmokeDirectory").orNull?.let { rootProject.file(it) }
 
 tasks.named<Test>("test") {
+  // Optional host-owned Lovelace publication interoperability check; do not cache a previous
+  // generation just because the Kotlin test class stayed unchanged.
+  providers.environmentVariable("LOVELACE_PUBLICATION_DIR").orNull?.let { inputs.dir(it) }
+  providers.environmentVariable("LOVELACE_DASHBOARD_FIXTURE").orNull?.let { inputs.file(it) }
+  providers.environmentVariable("LOVELACE_CAPABILITIES_OUTPUT").orNull?.let { outputs.file(it) }
   if (externalCatalog != null) {
     inputs.dir(externalCatalog)
     systemProperty("typedCatalogSmokeDirectory", externalCatalog.absolutePath)

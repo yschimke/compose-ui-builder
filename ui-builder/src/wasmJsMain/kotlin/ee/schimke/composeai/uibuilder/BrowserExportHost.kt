@@ -53,6 +53,7 @@ internal class BrowserExportHost(
         when (format) {
           EditorExportFormat.Svg,
           EditorExportFormat.Json,
+          EditorExportFormat.LovelaceJson,
           EditorExportFormat.A2uiJson -> awaitJsString(copySvgTextPromise(url, document))
           EditorExportFormat.Png -> awaitJsString(copyPngImagePromise(url, document))
           EditorExportFormat.Rc -> return "Use Download to save the binary document"
@@ -116,6 +117,7 @@ internal class BrowserExportHost(
       EditorExportFormat.Svg -> "image/svg+xml"
       EditorExportFormat.Png -> "image/png"
       EditorExportFormat.Json,
+      EditorExportFormat.LovelaceJson,
       EditorExportFormat.A2uiJson -> "application/json"
       EditorExportFormat.Rc -> "application/octet-stream"
     }

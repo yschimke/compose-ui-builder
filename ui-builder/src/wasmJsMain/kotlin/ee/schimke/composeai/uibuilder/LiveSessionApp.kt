@@ -916,6 +916,9 @@ private fun LiveSessionApp(
         )
       val a2ui =
         UiBuilderCatalogPlatform.from(capability.statusSemantics) == UiBuilderCatalogPlatform.A2UI
+      val lovelace =
+        UiBuilderCatalogPlatform.from(capability.statusSemantics) ==
+          UiBuilderCatalogPlatform.LOVELACE
       documentPreviewAvailable =
         RemoteDocumentExportSupport.documentFormat?.let {
           RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
@@ -931,7 +934,8 @@ private fun LiveSessionApp(
           suppliedDocument = { format ->
             val current = latestEditorDocument ?: document
             current?.takeIf {
-              (UiBuilderBuildFeatures.remoteCompose || format == EditorExportFormat.A2uiJson) &&
+              (UiBuilderBuildFeatures.remoteCompose ||
+                format in setOf(EditorExportFormat.A2uiJson, EditorExportFormat.LovelaceJson)) &&
                 (config.localStorage ||
                   (revision == null && authoritativeDocument?.toUiBuilderDocument() != it))
             }
@@ -944,17 +948,20 @@ private fun LiveSessionApp(
                   (!config.localStorage || UiBuilderBuildFeatures.remoteCompose),
               json =
                 !a2ui &&
+                  !lovelace &&
                   RemoteDocumentExportSupport.jsonFormat?.let {
                     RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
                   } == true,
               rc =
                 !a2ui &&
+                  !lovelace &&
                   RemoteDocumentExportSupport.documentFormat?.let {
                     RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
                   } == true,
               // The host's JSON flag, read without the Remote Compose one: for an A2UI catalog the
               // JSON it writes is the A2UI messages.
               a2uiJson = a2ui && capability.exportCapabilities.remoteJson,
+              lovelaceJson = lovelace && capability.exportCapabilities.remoteJson,
             ),
           revision = revision,
         )

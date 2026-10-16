@@ -92,7 +92,8 @@ fun UiBuilderCatalogPlatform.relevantDeviceGroups(): List<String> =
     // An A2UI surface is drawn by whichever client receives it; the Android one the native lane
     // renders is a phone app, so the phone sections are where its frame is picked from.
     UiBuilderCatalogPlatform.MOBILE,
-    UiBuilderCatalogPlatform.A2UI -> listOf("Phones", "Foldables", "Tablets")
+    UiBuilderCatalogPlatform.A2UI,
+    UiBuilderCatalogPlatform.LOVELACE -> listOf("Phones", "Foldables", "Tablets")
     // A widget body is drawn on a watch, so the widget catalog wants the watch frames too.
     UiBuilderCatalogPlatform.WEAR,
     UiBuilderCatalogPlatform.REMOTE_COMPOSE -> listOf("Wear OS")

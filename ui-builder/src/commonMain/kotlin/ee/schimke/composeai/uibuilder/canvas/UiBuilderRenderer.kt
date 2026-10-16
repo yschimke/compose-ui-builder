@@ -711,6 +711,12 @@ private fun RenderNode(
       }
     }
 
+    if (node.componentId.startsWith("lovelace/")) {
+      LovelaceCanvas(document, document.nodes[node.id] ?: node, measured, child) {
+        ReportUndrawn(UiBuilderUndrawnNode.STAND_IN)
+      }
+      return@RenderCanvasNode
+    }
     // The launcher widget root, by component id whatever adapter its catalog names: drawn into the
     // launcher cell with its own background, its one child filling it.
     if (node.componentId == LauncherWidgetCodeExporter.ROOT) {

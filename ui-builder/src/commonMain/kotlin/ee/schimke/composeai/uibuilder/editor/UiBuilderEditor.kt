@@ -2212,6 +2212,7 @@ fun UiBuilderEditor(
   val generatedCodeCaption =
     if (state.document.isWearWidget()) "Wear widget · Remote Compose"
     else if (catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) "Remote Compose source"
+    else if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE) "Lovelace JSON"
     else if (catalog.platform == UiBuilderCatalogPlatform.A2UI) "A2UI messages · Compose"
     else "Compose export · ${ScreenExportGate.PACKAGE_NAME}"
   val propertyFields = reducer.propertyFields(state)
@@ -2671,6 +2672,12 @@ fun UiBuilderEditor(
                 nativeAvailable = nativeAvailable,
                 dispatch = ::dispatch,
               )
+            }
+          }
+          if (!dedicatedOutput && catalog.platform == UiBuilderCatalogPlatform.LOVELACE) {
+            LovelaceViewControls(state.document, state.selectedNodeId, hostChrome) {
+              focusEditor()
+              dispatch(UiBuilderEditorEvent.SelectNode(it))
             }
           }
           // Which of the file's designs this is: under the toolbar on every layout, the compact and
