@@ -63,6 +63,7 @@ internal class BrowserExportHost(
       }
     return if (outcome.isNotEmpty()) outcome
     else if (format == EditorExportFormat.Json) "JSON source copied"
+    else if (format == EditorExportFormat.LovelaceJson) "Dashboard JSON copied"
     else if (format == EditorExportFormat.A2uiJson) "A2UI messages copied"
     else "${format.label} copied — paste it into Figma"
   }

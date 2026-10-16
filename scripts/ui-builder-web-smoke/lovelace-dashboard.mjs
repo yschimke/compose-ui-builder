@@ -15,7 +15,7 @@ const rcDirectory = process.env.LOVELACE_RC_FIXTURES;
 const rc = (await readFile(path.join(harc, 'design-server/src/test/resources/tile-light.rc'))).toString('base64');
 let renders = 0, failPreviews = false;
 const renderRequests = [], rawRenderRequests = [];
-let remoteDashboard = structuredClone(fixture), writes = 0, admin = true, mode = 'storage', haSocket, subscription, subscribedEntities = [];
+let remoteDashboard = structuredClone(fixture), remoteOther = {title:"Other dashboard",views:[]}, writesOther = 0, holdStates = false, heldStates = [], writes = 0, admin = true, mode = 'storage', haSocket, subscription, subscribedEntities = [];
 const haStates = [{ entity_id: 'light.sofa', state: 'on', attributes: {friendly_name:'Sofa'} }, { entity_id:'sensor.room', state:'21.5', attributes:{device_class:'temperature'} }, {entity_id:'climate.boiler',state:'heat',attributes:{}}];
 const server = http.createServer(async (req, res) => {
   try {
@@ -60,11 +60,14 @@ try {
       const message = JSON.parse(text);
       if (message.type === 'auth') { socket.send(JSON.stringify({type:'auth_ok'})); return; }
       let result;
-      if (message.type === 'lovelace/dashboards/list') result = [{url_path:'fixture',title:'Automated test dashboard',mode}];
+      if (message.type === 'lovelace/dashboards/list') result = [{url_path:'fixture',title:'Automated test dashboard',mode},{url_path:'other',title:'Other fixture dashboard',mode:'storage'}];
       else if (message.type === 'auth/current_user') result = {is_admin:admin};
-      else if (message.type === 'get_states') result = haStates;
-      else if (message.type === 'lovelace/config') result = remoteDashboard;
-      else if (message.type === 'lovelace/config/save') { assert.equal(message.url_path,'fixture'); remoteDashboard = structuredClone(message.config); writes++; result = null; }
+      else if (message.type === 'get_states') {
+        if (holdStates) { heldStates.push(failed => socket.send(JSON.stringify(failed ? {id:message.id,type:'result',success:false,error:{code:'fixture_error',message:'Fixture entity snapshot failed'}} : {id:message.id,type:'result',success:true,result:haStates}))); return; }
+        result = haStates;
+      }
+      else if (message.type === 'lovelace/config') result = message.url_path === 'other' ? remoteOther : remoteDashboard;
+      else if (message.type === 'lovelace/config/save') { if (message.url_path==='other') {remoteOther=structuredClone(message.config); writesOther++;} else {assert.equal(message.url_path,'fixture'); remoteDashboard=structuredClone(message.config); writes++;} result=null; }
       else if (message.type === 'subscribe_entities') { subscription = message.id; subscribedEntities = message.entity_ids; result = null; }
       else if (message.type === 'unsubscribe_events') { if (message.subscription === subscription) subscribedEntities = []; result = null; }
       else throw new Error(`Unexpected test HA request ${message.type}`);
@@ -124,6 +127,16 @@ try {
   assert.deepEqual(resized.views[0].sections[0].cards[2], fixture.views[0].sections[0].cards[2]);
   await page.locator('#undo-edit').click();
   await page.waitForFunction(expected => window.dashboardCanonical(JSON.parse(document.getElementById('json').value)) === window.dashboardCanonical(expected), fixture);
+  // Drag the selected tile onto the neighboring section on the fixed tablet test viewport.
+  const frameBounds = await page.locator('#editor').boundingBox();
+  await page.mouse.move(frameBounds.x+300,frameBounds.y+155); await page.mouse.down();
+  await page.mouse.move(frameBounds.x+800,frameBounds.y+155,{steps:24}); await page.mouse.up();
+  await page.waitForFunction(() => {
+    const sections=JSON.parse(document.getElementById('json').value).views[0].sections;
+    return sections[0].cards.length===2 && sections[1].cards.some(card=>card.entity==='light.sofa');
+  });
+  await page.locator('#chrome').getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(expected => window.dashboardCanonical(JSON.parse(document.getElementById('json').value))===window.dashboardCanonical(expected),fixture);
   const customId = Object.keys(document.nodes).find(id => document.nodes[id].componentId === 'lovelace/card/custom');
   await page.evaluate(id => document.getElementById('editor').contentWindow.postMessage({type:'compose-ui-builder/select',nodeId:id},location.origin),customId);
   await page.waitForFunction(id => window.dashboardMessages.filter(m=>m.type==='compose-ui-builder/selection').at(-1)?.nodeId === id,customId);
@@ -199,6 +212,33 @@ try {
   await page.waitForFunction(() => document.getElementById('json').value.includes('light.sofa'));
   await page.locator('#style').selectOption('braun'); await page.locator('#dark').check();
   await new Promise((resolve,reject) => { const deadline=Date.now()+10000; const poll=()=>renderRequests.some(r=>r.style==='braun' && r.dark && r.snapshot.states['light.sofa']?.state==='off') ? resolve() : Date.now()>deadline ? reject(new Error('live state/style did not reach rendering')) : setTimeout(poll,50); poll(); });
+  // A delayed/failed load must never pair the old draft with a new HA destination.
+  const previousDraft = await exported();
+  const staleMessages = await page.evaluate(() => ['compose-ui-builder/changed','compose-ui-builder/lovelace-config'].map(type=>window.dashboardMessages.filter(m=>m.type===type).at(-1)));
+  async function waitForHeldStates(count) {
+    const deadline=Date.now()+10000;
+    while (heldStates.length<count && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,25));
+    assert.equal(heldStates.length,count);
+  }
+  holdStates=true; await page.locator('#dashboard').selectOption('other'); await page.locator('#load').click();
+  await waitForHeldStates(1);
+  assert.ok(await page.locator('#save').isDisabled()); assert.ok(await page.locator('#undo-save').isDisabled());
+  await page.evaluate(() => document.getElementById('save').onclick());
+  assert.equal(writesOther,0); assert.equal(writes,2);
+  heldStates.shift()(true);
+  await page.waitForFunction(() => document.getElementById('status').textContent.includes('Fixture entity snapshot failed'));
+  assert.deepEqual(await exported(),previousDraft); assert.ok(await page.locator('#save').isDisabled());
+  // Finish a newer load first, then deliver an older load and old editor acknowledgements.
+  await page.locator('#dashboard').selectOption('fixture'); await page.locator('#load').click(); await waitForHeldStates(1);
+  await page.locator('#dashboard').selectOption('other'); await page.locator('#load').click(); await waitForHeldStates(2);
+  heldStates.pop()(false);
+  await page.waitForFunction(() => JSON.parse(document.getElementById('json').value).title==='Other dashboard' && !document.getElementById('save').disabled);
+  heldStates.shift()(false); holdStates=false;
+  for (const message of staleMessages) await embedded.evaluate(data=>parent.postMessage(data,location.origin),message);
+  await page.evaluate(() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.deepEqual(await exported(),remoteOther); assert.equal(writesOther,0); assert.equal(writes,2);
+  await page.locator('#dashboard').selectOption('fixture'); await page.locator('#load').click();
+  await page.waitForFunction(() => JSON.parse(document.getElementById('json').value).title==='Lovelace test dashboard' && !document.getElementById('save').disabled);
   admin=false; await page.locator('#load').click();
   await page.waitForFunction(() => document.getElementById('status').textContent.includes('Administrator access'));
   assert.ok(await page.locator('#save').isDisabled());
@@ -210,21 +250,23 @@ try {
   await page.locator('#file').setInputFiles({name:'invalid-dashboard.json',mimeType:'application/json',buffer:Buffer.from('{"views":"invalid"}')});
   await page.waitForFunction(() => document.getElementById('status').textContent.includes('must be an array'));
   assert.ok(await page.locator('#save').isDisabled()); assert.ok(await page.locator('#export').isDisabled()); assert.equal(writes,2);
-  const large = '{"views":[{"type":"sections","sections":[{"cards":[{"type":"tile","entity":"light.sofa","future":9007199254740993}]}]}]}';
+  const large = '{"views":[{"type":"sections","sections":[{"cards":[{"type":"tile","entity":"light.sofa","future":9007199254740993,"decimal":0.123456789012345678901}]}]}]}';
   await page.locator('#file').setInputFiles({name:'large-number-dashboard.json',mimeType:'application/json',buffer:Buffer.from(large)});
   await page.waitForFunction(() => !document.getElementById('export').disabled);
-  await new Promise((resolve,reject) => { const deadline=Date.now()+10000; const poll=()=>rawRenderRequests.some(body=>body.includes('9007199254740993')) ? resolve() : Date.now()>deadline ? reject(new Error('large unknown value did not survive preview request')) : setTimeout(poll,50); poll(); });
+  await new Promise((resolve,reject) => { const deadline=Date.now()+10000; const poll=()=>rawRenderRequests.some(body=>body.includes('9007199254740993') && body.includes('0.123456789012345678901')) ? resolve() : Date.now()>deadline ? reject(new Error('large unknown value did not survive preview request')) : setTimeout(poll,50); poll(); });
   await embedded.waitForFunction(() => {
     const undrawn=globalThis.__uiBuilderUndrawn?.['host-dashboard@0'];
     return Array.isArray(undrawn) && !undrawn.some(node=>node.componentId.startsWith('lovelace/card/'));
   });
   const largeDownload=page.waitForEvent('download'); await page.locator('#export').click();
-  assert.ok((await readFile(await (await largeDownload).path(),'utf8')).includes('9007199254740993'));
+  const preciseExport = await readFile(await (await largeDownload).path(),'utf8');
+  assert.ok(preciseExport.includes('9007199254740993'));
+  assert.ok(preciseExport.includes('0.123456789012345678901'));
   assert.equal(writes,2);
 
   await readFile(path.join(evidence,'dashboard.png'));
   assert.deepEqual(errors, []);
-  const report = {passed:true,renders,evidence,renderSource:rcDirectory ? 'actual harc converter capture matrix' : 'committed RC playback fixture',checks:['fixture round trip','view tab switching','large integer import/export/preview','grid resize','unknown custom preservation','delete/undo through editor keyboard','undo edit','section/view templates','template capture/import/reuse','invalid import cannot save','JSON download','RC playback and rendered style change','host HA save/undo conflicts','preview failures preserve conflict feedback','live state/style inputs','admin and YAML save restrictions']};
+  const report = {passed:true,renders,evidence,renderSource:rcDirectory ? 'actual harc converter capture matrix' : 'committed RC playback fixture',checks:['fixture round trip','view tab switching','precise integer/decimal import/export/preview','grid resize','drag cards between sections and undo','unknown custom preservation','delete/undo through editor keyboard','undo edit','section/view templates','template capture/import/reuse','invalid import cannot save','JSON download','RC playback and rendered style change','host HA save/undo conflicts','delayed/failed/overlapping loads cannot change save target','stale editor acknowledgements are ignored','preview failures preserve conflict feedback','live state/style inputs','admin and YAML save restrictions']};
   await writeFile(path.join(evidence,'report.json'),JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify(report));
 } catch (error) {

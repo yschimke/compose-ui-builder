@@ -97,7 +97,7 @@ internal fun HostBridgeApp() {
                   design.catalog.platform ==
                     ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform.LOVELACE)
             ) {
-              postHostChanged(encodeHostDesign(design.document))
+              postHostChanged(encodeHostDesign(design.document), design.requestId)
             }
           }
           .onFailure { postHostError(it.message ?: it::class.simpleName ?: "unreadable design") }
@@ -190,6 +190,7 @@ internal data class HostOpenMessage(
   val label: String = "",
   val seed: HostDesignSeed? = null,
   val lovelaceConfig: String = "",
+  val requestId: String = "",
 )
 
 /**
@@ -211,6 +212,7 @@ internal class HostOpenedDesign(
   val generation: Int,
   val seeded: Boolean,
   private val fileContext: OpenedUidDesign? = null,
+  val requestId: String = "",
 ) {
   private var published: UiBuilderDocument = document
   private var publishedSelection: String? = null
@@ -227,12 +229,13 @@ internal class HostOpenedDesign(
     val context = requireNotNull(fileContext) { "this design is not one of several in a file" }
     val text = context.switchTo(id, published)
     val next = UidDesignFiles.open(text)
-    postHostChanged(text)
+    postHostChanged(text, requestId)
     return HostOpenedDesign(
       document = next.document,
       catalog = catalog,
       label = label,
       generation = generation,
+      requestId = requestId,
       seeded = false,
       fileContext = next,
     )
@@ -256,7 +259,7 @@ internal class HostOpenedDesign(
       runCatching { fileContext?.encode(current) ?: encodeHostDesign(current) }
         .onSuccess { text ->
           published = current
-          postHostChanged(text)
+          postHostChanged(text, requestId)
         }
         .onFailure { postHostError("Not saved: ${it.message}") }
     }
@@ -310,6 +313,7 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
     generation = generation,
     seeded = message.document.isBlank(),
     fileContext = fileContext,
+    requestId = message.requestId,
   )
 }
 
@@ -399,8 +403,18 @@ private external fun hostMessage(type: String, key: String, value: String): JsAn
 
 private fun postHostReady() = postToHost(readyMessage())
 
-private fun postHostChanged(documentJson: String) {
-  postToHost(hostMessage("compose-ui-builder/changed", "document", documentJson))
+@JsFun(
+  "(type, key, value, requestId) => ({ type, [key]: value, ...(requestId ? {requestId} : {}) })"
+)
+private external fun hostSessionMessage(
+  type: String,
+  key: String,
+  value: String,
+  requestId: String,
+): JsAny
+
+private fun postHostChanged(documentJson: String, requestId: String = "") {
+  postToHost(hostSessionMessage("compose-ui-builder/changed", "document", documentJson, requestId))
   val document = runCatching { decodeHostDesign(documentJson) }.getOrNull() ?: return
   if (
     document.roots.singleOrNull()?.let { document.nodes[it]?.componentId } ==
@@ -408,7 +422,14 @@ private fun postHostChanged(documentJson: String) {
   ) {
     when (val exported = LovelaceConfigExporter.export(document)) {
       is LovelaceConfigExporter.Result.Emitted ->
-        postToHost(hostMessage("compose-ui-builder/lovelace-config", "config", exported.source))
+        postToHost(
+          hostSessionMessage(
+            "compose-ui-builder/lovelace-config",
+            "config",
+            exported.source,
+            requestId,
+          )
+        )
       is LovelaceConfigExporter.Result.Refused -> postHostError(exported.reasons.joinToString("; "))
     }
   }

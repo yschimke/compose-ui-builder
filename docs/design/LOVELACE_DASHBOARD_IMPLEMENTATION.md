@@ -22,7 +22,9 @@ child deletes it from the exported dashboard rather than resurrecting the origin
 fields, explicit nulls, unknown grid options, actions, visibility, nested cards and custom config
 survive import, `.uid` persistence, edits and export. Opaque config is JSON text in a regular
 string value, so the typed `.uid` value codec cannot reinterpret custom config or round unknown
-numbers. Export sorts object keys without coercing numeric literals through floating point. Export refuses unsupported design expressions
+numbers. The browser host also retains numeric source text, including long decimals; browsers without
+the required JSON parse source context / `JSON.rawJSON` report an error instead of losing precision.
+Export sorts object keys without coercing numeric literals through floating point. Export refuses unsupported design expressions
 and invalid topology instead of emitting a partial dashboard.
 
 ## Host boundary
@@ -32,7 +34,10 @@ capability catalog and a `compose-ui-builder/open` message with `lovelaceConfig`
 receives the ordinary `.uid` changed/selection/chrome events and an additional
 `compose-ui-builder/lovelace-config` event containing the valid exported JSON text. Invalid edits
 produce the existing error message and do not produce a new valid config. The host disables saving
-until the matching valid export arrives.
+until the matching valid export arrives. Hosts may supply `requestId` on `open`; changed and
+Lovelace-config acknowledgements echo it. Harc uses this to reject replies from an older document
+while switching dashboards. Loading detaches the save destination, stages all reads, then opens
+the matching config and destination together. Failed loads leave an exportable local draft.
 
 Transient `compose-ui-builder/lovelace-previews` messages carry `previews` as JSON text (or a
 structured object), keyed by node id, with
