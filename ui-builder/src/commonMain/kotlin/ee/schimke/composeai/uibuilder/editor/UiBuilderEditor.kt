@@ -1433,13 +1433,20 @@ fun UiBuilderEditor(
     remember(drawnDocument, devicePresets, state.variantAxes) {
       drawnDocument.variantPanes(devicePresets, state.variantAxes)
     }
+  // The previews the catalog shows every design at (`frame.previews`): a card that is also a Wear
+  // widget and a launcher widget, say, is drawn in each. Null leaves the strip as it was.
+  val catalogPanes =
+    remember(drawnDocument, catalog.previews) {
+      drawnDocument.catalogPreviewPanes(catalog.previews)
+    }
   // A dedicated Preview view has no canvas beside it, so its first frame is the current design.
   val previewPanes =
-    remember(drawnDocument, variantPanes, availablePanes) {
-      if (EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null) {
-        variantPanes
-      } else {
-        listOf(drawnDocument.currentFramePane()) + variantPanes
+    remember(drawnDocument, variantPanes, availablePanes, catalogPanes) {
+      when {
+        catalogPanes != null -> catalogPanes + variantPanes
+        EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null ->
+          variantPanes
+        else -> listOf(drawnDocument.currentFramePane()) + variantPanes
       }
     }
   // The read-only pane: the catalog's typed capability picks the canvas renderer or a browser
@@ -1453,8 +1460,10 @@ fun UiBuilderEditor(
   // Compact preview tabs, one frame each (see [MobileViewTabs]), the design's own frame first.
   // Widgets use their host shapes or grid sizes.
   val mobilePreviewPanes =
-    remember(drawnDocument, variantPanes, documentBackedPreview) {
-      drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
+    remember(drawnDocument, variantPanes, documentBackedPreview, catalog.previews) {
+      val resizable = documentBackedPreview == null
+      drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
+        ?: drawnDocument.widgetPreviewPanes(resizable)
         ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)
     }
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
@@ -1464,10 +1473,14 @@ fun UiBuilderEditor(
     if (documentBackedPreview != null) {
       RemoteDocumentDesignPreviewPane(
         document = drawnDocument,
-        variants = previewPanes,
+        // A catalog's panes, fixed stills only: each is a render round trip.
+        variants =
+          if (catalogPanes != null) previewPanes.filterNot { it.launcherGridResizable }
+          else previewPanes,
         authoritativeGeneration = authoritativeGeneration,
         request = requireNotNull(onRequestDocumentPreview),
         modifier = modifier,
+        exactPanes = catalogPanes != null,
         timeRunning = previewTimeRunning,
         onTimeRunningChange = { previewTimeRunning = it },
       )
@@ -1477,6 +1490,7 @@ fun UiBuilderEditor(
         variants = previewPanes,
         modifier = modifier,
         deviceRenderer = canvasRenderer,
+        exactPanes = catalogPanes != null,
         timeRunning = previewTimeRunning,
         onTimeRunningChange = { previewTimeRunning = it },
       )

@@ -2,10 +2,12 @@ package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.capability.CatalogPreview
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetGrid
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostSpec
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.export.isLauncherWidget
@@ -74,6 +76,12 @@ data class UiBuilderVariantPane(
    * ([LAUNCHER_RESIZE_MAX]) so the strip does not reflow as it grows.
    */
   val launcherGridResizable: Boolean = false,
+  /**
+   * A Wear widget host this pane draws around a design that has no container of its own (a catalog
+   * preview; see [catalogPreviewPanes]): [widthDp]/[heightDp] are the host's frame and the design
+   * is laid out in its content box.
+   */
+  val wearHostFrame: WearWidgetHostSpec? = null,
 )
 
 /**
@@ -86,6 +94,82 @@ internal fun UiBuilderDocument.widgetPreviewPanes(
 ): List<UiBuilderVariantPane>? =
   wearWidgetScaffoldSize()?.let(::wearWidgetPreviewPanes)
     ?: if (isLauncherWidget()) launcherWidgetPreviewPanes(resizable) else null
+
+/**
+ * The panes [previews] (the catalog's `frame.previews`) draw this design in, or null when the
+ * catalog declares none or the design is itself a Wear or launcher widget, whose own host panes
+ * ([widgetPreviewPanes]) already show it where it lands. [resizable] keeps the animated launcher
+ * pane; hosts rendering fixed stills leave it out.
+ */
+fun UiBuilderDocument.catalogPreviewPanes(
+  previews: List<CatalogPreview>,
+  resizable: Boolean = true,
+): List<UiBuilderVariantPane>? {
+  if (previews.isEmpty() || wearWidgetScaffoldSize() != null || isLauncherWidget()) return null
+  val own = screenEnvironmentSettings()
+  return previews
+    .mapNotNull { preview ->
+      when (preview) {
+        is CatalogPreview.WearWidget -> {
+          val spec = preview.size.hostSpec(preview.shape)
+          UiBuilderVariantPane(
+            id = "preview-catalog-wear-${preview.size.name.lowercase()}-${preview.shape.id}",
+            label = preview.label ?: "${wearHostName(preview.shape)} · ${preview.size.name}",
+            widthDp = spec.frameWidthDp.toFloat(),
+            heightDp = spec.frameHeightDp.toFloat(),
+            document =
+              withEnvironmentOverrides(
+                mapOf(
+                  "widthDp" to JsonPrimitive(spec.contentWidthDp),
+                  "heightDp" to JsonPrimitive(spec.contentHeightDp),
+                )
+              ),
+            wearWidgetHostShape = preview.shape,
+            wearHostFrame = spec,
+          )
+        }
+        is CatalogPreview.LauncherResizable ->
+          if (!resizable) null
+          else {
+            val patch = launcherGridPatchDp(LAUNCHER_RESIZE_MAX)
+            UiBuilderVariantPane(
+              id = LAUNCHER_RESIZABLE_PANE_ID,
+              label = preview.label ?: "Resizable",
+              widthDp = patch.first,
+              heightDp = patch.second,
+              document = this,
+              launcherGridResizable = true,
+            )
+          }
+        is CatalogPreview.Frame -> {
+          val height = preview.heightDp ?: own.heightDp
+          UiBuilderVariantPane(
+            id = "preview-catalog-frame-${preview.widthDp}x${preview.heightDp ?: "own"}",
+            label = (preview.label ?: "Frame") + " · ${preview.widthDp}×${height}dp",
+            widthDp = preview.widthDp.toFloat(),
+            heightDp = height.toFloat(),
+            document =
+              withEnvironmentOverrides(
+                mapOf(
+                  "widthDp" to JsonPrimitive(preview.widthDp),
+                  "heightDp" to JsonPrimitive(height),
+                )
+              ),
+          )
+        }
+      }
+    }
+    .distinctBy { it.id }
+    .takeIf { it.isNotEmpty() }
+}
+
+/** What a Wear host shape is called on a pane: the watch that draws it. */
+private fun wearHostName(shape: WearWidgetHostShape): String =
+  when (shape) {
+    WearWidgetHostShape.Round -> "Samsung"
+    WearWidgetHostShape.Squircle -> "Pixel Watch"
+    WearWidgetHostShape.Rectangular -> "Rectangular"
+  }
 
 /**
  * The fixed grid sizes a launcher widget is previewed at (narrow strip, square, two wide), plus the
@@ -226,14 +310,9 @@ private fun wearWidgetPreviewPanes(
 ): List<UiBuilderVariantPane> =
   WearWidgetHostShape.entries.map { shape ->
     val spec = size.hostSpec(shape)
-    val host =
-      // Named for the watches that draw each frame: Samsung's launcher gives a widget fully
-      // rounded ends, and the Pixel Watch a rounded rectangle.
-      when (shape) {
-        WearWidgetHostShape.Round -> "Samsung"
-        WearWidgetHostShape.Squircle -> "Pixel Watch"
-        WearWidgetHostShape.Rectangular -> "Rectangular"
-      }
+    // Named for the watches that draw each frame: Samsung's launcher gives a widget fully rounded
+    // ends, and the Pixel Watch a rounded rectangle.
+    val host = wearHostName(shape)
     UiBuilderVariantPane(
       id = "preview-widget-${shape.id}" + adaptiveSize?.let { "-${it.name.lowercase()}" }.orEmpty(),
       label = adaptiveSize?.let { "$host · ${it.name}" } ?: host,

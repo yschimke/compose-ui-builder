@@ -1652,6 +1652,7 @@ internal fun VariantPane(
     LauncherWidgetResizablePane(pane, scale, hostDensity, deviceRenderer, positionVersion)
     return
   }
+  val host = pane.wearHostFrame
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Text(
       pane.label,
@@ -1661,6 +1662,25 @@ internal fun VariantPane(
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
     )
+    if (host != null) {
+      Box(
+        Modifier.size((pane.widthDp * scale).dp, (pane.heightDp * scale).dp)
+          .wearHostFrame(host, scale)
+      ) {
+        ConstrainedFramePane(
+          document = pane.document,
+          widthDp = host.contentWidthDp.toFloat(),
+          heightDp = host.contentHeightDp.toFloat(),
+          scale = scale,
+          densityRatio = pane.document.renderDensity(hostDensity).density / hostDensity.density,
+          renderSessionId = pane.id,
+          wearWidgetHostShape = pane.wearWidgetHostShape,
+          deviceRenderer = deviceRenderer,
+          positionVersion = positionVersion,
+        )
+      }
+      return@Column
+    }
     ConstrainedFramePane(
       document = pane.document,
       widthDp = pane.widthDp,
@@ -1676,6 +1696,8 @@ internal fun VariantPane(
     )
   }
 }
+
+/** What a Wear widget host paints behind a widget that declares no background of its own. */
 
 /** Room above a variant pane for its label, in canvas dp. */
 internal const val VARIANT_LABEL_ROOM_DP = 18f
