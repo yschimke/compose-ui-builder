@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -386,6 +387,22 @@ class UiExpressionsTest {
     assertEquals(216.0, read("device.windowWidth"))
     assertEquals(124.0, read("device.windowHeight"))
     assertEquals(UiExpressions.Device.DEFAULT, UiExpressions.Device.of(JsonObject(emptyMap())))
+  }
+
+  @Test
+  fun `the canvas's size reads the canvas being drawn, and touch and sensors preview as 0`() {
+    val inside =
+      UiExpressions.Environment(canvas = UiExpressions.CanvasSize(width = 120.0, height = 80.0))
+    assertEquals(60.0, UiExpressions.evaluate(typed("canvas.width / 2"), inside))
+    assertEquals(80.0, UiExpressions.evaluate(typed("canvas.height"), inside))
+    assertTrue(UiExpressions.readsCanvas(typed("max(canvas.height, 4)")))
+    assertFalse(UiExpressions.readsCanvas(typed("time.hour + 1")))
+    for (id in
+      listOf("touch.x", "touch.y", "touch.velocityX", "touch.velocityY", "touch.time") +
+        listOf("sensor.light", "sensor.accelerationZ", "sensor.rotationX", "sensor.magneticY")) {
+      assertEquals(0.0, evaluate(id), id)
+      assertEquals(UiValueKind.FLOAT, typed(id).kind, id)
+    }
   }
 
   @Test

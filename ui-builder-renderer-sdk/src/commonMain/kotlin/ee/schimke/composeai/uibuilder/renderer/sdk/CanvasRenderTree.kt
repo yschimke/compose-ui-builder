@@ -55,6 +55,7 @@ class CanvasRenderTree(
     path: UiBuilderInstancePath,
     ancestors: Set<String>,
     arguments: JsonObject,
+    canvas: UiExpressions.CanvasSize? = null,
   ): CanvasRenderNode? {
     val authored = document.nodes[nodeId] ?: return null
     if (nodeId in ancestors) return null
@@ -65,6 +66,7 @@ class CanvasRenderTree(
         state = state,
         mapping = adapterMappings[authored.componentId],
         expressions = expressions,
+        canvas = canvas,
       )
     return CanvasRenderNode(
       tree = this,
@@ -73,6 +75,7 @@ class CanvasRenderTree(
       adapterId = adapterIds[node.componentId] ?: node.componentId,
       ancestors = ancestors,
       bindingArguments = arguments,
+      canvas = canvas,
     )
   }
 
@@ -87,6 +90,7 @@ class CanvasRenderTree(
       path = path,
       ancestors = parent.ancestors + parent.node.id,
       arguments = arguments,
+      canvas = parent.canvas,
     )
 
   internal fun child(parent: CanvasRenderNode, nodeId: String): CanvasRenderNode? =
@@ -106,6 +110,10 @@ class CanvasRenderTree(
     arguments: JsonObject,
   ): CanvasRenderNode? = child(parent, nodeId, parent.path.placement().child(nodeId), arguments)
 
+  /** [entry] resolved again with the size its canvas draws in, which its operations inherit. */
+  internal fun withCanvas(entry: CanvasRenderNode, canvas: UiExpressions.CanvasSize) =
+    resolve(entry.node.id, entry.path, entry.ancestors, entry.bindingArguments, canvas) ?: entry
+
   internal fun componentRoot(node: UiBuilderNode): String? {
     val key = node.componentKey().takeIf(String::isNotEmpty) ?: return null
     val definition = document.components[key] as? JsonObject ?: return null
@@ -123,6 +131,8 @@ internal constructor(
   val adapterId: String,
   internal val ancestors: Set<String>,
   val bindingArguments: JsonObject,
+  /** The space the canvas this node is drawn in draws in; null until that canvas is measured. */
+  internal val canvas: UiExpressions.CanvasSize? = null,
 ) {
   /** The document's state kinds, for typing a formula an action of this node writes. */
   val expressionScope: UiExpressions.Scope
@@ -150,6 +160,11 @@ internal constructor(
     tree.placementChild(this, nodeId, arguments)
 
   internal fun componentRoot(): String? = tree.componentRoot(node)
+
+  /**
+   * This canvas resolved again knowing the space it draws in, so its operations read `canvas.*`.
+   */
+  fun withCanvas(canvas: UiExpressions.CanvasSize): CanvasRenderNode = tree.withCanvas(this, canvas)
 }
 
 private fun UiBuilderNode.componentKey(): String =

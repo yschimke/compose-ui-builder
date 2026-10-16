@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -34,10 +35,13 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.UiTimeText
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -56,10 +60,38 @@ fun UiBuilderDrawCanvas(
   modifier: Modifier,
   resolveColor: @Composable (String) -> Color?,
 ) {
-  val steps = collectSteps(entry.slot(UiDrawing.OPS_SLOT), resolveColor)
-  val measurer = rememberTextMeasurer()
   val stated = entry.node.statedSizeDp()
   val viewport = UiDrawing.Viewport.of(entry.node)
+  if (!opsReadCanvas(entry)) {
+    DrawCanvas(entry, modifier, stated, viewport, resolveColor)
+    return
+  }
+  // Operations that read `canvas.*` are resolved again once the size is known: the stated size,
+  // or what an unsized canvas takes (its minimum, as a `Canvas` with no size does), or the
+  // viewport its operations draw in. Only such a canvas pays for the subcomposition.
+  BoxWithConstraints(modifier) {
+    val size =
+      if (viewport != null)
+        UiExpressions.CanvasSize(viewport.width.toDouble(), viewport.height.toDouble())
+      else
+        UiExpressions.CanvasSize(
+          (stated.first ?: minWidth.value).toDouble(),
+          (stated.second ?: minHeight.value).toDouble(),
+        )
+    DrawCanvas(entry.withCanvas(size), Modifier.matchParentSize(), stated, viewport, resolveColor)
+  }
+}
+
+@Composable
+private fun DrawCanvas(
+  entry: CanvasRenderNode,
+  modifier: Modifier,
+  stated: Pair<Float?, Float?>,
+  viewport: UiDrawing.Viewport?,
+  resolveColor: @Composable (String) -> Color?,
+) {
+  val steps = collectSteps(entry.slot(UiDrawing.OPS_SLOT), resolveColor)
+  val measurer = rememberTextMeasurer()
   Canvas(modifier) {
     // A canvas that states its size draws in that size, as the export does; see `CanvasExtent`
     // in the Remote emitter for why the export reads the stated size rather than the measured one.
@@ -185,6 +217,25 @@ private fun collectSteps(
     else -> null
   }
 }
+
+/** Whether any operation under [canvas] reads the size it draws in, `canvas.width` or `height`. */
+private fun opsReadCanvas(canvas: CanvasRenderNode): Boolean =
+  canvas.slot(UiDrawing.OPS_SLOT).any { operation ->
+    operation.node.properties.values.any(::mentionsCanvas) ||
+      operation.node.modifiers.any(::mentionsCanvas) ||
+      opsReadCanvas(operation)
+  }
+
+private fun mentionsCanvas(value: JsonElement): Boolean =
+  when (value) {
+    is JsonObject ->
+      ((value["type"] as? JsonPrimitive)?.contentOrNull == "system" &&
+        (value["value"] as? JsonPrimitive)?.contentOrNull.let {
+          it == UiExpressions.CANVAS_WIDTH || it == UiExpressions.CANVAS_HEIGHT
+        }) || value.values.any(::mentionsCanvas)
+    is JsonArray -> value.any(::mentionsCanvas)
+    else -> false
+  }
 
 /**
  * A [UiDrawing.REPEAT]'s operations once per index, each entered with the index bound under the

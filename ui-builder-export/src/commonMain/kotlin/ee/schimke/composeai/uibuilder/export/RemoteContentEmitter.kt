@@ -1817,10 +1817,15 @@ internal class RemoteContentEmitter(
                 "field to the property directly"
             null
           }
-      is UiExpressions.Expr.System -> {
-        usedComponentImports += expr.value.imports
-        expr.value.remote
-      }
+      is UiExpressions.Expr.System ->
+        when (expr.value.id) {
+          UiExpressions.CANVAS_WIDTH -> canvasExtent?.widthDp ?: outsideCanvas(expr, where)
+          UiExpressions.CANVAS_HEIGHT -> canvasExtent?.heightDp ?: outsideCanvas(expr, where)
+          else -> {
+            usedComponentImports += expr.value.imports
+            expr.value.remote
+          }
+        }
       is UiExpressions.Expr.Call -> lowerCall(expr, where)
     }
 
@@ -2192,7 +2197,12 @@ internal class RemoteContentEmitter(
     // Inside a viewport the operations' "whole canvas" is the viewport, in its own units.
     canvasExtent =
       viewport?.let {
-        CanvasExtent("${it.width.dpLiteral()}.toPx()", "${it.height.dpLiteral()}.toPx()")
+        CanvasExtent(
+          "${it.width.dpLiteral()}.toPx()",
+          "${it.height.dpLiteral()}.toPx()",
+          it.width.floatLiteral(),
+          it.height.floatLiteral(),
+        )
       } ?: stated
     val opsDepth = if (viewport == null) depth + 1 else depth + 2
     val ops =
@@ -2240,10 +2250,24 @@ internal class RemoteContentEmitter(
    * Glance Wear capture, so a canvas with a dp size gets literals; only an unsized one reads its
    * measured size.
    */
-  private class CanvasExtent(val width: String, val height: String) {
+  private inner class CanvasExtent(
+    val width: String,
+    val height: String,
+    /** The same, in dp: a stated size's own number, a measured one over the density. */
+    val widthDp: String = inDp(width),
+    val heightDp: String = inDp(height),
+  ) {
     val centerX: String = "($width / 2.rf)"
     val centerY: String = "($height / 2.rf)"
     val center: String = "RemoteOffset($centerX, $centerY)"
+  }
+
+  private fun inDp(pixels: String): String = "($pixels / ${1f.dpLiteral()}.toPx())"
+
+  /** A `canvas.*` read where no canvas is being written: there is no size to read. */
+  private fun outsideCanvas(expr: UiExpressions.Expr.System, where: String): String? {
+    refusals += "$where: `${expr.value.id}` is the canvas's size, read only by its operations"
+    return null
   }
 
   private var canvasExtent: CanvasExtent? = null
@@ -2268,6 +2292,8 @@ internal class RemoteContentEmitter(
     return CanvasExtent(
       width?.let { "${it.dpLiteral()}.toPx()" } ?: "width",
       height?.let { "${it.dpLiteral()}.toPx()" } ?: "height",
+      width?.floatLiteral() ?: inDp("width"),
+      height?.floatLiteral() ?: inDp("height"),
     )
   }
 

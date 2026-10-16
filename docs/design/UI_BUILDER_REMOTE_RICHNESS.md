@@ -219,9 +219,15 @@ System values follow the player's `RemoteClock`:
 | `device.density` | pixels per dp |
 | `device.fontScale` | the user's font scale, 1 at the default size: the player's 14sp font size over 14 dp's pixels |
 | `device.windowWidth` `device.windowHeight` | the window in dp (its pixels over the density) |
+| `canvas.width` `canvas.height` | the space a canvas's operations draw in: its size in dp, or its viewport's units when it has one. Read only by a canvas's operations; elsewhere the Remote writer refuses it. A stated size exports as its number, an unsized canvas as its measured pixels over the density |
+| `touch.x` `touch.y` `touch.velocityX` `touch.velocityY` | the last touch and its speed, in dp and dp per second (the player's pixels over the density); 0 in a preview |
+| `touch.time` | when the last touch happened, on the `time.animation` clock; 0 in a preview |
+| `sensor.light` | ambient light, lux |
+| `sensor.accelerationX/Y/Z` `sensor.rotationX/Y/Z` `sensor.magneticX/Y/Z` | the accelerometer (m/s²), gyroscope (rad/s) and magnetometer (µT), as the host player feeds them; 0 where it has none, and in a preview |
 
 The `device.*` values preview from the document's `environment` (`density`, `fontScale`, `widthDp`,
-`heightDp`).
+`heightDp`). A canvas whose operations read `canvas.*` resolves them once it knows its size,
+the stated one or what it was given.
 
 ### Formula text
 

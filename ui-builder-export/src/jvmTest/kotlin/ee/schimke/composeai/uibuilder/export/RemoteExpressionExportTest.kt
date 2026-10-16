@@ -351,6 +351,43 @@ class RemoteExpressionExportTest {
   }
 
   @Test
+  fun `touch and sensor values are the player's context floats, touch lengths in dp`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            formula(
+              "toString(touch.x + touch.velocityY + touch.time + sensor.light + sensor.rotationZ)"
+            )
+        )
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(
+      source,
+      "(RemoteFloat(RemoteContext.FLOAT_TOUCH_POS_X) / RemoteFloat(RemoteContext.FLOAT_DENSITY))",
+    )
+    assertContains(
+      source,
+      "(RemoteFloat(RemoteContext.FLOAT_TOUCH_VEL_Y) / RemoteFloat(RemoteContext.FLOAT_DENSITY))",
+    )
+    for (constant in listOf("FLOAT_TOUCH_EVENT_TIME", "FLOAT_LIGHT", "FLOAT_GYRO_ROT_Z")) {
+      assertContains(source, "RemoteFloat(RemoteContext.$constant)")
+    }
+    assertContains(source, "\nandroidx.compose.remote.core.RemoteContext\n")
+  }
+
+  @Test
+  fun `the canvas's size outside a canvas is a located refusal`() {
+    val (_, refusals) = emit(mapOf("text" to formula("toString(canvas.width)")))
+
+    assertTrue(
+      refusals.any { "nodes.label.text" in it && "canvas.width" in it },
+      refusals.toString(),
+    )
+  }
+
+  @Test
   fun `a tree that does not type is a located refusal, not source`() {
     val (_, refusals) = emit(mapOf("text" to formula("on * 2")))
 
