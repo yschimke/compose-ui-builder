@@ -115,6 +115,16 @@ class RemoteJsonImporterTest {
       UiExpressions.parseFormula("(dragY(4, 1, 10, -0.0275)) * 10", emptySet()),
       dot.properties.getValue("centerYDp"),
     )
+    // A drag stops gently; another stop is reported rather than changed.
+    for (mode in listOf("\"touchMode\":2", "\"stopMode\":\"instantly\"")) {
+      val refused =
+        imported(
+          """{"header":{"width":360,"height":100},"root":[{"type":"canvas","commands":[
+            {"touchExpression":{"name":"snap","min":0.0,"max":1.0,$mode,"expression":"touchX()"}}
+          ]}]}"""
+        )
+      assertTrue(refused.gaps.single().contains("stops other than gently"), refused.gaps.toString())
+    }
   }
 
   @Test

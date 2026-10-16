@@ -2836,8 +2836,10 @@ internal class RemoteContentEmitter(
               "area takes the touch"
           return null
         }
-    val (default, min, max, perDp) =
+    val (authoredDefault, min, max, perDp) =
       expr.args.map { (it as UiExpressions.Expr.Literal).value.content.toFloat() }
+    // The player starts from the default as written, unclamped: clamp it here, as the preview does.
+    val default = authoredDefault.coerceIn(min, max)
     val axis = if (expr.op == UiExpressions.Op.DRAG_X) "X" else "Y"
     val key = "$axis:$default:$min:$max:$perDp"
     drags[key]?.let {

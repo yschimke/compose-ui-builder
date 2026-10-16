@@ -120,5 +120,12 @@ class RemoteDrawingDragExportTest {
         )
       )
     assertEquals(100.0, UiExpressions.evaluate(checked.expr, UiExpressions.Environment()))
+    // The player starts from the default unclamped, so the export clamps it as the preview does.
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(document(formula("dragX(120, 8, 88, 1)")))
+        )
+        .source
+    assertContains(source, "document.addTouch(88f, 8f, 88f, 0,")
   }
 }

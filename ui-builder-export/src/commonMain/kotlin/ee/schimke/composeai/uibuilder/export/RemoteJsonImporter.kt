@@ -635,6 +635,12 @@ object RemoteJsonImporter {
       val max = body.number("max") ?: 1.0
       val default = body.number("defaultValue") ?: min
       if (min >= max) throw Gap("touch expression `$name`'s minimum is not below its maximum")
+      // `dragX` / `dragY` stop gently: the codec's touch mode 0, which the corpus spells `gently`.
+      val touchMode = body.number("touchMode") ?: 0.0
+      val stopMode = body.string("stopMode") ?: "gently"
+      if (touchMode != 0.0 || stopMode != "gently") {
+        throw Gap("touch expression `$name` stops other than gently")
+      }
       globals[name] =
         "drag$axis(${plain(default)}, ${plain(min)}, ${plain(max)}, ${plain(perPixel)})"
     }
