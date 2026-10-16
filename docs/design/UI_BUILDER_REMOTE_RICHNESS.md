@@ -393,3 +393,28 @@ A progress ring and a clock hand, as a document:
 - The device preview in remote-m3-catalog plays the canvas once its renderer adds the case.
 - The regular Compose lane: `Canvas { }` is the same shape, but no catalog that exports regular
   Compose offers the vocabulary yet.
+
+## Importing authoring JSON
+
+`RemoteJsonImporter` reads Remote Compose authoring JSON — the `remotecompose-json` codec's input,
+the language the RemoteCompose-Examples corpus is written in — into a design. The layout tree
+becomes `layout/box`/`row`/`column` and `remote-m3/remote-text` (a spacer is an empty sized box); a
+canvas becomes a `draw/canvas` whose viewport is the document's units, so its pixel coordinates draw
+where the codec drew them. Its commands become drawing operations: the paint state the codec
+carries is copied onto each, a `rotate`/`translate`/`scale`/`clipRect` wraps the commands after it in
+a group or clip, a flat `save` … `restore` is a group, and `loop` / `conditionalOperations` become
+`draw/repeat` / `draw/if`.
+
+`RemoteJsonFormulas` translates the codec's formulas. The codec writes each function as the
+remote-core operator of that name with its arguments pushed in order, so each is translated by what
+the operator does with them: `clamp(a, b, x)` is `min(max(a, x), b)`, `step(a, b)` is `a > b`,
+`ifElse(a, b, c)` is `c > 0 ? b : a`, `smooth_step(x, high, low)` is `smoothstep(low, high, x)`,
+`log` is base 10. System names map to system values, pixel ones (`touchX`, `windowWidth`) times
+`device.density`, and `componentWidth`/`componentHeight` to `canvas.width`/`height`. Variables are
+the document's and inline where they are read; a loop's index is the builder's `@index`.
+
+What has no builder equivalent — 3D, particles, runtime paths, touch expressions, shaders, arrays —
+is skipped and reported by its path, so a document imports as far as it can.
+`RemoteJsonImporterTest` imports a corpus checkout given `-PremoteJsonCorpus=<dir>` and writes
+`ui-builder-export/build/remote-json-import/report.md`, every gap with the documents it stops.
+
