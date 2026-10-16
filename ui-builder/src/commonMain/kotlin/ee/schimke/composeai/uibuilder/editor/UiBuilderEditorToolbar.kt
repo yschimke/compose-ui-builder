@@ -628,6 +628,10 @@ internal fun EditorToolbar(
           WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
         }
       }
+      // A developer option, shown only when the page asked for it and a runtime offers a choice.
+      if (CatalogRuntimePreviewEngine.enabled && CatalogRuntimePreviewEngine.offered) {
+        PreviewEngineMenu()
+      }
       if (showPresence && !foldToMore) {
         Spacer(Modifier.width(6.dp))
         PresenceRow(collaborators)
@@ -995,6 +999,60 @@ private fun WidgetHostShapeMenu(
             },
           )
         },
+    )
+  }
+}
+
+/**
+ * Which engine the catalog runtime draws with ([CatalogRuntimePreviewEngine]). Like the host shape,
+ * it changes the view, not the document.
+ */
+@Composable
+private fun PreviewEngineMenu() {
+  var open by remember { mutableStateOf(false) }
+  val selected = CatalogRuntimePreviewEngine.selected
+  val label = selected?.label ?: "Default"
+  Box {
+    TextButton(
+      onClick = { open = true },
+      modifier = Modifier.semantics { contentDescription = "Preview engine ($label)" },
+    ) {
+      Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+      Text("Engine: $label", Modifier.padding(start = 6.dp))
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+    }
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = open,
+      onDismissRequest = { open = false },
+      entries =
+        listOf(
+          UiBuilderMenuEntry.Action(
+            label = "Runtime default",
+            detail = "Whatever the catalog runtime ships with",
+            detailStyle = UiBuilderMenuDetailStyle.Body,
+            selected = selected == null,
+            reserveIconSpace = true,
+            compactLeadingIcon = true,
+            onClick = {
+              CatalogRuntimePreviewEngine.select(null)
+              open = false
+            },
+          )
+        ) +
+          CatalogRuntimePreviewEngine.Engine.entries.map { option ->
+            UiBuilderMenuEntry.Action(
+              label = option.label,
+              detail = option.detail,
+              detailStyle = UiBuilderMenuDetailStyle.Body,
+              selected = option == selected,
+              reserveIconSpace = true,
+              compactLeadingIcon = true,
+              onClick = {
+                CatalogRuntimePreviewEngine.select(option)
+                open = false
+              },
+            )
+          },
     )
   }
 }
