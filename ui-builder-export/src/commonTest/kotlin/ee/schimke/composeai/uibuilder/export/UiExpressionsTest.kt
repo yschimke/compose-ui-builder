@@ -335,6 +335,8 @@ class UiExpressionsTest {
     assertEquals("-3", evaluate("format(-2.5, 0)"))
     // Any negative keeps its sign, even one that rounds to zero, as the player prints it.
     assertEquals("-0.0", evaluate("format(-0.01, 1)"))
+    // Only the fraction is scaled, after rounding, so a large value keeps the player's digits.
+    assertEquals("1111.611", evaluate("format(1111.6115, 3)"))
     assertEquals("05", evaluate("format(count, 0, 2)", mapOf("count" to "5")))
     assertEquals(UiValueKind.STRING, typed("format(progress, 1)").kind)
   }

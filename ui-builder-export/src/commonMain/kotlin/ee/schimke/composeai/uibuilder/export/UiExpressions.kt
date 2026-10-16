@@ -907,11 +907,13 @@ object UiExpressions {
     val magnitude = abs(value).toFloat()
     var half = 0.5f
     repeat(decimals) { half /= 10f }
-    val scaled = ((magnitude + half).toDouble() * 10.0.pow(decimals)).toFloat()
-    val truncated = floor(scaled.toDouble()).toLong()
-    val digits = truncated.toString().padStart(decimals + 1, '0')
-    val whole = digits.dropLast(decimals).padStart(minDigits, '0')
-    val fraction = digits.takeLast(decimals)
+    var scale = 1L
+    repeat(decimals) { scale *= 10 }
+    // As the player does: round in Float, then split, and scale only the fractional part.
+    val rounded = magnitude + half
+    val integer = rounded.toLong()
+    val whole = integer.toString().padStart(minDigits, '0')
+    val fraction = ((rounded - integer) * scale).toLong().toString().padStart(decimals, '0')
     val sign = if (value < 0) "-" else ""
     return sign + whole + if (decimals > 0) ".$fraction" else ""
   }
