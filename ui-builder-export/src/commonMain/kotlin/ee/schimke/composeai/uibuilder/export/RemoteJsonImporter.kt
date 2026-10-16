@@ -67,6 +67,12 @@ object RemoteJsonImporter {
   /** `PathExpression`'s flags: straight segments, and a closed path. */
   private const val PATH_LINEAR = 4
   private const val PATH_LOOP = 1
+
+  /** A resource colour's name, read as `@colors.name` or `$colors.name`. */
+  private val COLOR_REFERENCE = Regex("""[@$]colors\.(.+)""")
+
+  /** The keys of a resource written `{"name": "…", "value": …}`. */
+  private val VERBOSE_RESOURCE_KEYS = setOf("name", "value", "export")
   private const val PATH_WINDING_MASK = 0x3000000
 
   /** A path expression's parameter, as its formulas read it. */
@@ -151,13 +157,21 @@ object RemoteJsonImporter {
             emptyList()
           }
         }
-      val children = roots.flatMapIndexed { index, element ->
-        // `{"global": [...]}`: the document's resources, then its layout.
-        val global = (element as? JsonObject)?.takeIf { it.keys.singleOrNull() == "global" }
-        val items =
-          (global?.get("global") as? JsonArray)
-            ?: return@flatMapIndexed listOfNotNull(layout(element, "root[$index]"))
-        items.mapIndexedNotNull { i, item -> layout(item, "root[$index].global[$i]") }
+      // `{"global": [...]}` holds the document's resources and layout. Like the codec, read every
+      // resource before any layout, so a layout reads them wherever they are listed.
+      val items = roots.flatMapIndexed { index, element ->
+        val global =
+          (element as? JsonObject)?.takeIf { it.keys.singleOrNull() == "global" }?.get("global")
+            as? JsonArray
+        global?.mapIndexed { i, item -> item to "root[$index].global[$i]" }
+          ?: listOf(element to "root[$index]")
+      }
+      fun resourcesOf(item: JsonElement) =
+        (item as? JsonObject)?.takeIf { it.keys.singleOrNull() == "resources" }?.get("resources")
+          as? JsonObject
+      for ((item, path) in items) resourcesOf(item)?.let { resources(it, "$path.resources") }
+      val children = items.mapNotNull { (item, path) ->
+        if (resourcesOf(item) != null) null else layout(item, path)
       }
       nodes[ROOT_ID] =
         UiBuilderNode(
@@ -702,9 +716,20 @@ object RemoteJsonImporter {
      * equivalent.
      */
     fun resources(body: JsonObject, path: String) {
+      // A section is a map of names, a list of `{"name": value}`, or a list of
+      // `{"name": "…", "value": …}`.
       fun named(key: String): List<Pair<String, JsonElement>> =
-        (body[key] as? JsonArray).orEmpty().flatMap { entry ->
-          (entry as? JsonObject)?.entries?.map { it.key to it.value }.orEmpty()
+        when (val section = body[key]) {
+          is JsonObject -> section.entries.map { it.key to it.value }
+          is JsonArray ->
+            section.flatMap { entry ->
+              val obj = entry as? JsonObject ?: return@flatMap emptyList()
+              val name = obj.string("name")
+              if (name != null && obj.keys.all { it in VERBOSE_RESOURCE_KEYS }) {
+                listOfNotNull(obj["value"]?.let { name to it })
+              } else obj.entries.map { it.key to it.value }
+            }
+          else -> emptyList()
         }
       fun valueOf(element: JsonElement): JsonElement =
         (element as? JsonObject)?.get("value") ?: element
@@ -740,12 +765,15 @@ object RemoteJsonImporter {
       }
     }
 
-    /** `@colors.name` as the colour it names, following names of names; any other text as is. */
+    /**
+     * `@colors.name` or `$colors.name` as the colour it names, following names of names; any other
+     * text as is.
+     */
     fun resolveColor(raw: String): String {
       var at = raw
       repeat(8) {
-        if (!at.startsWith("@colors.")) return at
-        at = colors[at.removePrefix("@colors.")] ?: return at
+        val name = COLOR_REFERENCE.matchEntire(at)?.groupValues?.get(1) ?: return at
+        at = colors[name] ?: return at
       }
       return at
     }
@@ -753,7 +781,8 @@ object RemoteJsonImporter {
     /** A colour read where a missing one is skipped: an unresolved `@colors` name is reported. */
     fun colorOf(raw: String, path: String): JsonObject? =
       color(resolveColor(raw)).also {
-        if (it == null && raw.startsWith("@")) gaps += "$path: colour `$raw` is not a colour"
+        if (it == null && COLOR_REFERENCE.matches(raw))
+          gaps += "$path: colour `$raw` is not a colour"
       }
 
     /**

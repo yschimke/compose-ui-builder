@@ -110,6 +110,26 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `resources are read before any layout, in each of the codec's encodings`() {
+    val result =
+      imported(
+        """{"header":{"width":100,"height":100},"root":[
+          {"canvas":{"commands":[
+            {"paint":{"color":"${'$'}colors.ink"}},
+            {"drawCircle":{"cx":"@cx","cy":"arrayGet(@data, 1)","radius":4}}]}},
+          {"resources":{
+            "colors":{"ink":"#FF42A5F5"},
+            "variables":[{"name":"cx","value":"12 * 2"}],
+            "floatArrays":[{"name":"data","value":[5,7]}]}}]}"""
+      )
+    assertEquals(emptyList(), result.gaps)
+    val dot = result.document.nodes.values.single { it.componentId == "draw/circle" }
+    assertEquals("#FF42A5F5", dot.properties["color"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals("12 * 2", UiExpressions.format(dot.properties.getValue("centerXDp").jsonObject))
+    assertEquals("7", UiExpressions.format(dot.properties.getValue("centerYDp").jsonObject))
+  }
+
+  @Test
   fun `layout and text import as builder components`() {
     val result =
       imported(
