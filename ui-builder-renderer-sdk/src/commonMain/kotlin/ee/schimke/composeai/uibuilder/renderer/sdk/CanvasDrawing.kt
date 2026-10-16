@@ -40,6 +40,7 @@ import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.UiTimeText
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -221,6 +222,8 @@ private fun collectSteps(
         DrawStep.Sequence(collectSteps(operation.slot(UiDrawing.OPS_SLOT), resolveColor))
       else null
     UiDrawing.REPEAT -> DrawStep.Sequence(collectSteps(iterations(operation), resolveColor))
+    UiDrawing.POLYLINE ->
+      polylinePoints(operation)?.let { DrawStep.Polyline(it, node.flag("closed"), paint) }
     in UiDrawing.BY_ID -> DrawStep.Shape(node, paint)
     else -> null
   }
@@ -272,6 +275,31 @@ private fun iterations(repeat: CanvasRenderNode): List<CanvasRenderNode> {
       pass++
       index = from + step * pass
     }
+  }
+}
+
+/**
+ * A [UiDrawing.POLYLINE]'s points in dp, each read with the index bound to its number, as the
+ * export writes one segment per point; null where the count or a point is missing.
+ */
+private fun polylinePoints(polyline: CanvasRenderNode): List<Offset>? {
+  val count = polyline.node.number("count")?.takeIf { it == floor(it) }?.toInt() ?: return null
+  if (count !in 2..UiDrawing.MAX_POINTS) return null
+  val name = UiDrawing.indexName(polyline.node) ?: return null
+  return (0 until count).map { point ->
+    val node =
+      polyline
+        .rebound(
+          JsonObject(
+            polyline.bindingArguments +
+              (name to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(point))
+                ))
+          )
+        )
+        .node
+    Offset(node.number("pointXDp") ?: return null, node.number("pointYDp") ?: return null)
   }
 }
 
@@ -426,6 +454,28 @@ private sealed interface DrawStep {
         ) {
           children.forEach { it.draw(this, measurer, extent) }
         }
+      }
+  }
+
+  class Polyline(
+    private val points: List<Offset>,
+    private val closed: Boolean,
+    private val paint: DrawPaint,
+  ) : DrawStep {
+    override fun draw(scope: DrawScope, measurer: TextMeasurer, extent: Size) =
+      with(scope) {
+        val path = Path()
+        points.forEachIndexed { index, point ->
+          val x = point.x.dp(this)
+          val y = point.y.dp(this)
+          if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        if (closed) path.close()
+        val style =
+          if (paint.stroke)
+            Stroke(width = paint.strokeWidthDp.dp(this), cap = paint.cap, join = paint.join)
+          else Fill
+        drawPath(path, paint.brush(extent, density), style = style, blendMode = paint.blendMode)
       }
   }
 

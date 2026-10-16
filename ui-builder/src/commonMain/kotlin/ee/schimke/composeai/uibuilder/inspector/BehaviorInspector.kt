@@ -233,7 +233,8 @@ internal fun EventActionsInspector(
     if (kind !in actionKinds.map { it.first }) kind = "set"
   }
   // A Remote Compose layout or canvas also takes a long press and a double tap, which the export
-  // writes as `combinedClickable`; the other platforms' emitters write a plain `clickable`.
+  // writes as `combinedClickable`, and touch down, up and cancel (`onTouchDown`, …); the other
+  // platforms' emitters write a plain `clickable`.
   val remoteLayout =
     LocalUiBuilderCatalogPlatform.current == "remote-compose" &&
       (node.componentId.startsWith("layout/") || node.componentId == "draw/canvas")
@@ -243,7 +244,7 @@ internal fun EventActionsInspector(
   val events =
     (listOfNotNull(changeEvent) +
         (if (changeEvent == null) listOf("click") else emptyList()) +
-        (if (remoteLayout) listOf("longClick", "doubleClick") else emptyList()) +
+        (if (remoteLayout) REMOTE_LAYOUT_EVENTS else emptyList()) +
         node.eventBindings.keys)
       .distinct()
   var event by remember(node.id) { mutableStateOf(changeEvent ?: "click") }
@@ -271,6 +272,9 @@ internal fun EventActionsInspector(
                 "selectionClick" -> "On select"
                 "longClick" -> "On long press"
                 "doubleClick" -> "On double tap"
+                "touchDown" -> "On touch down"
+                "touchUp" -> "On touch up"
+                "touchCancel" -> "On touch cancel"
                 else -> candidate
               }
             )
@@ -569,3 +573,7 @@ private fun actionOperandText(operand: JsonElement?): String =
     UiExpressions.isComputed(operand) -> "=" + UiExpressions.format(operand)
     else -> (operand as? JsonPrimitive)?.contentOrNull.orEmpty()
   }
+
+/** The events a Remote Compose layout or canvas takes beyond a click. */
+private val REMOTE_LAYOUT_EVENTS =
+  listOf("longClick", "doubleClick", "touchDown", "touchUp", "touchCancel")

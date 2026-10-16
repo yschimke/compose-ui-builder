@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiExpressions
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -228,6 +230,36 @@ class DrawCanvasRenderTest {
       countOn(Color.Blue, listOf("fill"), fill(""","gradientEndDp":{"type":"float","value":40}"""))
     // Clamped, everything past 40dp of the 80dp canvas is the end colour.
     assertTrue(early > across + 1_000, "blue past the gradient's end: $early, across: $across")
+  }
+
+  @Test
+  fun `a closed polyline through four indexed points fills the square they bound`() {
+    fun formula(text: String) = UiExpressions.parseFormula(text, emptySet()).toString()
+    val square =
+      countOn(
+        Color.Red,
+        listOf("fill"),
+        """"fill":{"id":"fill","componentId":"draw/rect","properties":{
+          "xDp":{"type":"float","value":20},"yDp":{"type":"float","value":20},
+          "widthDp":{"type":"float","value":40},"heightDp":{"type":"float","value":40},
+          "color":{"type":"color","value":"#FFFF0000"}},
+          "modifiers":[],"slots":{},"eventBindings":{}}""",
+      )
+    // Corners 0 to 3 clockwise from the top left: across at 1 and 2, down at 2 and 3.
+    val polyline =
+      countOn(
+        Color.Red,
+        listOf("fill"),
+        """"fill":{"id":"fill","componentId":"draw/polyline","properties":{
+          "count":{"type":"float","value":4},
+          "pointXDp":${formula("20 + 40 * (select(@i > 0.5, 1, 0) - select(@i > 2.5, 1, 0))")},
+          "pointYDp":${formula("20 + 40 * select(@i > 1.5, 1, 0)")},
+          "closed":{"type":"bool","value":true},
+          "color":{"type":"color","value":"#FFFF0000"}},
+          "modifiers":[],"slots":{},"eventBindings":{}}""",
+      )
+    assertTrue(square > 1_000, "the reference square was not drawn ($square samples)")
+    assertTrue(abs(polyline - square) < square / 20, "polyline: $polyline, square: $square")
   }
 
   private fun Color.isNear(other: Color): Boolean =
