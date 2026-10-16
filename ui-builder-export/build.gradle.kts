@@ -237,8 +237,8 @@ dependencies {
 }
 
 tasks.named<Test>("jvmTest") {
-  // The exported widgets the tests write, which experiments/remote-export-compile compiles: outputs,
-  // so a jvmTest restored from the build cache restores them too.
+  // The exported widgets the tests write, which experiments/remote-export-compile compiles, are
+  // outputs, so a jvmTest restored from the build cache restores them too.
   outputs.dir(layout.buildDirectory.dir("draw-proof")).withPropertyName("drawProof")
   outputs.dir(layout.buildDirectory.dir("remote-call-proof")).withPropertyName("remoteCallProof")
   // `RemoteJsonImporterTest` imports a RemoteCompose-Examples checkout when given one.
