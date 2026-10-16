@@ -58,6 +58,78 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `a fixed array folds into the formulas reading it`() {
+    val data = mapOf("data" to listOf(40.0, 90.0, 60.0), "w" to listOf(1.0, 2.0, 3.0))
+    fun folded(text: String, indices: Set<String> = emptySet()) =
+      RemoteJsonFormulas.translate(text, emptyMap(), indices, data)
+    assertEquals("3", folded("arrayLength(@data)"))
+    assertEquals("190", folded("arraySum(@data)"))
+    assertEquals("400", folded("arraySumXY(@data, @w)"))
+    assertEquals("90", folded("arrayMax(@data)"))
+    assertEquals("60", folded("arrayGet(@data, 2)"))
+    // A live index picks by halves, truncating as the player does.
+    assertEquals(
+      "200 - select((@i) < 1, 40, select((@i) < 2, 90, 60))",
+      folded("200 - arrayGet(@data, i)", setOf("i")),
+    )
+    assertFailsWith<RemoteJsonFormulas.Untranslatable> { folded("@data + 1") }
+    assertFailsWith<RemoteJsonFormulas.Untranslatable> { folded("abs(@data)") }
+  }
+
+  @Test
+  fun `a global block's resources are read before its layout`() {
+    val result =
+      imported(
+        """{"header":{"width":320,"height":220},"root":[{"global":[
+          {"resources":{
+            "floatArrays":[{"data":[40,90,60]}],
+            "integers":[{"bars":3}],
+            "colors":[{"ink":"#FF42A5F5"},{"accent":"@colors.ink"},{"themed":{"light":"#FF000000","dark":"#FFFFFFFF"}}],
+            "variables":[{"n":"arrayLength(@data)"},{"gap":{"value":42,"export":true}}]}},
+          {"canvas":{"modifiers":["fillMaxSize"],"commands":[
+            {"paint":{"color":"@colors.accent","style":"fill"}},
+            {"loop":{"from":0.0,"until":"@n","index":"i","commands":[
+              {"drawRect":{"left":"20 + i * @gap","top":"200 - arrayGet(@data, i)","right":"52 + i * @gap","bottom":200.0}}]}}
+          ]}}]}]}"""
+      )
+    assertEquals(
+      listOf(
+        "root[0].global[0].resources.colors.themed: a colour with light and dark values has no builder equivalent"
+      ),
+      result.gaps,
+    )
+    val nodes = result.document.nodes
+    val repeat = nodes.values.single { it.componentId == UiDrawing.REPEAT }
+    assertEquals("3", UiExpressions.format(repeat.properties.getValue("until").jsonObject))
+    val bar = nodes.getValue(repeat.slots.getValue(UiDrawing.OPS_SLOT).single())
+    assertEquals("#FF42A5F5", bar.properties["color"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertContains(
+      UiExpressions.format(bar.properties.getValue("yDp").jsonObject),
+      "select(@i < 1, 40, select(@i < 2, 90, 60))",
+    )
+  }
+
+  @Test
+  fun `resources are read before any layout, in each of the codec's encodings`() {
+    val result =
+      imported(
+        """{"header":{"width":100,"height":100},"root":[
+          {"canvas":{"commands":[
+            {"paint":{"color":"${'$'}colors.ink"}},
+            {"drawCircle":{"cx":"@cx","cy":"arrayGet(@data, 1)","radius":4}}]}},
+          {"resources":{
+            "colors":{"ink":"#FF42A5F5"},
+            "variables":[{"name":"cx","value":"12 * 2"}],
+            "floatArrays":[{"name":"data","value":[5,7]}]}}]}"""
+      )
+    assertEquals(emptyList(), result.gaps)
+    val dot = result.document.nodes.values.single { it.componentId == "draw/circle" }
+    assertEquals("#FF42A5F5", dot.properties["color"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals("12 * 2", UiExpressions.format(dot.properties.getValue("centerXDp").jsonObject))
+    assertEquals("7", UiExpressions.format(dot.properties.getValue("centerYDp").jsonObject))
+  }
+
+  @Test
   fun `layout and text import as builder components`() {
     val result =
       imported(

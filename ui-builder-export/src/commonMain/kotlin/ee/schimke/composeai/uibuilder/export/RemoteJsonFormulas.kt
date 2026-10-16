@@ -14,8 +14,19 @@ package ee.schimke.composeai.uibuilder.export
 internal object RemoteJsonFormulas {
   class Untranslatable(message: String) : IllegalArgumentException(message)
 
-  fun translate(source: String, variables: Map<String, String>, indices: Set<String>): String =
-    Parser(source, variables, indices).run()
+  /**
+   * @param arrays the document's float arrays, by name. Their numbers are fixed, so a function of
+   *   one folds into a number, and `arrayGet` into a choice of its numbers by the index.
+   */
+  fun translate(
+    source: String,
+    variables: Map<String, String>,
+    indices: Set<String>,
+    arrays: Map<String, List<Double>> = emptyMap(),
+  ): String = Parser(source, variables, indices, arrays).run()
+
+  /** What an `@name` of an array translates to: only an array function's argument reads it. */
+  private const val ARRAY = "\u0000array:"
 
   /** Builder formulas for the codec's system names; pixel values are its dp ones times density. */
   private val SYSTEM: Map<String, String> = buildMap {
@@ -94,6 +105,7 @@ internal object RemoteJsonFormulas {
     val source: String,
     val variables: Map<String, String>,
     val indices: Set<String>,
+    val arrays: Map<String, List<Double>>,
   ) {
     var at = 0
 
@@ -101,8 +113,60 @@ internal object RemoteJsonFormulas {
       val result = additive()
       skip()
       if (at < source.length) fail("unexpected `${source.substring(at)}`")
+      if (ARRAY in result) fail("an array is read as a number")
       return result
     }
+
+    /** The array an argument names, else null. */
+    fun array(arg: String): List<Double>? =
+      arg.takeIf { it.startsWith(ARRAY) }?.let { arrays.getValue(it.removePrefix(ARRAY)) }
+
+    /**
+     * An array function, folded: the array's numbers are fixed. `arrayGet` truncates its index to a
+     * whole number as the player does, so a live index picks between the numbers by halves.
+     */
+    fun arrayCall(name: String, args: List<String>): String? {
+      val first = args.firstOrNull()?.let(::array) ?: return null
+      fun one(): List<Float> {
+        if (args.size != 1) fail("`$name` takes one array")
+        return first.map { it.toFloat() }
+      }
+      fun sum(values: List<Float>) = values.fold(0f) { total, v -> total + v }
+      val folded: Float =
+        when (name) {
+          "arrayLength" -> one().size.toFloat()
+          "arraySum" -> sum(one())
+          "arraySumSqr" -> sum(one().map { it * it })
+          "arrayMax" -> one().maxOrNull() ?: 0f
+          "arrayMin" -> one().minOrNull() ?: 0f
+          "arraySumXY" -> {
+            val second = args.getOrNull(1)?.let(::array)
+            if (args.size != 2 || second == null) fail("`$name` takes two arrays")
+            sum(first.zip(second) { a, b -> a.toFloat() * b.toFloat() })
+          }
+          "arrayGet" -> {
+            if (args.size != 2 || ARRAY in args[1]) fail("`$name` takes an array and an index")
+            if (first.isEmpty()) fail("`$name` reads an empty array")
+            args[1].toDoubleOrNull()?.let {
+              return literal(first[it.toInt().coerceIn(0, first.lastIndex)].toFloat())
+            }
+            return pick(first, "(${args[1]})", 0, first.size)
+          }
+          else -> fail("`$name` has no builder equivalent")
+        }
+      return literal(folded)
+    }
+
+    fun pick(values: List<Double>, index: String, from: Int, until: Int): String {
+      if (until - from == 1) return literal(values[from].toFloat())
+      val half = (from + until) / 2
+      return "select($index < $half, ${pick(values, index, from, half)}, " +
+        "${pick(values, index, half, until)})"
+    }
+
+    fun literal(value: Float): String =
+      if (value % 1f == 0f && kotlin.math.abs(value) < 1e9f) value.toLong().toString()
+      else value.toString()
 
     fun fail(message: String): Nothing = throw Untranslatable("`$source`: $message")
 
@@ -165,6 +229,7 @@ internal object RemoteJsonFormulas {
             name = identifier()
           }
           if (name in indices) return "@$name"
+          if (name in arrays && name !in variables) return "$ARRAY$name"
           return variables[name]?.let { "($it)" } ?: fail("variable `$name` is not defined here")
         }
         c.isLetter() || c == '_' -> {
@@ -197,6 +262,9 @@ internal object RemoteJsonFormulas {
     }
 
     fun call(name: String, args: List<String>): String {
+      arrayCall(name, args)?.let {
+        return it
+      }
       fun arity(n: Int) {
         if (args.size != n) fail("`$name` takes $n arguments")
       }

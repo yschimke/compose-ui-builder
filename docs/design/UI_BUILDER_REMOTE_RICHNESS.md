@@ -432,7 +432,14 @@ the operator does with them: `clamp(a, b, x)` is `min(max(a, x), b)`, `step(a, b
 `device.density`, and `componentWidth`/`componentHeight` to `canvas.width`/`height`. Variables are
 the document's and inline where they are read; a loop's index is the builder's `@index`.
 
-What has no builder equivalent — 3D, particles, curved runtime paths, shaders, arrays —
+A `global` block is the document's `resources` and then its layout. Its float arrays are fixed
+numbers, so a formula reading one folds them in: `arrayLength`, `arraySum`, `arraySumSqr`,
+`arraySumXY`, `arrayMax` and `arrayMin` become numbers, and `arrayGet` with a live index a choice of
+the numbers by halves, truncating the index as the player does. Its integers and variables are
+variables; its plain colours resolve `@colors.name` paints, text and backgrounds, while a colour with
+light and dark values has no builder equivalent and is reported.
+
+What has no builder equivalent — 3D, particles, curved runtime paths, shaders, live arrays —
 is skipped and reported by its path, so a document imports as far as it can.
 `RemoteJsonImporterTest` imports a corpus checkout given `-PremoteJsonCorpus=<dir>` and writes
 `ui-builder-export/build/remote-json-import/report.md`, every gap with the documents it stops.
