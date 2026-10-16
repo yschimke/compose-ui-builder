@@ -228,7 +228,12 @@ bounds, slot value parameters); this plan adds the catalog-level part.
       "cardCornerRadiusDp": 26,
       "colors": { "background": "#000000", "cardSurface": "#332E3C", "title": "#F6EDFF", … },
       "timeText": { "topDp": 5.5, "frozen": "10:10" }
-    }
+    },
+    "previews": [                           // optional, hand-written: every host a design lands in
+      { "kind": "wear-widget", "size": "small", "shape": "round" },
+      { "kind": "launcher-resizable" },
+      { "kind": "frame", "widthDp": 360, "label": "Phone" }
+    ]
   },
   "builtins": {                             // components no record can carry
     "wear-m3/screen-scaffold": { "role": "screen-root",
@@ -250,6 +255,16 @@ bounds, slot value parameters); this plan adds the catalog-level part.
   "templates": ["ui-builder/designs/wear-list.json", "ui-builder/designs/blank.json"]
 }
 ```
+
+`frame.previews` is the preview strip a catalog asks for beside each of its designs, in order. A
+catalog whose designs render in several hosts — a dashboard card that is also a Wear widget and a
+launcher widget — lists each one, so the author sees the design wherever it lands rather than at the
+one frame it is authored at. `wear-widget` draws the design in a Wear widget host (`size`
+`small`|`large`, `shape` `round`|`squircle`|`rectangular`); `launcher-resizable` is the launcher
+grid resized a cell at a time; `frame` is a fixed `widthDp`, at `heightDp` or the design's own
+height. Each takes an optional `label`. An entry this build cannot read is skipped, never an error,
+and a widget design keeps its own host panes. A catalog with no `previews` keeps the builder's
+defaults.
 
 The structural templates are not new writing for wear-m3-catalog. Its own sticker frames —
 `ScreenSticker` (`AppScaffold` + frozen `TimeText`), `EdgeButtonScreen` (`AppScaffold` →

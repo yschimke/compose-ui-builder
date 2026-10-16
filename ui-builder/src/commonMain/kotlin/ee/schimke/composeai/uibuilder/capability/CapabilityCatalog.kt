@@ -51,6 +51,12 @@ data class CapabilityCatalog(
   }
 
   /**
+   * The previews this catalog shows every design at (`frame.previews`), or empty to leave the strip
+   * to the design's own frame, devices and widget hosts. See [CatalogPreview].
+   */
+  val previews: List<CatalogPreview> by lazy { CatalogPreview.from(statusSemantics) }
+
+  /**
    * How the builder's insert panel shelves this catalog's components. Read from [statusSemantics]
    * like [previewSurfaces]; see [ComponentMenu]. Defaults to [ComponentMenu.EMPTY] (group by
    * component kind).
