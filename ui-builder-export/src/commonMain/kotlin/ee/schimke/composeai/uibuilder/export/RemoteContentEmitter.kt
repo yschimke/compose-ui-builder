@@ -2645,6 +2645,22 @@ internal class RemoteContentEmitter(
       usedComponentImports += "androidx.compose.ui.graphics.StrokeCap"
       lines += "strokeCap = StrokeCap.${cap.replaceFirstChar { it.uppercaseChar() }}"
     }
+    node.properties["strokeJoin"]?.stringOrNull()?.let { join ->
+      if (join !in UiDrawing.STROKE_JOINS) {
+        refusals += "nodes.${node.id}.strokeJoin: `$join` is not one of ${UiDrawing.STROKE_JOINS}"
+      } else {
+        usedComponentImports += "androidx.compose.ui.graphics.StrokeJoin"
+        lines += "strokeJoin = StrokeJoin.${join.replaceFirstChar { it.uppercaseChar() }}"
+      }
+    }
+    node.properties["blendMode"]?.stringOrNull()?.let { mode ->
+      if (mode !in UiDrawing.BLEND_MODES) {
+        refusals += "nodes.${node.id}.blendMode: `$mode` is not one of ${UiDrawing.BLEND_MODES}"
+      } else {
+        usedComponentImports += "androidx.compose.ui.graphics.BlendMode"
+        lines += "blendMode = BlendMode.${mode.replaceFirstChar { it.uppercaseChar() }}"
+      }
+    }
     when (operation.componentId) {
       "draw/text",
       UiDrawing.TEXT_CIRCLE ->
@@ -2676,7 +2692,10 @@ internal class RemoteContentEmitter(
     usedComponentImports += "androidx.compose.remote.creation.compose.shaders.RemoteBrush"
     usedComponentImports += "androidx.compose.remote.creation.compose.shaders.$factory"
     usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteSize"
-    val to = drawColor(node, hoisted, "gradientColor", transparentWhenAbsent = true)
+    // A listed run of colours replaces the two ends, each faded by the paint's alpha as they are.
+    val colours =
+      UiDrawing.gradientColors(node)?.map { gradientStop(node, it, hoisted) ?: return null }
+        ?: listOf(from, drawColor(node, hoisted, "gradientColor", transparentWhenAbsent = true))
     // A path is drawn under a viewport-to-canvas scale, which scales the shader too, so its
     // gradient spans the viewport rather than the canvas.
     val size =
@@ -2684,8 +2703,44 @@ internal class RemoteContentEmitter(
         "${node.drawFloat("viewportWidth") ?: 24f.floatLiteral()}, " +
           (node.drawFloat("viewportHeight") ?: 24f.floatLiteral())
       else "${extent.width}, ${extent.height}"
-    return "with(RemoteBrush.$factory(listOf($from, $to))) { " +
+    return "with(RemoteBrush.$factory(listOf(${colours.joinToString()}))) { " +
       "applyTo(this@RemotePaint, RemoteSize($size)) }"
+  }
+
+  /**
+   * One colour of a `gradientColors` list: a hex literal or a theme role read above the canvas,
+   * faded by the paint's alpha; null, refused, when it is neither.
+   */
+  private fun gradientStop(
+    node: UiBuilderNode,
+    token: String,
+    hoisted: MutableList<String>,
+  ): String? {
+    val base =
+      when {
+        COLOR_HEX.matches(token) -> {
+          usesColorLiteral = true
+          "${token.argbLiteral()}.rc"
+        }
+        token == TRANSPARENT_TOKEN -> {
+          usesColorLiteral = true
+          "Color(0x00000000).rc"
+        }
+        COLOR_ROLE.matches(token) -> {
+          usesTheme = true
+          val name = localName("drawColor")
+          hoisted += "val $name = RemoteMaterialTheme.colorScheme.$token"
+          name
+        }
+        else -> {
+          refusals +=
+            "nodes.${node.id}.gradientColors: `$token` is neither a #RRGGBB/#AARRGGBB colour " +
+              "nor a theme role"
+          return null
+        }
+      }
+    val alpha = node.drawFloat("alpha") ?: return base
+    return "$base.let { it.copy(alpha = it.alpha * $alpha) }"
   }
 
   /** A draw colour: a literal, a theme role read above the canvas, or a computed colour. */
@@ -4758,6 +4813,9 @@ private val REMOTE_COLOR_BUNDLES: Map<String, RemoteColorBundle> =
 
 /** A colour scheme role's name, as `RemoteMaterialTheme.colorScheme` spells its members. */
 private val COLOR_ROLE = Regex("[a-z][A-Za-z0-9]*")
+
+/** A colour literal as a draw property spells one: `#RRGGBB` or `#AARRGGBB`. */
+private val COLOR_HEX = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")
 /**
  * The published Remote Compose text component, served by the same writer as the borrowed `m3/text`,
  * so a design moving between the ids keeps its text properties.

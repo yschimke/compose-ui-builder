@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -242,6 +243,71 @@ class RemoteDrawingExportTest {
     assertEquals("0", panY("center"))
     assertEquals("-1", panY("bottom"))
     assertEquals("0", panY(null))
+  }
+
+  /** [GAUGE] with the sweep's paint given [extra] properties. */
+  private fun sweepWith(vararg extra: Pair<String, String>): UiBuilderDocument {
+    val sweep = document.nodes.getValue("sweep")
+    val properties =
+      sweep.properties + extra.associate { (name, value) -> name to Json.parseToJsonElement(value) }
+    return document.copy(
+      nodes = document.nodes + ("sweep" to sweep.copy(properties = JsonObject(properties)))
+    )
+  }
+
+  @Test
+  fun `a paint's join, blend mode and listed gradient colours are written onto it`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            sweepWith(
+              "strokeJoin" to """{"type":"enum","value":"round"}""",
+              "blendMode" to """{"type":"enum","value":"multiply"}""",
+              "gradient" to """{"type":"enum","value":"sweep"}""",
+              "gradientColors" to """{"type":"string","value":"#FF0000, primary , #800000FF"}""",
+            ),
+            packageName = "proof.draw",
+          )
+        )
+        .source
+        .also {
+          File("build/draw-proof").apply { mkdirs() }.resolve("PaintWidget.kt").writeText(it)
+        }
+
+    assertContains(source, "strokeJoin = StrokeJoin.Round")
+    assertContains(source, "blendMode = BlendMode.Multiply")
+    assertTrue(
+      "androidx.compose.ui.graphics.StrokeJoin" in source.lines().map { it.removePrefix("import ") }
+    )
+    assertTrue(
+      "androidx.compose.ui.graphics.BlendMode" in source.lines().map { it.removePrefix("import ") }
+    )
+    // Three stops, in order: a hex literal, the theme role read above the canvas, a hex with alpha.
+    val read = Regex("""val (\w+) = RemoteMaterialTheme\.colorScheme\.primary""").find(source)
+    val role = assertNotNull(read, source).groupValues[1]
+    assertContains(
+      source,
+      "RemoteBrush.sweepGradient(listOf(Color(0xFFFF0000).rc, $role, Color(0x800000FF).rc))",
+    )
+  }
+
+  @Test
+  fun `an unknown join, blend mode or gradient colour is refused by name`() {
+    for ((property, value) in
+      listOf(
+        "strokeJoin" to """{"type":"enum","value":"pointy"}""",
+        "blendMode" to """{"type":"enum","value":"hardLight"}""",
+        "gradientColors" to """{"type":"string","value":"#FF0000, not a colour"}""",
+      )) {
+      val document =
+        sweepWith("gradient" to """{"type":"enum","value":"vertical"}""", property to value)
+      val refused =
+        assertIs<WearWidgetCodeExporter.Result.Refused>(WearWidgetCodeExporter.export(document))
+      assertTrue(
+        refused.reasons.any { "nodes.sweep.$property" in it },
+        refused.reasons.toString(),
+      )
+    }
   }
 
   @Test

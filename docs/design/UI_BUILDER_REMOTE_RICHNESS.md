@@ -291,8 +291,12 @@ canvas stand-in and the Remote emitter.
 | `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
 
 Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `strokeWidthDp`,
-`strokeCap` and `alpha`, and optionally a `gradient` (`horizontal`, `vertical`, `radial`, `sweep`)
-from `color` to `gradientColor` (transparent when absent). A gradient is laid across the whole
+`strokeCap`, `strokeJoin` (`miter`/`round`/`bevel`), `alpha` and `blendMode` (`srcOver`, `multiply`,
+`screen`, `overlay`, `darken`, `lighten`, `plus`, `difference`, `xor`, `srcIn`, `srcAtop`, `dstOut`,
+`clear`; written as `RemotePaint.strokeJoin` / `blendMode`), and optionally a `gradient`
+(`horizontal`, `vertical`, `radial`, `sweep`) from `color` to `gradientColor` (transparent when
+absent), or through every colour `gradientColors` lists (hex or theme roles, comma-separated,
+evenly spaced). A gradient is laid across the whole
 canvas, not the shape: the Remote writer applies `RemoteBrush.<kind>Gradient(…)` to the paint over
 the canvas's size, as `RemoteModifier.background(brush)` applies one over its component, so a sweep
 gradient on a ring turns round the canvas centre. `alpha` fades both ends. Rules every lane shares: geometry is dp from the canvas's top-left; an

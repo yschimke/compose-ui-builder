@@ -138,6 +138,63 @@ class DrawCanvasRenderTest {
     )
   }
 
+  /** Samples of [colour] on an 80dp canvas drawing [ops] (draw node JSON, `"id":{…}` pairs). */
+  private fun countOn(colour: Color, opIds: List<String>, ops: String): Int {
+    var count = 0
+    val document =
+      PAINT_DOCUMENT.replace("OP_IDS", opIds.joinToString(",") { "\"$it\"" }).replace("OPS", ops)
+    runDesktopComposeUiTest(width = 600, height = 400) {
+      setContent { ProductionUiBuilderSurface(decodeProductionRendererDocument(document)) }
+      val pixels = onRoot().captureToImage().toPixelMap()
+      for (x in 0 until pixels.width step 2) {
+        for (y in 0 until pixels.height step 2) {
+          if (pixels[x, y].isNear(colour)) count++
+        }
+      }
+    }
+    return count
+  }
+
+  @Test
+  fun `a listed gradient runs through every colour it names`() {
+    fun fill(colours: String) =
+      """"fill":{"id":"fill","componentId":"draw/rect","properties":{
+        "gradient":{"type":"enum","value":"horizontal"},$colours},
+        "modifiers":[],"slots":{},"eventBindings":{}}"""
+    // Red to blue alone never passes through pure green; red, green, blue does, at its middle.
+    val twoEnds =
+      countOn(
+        Color.Green,
+        listOf("fill"),
+        fill(
+          """"color":{"type":"color","value":"#FFFF0000"},
+          "gradientColor":{"type":"color","value":"#FF0000FF"}"""
+        ),
+      )
+    val listed =
+      countOn(
+        Color.Green,
+        listOf("fill"),
+        fill(""""gradientColors":{"type":"string","value":"#FF0000, #00FF00, #0000FF"}"""),
+      )
+    assertEquals(0, twoEnds, "a two-colour gradient drew green")
+    assertTrue(listed > 20, "a three-colour gradient drew no green ($listed samples)")
+  }
+
+  @Test
+  fun `a clear blend mode erases what is beneath it`() {
+    val red =
+      """"red":{"id":"red","componentId":"draw/rect","properties":{
+        "color":{"type":"color","value":"#FFFF0000"}},"modifiers":[],"slots":{},"eventBindings":{}}"""
+    val eraser =
+      """"eraser":{"id":"eraser","componentId":"draw/rect","properties":{
+        "blendMode":{"type":"enum","value":"clear"}},"modifiers":[],"slots":{},"eventBindings":{}}"""
+    val drawn = countOn(Color.Red, listOf("red"), red)
+    val erased = countOn(Color.Red, listOf("red", "eraser"), "$red,$eraser")
+    assertTrue(drawn > 1_000, "the red rectangle was not drawn ($drawn samples)")
+    assertEquals(0, erased, "a clear rectangle left red behind")
+  }
+
   private fun Color.isNear(other: Color): Boolean =
     kotlin.math.abs(red - other.red) < 0.1f &&
       kotlin.math.abs(green - other.green) < 0.1f &&
@@ -170,6 +227,27 @@ class DrawCanvasRenderTest {
           "strokeWidthDp":{"type":"float","value":4},
           "color":{"type":"color","value":"#FF00FF00"}},
           "modifiers":[],"slots":{},"eventBindings":{}}}}
+      """
+        .trimIndent()
+
+    /** An 80dp canvas drawing the operations `OPS`, in the order `OP_IDS`. */
+    val PAINT_DOCUMENT =
+      """
+      {"schema":"compose-ui-builder-document/v1-candidate","id":"paint","title":"Paint",
+       "revision":1,
+       "catalogPin":{"systemId":"remote-m3","catalogRevision":"candidate",
+         "capabilityDigest":"candidate","nativeRuntimeId":"candidate"},
+       "environment":{"widthDp":216,"heightDp":124,"density":2.0,"theme":"dark",
+         "locale":"en-US","fontScale":1.0,"layoutDirection":"ltr"},
+       "stateVariables":{},"roots":["widget"],
+       "nodes":{
+        "widget":{"id":"widget","componentId":"remote-m3/widget-container-large",
+          "properties":{},"modifiers":[],
+          "slots":{"background":[],"content":["canvas"]},"eventBindings":{}},
+        "canvas":{"id":"canvas","componentId":"draw/canvas","properties":{},
+          "modifiers":[{"type":"size","widthDp":80,"heightDp":80}],
+          "slots":{"ops":[OP_IDS]},"eventBindings":{}},
+        OPS}}
       """
         .trimIndent()
 

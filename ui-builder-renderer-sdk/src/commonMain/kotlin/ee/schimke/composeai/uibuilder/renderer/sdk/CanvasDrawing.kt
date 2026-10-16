@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
@@ -14,6 +15,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -141,6 +143,11 @@ private fun collectSteps(
   val gradientColor = gradient?.let {
     faded(node.text("gradientColor")?.let { resolveColor(it) } ?: Color.Transparent)
   }
+  // A listed run replaces the two ends; an unresolvable entry is transparent, as an absent end is.
+  val gradientColors =
+    gradient
+      ?.let { UiDrawing.gradientColors(node) }
+      ?.map { faded(resolveColor(it) ?: Color.Transparent) }
   val paint =
     DrawPaint(
       color = color,
@@ -154,6 +161,14 @@ private fun collectSteps(
           "square" -> StrokeCap.Square
           else -> StrokeCap.Butt
         },
+      join =
+        when (node.text("strokeJoin")) {
+          "round" -> StrokeJoin.Round
+          "bevel" -> StrokeJoin.Bevel
+          else -> StrokeJoin.Miter
+        },
+      blendMode = blendModeOf(node.text("blendMode")),
+      gradientColors = gradientColors,
     )
   when (node.componentId) {
     UiDrawing.GROUP ->
@@ -208,13 +223,17 @@ private class DrawPaint(
   val stroke: Boolean,
   val strokeWidthDp: Float,
   val cap: StrokeCap,
+  val join: StrokeJoin = StrokeJoin.Miter,
+  val blendMode: BlendMode = BlendMode.SrcOver,
+  /** A gradient's listed colours, evenly spaced, in place of [color] → [gradientColor]. */
+  val gradientColors: List<Color>? = null,
 ) {
   /**
    * What the shape is filled or stroked with: its colour, or a gradient from it to [gradientColor]
    * laid across the whole canvas, as the exported `RemoteBrush` is.
    */
   fun brush(extent: Size): Brush {
-    val colors = listOf(color, gradientColor ?: color)
+    val colors = gradientColors ?: listOf(color, gradientColor ?: color)
     val center = Offset(extent.width / 2f, extent.height / 2f)
     return when (gradient) {
       "horizontal" -> Brush.horizontalGradient(colors, 0f, extent.width)
@@ -292,7 +311,8 @@ private sealed interface DrawStep {
     override fun draw(scope: DrawScope, measurer: TextMeasurer, extent: Size) =
       with(scope) {
         val strokePx = paint.strokeWidthDp.dp(this)
-        val style: DrawStyle = if (paint.stroke) Stroke(width = strokePx, cap = paint.cap) else Fill
+        val style: DrawStyle =
+          if (paint.stroke) Stroke(width = strokePx, cap = paint.cap, join = paint.join) else Fill
         val boxStated = listOf("xDp", "yDp", "widthDp", "heightDp").any { it in node.properties }
         val inset = if (paint.stroke && !boxStated) strokePx / 2f else 0f
         val x = node.number("xDp")?.dp(this) ?: inset
@@ -308,11 +328,20 @@ private sealed interface DrawStep {
         when (node.componentId) {
           "draw/rect" -> {
             val radius = node.number("cornerRadiusDp")?.dp(this)
-            if (radius == null) drawRect(brush, Offset(x, y), box, style = style)
+            if (radius == null)
+              drawRect(brush, Offset(x, y), box, style = style, blendMode = paint.blendMode)
             else
-              drawRoundRect(brush, Offset(x, y), box, CornerRadius(radius, radius), style = style)
+              drawRoundRect(
+                brush,
+                Offset(x, y),
+                box,
+                CornerRadius(radius, radius),
+                style = style,
+                blendMode = paint.blendMode,
+              )
           }
-          "draw/oval" -> drawOval(brush, Offset(x, y), box, style = style)
+          "draw/oval" ->
+            drawOval(brush, Offset(x, y), box, style = style, blendMode = paint.blendMode)
           "draw/arc" ->
             drawArc(
               brush,
@@ -322,6 +351,7 @@ private sealed interface DrawStep {
               topLeft = Offset(x, y),
               size = box,
               style = style,
+              blendMode = paint.blendMode,
             )
           "draw/circle" ->
             drawCircle(
@@ -333,6 +363,7 @@ private sealed interface DrawStep {
                   node.number("centerYDp")?.dp(this) ?: extent.height / 2f,
                 ),
               style = style,
+              blendMode = paint.blendMode,
             )
           "draw/line" ->
             drawLine(
@@ -347,6 +378,7 @@ private sealed interface DrawStep {
               ),
               strokeWidth = strokePx,
               cap = paint.cap,
+              blendMode = paint.blendMode,
             )
           "draw/path",
           UiDrawing.MORPH -> {
@@ -370,9 +402,12 @@ private sealed interface DrawStep {
               // is dp on the canvas whatever the viewport, as on every other operation. The export
               // divides by the same mean scale, which is exact when the viewport keeps its aspect.
               val pathStyle =
-                if (paint.stroke) Stroke(width = strokePx / ((sx + sy) / 2f), cap = paint.cap)
+                if (paint.stroke)
+                  Stroke(width = strokePx / ((sx + sy) / 2f), cap = paint.cap, join = paint.join)
                 else style
-              scale(sx, sy, Offset.Zero) { drawPath(path, viewportBrush, style = pathStyle) }
+              scale(sx, sy, Offset.Zero) {
+                drawPath(path, viewportBrush, style = pathStyle, blendMode = paint.blendMode)
+              }
             }
           }
           UiDrawing.TEXT_CIRCLE -> {
@@ -445,6 +480,7 @@ private sealed interface DrawStep {
                   anchorY -
                     layout.size.height * (1f - UiDrawing.textPanY(node.text("verticalAlign"))) / 2f,
                 ),
+              blendMode = paint.blendMode,
             )
           }
         }
@@ -553,3 +589,21 @@ private fun UiBuilderNode.statedSizeDp(): Pair<Float?, Float?> {
   }
   return width to height
 }
+
+/** A paint's `blendMode`, from its name in [UiDrawing.BLEND_MODES]; drawing on top when absent. */
+private fun blendModeOf(name: String?): BlendMode =
+  when (name) {
+    "multiply" -> BlendMode.Multiply
+    "screen" -> BlendMode.Screen
+    "overlay" -> BlendMode.Overlay
+    "darken" -> BlendMode.Darken
+    "lighten" -> BlendMode.Lighten
+    "plus" -> BlendMode.Plus
+    "difference" -> BlendMode.Difference
+    "xor" -> BlendMode.Xor
+    "srcIn" -> BlendMode.SrcIn
+    "srcAtop" -> BlendMode.SrcAtop
+    "dstOut" -> BlendMode.DstOut
+    "clear" -> BlendMode.Clear
+    else -> BlendMode.SrcOver
+  }

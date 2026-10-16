@@ -78,6 +78,44 @@ object UiDrawing {
     )
   private val alpha = Property.Number("alpha", Unit.FRACTION, "Opacity of the paint, 0 to 1.")
 
+  /** How a stroke's corners are drawn, as Compose's `StrokeJoin` names them. */
+  val STROKE_JOINS: List<String> = listOf("miter", "round", "bevel")
+
+  private val strokeJoin =
+    Property.Choice(
+      "strokeJoin",
+      STROKE_JOINS,
+      "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+    )
+
+  /**
+   * The blend modes a paint offers, as Compose's `BlendMode` names them, lower-cased first letter.
+   * The common Porter-Duff and separable modes; the player takes any.
+   */
+  val BLEND_MODES: List<String> =
+    listOf(
+      "srcOver",
+      "multiply",
+      "screen",
+      "overlay",
+      "darken",
+      "lighten",
+      "plus",
+      "difference",
+      "xor",
+      "srcIn",
+      "srcAtop",
+      "dstOut",
+      "clear",
+    )
+
+  private val blendMode =
+    Property.Choice(
+      "blendMode",
+      BLEND_MODES,
+      "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
+    )
+
   /** The gradients a paint can be, each laid across the whole canvas as `RemoteBrush` lays it. */
   val GRADIENTS: List<String> = listOf("horizontal", "vertical", "radial", "sweep")
 
@@ -96,8 +134,27 @@ object UiDrawing {
           "right, top to bottom, out from the centre, or clockwise round it.",
       ),
       Property.Color("gradientColor", "Where the gradient ends. Transparent when absent."),
+      Property.Text(
+        "gradientColors",
+        "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by " +
+          "commas. Replaces color → gradientColor when set.",
+      ),
+      // Not a gradient, but every paint that can take one can take a blend mode too.
+      blendMode,
     )
-  private val paint = listOf(color, style, strokeWidth, strokeCap, alpha) + gradient
+  private val paint = listOf(color, style, strokeWidth, strokeCap, strokeJoin, alpha) + gradient
+
+  /**
+   * A paint's `gradientColors`: the hex colours and theme roles it lists, in order, or null when it
+   * lists fewer than two.
+   */
+  fun gradientColors(node: UiBuilderNode): List<String>? =
+    ((node.properties["gradientColors"] as? JsonObject)?.get("value") as? JsonPrimitive)
+      ?.content
+      ?.split(',')
+      ?.map { it.trim() }
+      ?.filter { it.isNotEmpty() }
+      ?.takeIf { it.size >= 2 }
 
   private val viewportWidth =
     Property.Number(
