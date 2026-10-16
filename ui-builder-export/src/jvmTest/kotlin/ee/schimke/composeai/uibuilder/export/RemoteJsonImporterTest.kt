@@ -276,6 +276,120 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `a straight path expression draws as a polyline sampling its parameter`() {
+    val result =
+      imported(
+        """{"header":{"width":400,"height":400},"root":[{"type":"canvas","commands":[
+          {"variable":{"name":"endX","value":"componentWidth()"}},
+          {"pathExpression":{"id":"curve","expressionX":"a[0] * 2","expressionY":"200 + 150 * sin(a[0] + continuousSec())",
+            "start":0,"end":"@endX","count":128.0,"flags":4}},
+          {"polarPathExpression":{"id":"ring","expressionR":"100 + 10 * sin(a[0] * 6)",
+            "start":0,"end":6.2831853,"count":64,"cx":200,"cy":200,"flags":5}},
+          {"pathExpression":{"id":"smooth","expressionX":"a[0]","expressionY":"a[0]","start":0,"end":1,"count":8,"flags":0}},
+          {"pathExpression":{"id":"wound","expressionX":"a[0]","expressionY":"a[0]","start":0,"end":1,"count":8,"flags":16777220}},
+          {"paint":{"ops":[{"color":"#FF2E6F52"},{"style":"stroke"},{"strokeWidth":3}]}},
+          {"drawPath":{"path":"curve"}},
+          {"drawPath":{"path":"ring"}},
+          {"drawPath":{"path":"smooth"}}
+        ]}]}"""
+      )
+    val nodes = result.document.nodes
+    val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
+    val (curve, ring) = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)
+    assertEquals(UiDrawing.POLYLINE, curve.componentId)
+    fun text(node: UiBuilderNode, key: String) =
+      node.properties.getValue(key).jsonObject.let {
+        if (it["type"]!!.jsonPrimitive.content == "expr") UiExpressions.format(it)
+        else it["value"]!!.jsonPrimitive.content
+      }
+    assertEquals("128.0", text(curve, "count"))
+    assertEquals("point", text(curve, "index"))
+    // a[0] runs from start to end over count - 1 steps: the last point is at `end`.
+    assertEquals("(0 + @point * (canvas.width - 0) / 127) * 2", text(curve, "pointXDp"))
+    assertContains(text(curve, "pointYDp"), "time.continuousSecond")
+    assertEquals("stroke", text(curve, "style"))
+    // A loop closes, a step short of `end`; a polar radius turns about the centre.
+    assertEquals("true", text(ring, "closed"))
+    assertContains(text(ring, "pointXDp"), "cos(")
+    assertContains(text(ring, "pointXDp"), "/ 64")
+    // A smoothed path is reported where it is defined, and drawing it is not read as SVG data.
+    // So is one asking for a winding the polyline's fill would not keep.
+    assertEquals(3, result.gaps.size, result.gaps.toString())
+    assertTrue(result.gaps[0].startsWith("root[0].commands[3]") && "smoothed" in result.gaps[0])
+    assertTrue(result.gaps[1].startsWith("root[0].commands[4]") && "winding" in result.gaps[1])
+    assertTrue("`smooth` was not imported" in result.gaps[2], result.gaps.toString())
+  }
+
+  @Test
+  fun `a path built by commands is its path data, or a polyline when its points are live`() {
+    val result =
+      imported(
+        """{"header":{"width":300,"height":300},"root":[{"type":"canvas","commands":[
+          {"pathCreate":{"id":"tri","x":150.0,"y":40.0}},
+          {"pathAppendLineTo":{"path":"tri","x":260,"y":260.0}},
+          {"pathAppendLineTo":{"path":"tri","x":40.0,"y":260.0}},
+          {"pathAppendClose":{"path":"tri"}},
+          {"paint":{"ops":[{"color":"#FF2E6F52"}]}},
+          {"drawPath":{"path":"tri"}},
+          {"pathCreate":{"id":"live","x":0,"y":0}},
+          {"pathAppendLineTo":{"path":"live","x":"width - 40","y":10}},
+          {"pathAppendLineTo":{"path":"live","x":5,"y":"continuousSec()"}},
+          {"drawPath":{"path":"live"}},
+          {"loop":{"index":"i","from":0,"until":3,"commands":[
+            {"pathCreate":{"id":"fan","x":150,"y":150}},
+            {"pathAppendLineTo":{"path":"fan","x":"150 + i","y":0}},
+            {"drawPath":{"path":"fan"}}]}},
+          {"pathCreate":{"id":"wave","x":0,"y":0}},
+          {"loop":{"index":"i","from":1,"until":4,"commands":[
+            {"pathAppendLineTo":{"path":"wave","x":"i * 5","y":"sin(i)"}}]}},
+          {"pathAppendLineTo":{"path":"wave","x":20,"y":0}},
+          {"drawPath":{"path":"wave"}},
+          {"pathCreate":{"id":"mixed","x":0,"y":0}},
+          {"loop":{"index":"i","from":0,"until":3,"commands":[
+            {"variable":{"name":"v","value":"i * 2"}},
+            {"pathAppendLineTo":{"path":"mixed","x":"@v","y":"i"}}]}},
+          {"drawPath":{"path":"mixed"}}
+        ]}]}"""
+      )
+    val nodes = result.document.nodes
+    val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
+    val (tri, live, repeat) = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)
+    fun text(node: UiBuilderNode, key: String) =
+      node.properties.getValue(key).jsonObject.let {
+        if (it["type"]!!.jsonPrimitive.content == "expr") UiExpressions.format(it)
+        else it["value"]!!.jsonPrimitive.content
+      }
+    assertEquals("draw/path", tri.componentId)
+    assertEquals("M150 40 L260 260 L40 260 Z", text(tri, "pathData"))
+    assertEquals("#FF2E6F52", text(tri, "color"))
+    assertEquals(UiDrawing.POLYLINE, live.componentId)
+    assertEquals("3.0", text(live, "count"))
+    assertEquals(
+      "select(@point < 1, 0, select(@point < 2, 10, time.continuousSecond))",
+      text(live, "pointYDp"),
+    )
+    // A path built and drawn in each pass of a loop is a polyline in the repeat.
+    val fan = nodes.getValue(repeat.slots.getValue(UiDrawing.OPS_SLOT).single())
+    assertEquals(UiDrawing.POLYLINE, fan.componentId)
+    assertContains(text(fan, "pointXDp"), "150 + @i")
+    // A loop whose every pass appends a line is a run of points, reading the loop's index from
+    // the point's number: points 1..3 are passes 1..3, point 4 the line after the loop.
+    val wave = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)[3]
+    assertEquals(UiDrawing.POLYLINE, wave.componentId)
+    assertEquals("5.0", text(wave, "count"))
+    assertEquals(
+      "select(@point < 1, 0, select(@point < 4, (1 + (@point - 1) * 1) * 5, 20))",
+      text(wave, "pointXDp"),
+    )
+    // A loop doing more than appending builds a different path each pass, and is refused.
+    assertTrue(
+      result.gaps.any { "`mixed` is appended to from another loop" in it },
+      result.gaps.toString(),
+    )
+    assertTrue(result.gaps.any { "`mixed` was not imported" in it }, result.gaps.toString())
+  }
+
+  @Test
   fun `what has no builder equivalent is skipped and reported where it is`() {
     val result =
       imported(

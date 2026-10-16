@@ -412,7 +412,17 @@ canvas becomes a `draw/canvas` whose viewport is the document's units, so its pi
 where the codec drew them. Its commands become drawing operations: the paint state the codec
 carries is copied onto each, a `rotate`/`translate`/`scale`/`clipRect` wraps the commands after it in
 a group or clip, a flat `save` … `restore` is a group, and `loop` / `conditionalOperations` become
-`draw/repeat` / `draw/if`.
+`draw/repeat` / `draw/if`. A straight (`LINEAR`) `pathExpression` or `polarPathExpression` is the
+`draw/polyline` it draws: the player samples `a[0]` at `count` even steps from `start` to `end` and
+joins the points with lines, so each point's formula reads `a[0]` as `start` plus the point's index
+times the step, a `LOOP` path closing a step short of `end`. The player's smoothed paths have no
+builder equivalent. A path built by commands — `pathCreate`, `pathAppendLineTo`s, `pathAppendClose`
+— is drawn as it stands at each `drawPath`: as SVG path data when every point is a number, else as a
+polyline whose point formulas pick each point's coordinates by its index, so live points stay live.
+It must be built in one loop or condition body and drawn inside it. A loop with number bounds whose
+only command appends a line to a path made outside it is a run of the polyline's points, the loop's
+index read from the point's number; any other loop appending to an outer path is reported, since
+each of the player's passes adds to it.
 
 `RemoteJsonFormulas` translates the codec's formulas. The codec writes each function as the
 remote-core operator of that name with its arguments pushed in order, so each is translated by what
@@ -422,7 +432,7 @@ the operator does with them: `clamp(a, b, x)` is `min(max(a, x), b)`, `step(a, b
 `device.density`, and `componentWidth`/`componentHeight` to `canvas.width`/`height`. Variables are
 the document's and inline where they are read; a loop's index is the builder's `@index`.
 
-What has no builder equivalent — 3D, particles, runtime paths, touch expressions, shaders, arrays —
+What has no builder equivalent — 3D, particles, curved runtime paths, shaders, arrays —
 is skipped and reported by its path, so a document imports as far as it can.
 `RemoteJsonImporterTest` imports a corpus checkout given `-PremoteJsonCorpus=<dir>` and writes
 `ui-builder-export/build/remote-json-import/report.md`, every gap with the documents it stops.
