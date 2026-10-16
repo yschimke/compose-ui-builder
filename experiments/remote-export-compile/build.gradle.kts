@@ -26,7 +26,7 @@ dependencies {
   implementation("androidx.glance.wear:wear:${glanceWear.get()}")
   implementation("androidx.glance.wear:wear-core:${glanceWear.get()}")
   implementation("androidx.glance.wear:wear-tooling-preview:${glanceWear.get()}")
-  implementation("androidx.compose.ui:ui-tooling-preview:1.11.0")
+  implementation("androidx.compose.ui:ui-tooling-preview:1.12.1")
   implementation("androidx.compose.material:material-icons-core:1.7.8")
 }
 
