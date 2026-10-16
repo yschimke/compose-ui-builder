@@ -44,7 +44,18 @@ object RemoteJsonImporter {
 
   /** The node kinds that can be written keyed, `{"<kind>": {…}}`. */
   private val KEYED_NODES =
-    setOf("box", "column", "row", "canvas", "text", "spacer", "flow", "fitBox", "image")
+    setOf(
+      "box",
+      "column",
+      "row",
+      "canvas",
+      "text",
+      "spacer",
+      "flow",
+      "fitBox",
+      "image",
+      "resources",
+    )
 
   /** An inlined formula past this length is reported rather than written out. */
   private const val MAX_FORMULA = 4_000
@@ -111,6 +122,10 @@ object RemoteJsonImporter {
     val globals = linkedMapOf<String, String>()
     /** Every path expression defined so far, by its id, as the polyline geometry it draws. */
     val pathExpressions = mutableMapOf<String, Map<String, JsonElement>>()
+    /** The `resources` float arrays, by name: fixed numbers a formula folds in. */
+    val arrays = mutableMapOf<String, List<Double>>()
+    /** The `resources` colours, by name: a colour, or `@colors.` and another's name. */
+    val colors = mutableMapOf<String, String>()
     /** Every path built by commands so far, by its id. */
     val linePaths = mutableMapOf<String, LinePath>()
     var bodyCount = 0
@@ -131,7 +146,14 @@ object RemoteJsonImporter {
             emptyList()
           }
         }
-      val children = roots.mapIndexedNotNull { index, element -> layout(element, "root[$index]") }
+      val children = roots.flatMapIndexed { index, element ->
+        // `{"global": [...]}`: the document's resources, then its layout.
+        val global = (element as? JsonObject)?.takeIf { it.keys.singleOrNull() == "global" }
+        val items =
+          (global?.get("global") as? JsonArray)
+            ?: return@flatMapIndexed listOfNotNull(layout(element, "root[$index]"))
+        items.mapIndexedNotNull { i, item -> layout(item, "root[$index].global[$i]") }
+      }
       nodes[ROOT_ID] =
         UiBuilderNode(
           ROOT_ID,
@@ -205,6 +227,10 @@ object RemoteJsonImporter {
         "row" -> container(type, obj, at)
         "canvas" -> canvas(obj, at)
         "text" -> text(obj, at)
+        "resources" -> {
+          resources(obj, at)
+          null
+        }
         // An empty box of the spacer's size: what a spacer is, and remote-m3 has no spacer.
         "spacer" ->
           add(
@@ -259,7 +285,7 @@ object RemoteJsonImporter {
         }
       val properties = buildMap {
         put("text", text)
-        obj.string("color")?.let(::color)?.let { put("color", it) }
+        obj.string("color")?.let { colorOf(it, "$path.color") }?.let { put("color", it) }
         obj.number("fontSize")?.let { put("fontSize", float(it)) }
       }
       return add(
@@ -335,9 +361,10 @@ object RemoteJsonImporter {
             type("offset", "xDp" to JsonPrimitive(x), "yDp" to JsonPrimitive(y))
           }
         "background" ->
-          (value as? JsonPrimitive)?.contentOrNull?.let(::color)?.let {
-            type("background", "color" to it)
-          }
+          (value as? JsonPrimitive)
+            ?.contentOrNull
+            ?.let { colorOf(it, path) }
+            ?.let { type("background", "color" to it) }
         "weight" -> number?.let { type("weight", "weight" to JsonPrimitive(it)) }
         else -> null
       } ?: gap("$path: the `$name` modifier as written here has no builder equivalent")
@@ -473,6 +500,7 @@ object RemoteJsonImporter {
             "conditionalOperations" -> ops += conditional(body as JsonObject, at, paint, scope)
             "pathExpression",
             "polarPathExpression" -> pathExpression(name, body as JsonObject, scope)
+            "resources" -> resources(body as? JsonObject ?: throw Gap("not resources"), at)
             "pathCreate",
             "pathAppendLineTo",
             "pathAppendClose" -> linePath(name, body as JsonObject, scope)
@@ -629,8 +657,10 @@ object RemoteJsonImporter {
             "color" ->
               paint.copy(
                 color =
-                  color((value as JsonPrimitive).content)?.get("value")?.jsonPrimitive?.content
-                    ?: throw Gap("paint colour `$value` is not a colour")
+                  color(resolveColor((value as JsonPrimitive).content))
+                    ?.get("value")
+                    ?.jsonPrimitive
+                    ?.content ?: throw Gap("paint colour `$value` is not a colour")
               )
             "style" ->
               paint.copy(stroke = (value as JsonPrimitive).content.lowercase().startsWith("stroke"))
@@ -657,6 +687,67 @@ object RemoteJsonImporter {
       globals[name] = formula
       return scope
     }
+
+    /**
+     * A `resources` block: its float arrays, integers and colours as values formulas and paint
+     * read, then its variables, which may read the arrays. An array's numbers are fixed, so a
+     * formula reading one folds it in; a colour with light and dark values has no builder
+     * equivalent.
+     */
+    fun resources(body: JsonObject, path: String) {
+      fun named(key: String): List<Pair<String, JsonElement>> =
+        (body[key] as? JsonArray).orEmpty().flatMap { entry ->
+          (entry as? JsonObject)?.entries?.map { it.key to it.value }.orEmpty()
+        }
+      fun valueOf(element: JsonElement): JsonElement =
+        (element as? JsonObject)?.get("value") ?: element
+      for ((name, element) in named("floatArrays")) {
+        val numbers = (valueOf(element) as? JsonArray)?.map { (it as? JsonPrimitive)?.doubleOrNull }
+        if (numbers == null || numbers.any { it == null }) {
+          gaps += "$path.floatArrays.$name: only an array of numbers is read"
+          continue
+        }
+        arrays[name] = numbers.filterNotNull()
+      }
+      for ((name, element) in named("integers")) {
+        val number = (valueOf(element) as? JsonPrimitive)?.doubleOrNull
+        if (number == null) gaps += "$path.integers.$name: only a number is read"
+        else globals[name] = number(number)
+      }
+      for ((name, element) in named("colors")) {
+        val color = (element as? JsonPrimitive)?.contentOrNull
+        if (color == null) {
+          gaps +=
+            "$path.colors.$name: a colour with light and dark values has no builder equivalent"
+        } else colors[name] = color
+      }
+      for ((name, element) in named("variables")) {
+        try {
+          globals[name] = formula(valueOf(element), Scope())
+        } catch (e: Gap) {
+          gaps += "$path.variables.$name: ${e.message}"
+        }
+      }
+      for (key in body.keys - setOf("floatArrays", "integers", "colors", "variables", "order")) {
+        gaps += "$path.$key: resource `$key` has no builder equivalent"
+      }
+    }
+
+    /** `@colors.name` as the colour it names, following names of names; any other text as is. */
+    fun resolveColor(raw: String): String {
+      var at = raw
+      repeat(8) {
+        if (!at.startsWith("@colors.")) return at
+        at = colors[at.removePrefix("@colors.")] ?: return at
+      }
+      return at
+    }
+
+    /** A colour read where a missing one is skipped: an unresolved `@colors` name is reported. */
+    fun colorOf(raw: String, path: String): JsonObject? =
+      color(resolveColor(raw)).also {
+        if (it == null && raw.startsWith("@")) gaps += "$path: colour `$raw` is not a colour"
+      }
 
     /** The codec's number-to-text: `whole` digits before the point, `decimal` after. */
     fun textFromFloat(value: JsonObject, scope: Scope): String {
@@ -1065,7 +1156,7 @@ object RemoteJsonImporter {
       }
       val translated =
         try {
-          RemoteJsonFormulas.translate(primitive.content, globals + bindings, scope.indices)
+          RemoteJsonFormulas.translate(primitive.content, globals + bindings, scope.indices, arrays)
         } catch (e: RemoteJsonFormulas.Untranslatable) {
           throw Gap(e.message.orEmpty())
         }
