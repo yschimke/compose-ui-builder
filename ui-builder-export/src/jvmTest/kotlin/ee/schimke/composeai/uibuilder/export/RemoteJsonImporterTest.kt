@@ -9,7 +9,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -22,12 +21,18 @@ class RemoteJsonImporterTest {
   private fun imported(json: String): RemoteJsonImporter.Result =
     RemoteJsonImporter.import(Json.parseToJsonElement(json) as JsonObject)
 
-  private fun formula(text: String, variables: Map<String, String> = emptyMap(), indices: Set<String> = emptySet()) =
-    RemoteJsonFormulas.translate(text, variables, indices)
+  private fun formula(
+    text: String,
+    variables: Map<String, String> = emptyMap(),
+    indices: Set<String> = emptySet(),
+  ) = RemoteJsonFormulas.translate(text, variables, indices)
 
   @Test
   fun `the codec's functions become the builder's, in the order remote-core reads them`() {
-    assertEquals("pingPong(time.continuousSecond, 4.0) / 4.0", formula("ping_pong(continuousSec(), 4.0) / 4.0"))
+    assertEquals(
+      "pingPong(time.continuousSecond, 4.0) / 4.0",
+      formula("ping_pong(continuousSec(), 4.0) / 4.0"),
+    )
     // CLAMP is min(max(a, c), b): the corpus writes clamp(low, high, x).
     assertEquals(
       "min(max(0.0, 1.0 - abs(@i)), 1.0)",
@@ -39,9 +44,15 @@ class RemoteJsonImporterTest {
     assertEquals("log10(100)", formula("log(100)"))
     assertEquals("(2 * 2)", formula("square(2)"))
     // Pixel-valued system names are the builder's dp ones times the density.
-    assertEquals("(touch.x * device.density) + canvas.width", formula("touchX() + componentWidth()"))
+    assertEquals(
+      "(touch.x * device.density) + canvas.width",
+      formula("touchX() + componentWidth()"),
+    )
     // A variable inlines; a loop's index, bare, is the builder's @index.
-    assertEquals("(time.animation * 2) + @i", formula("@speed + i", mapOf("speed" to "time.animation * 2"), setOf("i")))
+    assertEquals(
+      "(time.animation * 2) + @i",
+      formula("@speed + i", mapOf("speed" to "time.animation * 2"), setOf("i")),
+    )
     assertFailsWith<RemoteJsonFormulas.Untranslatable> { formula("arrayGet(@data, 2)") }
     assertFailsWith<RemoteJsonFormulas.Untranslatable> { formula("@missing + 1") }
   }
@@ -67,10 +78,19 @@ class RemoteJsonImporterTest {
       listOf("fillMaxSize", "padding", "background"),
       column.modifiers.map { it.jsonObject.getValue("type").jsonPrimitive.content },
     )
-    assertEquals("#FF102030", column.modifiers[2].jsonObject["color"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals(
+      "#FF102030",
+      column.modifiers[2].jsonObject["color"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
     val children = column.slots.getValue("children").map(document.nodes::getValue)
-    assertEquals(listOf(REMOTE_TEXT_COMPONENT_ID, "layout/box", REMOTE_TEXT_COMPONENT_ID), children.map { it.componentId })
-    assertEquals("Hello", children[0].properties["text"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals(
+      listOf(REMOTE_TEXT_COMPONENT_ID, "layout/box", REMOTE_TEXT_COMPONENT_ID),
+      children.map { it.componentId },
+    )
+    assertEquals(
+      "Hello",
+      children[0].properties["text"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
   }
 
   @Test
@@ -91,24 +111,51 @@ class RemoteJsonImporterTest {
     assertEquals(emptyList(), result.gaps)
     val document = result.document
     val canvas = document.nodes.values.single { it.componentId == UiDrawing.CANVAS }
-    assertEquals("360.0", canvas.properties["viewportWidth"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals(
+      "360.0",
+      canvas.properties["viewportWidth"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
     val ops = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(document.nodes::getValue)
-    assertEquals(listOf("draw/rect", "draw/rect", "draw/circle", "draw/text"), ops.map { it.componentId })
+    assertEquals(
+      listOf("draw/rect", "draw/rect", "draw/circle", "draw/text"),
+      ops.map { it.componentId },
+    )
     val (fill, outline, dot, text) = ops
-    assertEquals("#FF080B10", fill.properties["color"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals(
+      "#FF080B10",
+      fill.properties["color"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
     assertEquals(null, fill.properties["style"])
-    assertEquals("stroke", outline.properties["style"]!!.jsonObject["value"]!!.jsonPrimitive.content)
-    assertEquals("340.0", outline.properties["widthDp"]!!.jsonObject["value"]!!.jsonPrimitive.content)
-    assertEquals("18.0", outline.properties["cornerRadiusDp"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals(
+      "stroke",
+      outline.properties["style"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
+    assertEquals(
+      "340.0",
+      outline.properties["widthDp"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
+    assertEquals(
+      "18.0",
+      outline.properties["cornerRadiusDp"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
     // The circle's centre is a live formula with the variable inlined.
     val centre = dot.properties.getValue("centerXDp")
     assertEquals("expr", centre.jsonObject["type"]!!.jsonPrimitive.content)
-    assertContains(UiExpressions.format(centre.jsonObject), "pingPong(time.continuousSecond, 4)")
+    assertContains(
+      UiExpressions.format(centre.jsonObject),
+      "pingPong(time.continuousSecond, 4.0) / 4.0 * 248.0",
+    )
     assertIs<UiExpressions.Checked.Ok>(UiExpressions.check(centre, UiExpressions.Scope(emptyMap())))
     // panX -1 starts the text at the anchor; panY 1 hangs it below.
     assertEquals("start", text.properties["align"]!!.jsonObject["value"]!!.jsonPrimitive.content)
-    assertEquals("top", text.properties["verticalAlign"]!!.jsonObject["value"]!!.jsonPrimitive.content)
-    assertEquals("34.0", text.properties["textSizeSp"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    assertEquals(
+      "top",
+      text.properties["verticalAlign"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
+    assertEquals(
+      "34.0",
+      text.properties["textSizeSp"]!!.jsonObject["value"]!!.jsonPrimitive.content,
+    )
   }
 
   @Test
@@ -131,18 +178,30 @@ class RemoteJsonImporterTest {
     val nodes = result.document.nodes
     val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
     val top = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)
-    assertEquals(listOf(UiDrawing.REPEAT, UiDrawing.GROUP, UiDrawing.IF), top.map { it.componentId })
+    assertEquals(
+      listOf(UiDrawing.REPEAT, UiDrawing.GROUP, UiDrawing.IF),
+      top.map { it.componentId },
+    )
     val repeat = top[0]
     assertEquals("i", repeat.properties["index"]!!.jsonObject["value"]!!.jsonPrimitive.content)
     // save → group; the rotate in it wraps the line in a group of its own.
     val save = nodes.getValue(repeat.slots.getValue(UiDrawing.OPS_SLOT).single())
     val rotated = nodes.getValue(save.slots.getValue(UiDrawing.OPS_SLOT).single())
-    assertContains(UiExpressions.format(rotated.properties.getValue("rotate").jsonObject), "@i * 30")
-    assertEquals("draw/line", nodes.getValue(rotated.slots.getValue(UiDrawing.OPS_SLOT).single()).componentId)
+    assertContains(
+      UiExpressions.format(rotated.properties.getValue("rotate").jsonObject),
+      "@i * 30",
+    )
+    assertEquals(
+      "draw/line",
+      nodes.getValue(rotated.slots.getValue(UiDrawing.OPS_SLOT).single()).componentId,
+    )
     // A flat save … restore is the same group, the clip inside it holding the oval.
     val clip = nodes.getValue(top[1].slots.getValue(UiDrawing.OPS_SLOT).single())
     assertEquals(UiDrawing.CLIP, clip.componentId)
-    assertEquals("draw/oval", nodes.getValue(clip.slots.getValue(UiDrawing.OPS_SLOT).single()).componentId)
+    assertEquals(
+      "draw/oval",
+      nodes.getValue(clip.slots.getValue(UiDrawing.OPS_SLOT).single()).componentId,
+    )
     assertContains(UiExpressions.format(top[2].properties.getValue("condition").jsonObject), "<")
   }
 
@@ -156,10 +215,19 @@ class RemoteJsonImporterTest {
           {"drawCircle":{"cx":"arrayGet(@data, 0)","cy":5,"radius":2}}
         ]}]}"""
       )
-    val ops = result.document.nodes.values.filter { it.componentId.startsWith("draw/") && it.componentId != UiDrawing.CANVAS }
+    val ops =
+      result.document.nodes.values.filter {
+        it.componentId.startsWith("draw/") && it.componentId != UiDrawing.CANVAS
+      }
     assertEquals(listOf("draw/rect"), ops.map { it.componentId })
-    assertTrue(result.gaps.any { "root[0].commands[1]" in it && "matrix3D" in it }, result.gaps.toString())
-    assertTrue(result.gaps.any { "root[0].commands[2]" in it && "arrayGet" in it }, result.gaps.toString())
+    assertTrue(
+      result.gaps.any { "root[0].commands[1]" in it && "matrix3D" in it },
+      result.gaps.toString(),
+    )
+    assertTrue(
+      result.gaps.any { "root[0].commands[2]" in it && "arrayGet" in it },
+      result.gaps.toString(),
+    )
   }
 
   /**
@@ -169,7 +237,8 @@ class RemoteJsonImporterTest {
   @Test
   fun `the corpus imports as far as the builder reaches`() {
     val corpus = System.getProperty("remoteJsonCorpus")?.let(::File) ?: return
-    val documents = corpus.resolve("docs").walkTopDown().filter { it.name == "doc.json" }.sorted().toList()
+    val documents =
+      corpus.resolve("docs").walkTopDown().filter { it.name == "doc.json" }.sorted().toList()
     check(documents.isNotEmpty()) { "no docs/*/*/doc.json under $corpus" }
     val reasons = mutableMapOf<String, MutableSet<String>>()
     var clean = 0
@@ -178,27 +247,49 @@ class RemoteJsonImporterTest {
       val json = Json.parseToJsonElement(file.readText()) as? JsonObject ?: continue
       if (json["root"] == null) {
         refused++
-        reasons.getOrPut("no `root` layout tree (an `ops` document)") { mutableSetOf() } += file.parentFile.name
+        reasons.getOrPut("no `root` layout tree (an `ops` document)") { mutableSetOf() } +=
+          file.parentFile.name
         continue
       }
       val result = RemoteJsonImporter.import(json, id = file.parentFile.name)
       if (result.gaps.isEmpty()) clean++
       result.gaps
-        .map { gap -> gap.substringAfter(": ").replace(Regex("`[^`]*` is not defined here"), "a variable is not defined here").replace(Regex("""`[^`]*`: """), "") }
-        .map { it.replace(Regex("""\d+(\.\d+)?"""), "N").take(110) }
+        .map { gap ->
+          gap
+            .substringAfter(": ")
+            .replace(
+              Regex("`[^`]*` is not defined( before)? here"),
+              "a variable is not defined here",
+            )
+            .replace(Regex("""`[^`]*`: """), "")
+        }
+        .map { gap ->
+          // Numbers vary per document; names in backticks do not.
+          gap
+            .split('`')
+            .mapIndexed { i, part ->
+              if (i % 2 == 1) part else part.replace(Regex("""\d+(\.\d+)?"""), "N")
+            }
+            .joinToString("`")
+            .take(110)
+        }
         .toSet()
         .forEach { reasons.getOrPut(it) { mutableSetOf() } += file.parentFile.name }
     }
     val report = buildString {
       appendLine("# RemoteCompose-Examples import")
       appendLine()
-      appendLine("${documents.size} documents: $clean import with no gaps, $refused have no layout tree.")
+      appendLine(
+        "${documents.size} documents: $clean import with no gaps, $refused have no layout tree."
+      )
       appendLine()
       appendLine("| Documents | Gap |")
       appendLine("| ---: | --- |")
-      reasons.entries.sortedByDescending { it.value.size }.forEach { (reason, docs) ->
-        appendLine("| ${docs.size} | ${reason.replace("|", "\\|")} |")
-      }
+      reasons.entries
+        .sortedByDescending { it.value.size }
+        .forEach { (reason, docs) ->
+          appendLine("| ${docs.size} | ${reason.replace("|", "\\|")} |")
+        }
     }
     File("build/remote-json-import").apply { mkdirs() }.resolve("report.md").writeText(report)
     println(report.lines().take(40).joinToString("\n"))

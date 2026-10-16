@@ -13,12 +13,13 @@ import kotlinx.serialization.json.jsonPrimitive
  * Remote Compose authoring JSON — what the `remotecompose-json` codec reads, and what the
  * RemoteCompose-Examples corpus is written in — read back into a design the builder can edit.
  *
- * The layout tree becomes `layout/box`, `row` and `column` nodes and `remote-m3/remote-text`; a canvas becomes a
- * `draw/canvas` whose viewport is the document's own units, so its pixel coordinates draw where the
- * codec drew them. Its commands become drawing operations: the paint state the codec carries from
- * command to command is copied onto each operation, a transform or clip wraps the commands after it
- * in a group or clip, and loops and conditionals become `draw/repeat` and `draw/if`. The codec's
- * formulas are translated into the builder's, its named variables inlined where they are read.
+ * The layout tree becomes `layout/box`, `row` and `column` nodes and `remote-m3/remote-text`; a
+ * canvas becomes a `draw/canvas` whose viewport is the document's own units, so its pixel
+ * coordinates draw where the codec drew them. Its commands become drawing operations: the paint
+ * state the codec carries from command to command is copied onto each operation, a transform or
+ * clip wraps the commands after it in a group or clip, and loops and conditionals become
+ * `draw/repeat` and `draw/if`. The codec's formulas are translated into the builder's, its named
+ * variables inlined where they are read.
  *
  * What the builder has no equivalent for is skipped and reported in [Result.gaps], located by its
  * path in the source, so a document imports as far as it can and the gaps say what is missing.
@@ -31,6 +32,10 @@ object RemoteJsonImporter {
     Importer(source).run(id, title)
 
   private const val ROOT_ID = "root"
+
+  /** The node kinds that can be written keyed, `{"<kind>": {…}}`. */
+  private val KEYED_NODES =
+    setOf("box", "column", "row", "canvas", "text", "spacer", "flow", "fitBox", "image")
 
   /** An inlined formula past this length is reported rather than written out. */
   private const val MAX_FORMULA = 4_000
@@ -48,14 +53,13 @@ object RemoteJsonImporter {
     val textSize: JsonObject? = null,
   )
 
-  /** Variables by name, as builder formulas, and the loop indices in scope. */
-  private data class Scope(
-    val variables: Map<String, String> = emptyMap(),
-    val indices: Set<String> = emptySet(),
-  )
+  /** The loop indices in scope. */
+  private data class Scope(val indices: Set<String> = emptySet())
 
   private class Importer(val source: JsonObject) {
     val gaps = mutableListOf<String>()
+    /** Every variable defined so far, in document order, as a builder formula. */
+    val globals = linkedMapOf<String, String>()
     val nodes = linkedMapOf<String, UiBuilderNode>()
     val ids = mutableMapOf<String, Int>()
     val header = source["header"] as? JsonObject
@@ -63,8 +67,16 @@ object RemoteJsonImporter {
     val height = header?.number("height") ?: 360.0
 
     fun run(id: String, title: String): Result {
-      val roots = (source["root"] as? JsonArray).orEmpty()
-      if (source["root"] !is JsonArray) gaps += "root: no layout tree to import"
+      // A list of nodes, or the one node.
+      val roots =
+        when (val root = source["root"]) {
+          is JsonArray -> root
+          is JsonObject -> listOf(root)
+          else -> {
+            gaps += "root: no layout tree to import"
+            emptyList()
+          }
+        }
       val children = roots.mapIndexedNotNull { index, element -> layout(element, "root[$index]") }
       nodes[ROOT_ID] =
         UiBuilderNode(
@@ -117,14 +129,28 @@ object RemoteJsonImporter {
 
     // ---- Layout --------------------------------------------------------------------------------
 
+    /**
+     * A node in either spelling the codec reads: keyed (`{"column": {…}}`, `{"text": {…}}`) or
+     * typed (`{"type": "column", …}`).
+     */
     fun layout(element: JsonElement, path: String): String? {
-      val obj = element as? JsonObject ?: return gap("$path: not a layout node")
-      listOf("box", "column", "row").forEach { kind ->
-        (obj[kind] as? JsonObject)?.let { return container(kind, it, "$path.$kind") }
-      }
-      return when (val type = obj.string("type")) {
-        "canvas" -> canvas(obj, path)
-        "text" -> text(obj, path)
+      val node = element as? JsonObject ?: return gap("$path: not a layout node")
+      val typed = node.string("type")
+      val key = node.keys.singleOrNull()?.takeIf { typed == null && it in KEYED_NODES }
+      val obj =
+        when {
+          key == null -> node
+          node[key] is JsonObject -> node[key] as JsonObject
+          // `{"text": "Hello"}`
+          else -> JsonObject(mapOf("value" to node.getValue(key)))
+        }
+      val at = if (key == null) path else "$path.$key"
+      return when (val type = typed ?: key) {
+        "box",
+        "column",
+        "row" -> container(type, obj, at)
+        "canvas" -> canvas(obj, at)
+        "text" -> text(obj, at)
         // An empty box of the spacer's size: what a spacer is, and remote-m3 has no spacer.
         "spacer" ->
           add(
@@ -146,7 +172,8 @@ object RemoteJsonImporter {
         }
       val properties = buildMap {
         when (kind) {
-          "column" -> obj.string("horizontalAlignment")?.let { put("horizontalAlignment", enum(it)) }
+          "column" ->
+            obj.string("horizontalAlignment")?.let { put("horizontalAlignment", enum(it)) }
           "row" -> obj.string("verticalAlignment")?.let { put("verticalAlignment", enum(it)) }
         }
       }
@@ -162,10 +189,17 @@ object RemoteJsonImporter {
     }
 
     fun text(obj: JsonObject, path: String): String? {
-      val value = obj["value"] ?: obj["text"]
+      val value =
+        obj["value"]
+          ?: obj["text"]
+          ?: (obj["textFromFloat"] as? JsonObject)?.let {
+            JsonObject(mapOf("type" to JsonPrimitive("textFromFloat")) + it)
+          }
       val text =
         try {
-          textValue(value, Scope())
+          if (value is JsonObject && value.string("type") == "textFromFloat")
+            parsed(textFromFloat(value, Scope()))
+          else textValue(value, Scope())
         } catch (e: Gap) {
           return gap("$path.value: ${e.message}")
         }
@@ -191,6 +225,21 @@ object RemoteJsonImporter {
         }
       )
 
+    /** `[a, b, …]` as numbers; null when it is not a list of numbers. */
+    fun numbers(value: JsonElement?): List<Double>? =
+      (value as? JsonArray)?.map { (it as? JsonPrimitive)?.doubleOrNull ?: return null }
+
+    /** `[x, y]` or `{"x": …, "y": …}`. */
+    fun pair(value: JsonElement?): Pair<Double, Double>? {
+      numbers(value)
+        ?.takeIf { it.size == 2 }
+        ?.let {
+          return it[0] to it[1]
+        }
+      val obj = value as? JsonObject ?: return null
+      return (obj.number("x") ?: return null) to (obj.number("y") ?: return null)
+    }
+
     fun modifier(element: JsonElement, path: String): JsonObject? {
       val (name, value) =
         when (element) {
@@ -206,20 +255,35 @@ object RemoteJsonImporter {
         "width" -> number?.let { type("width", "widthDp" to JsonPrimitive(it)) }
         "height" -> number?.let { type("height", "heightDp" to JsonPrimitive(it)) }
         "size" ->
-          number?.let {
-            type("size", "widthDp" to JsonPrimitive(it), "heightDp" to JsonPrimitive(it))
+          (number?.let { it to it } ?: pair(value))?.let { (w, h) ->
+            type("size", "widthDp" to JsonPrimitive(w), "heightDp" to JsonPrimitive(h))
           }
-        "padding" ->
-          number?.let { all ->
-            type(
-              "padding",
-              *listOf("startDp", "topDp", "endDp", "bottomDp")
-                .map { it to JsonPrimitive(all) }
-                .toTypedArray(),
-            )
+        // One number for every side, [horizontal, vertical], or [start, top, end, bottom].
+        "padding" -> {
+          val sides = numbers(value)
+          val (start, top, end, bottom) =
+            when {
+              number != null -> listOf(number, number, number, number)
+              sides?.size == 2 -> listOf(sides[0], sides[1], sides[0], sides[1])
+              sides?.size == 4 -> sides
+              else -> null
+            } ?: return gap("$path: `padding` as written here has no builder equivalent")
+          type(
+            "padding",
+            "startDp" to JsonPrimitive(start),
+            "topDp" to JsonPrimitive(top),
+            "endDp" to JsonPrimitive(end),
+            "bottomDp" to JsonPrimitive(bottom),
+          )
+        }
+        "offset" ->
+          pair(value)?.let { (x, y) ->
+            type("offset", "xDp" to JsonPrimitive(x), "yDp" to JsonPrimitive(y))
           }
         "background" ->
-          (value as? JsonPrimitive)?.contentOrNull?.let(::color)?.let { type("background", "color" to it) }
+          (value as? JsonPrimitive)?.contentOrNull?.let(::color)?.let {
+            type("background", "color" to it)
+          }
         "weight" -> number?.let { type("weight", "weight" to JsonPrimitive(it)) }
         else -> null
       } ?: gap("$path: the `$name` modifier as written here has no builder equivalent")
@@ -231,13 +295,13 @@ object RemoteJsonImporter {
       val modifierList = modifiers(obj["modifiers"], "$path.modifiers")
       // The commands are in the document's pixels; a viewport of the canvas's stated size, or the
       // document's, draws them there whatever size the canvas ends up.
-      val stated =
-        modifierList.firstNotNullOfOrNull { m ->
-          (m as JsonObject).takeIf { it.string("type") == "size" }
-        }
+      val stated = modifierList.firstNotNullOfOrNull { m ->
+        (m as JsonObject).takeIf { it.string("type") == "size" }
+      }
       val viewportWidth = stated?.number("widthDp") ?: width
       val viewportHeight = stated?.number("heightDp") ?: height
-      val ops = commands(obj["commands"], "$path.commands", Paint(), Scope(), viewportWidth, viewportHeight)
+      val ops =
+        commands(obj["commands"], "$path.commands", Paint(), Scope(), viewportWidth, viewportHeight)
       return add(
         UiBuilderNode(
           nextId("canvas"),
@@ -277,17 +341,26 @@ object RemoteJsonImporter {
       while (i < list.size) {
         val command = list[i] as? JsonObject
         val save = command?.get("save")
-        if (command != null && command.keys.singleOrNull() == "save" && (save as? JsonObject)?.get("commands") == null) {
+        if (
+          command != null &&
+            command.keys.singleOrNull() == "save" &&
+            (save as? JsonObject)?.get("commands") == null
+        ) {
           var depth = 1
           var j = i + 1
           while (j < list.size && depth > 0) {
             val key = (list[j] as? JsonObject)?.keys?.firstOrNull()
-            if (key == "save" && ((list[j] as JsonObject)["save"] as? JsonObject)?.get("commands") == null) depth++
+            if (
+              key == "save" &&
+                ((list[j] as JsonObject)["save"] as? JsonObject)?.get("commands") == null
+            )
+              depth++
             if (key == "restore") depth--
             j++
           }
           val body = list.subList(i + 1, if (depth == 0) j - 1 else j)
-          out += JsonObject(mapOf("save" to JsonObject(mapOf("commands" to JsonArray(nested(body))))))
+          out +=
+            JsonObject(mapOf("save" to JsonObject(mapOf("commands" to JsonArray(nested(body))))))
           i = j
         } else if (command?.keys?.firstOrNull() == "restore") {
           i++
@@ -299,7 +372,12 @@ object RemoteJsonImporter {
       return out
     }
 
-    fun commandList(list: List<JsonElement>, path: String, startPaint: Paint, startScope: Scope): List<String> {
+    fun commandList(
+      list: List<JsonElement>,
+      path: String,
+      startPaint: Paint,
+      startScope: Scope,
+    ): List<String> {
       var paint = startPaint
       var scope = startScope
       val ops = mutableListOf<String>()
@@ -311,7 +389,8 @@ object RemoteJsonImporter {
         try {
           when (name) {
             "paint" -> paint = paint(paint, body as? JsonObject ?: throw Gap("not a paint"), scope)
-            "variable" -> scope = variable(body as? JsonObject ?: throw Gap("not a variable"), scope)
+            "variable" ->
+              scope = variable(body as? JsonObject ?: throw Gap("not a variable"), scope)
             "save" ->
               ops += group(emptyMap(), (body as? JsonObject)?.get("commands"), at, paint, scope)
             // A transform or clip holds for the rest of its list: those commands go inside it.
@@ -319,7 +398,14 @@ object RemoteJsonImporter {
             "translate",
             "scale" -> {
               val rest = JsonArray(list.drop(index + 1))
-              ops += group(transform(name, body as JsonObject, scope), rest, "$path[${index + 1}..]", paint, scope)
+              ops +=
+                group(
+                  transform(name, body as JsonObject, scope),
+                  rest,
+                  "$path[${index + 1}..]",
+                  paint,
+                  scope,
+                )
               return ops
             }
             "clipRect" -> {
@@ -329,7 +415,9 @@ object RemoteJsonImporter {
             }
             "loop" -> ops += loop(body as JsonObject, at, paint, scope)
             "conditionalOperations" -> ops += conditional(body as JsonObject, at, paint, scope)
-            else -> ops += draw(name, body, paint, scope) ?: throw Gap("`$name` has no builder equivalent")
+            else ->
+              ops +=
+                draw(name, body, paint, scope) ?: throw Gap("`$name` has no builder equivalent")
           }
         } catch (e: Gap) {
           gaps += "$at: ${e.message}"
@@ -342,53 +430,96 @@ object RemoteJsonImporter {
       return ops
     }
 
-    fun group(properties: Map<String, JsonElement>, commands: JsonElement?, path: String, paint: Paint, scope: Scope): String {
+    fun group(
+      properties: Map<String, JsonElement>,
+      commands: JsonElement?,
+      path: String,
+      paint: Paint,
+      scope: Scope,
+    ): String {
       val id = nextId("group")
-      val ops = commandList(nested((commands as? JsonArray).orEmpty()), "$path.commands", paint, scope)
-      return add(UiBuilderNode(id, UiDrawing.GROUP, JsonObject(properties), slots = mapOf(UiDrawing.OPS_SLOT to ops)))
+      val ops =
+        commandList(nested((commands as? JsonArray).orEmpty()), "$path.commands", paint, scope)
+      return add(
+        UiBuilderNode(
+          id,
+          UiDrawing.GROUP,
+          JsonObject(properties),
+          slots = mapOf(UiDrawing.OPS_SLOT to ops),
+        )
+      )
     }
 
     fun transform(name: String, body: JsonObject, scope: Scope): Map<String, JsonElement> =
       when (name) {
-        "rotate" -> buildMap {
-          put("rotate", value(body["angle"] ?: body["degrees"], scope))
-          // The codec rotates about the origin unless it is given a pivot; the group's default is
-          // the canvas's centre, so an absent pivot is written as 0.
-          put("pivotXDp", value(body["pivotX"] ?: JsonPrimitive(0), scope))
-          put("pivotYDp", value(body["pivotY"] ?: JsonPrimitive(0), scope))
-        }
-        "translate" -> buildMap {
-          body["dx"]?.let { put("translateXDp", value(it, scope)) }
-          body["dy"]?.let { put("translateYDp", value(it, scope)) }
-        }
-        else -> buildMap {
-          val sx = body["sx"] ?: body["scaleX"] ?: body["scale"]
-          val sy = body["sy"] ?: body["scaleY"] ?: sx
-          sx?.let { put("scaleX", value(it, scope)) }
-          sy?.let { put("scaleY", value(it, scope)) }
-          put("pivotXDp", value(body["pivotX"] ?: body["cx"] ?: JsonPrimitive(0), scope))
-          put("pivotYDp", value(body["pivotY"] ?: body["cy"] ?: JsonPrimitive(0), scope))
-        }
+        "rotate" ->
+          buildMap {
+            put("rotate", value(body["angle"] ?: body["degrees"], scope))
+            // The codec rotates about the origin unless it is given a pivot; the group's default is
+            // the canvas's centre, so an absent pivot is written as 0.
+            put("pivotXDp", value(body["pivotX"] ?: JsonPrimitive(0), scope))
+            put("pivotYDp", value(body["pivotY"] ?: JsonPrimitive(0), scope))
+          }
+        "translate" ->
+          buildMap {
+            body["dx"]?.let { put("translateXDp", value(it, scope)) }
+            body["dy"]?.let { put("translateYDp", value(it, scope)) }
+          }
+        else ->
+          buildMap {
+            val sx = body["sx"] ?: body["scaleX"] ?: body["scale"]
+            val sy = body["sy"] ?: body["scaleY"] ?: sx
+            sx?.let { put("scaleX", value(it, scope)) }
+            sy?.let { put("scaleY", value(it, scope)) }
+            put("pivotXDp", value(body["pivotX"] ?: body["cx"] ?: JsonPrimitive(0), scope))
+            put("pivotYDp", value(body["pivotY"] ?: body["cy"] ?: JsonPrimitive(0), scope))
+          }
       }
 
-    fun clip(body: JsonObject, rest: List<JsonElement>, path: String, paint: Paint, scope: Scope): String {
+    fun clip(
+      body: JsonObject,
+      rest: List<JsonElement>,
+      path: String,
+      paint: Paint,
+      scope: Scope,
+    ): String {
       val id = nextId("clip")
       val ops = commandList(rest, path, paint, scope)
-      return add(UiBuilderNode(id, UiDrawing.CLIP, JsonObject(box(body, scope)), slots = mapOf(UiDrawing.OPS_SLOT to ops)))
+      return add(
+        UiBuilderNode(
+          id,
+          UiDrawing.CLIP,
+          JsonObject(box(body, scope)),
+          slots = mapOf(UiDrawing.OPS_SLOT to ops),
+        )
+      )
     }
 
     fun loop(body: JsonObject, path: String, paint: Paint, scope: Scope): String {
       val index = body.string("index") ?: "i"
       val id = nextId("repeat")
       val inner = scope.copy(indices = scope.indices + index)
-      val ops = commandList(nested((body["commands"] as? JsonArray).orEmpty()), "$path.commands", paint, inner)
+      val ops =
+        commandList(
+          nested((body["commands"] as? JsonArray).orEmpty()),
+          "$path.commands",
+          paint,
+          inner,
+        )
       val properties = buildMap {
         put("from", value(body["from"] ?: JsonPrimitive(0), scope))
         put("until", value(body["until"] ?: throw Gap("a loop needs `until`"), scope))
         put("step", value(body["step"] ?: JsonPrimitive(1), scope))
         put("index", string(index))
       }
-      return add(UiBuilderNode(id, UiDrawing.REPEAT, JsonObject(properties), slots = mapOf(UiDrawing.OPS_SLOT to ops)))
+      return add(
+        UiBuilderNode(
+          id,
+          UiDrawing.REPEAT,
+          JsonObject(properties),
+          slots = mapOf(UiDrawing.OPS_SLOT to ops),
+        )
+      )
     }
 
     fun conditional(body: JsonObject, path: String, paint: Paint, scope: Scope): String {
@@ -404,7 +535,13 @@ object RemoteJsonImporter {
         }
       val formula = "(${formula(body["v1"], scope)}) $symbol (${formula(body["v2"], scope)})"
       val id = nextId("if")
-      val ops = commandList(nested((body["commands"] as? JsonArray).orEmpty()), "$path.commands", paint, scope)
+      val ops =
+        commandList(
+          nested((body["commands"] as? JsonArray).orEmpty()),
+          "$path.commands",
+          paint,
+          scope,
+        )
       return add(
         UiBuilderNode(
           id,
@@ -418,14 +555,21 @@ object RemoteJsonImporter {
     fun paint(current: Paint, body: JsonObject, scope: Scope): Paint {
       // Either `{"ops": [{"color": …}, …]}` or the same keys inline.
       val entries =
-        (body["ops"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.entries?.firstOrNull()?.toPair() }
-          ?: body.entries.map { it.toPair() }
+        (body["ops"] as? JsonArray)?.mapNotNull {
+          (it as? JsonObject)?.entries?.firstOrNull()?.toPair()
+        } ?: body.entries.map { it.toPair() }
       var paint = current
       for ((key, value) in entries) {
         paint =
           when (key) {
-            "color" -> paint.copy(color = color((value as JsonPrimitive).content)?.get("value")?.jsonPrimitive?.content ?: throw Gap("paint colour `$value` is not a colour"))
-            "style" -> paint.copy(stroke = (value as JsonPrimitive).content.lowercase().startsWith("stroke"))
+            "color" ->
+              paint.copy(
+                color =
+                  color((value as JsonPrimitive).content)?.get("value")?.jsonPrimitive?.content
+                    ?: throw Gap("paint colour `$value` is not a colour")
+              )
+            "style" ->
+              paint.copy(stroke = (value as JsonPrimitive).content.lowercase().startsWith("stroke"))
             "strokeWidth",
             "width" -> paint.copy(strokeWidth = value(value, scope))
             "strokeCap" -> paint.copy(strokeCap = (value as JsonPrimitive).content.lowercase())
@@ -442,12 +586,19 @@ object RemoteJsonImporter {
       val name = body.string("name") ?: throw Gap("a variable needs a name")
       val value = body["value"]
       val formula =
-        if (value is JsonObject && value.string("type") == "textFromFloat") {
-          val decimals = value.number("decimal") ?: 0.0
-          val whole = value.number("whole") ?: 1.0
-          "format(${formula(value["value"], scope)}, ${decimals.toInt()}, ${whole.toInt().coerceIn(1, 9)})"
-        } else formula(value, scope)
-      return scope.copy(variables = scope.variables + (name to formula))
+        if (value is JsonObject && value.string("type") == "textFromFloat")
+          textFromFloat(value, scope)
+        else formula(value, scope)
+      // The codec's variables are the document's, read by any node after the one defining them.
+      globals[name] = formula
+      return scope
+    }
+
+    /** The codec's number-to-text: `whole` digits before the point, `decimal` after. */
+    fun textFromFloat(value: JsonObject, scope: Scope): String {
+      val decimals = (value.number("decimal") ?: 0.0).toInt().coerceIn(0, 6)
+      val whole = (value.number("whole") ?: 1.0).toInt().coerceIn(1, 9)
+      return "format(${formula(value["value"], scope)}, $decimals, $whole)"
     }
 
     fun draw(name: String, body: JsonElement?, paint: Paint, scope: Scope): String? {
@@ -457,7 +608,8 @@ object RemoteJsonImporter {
           "drawRect" -> "draw/rect" to box(obj!!, scope)
           "drawRoundRect" ->
             "draw/rect" to
-              (box(obj!!, scope) + listOfNotNull(obj["rx"]?.let { "cornerRadiusDp" to value(it, scope) }))
+              (box(obj!!, scope) +
+                listOfNotNull(obj["rx"]?.let { "cornerRadiusDp" to value(it, scope) }))
           "drawOval" -> "draw/oval" to box(obj!!, scope)
           "drawCircle" ->
             "draw/circle" to
@@ -475,7 +627,13 @@ object RemoteJsonImporter {
                 ) +
                 listOfNotNull(
                   (obj["useCenter"] as? JsonPrimitive)?.contentOrNull?.let {
-                    "useCenter" to JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(it == "true")))
+                    "useCenter" to
+                      JsonObject(
+                        mapOf(
+                          "type" to JsonPrimitive("bool"),
+                          "value" to JsonPrimitive(it == "true"),
+                        )
+                      )
                   }
                 ))
           "drawLine" ->
@@ -487,9 +645,13 @@ object RemoteJsonImporter {
                 "endYDp" to value(obj["y2"], scope),
               )
           "drawPath" -> {
-            val data = (body as? JsonPrimitive)?.contentOrNull ?: obj?.string("pathData") ?: obj?.string("path")
-              ?: throw Gap("only SVG path data is read for `drawPath`")
-            // Path data is in the canvas's units: a path viewport of the canvas's draws it in place.
+            val data =
+              (body as? JsonPrimitive)?.contentOrNull
+                ?: obj?.string("pathData")
+                ?: obj?.string("path")
+                ?: throw Gap("only SVG path data is read for `drawPath`")
+            // Path data is in the canvas's units: a path viewport of the canvas's draws it in
+            // place.
             "draw/path" to
               mapOf(
                 "pathData" to string(data),
@@ -509,11 +671,17 @@ object RemoteJsonImporter {
         if (paint.stroke && component != "draw/line") properties["style"] = enum("stroke")
         if (paint.stroke || component == "draw/line") {
           paint.strokeWidth?.let { properties["strokeWidthDp"] = it }
-          paint.strokeCap?.takeIf { it in setOf("round", "square", "butt") }?.let { properties["strokeCap"] = enum(it) }
-          paint.strokeJoin?.takeIf { it in UiDrawing.STROKE_JOINS }?.let { properties["strokeJoin"] = enum(it) }
+          paint.strokeCap
+            ?.takeIf { it in setOf("round", "square", "butt") }
+            ?.let { properties["strokeCap"] = enum(it) }
+          paint.strokeJoin
+            ?.takeIf { it in UiDrawing.STROKE_JOINS }
+            ?.let { properties["strokeJoin"] = enum(it) }
         }
       }
-      return add(UiBuilderNode(nextId(component.removePrefix("draw/")), component, JsonObject(properties)))
+      return add(
+        UiBuilderNode(nextId(component.removePrefix("draw/")), component, JsonObject(properties))
+      )
     }
 
     fun box(obj: JsonObject, scope: Scope): Map<String, JsonElement> {
@@ -560,7 +728,9 @@ object RemoteJsonImporter {
     /** A number, or a formula over variables and the clock. */
     fun value(element: JsonElement?, scope: Scope): JsonObject {
       val primitive = element as? JsonPrimitive ?: throw Gap("expected a number or a formula")
-      primitive.doubleOrNull?.let { return float(it) }
+      primitive.doubleOrNull?.let {
+        return float(it)
+      }
       return parsed(formula(primitive, scope))
     }
 
@@ -576,16 +746,18 @@ object RemoteJsonImporter {
       val text = (element as? JsonPrimitive)?.contentOrNull ?: throw Gap("expected text")
       if (!text.startsWith("@") && !text.startsWith("$")) return string(text)
       val name = text.removePrefix("@").removePrefix("$").removePrefix("vars.")
-      val formula = scope.variables[name] ?: throw Gap("text variable `$name` is not defined here")
+      val formula = globals[name] ?: throw Gap("text variable `$name` is not defined before here")
       return parsed(formula)
     }
 
     fun formula(element: JsonElement?, scope: Scope): String {
       val primitive = element as? JsonPrimitive ?: throw Gap("expected a number or a formula")
-      primitive.doubleOrNull?.let { return number(it) }
+      primitive.doubleOrNull?.let {
+        return number(it)
+      }
       val translated =
         try {
-          RemoteJsonFormulas.translate(primitive.content, scope.variables, scope.indices)
+          RemoteJsonFormulas.translate(primitive.content, globals, scope.indices)
         } catch (e: RemoteJsonFormulas.Untranslatable) {
           throw Gap(e.message.orEmpty())
         }
@@ -630,7 +802,9 @@ object RemoteJsonImporter {
         else -> return null
       }
     if (!argb.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) return null
-    return JsonObject(mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#${argb.uppercase()}")))
+    return JsonObject(
+      mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#${argb.uppercase()}"))
+    )
   }
 
   private fun number(value: Double): String =
