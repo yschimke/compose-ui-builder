@@ -278,10 +278,17 @@ the text is a literal, as before.
   click lands. An increment is `valueChange(x, (x + amount))`.
 - **Compose and JSON.** Refused with a located `TODO`, as computed values are there.
 
+### Loop rows
+
+A `layout/for-each` row field read inside an expression (`concat(@name, ": ", format(@goal, 0))`)
+is a row property of the matching Remote type (`RemoteString`, `RemoteFloat`, `RemoteBoolean`,
+`RemoteColor`), each row supplying its literal. A field must have the same kind in every row, and
+Int fields are not readable, as for component arguments. `@index` is the row's position from 0, as
+in a draw loop, unless the rows author a field of that name; the export adds it to the row class
+only when the template reads it.
+
 ### Not yet
 
-- A row field inside an expression is evaluated by the canvas but refused by the Remote writer,
-  which needs a typed loop lowering for it.
 - Named host inputs (`rememberNamedRemote*`).
 - The regular Compose and JSON lanes refuse computed values with a located message.
 

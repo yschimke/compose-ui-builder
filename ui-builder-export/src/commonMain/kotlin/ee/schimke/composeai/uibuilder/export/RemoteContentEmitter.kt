@@ -557,6 +557,11 @@ internal class RemoteContentEmitter(
   }
 
   private var bindings: Bindings? = null
+  /**
+   * The fields of the loop row being emitted that an expression may read, by kind; see
+   * [rowFieldKinds].
+   */
+  private var rowKinds: Map<String, UiValueKind> = emptyMap()
   private var function: FunctionBody? = null
   private val functions = linkedMapOf<String, FunctionBody>()
   private val defining = mutableSetOf<String>()
@@ -824,16 +829,19 @@ internal class RemoteContentEmitter(
     val rowBindings = Bindings(rowName)
     val previousBindings = bindings
     val previousScope = scope
+    val previousRowKinds = rowKinds
     bindings = rowBindings
     scope = "RemoteColumn"
+    rowKinds = rowFieldKinds(rows)
     val body =
       try {
         emit(template, depth + 2)
       } finally {
         bindings = previousBindings
         scope = previousScope
+        rowKinds = previousRowKinds
       }
-    val fields = rows.mapIndexed { index, value ->
+    val authored = rows.mapIndexed { index, value ->
       val row = value as? JsonObject
       val fields = row?.get("fields") as? JsonObject
       if (
@@ -845,6 +853,22 @@ internal class RemoteContentEmitter(
         JsonObject(emptyMap())
       } else fields
     }
+    // `@index`, where no row authors a field of that name, is each row's position, supplied only
+    // when the template reads it.
+    val indexField = rowBindings.fields[LOOP_INDEX]
+    val fields =
+      if (indexField == null || authored.any { LOOP_INDEX in it }) authored
+      else
+        authored.mapIndexed { index, record ->
+          val wrapper = if (indexField.type == "kotlin.Int") "int" else "float"
+          JsonObject(
+            record +
+              (LOOP_INDEX to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive(wrapper), "value" to JsonPrimitive(index))
+                ))
+          )
+        }
     fields.forEach { record ->
       record.forEach { (key, value) ->
         if (key !in rowBindings.fields) {
@@ -895,6 +919,28 @@ internal class RemoteContentEmitter(
       ) +
       body +
       listOf("$pad$INDENT}", "$pad}")
+  }
+
+  /**
+   * The row fields every row gives the same Remote-typed kind, and `@index` unless a row authors a
+   * field of that name. Ints are left out, as for component arguments: a Remote expression reads no
+   * Int parameter.
+   */
+  private fun rowFieldKinds(rows: JsonArray): Map<String, UiValueKind> {
+    val kinds = rows.map { row ->
+      ((row as? JsonObject)?.get("fields") as? JsonObject).orEmpty().mapValues { (_, value) ->
+        (value as? JsonObject)?.plainString("type")?.let(UiExpressions::kindOfWrapper)
+      }
+    }
+    val keys = kinds.flatMap { it.keys }.toSet()
+    val authored =
+      keys
+        .mapNotNull { key ->
+          val kind = kinds.map { it[key] }.distinct().singleOrNull()
+          if (kind == null || kind == UiValueKind.INT) null else key to kind
+        }
+        .toMap()
+    return if (LOOP_INDEX in keys) authored else authored + (LOOP_INDEX to UiValueKind.FLOAT)
   }
 
   private fun validateLayoutEvents(node: UiBuilderNode) {
@@ -1736,10 +1782,12 @@ internal class RemoteContentEmitter(
   private fun computed(value: JsonElement, expected: UiValueKind, where: String): String? {
     val documentScope = UiExpressions.Scope.of(document)
     val scope =
-      if (drawBindings.isEmpty() && componentArgumentKinds().isEmpty()) documentScope
+      if (drawBindings.isEmpty() && componentArgumentKinds().isEmpty() && rowKinds.isEmpty())
+        documentScope
       else
         UiExpressions.Scope(documentScope.stateKinds) { key ->
-          if (key in drawBindings) UiValueKind.FLOAT else componentArgumentKinds()[key]
+          if (key in drawBindings) UiValueKind.FLOAT
+          else componentArgumentKinds()[key] ?: rowKinds[key]
         }
     val checked = UiExpressions.check(value, scope, where)
     val expr =
@@ -1811,10 +1859,9 @@ internal class RemoteContentEmitter(
       is UiExpressions.Expr.Binding ->
         drawBindings[expr.key]
           ?: componentArgument(expr, where)
+          ?: rowField(expr, where)
           ?: run {
-            refusals +=
-              "$where: a row field inside an expression needs a typed loop lowering; bind the " +
-                "field to the property directly"
+            refusals += "$where: `${expr.key}` is not a value this expression can read here"
             null
           }
       is UiExpressions.Expr.System ->
@@ -1857,18 +1904,32 @@ internal class RemoteContentEmitter(
    */
   private fun componentArgument(expr: UiExpressions.Expr.Binding, where: String): String? {
     if (expr.key !in componentArgumentKinds()) return null
-    val type =
-      when (expr.kind) {
-        UiValueKind.FLOAT -> REMOTE_FLOAT_FQN
-        UiValueKind.BOOL -> REMOTE_BOOLEAN_FQN
-        UiValueKind.STRING -> REMOTE_STRING_FQN
-        UiValueKind.COLOR -> REMOTE_COLOR_FQN
-        UiValueKind.INT -> return null
-      }
+    val type = remoteType(expr.kind) ?: return null
     val reference =
       JsonObject(mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive(expr.key)))
     return bound(reference, type, where) { argumentLiteral(it, expr.kind) }
   }
+
+  /**
+   * A loop row's field read inside an expression, as a row property of the matching Remote type
+   * that each row supplies as a literal. Null where [expr] is not one.
+   */
+  private fun rowField(expr: UiExpressions.Expr.Binding, where: String): String? {
+    if (bindings?.row == null || rowKinds[expr.key] != expr.kind) return null
+    val type = remoteType(expr.kind) ?: return null
+    val reference =
+      JsonObject(mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive(expr.key)))
+    return bound(reference, type, where) { argumentLiteral(it, expr.kind) }
+  }
+
+  private fun remoteType(kind: UiValueKind): String? =
+    when (kind) {
+      UiValueKind.FLOAT -> REMOTE_FLOAT_FQN
+      UiValueKind.BOOL -> REMOTE_BOOLEAN_FQN
+      UiValueKind.STRING -> REMOTE_STRING_FQN
+      UiValueKind.COLOR -> REMOTE_COLOR_FQN
+      UiValueKind.INT -> null
+    }
 
   /** A placement's literal argument as the Remote value of [kind]. */
   private fun argumentLiteral(value: JsonElement, kind: UiValueKind): String? =
@@ -4897,6 +4958,9 @@ private const val TRANSPARENT_TOKEN = "transparent"
 
 /** The events a layout node takes: `RemoteModifier.combinedClickable`'s three. */
 internal val LAYOUT_EVENTS: List<String> = listOf("click", "longClick", "doubleClick")
+
+/** A layout loop's row position, read as `@index` like a draw loop's. */
+private const val LOOP_INDEX = "index"
 
 /** An Int literal in written Remote source, which needs the `ri` import. */
 private val INT_LITERAL = Regex("""\b\d+\.ri\b""")
