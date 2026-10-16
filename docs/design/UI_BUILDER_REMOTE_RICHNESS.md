@@ -281,7 +281,7 @@ canvas stand-in and the Remote emitter.
 | `draw/arc` | box, `startAngle` `sweepAngle` (degrees), `useCenter` + paint | `drawArc` |
 | `draw/line` | `startXDp` `startYDp` `endXDp` `endYDp`, colour, stroke | `drawLine` |
 | `draw/path` | `pathData` (SVG), `viewportWidth` `viewportHeight` + paint | `drawPath(RemotePath(…))`, scaled to the canvas |
-| `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` | `drawAnchoredText` |
+| `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` (start/center/end), `verticalAlign` (top/center/bottom) | `drawAnchoredText`, `align` as `panX` -1/0/1 and `verticalAlign` as `panY` 1/0/-1 (the player's vertical sign is the reverse) |
 | `draw/group` | `translateXDp` `translateYDp` `rotate` `scale` `pivotXDp` `pivotYDp`; its own `ops` | `withTransform({ … }) { … }` |
 | `draw/clip` | box, or `pathData` in a viewport; `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, or `withTransform({ scale(in); clipPath(path); scale(out) }) { … }`; `ClipOp.Difference` when excluding |
 | `draw/text-circle` | `text`, `centerXDp` `centerYDp` `radiusDp`, `angle` (270 is the top), `textSizeSp` + colour | `drawTextOnCircle`, centred on the angle, reading clockwise outside the circle |

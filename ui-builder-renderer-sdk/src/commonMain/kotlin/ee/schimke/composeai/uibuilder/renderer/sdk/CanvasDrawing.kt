@@ -441,7 +441,9 @@ private sealed interface DrawStep {
               topLeft =
                 Offset(
                   anchorX - layout.size.width * (1f + pan) / 2f,
-                  anchorY - layout.size.height / 2f,
+                  // The player's vertical placement, whose sign is the reverse of the horizontal.
+                  anchorY -
+                    layout.size.height * (1f - UiDrawing.textPanY(node.text("verticalAlign"))) / 2f,
                 ),
             )
           }

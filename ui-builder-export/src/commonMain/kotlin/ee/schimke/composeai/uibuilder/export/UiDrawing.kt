@@ -81,6 +81,12 @@ object UiDrawing {
   /** The gradients a paint can be, each laid across the whole canvas as `RemoteBrush` lays it. */
   val GRADIENTS: List<String> = listOf("horizontal", "vertical", "radial", "sweep")
 
+  /**
+   * The edges of a `draw/text` that can sit at its anchor, top to bottom. Declared before
+   * [OPERATIONS], which reads it while the object initialises.
+   */
+  val TEXT_VERTICAL_ALIGNS: List<String> = listOf("top", "center", "bottom")
+
   private val gradient =
     listOf(
       Property.Choice(
@@ -224,6 +230,12 @@ object UiDrawing {
             "align",
             listOf("start", "center", "end"),
             "Which end of the text sits at the anchor.",
+          ),
+          Property.Choice(
+            "verticalAlign",
+            TEXT_VERTICAL_ALIGNS,
+            "Which edge of the text sits at the anchor: its top, its middle (the default) or its " +
+              "bottom.",
           ),
           color,
           alpha,
@@ -433,6 +445,18 @@ object UiDrawing {
   val COMPONENT_IDS: List<String> = listOf(CANVAS) + OPERATIONS.map { it.componentId }
 
   fun isDrawing(componentId: String): Boolean = componentId == CANVAS || componentId in BY_ID
+
+  /**
+   * The player's `panY` for a `draw/text`'s `verticalAlign`. Its sign is the reverse of `panX`'s:
+   * the player places the text's top at `anchorY - height * (1 - panY) / 2`, so 1 hangs the text
+   * below the anchor and -1 stands it on top.
+   */
+  fun textPanY(verticalAlign: String?): Float =
+    when (verticalAlign) {
+      "top" -> 1f
+      "bottom" -> -1f
+      else -> 0f
+    }
 
   /** How a canvas's viewport maps onto the space the canvas has. */
   val VIEWPORT_MODES: List<String> = listOf("fit", "fill", "stretch")
