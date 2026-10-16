@@ -188,6 +188,10 @@ from its operands and refuses what does not type, with the path of the operand i
 | `select(condition, ifTrue, ifFalse)` | the branches' kind |
 | `concat(…)` `toString(x)` | String; numbers print as the player prints them |
 | `format(x, decimals[, minDigits])` | String: exactly `decimals` (0–6, literal) digits after the point, ties away from zero (the player adds half a unit and truncates), a negative always signed, the whole part zero-padded to `minDigits` (1–9, literal), no grouping — `format(7.5, 1, 2)` is `07.5`. Exports as `x.toRemoteString(DecimalFormat("00.0", DecimalFormatSymbols(Locale.ROOT)))` (`java.text`, the released API's type), the player's text-from-float |
+| `uppercase(text)` `lowercase(text)` `trim(text)` `substring(text, start[, end])` | String; `start`/`end` are Int |
+| `hsv(hue, saturation, value[, alpha])` `rgb(red, green, blue[, alpha])` | Colour from components 0–1, hue as a fraction of a turn — `RemoteColor.hsv` / `rgb` |
+| `rand()` `randRange(from, to)` | Float drawn by the player; a preview shows the middle (0.5, the midpoint) |
+| `pingPong(x, max)` | Float: `x` folded between 0 and `max`, as the player's PINGPONG; written out over public operators |
 | `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /
@@ -210,6 +214,14 @@ System values follow the player's `RemoteClock`:
 | `time.dayOfMonth` | 1–31 |
 | `time.utcOffset` | seconds |
 | `time.animation` | seconds since the player started the document; 0 in a frozen preview |
+| `time.animationDelta` | seconds since the previous frame, for motion stepped frame by frame; 0 in a preview |
+| `time.month` `time.dayOfYear` `time.year` | 1 (January) – 12, 1–366, the year |
+| `device.density` | pixels per dp |
+| `device.fontScale` | the user's font scale, 1 at the default size: the player's 14sp font size over 14 dp's pixels |
+| `device.windowWidth` `device.windowHeight` | the window in dp (its pixels over the density) |
+
+The `device.*` values preview from the document's `environment` (`density`, `fontScale`, `widthDp`,
+`heightDp`).
 
 ### Formula text
 

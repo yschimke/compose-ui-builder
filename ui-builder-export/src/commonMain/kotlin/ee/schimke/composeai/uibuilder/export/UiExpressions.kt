@@ -108,14 +108,81 @@ object UiExpressions {
           UiValueKind.FLOAT,
           "Seconds since the document started playing",
           "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)",
-          imports =
-            listOf(
-              "androidx.compose.remote.creation.compose.state.RemoteFloat",
-              "androidx.compose.remote.core.RemoteContext",
-            ),
+          imports = CONTEXT_IMPORTS,
+        ),
+        // The player's frame interval: what a motion integrated frame by frame steps by.
+        SystemValue(
+          "time.animationDelta",
+          UiValueKind.FLOAT,
+          "Seconds since the previous frame",
+          "RemoteFloat(RemoteContext.FLOAT_ANIMATION_DELTA_TIME)",
+          imports = CONTEXT_IMPORTS,
+        ),
+        SystemValue(
+          "time.month",
+          UiValueKind.FLOAT,
+          "Month of year (1 = January)",
+          "RemoteFloat(RemoteContext.FLOAT_CALENDAR_MONTH)",
+          imports = CONTEXT_IMPORTS,
+        ),
+        SystemValue(
+          "time.dayOfYear",
+          UiValueKind.FLOAT,
+          "Day of year (1–366)",
+          "RemoteFloat(RemoteContext.FLOAT_DAY_OF_YEAR)",
+          imports = CONTEXT_IMPORTS,
+        ),
+        SystemValue(
+          "time.year",
+          UiValueKind.FLOAT,
+          "Year",
+          "RemoteFloat(RemoteContext.FLOAT_YEAR)",
+          imports = CONTEXT_IMPORTS,
+        ),
+        // The device, as the player loads it: density in pixels per dp, and the window in dp so it
+        // reads in the units every other length here uses.
+        SystemValue(
+          "device.density",
+          UiValueKind.FLOAT,
+          "Pixels per dp",
+          "RemoteFloat(RemoteContext.FLOAT_DENSITY)",
+          imports = CONTEXT_IMPORTS,
+        ),
+        // The player loads ID_FONT_SIZE as 14sp in pixels (`14 * fontScale * density`), so the
+        // user's font scale is that over 14 dp's pixels.
+        SystemValue(
+          "device.fontScale",
+          UiValueKind.FLOAT,
+          "The user's font scale (1 at the default size)",
+          "(RemoteFloat(RemoteContext.FLOAT_FONT_SIZE) / " +
+            "(RemoteFloat(RemoteContext.FLOAT_DENSITY) * 14f.rf))",
+          imports = CONTEXT_IMPORTS + "androidx.compose.remote.creation.compose.state.rf",
+        ),
+        SystemValue(
+          "device.windowWidth",
+          UiValueKind.FLOAT,
+          "Window width in dp",
+          "(RemoteFloat(RemoteContext.FLOAT_WINDOW_WIDTH) / " +
+            "RemoteFloat(RemoteContext.FLOAT_DENSITY))",
+          imports = CONTEXT_IMPORTS,
+        ),
+        SystemValue(
+          "device.windowHeight",
+          UiValueKind.FLOAT,
+          "Window height in dp",
+          "(RemoteFloat(RemoteContext.FLOAT_WINDOW_HEIGHT) / " +
+            "RemoteFloat(RemoteContext.FLOAT_DENSITY))",
+          imports = CONTEXT_IMPORTS,
         ),
       )
       .associateBy { it.id }
+
+  private val CONTEXT_IMPORTS: List<String>
+    get() =
+      listOf(
+        "androidx.compose.remote.creation.compose.state.RemoteFloat",
+        "androidx.compose.remote.core.RemoteContext",
+      )
 
   /** Every operation, its arity, and the label the inspector shows. */
   enum class Op(val wire: String, val arity: IntRange, val symbol: String? = null) {
@@ -161,6 +228,28 @@ object UiExpressions {
     SMOOTHSTEP("smoothstep", 3..3),
     /** `sqrt(x * x + y * y)`. */
     HYPOT("hypot", 2..2),
+    /**
+     * `hsv(hue, saturation, value[, alpha])`: a colour from its components, each 0 to 1 — hue as a
+     * fraction of a turn, as `RemoteColor.hsv` takes it.
+     */
+    HSV("hsv", 3..4),
+    /** `rgb(red, green, blue[, alpha])`: a colour from its channels, each 0 to 1. */
+    RGB("rgb", 3..4),
+    UPPERCASE("uppercase", 1..1),
+    LOWERCASE("lowercase", 1..1),
+    /** Text without leading and trailing whitespace. */
+    TRIM("trim", 1..1),
+    /** `substring(text, start[, end])`: characters from `start` up to `end`, both whole numbers. */
+    SUBSTRING("substring", 2..3),
+    /** A random number from 0 up to 1, drawn by the player; the preview shows 0.5. */
+    RAND("rand", 0..0),
+    /** A random number from `from` up to `to`; the preview shows the middle. */
+    RAND_RANGE("randRange", 2..2),
+    /**
+     * `pingPong(x, max)`: x folded back and forth between 0 and max — up to max, back down to 0 —
+     * as the player's PINGPONG.
+     */
+    PING_PONG("pingPong", 2..2),
     LERP("lerp", 3..3),
     TO_INT("toInt", 1..1),
     TO_FLOAT("toFloat", 1..1),
@@ -527,7 +616,19 @@ object UiExpressions {
       Op.POW,
       Op.ATAN2,
       Op.STEP,
-      Op.HYPOT -> if (numeric(0, 1)) UiValueKind.FLOAT else fail()
+      Op.HYPOT,
+      Op.RAND_RANGE,
+      Op.PING_PONG -> if (numeric(0, 1)) UiValueKind.FLOAT else fail()
+      Op.RAND -> UiValueKind.FLOAT
+      Op.HSV,
+      Op.RGB -> if (kinds.indices.all { numeric(it) }) UiValueKind.COLOR else fail()
+      Op.UPPERCASE,
+      Op.LOWERCASE,
+      Op.TRIM -> if (kinds[0] == UiValueKind.STRING) UiValueKind.STRING else fail()
+      Op.SUBSTRING ->
+        if (kinds[0] == UiValueKind.STRING && kinds.drop(1).all { it == UiValueKind.INT })
+          UiValueKind.STRING
+        else fail()
       Op.SMOOTHSTEP -> if (numeric(0, 1, 2)) UiValueKind.FLOAT else fail()
       // Two colours mixed by a fraction, as the player's colour `tween(from, to, fraction)`.
       Op.LERP ->
@@ -576,7 +677,8 @@ object UiExpressions {
       is Expr.Binding -> false
       is Expr.State,
       is Expr.System -> true
-      is Expr.Call -> expr.args.any(::isDynamic)
+      // A random number is drawn by the player, so it changes even with no operand that does.
+      is Expr.Call -> expr.op == Op.RAND || expr.op == Op.RAND_RANGE || expr.args.any(::isDynamic)
     }
 
   // ---- Preview evaluation ----------------------------------------------------------------------
@@ -591,7 +693,42 @@ object UiExpressions {
     val clock: Clock = Clock.DEFAULT,
     /** A theme role's colour as `#AARRGGBB`, where the caller knows the theme. */
     val colorRoles: (String) -> String? = { null },
+    /** The device the preview stands for: `device.*` values read it. */
+    val device: Device = Device.DEFAULT,
   )
+
+  /** The device a preview stands for, from the document's `environment`. */
+  data class Device(
+    val density: Double = 2.0,
+    val fontScale: Double = 1.0,
+    val windowWidthDp: Double = 0.0,
+    val windowHeightDp: Double = 0.0,
+  ) {
+    fun read(id: String): Double =
+      when (id) {
+        "device.density" -> density
+        "device.fontScale" -> fontScale
+        "device.windowWidth" -> windowWidthDp
+        "device.windowHeight" -> windowHeightDp
+        else -> 0.0
+      }
+
+    companion object {
+      val DEFAULT: Device = Device()
+
+      /** The device an `environment` object describes: `density`, `fontScale`, `widthDp`. */
+      fun of(environment: JsonObject): Device {
+        fun number(name: String): Double? =
+          (environment[name] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
+        return Device(
+          density = number("density") ?: DEFAULT.density,
+          fontScale = number("fontScale") ?: DEFAULT.fontScale,
+          windowWidthDp = number("widthDp") ?: DEFAULT.windowWidthDp,
+          windowHeightDp = number("heightDp") ?: DEFAULT.windowHeightDp,
+        )
+      }
+    }
+  }
 
   /** A wall-clock instant broken into the fields the player publishes. */
   data class Clock(
@@ -629,6 +766,11 @@ object UiExpressions {
         "time.dayOfMonth" -> dayOfMonth.toDouble()
         "time.utcOffset" -> utcOffsetSeconds.toDouble()
         "time.animation" -> animationSeconds
+        "time.month" -> month.toDouble()
+        "time.dayOfYear" -> dayOfYear.toDouble()
+        "time.year" -> year.toDouble()
+        // A still frame has no previous frame; a live preview's frames are its own business.
+        "time.animationDelta" -> 0.0
         else -> 0.0
       }
 
@@ -797,7 +939,9 @@ object UiExpressions {
         }
       is Expr.State -> coerce(environment.state[expr.variable], expr.kind)
       is Expr.Binding -> coerce(environment.bindings(expr.key)?.contentOrNull, expr.kind)
-      is Expr.System -> environment.clock.read(expr.value.id)
+      is Expr.System ->
+        if (expr.value.id.startsWith("device.")) environment.device.read(expr.value.id)
+        else environment.clock.read(expr.value.id)
       is Expr.Call -> call(expr, expr.args.map { evaluate(it, environment) })
     }
 
@@ -858,6 +1002,25 @@ object UiExpressions {
         val y = d(1).toFloat()
         num(sqrt(x * x + y * y).toDouble())
       }
+      Op.HSV -> hsvColor(d(0), d(1), d(2), if (values.size > 3) d(3) else 1.0)
+      Op.RGB -> argbColor(if (values.size > 3) d(3) else 1.0, d(0), d(1), d(2))
+      Op.UPPERCASE -> (values[0] as String).uppercase()
+      Op.LOWERCASE -> (values[0] as String).lowercase()
+      Op.TRIM -> (values[0] as String).trim()
+      Op.SUBSTRING -> {
+        val text = values[0] as String
+        val start = (values[1] as Number).toInt().coerceIn(0, text.length)
+        val end = (values.getOrNull(2) as? Number)?.toInt()?.coerceIn(start, text.length)
+        if (end == null) text.substring(start) else text.substring(start, end)
+      }
+      // A still frame cannot show a random draw, so it shows the middle of the range.
+      Op.RAND -> num(0.5)
+      Op.RAND_RANGE -> num((d(0) + d(1)) / 2)
+      Op.PING_PONG -> {
+        val period = (d(1) * 2).toFloat()
+        val folded = d(0).toFloat() % period
+        num((if (folded < d(1).toFloat()) folded else period - folded).toDouble())
+      }
       Op.LERP ->
         if (expr.kind == UiValueKind.COLOR)
           mixColors(values[0] as String, values[1] as String, d(2))
@@ -886,6 +1049,35 @@ object UiExpressions {
           (values.getOrNull(2) as? Number)?.toInt() ?: 1,
         )
     }
+  }
+
+  /** `#AARRGGBB` from channels 0 to 1, each clamped. */
+  private fun argbColor(alpha: Double, red: Double, green: Double, blue: Double): String =
+    "#" +
+      listOf(alpha, red, green, blue).joinToString("") {
+        (it.coerceIn(0.0, 1.0) * 255).roundToLong().toString(16).uppercase().padStart(2, '0')
+      }
+
+  /** `#AARRGGBB` from hue (a fraction of a turn), saturation and value, each 0 to 1. */
+  private fun hsvColor(hue: Double, saturation: Double, value: Double, alpha: Double): String {
+    val h = (hue - floor(hue)) * 6
+    val s = saturation.coerceIn(0.0, 1.0)
+    val v = value.coerceIn(0.0, 1.0)
+    val sector = floor(h).toInt() % 6
+    val f = h - floor(h)
+    val p = v * (1 - s)
+    val q = v * (1 - s * f)
+    val t = v * (1 - s * (1 - f))
+    val (r, g, b) =
+      when (sector) {
+        0 -> Triple(v, t, p)
+        1 -> Triple(q, v, p)
+        2 -> Triple(p, v, t)
+        3 -> Triple(p, q, v)
+        4 -> Triple(t, p, v)
+        else -> Triple(v, p, q)
+      }
+    return argbColor(alpha, r, g, b)
   }
 
   /**

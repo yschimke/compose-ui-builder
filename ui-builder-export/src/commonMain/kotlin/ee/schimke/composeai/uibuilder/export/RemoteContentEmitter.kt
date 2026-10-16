@@ -1939,6 +1939,25 @@ internal class RemoteContentEmitter(
         "($t * $t * (${3f.floatLiteral()} - ${2f.floatLiteral()} * $t))"
       }
       UiExpressions.Op.HYPOT -> math("sqrt", "(${f(0)} * ${f(0)} + ${f(1)} * ${f(1)})")
+      UiExpressions.Op.HSV,
+      UiExpressions.Op.RGB -> {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteColor"
+        val factory = if (expr.op == UiExpressions.Op.HSV) "hsv" else "rgb"
+        "RemoteColor.$factory(${args.indices.joinToString { f(it) }})"
+      }
+      UiExpressions.Op.UPPERCASE -> "${args[0]}.uppercase()"
+      UiExpressions.Op.LOWERCASE -> "${args[0]}.lowercase()"
+      UiExpressions.Op.TRIM -> "${args[0]}.trim()"
+      UiExpressions.Op.SUBSTRING -> "${args[0]}.substring(${args.drop(1).joinToString()})"
+      UiExpressions.Op.RAND -> math("rand")
+      UiExpressions.Op.RAND_RANGE -> math("randRange", f(0), f(1))
+      // Written out over public operators, as the player's PINGPONG folds: x % 2max, then the
+      // part past max runs back down.
+      UiExpressions.Op.PING_PONG -> {
+        val period = "(${f(1)} * ${2f.floatLiteral()})"
+        val folded = "(${f(0)} % $period)"
+        "$folded.isLessThan(${f(1)}).select($folded, ($period - $folded))"
+      }
       UiExpressions.Op.POW -> math("pow", f(0), f(1))
       UiExpressions.Op.LERP ->
         if (expr.kind == UiValueKind.COLOR) {

@@ -264,6 +264,93 @@ class RemoteExpressionExportTest {
   }
 
   @Test
+  fun `date and device values read the player's context`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            formula(
+              "toString(time.year + time.month + time.dayOfYear + time.animationDelta + " +
+                "device.density + device.fontScale + device.windowWidth + device.windowHeight)"
+            )
+        )
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    for (constant in
+      listOf(
+        "FLOAT_YEAR",
+        "FLOAT_CALENDAR_MONTH",
+        "FLOAT_DAY_OF_YEAR",
+        "FLOAT_ANIMATION_DELTA_TIME",
+        "FLOAT_DENSITY",
+      )) {
+      assertContains(source, "RemoteFloat(RemoteContext.$constant)")
+    }
+    assertContains(
+      source,
+      "(RemoteFloat(RemoteContext.FLOAT_FONT_SIZE) / (RemoteFloat(RemoteContext.FLOAT_DENSITY) * 14f.rf))",
+    )
+    assertContains(
+      source,
+      "(RemoteFloat(RemoteContext.FLOAT_WINDOW_WIDTH) / RemoteFloat(RemoteContext.FLOAT_DENSITY))",
+    )
+  }
+
+  @Test
+  fun `random, ping-pong, colour and text functions lower to public operators`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            formula(
+              "concat(uppercase(substring(trim(lowercase(\"Ab\")), 0, count)), " +
+                "toString(rand() + randRange(1, 2) + pingPong(time.animation, 3)))"
+            )
+        ),
+        modifiers =
+          listOf(
+            JsonObject(
+              mapOf(
+                "type" to JsonPrimitive("background"),
+                "color" to formula("hsv(0.5, 1, rand())"),
+              )
+            )
+          ),
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(source, "\"Ab\".rs.lowercase().trim().substring(0.ri, count).uppercase()")
+    assertContains(source, "rand()")
+    assertContains(source, "randRange(1.rf, 2.rf)")
+    val time = "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)"
+    assertContains(
+      source,
+      "($time % (3.rf * 2.rf)).isLessThan(3.rf).select(($time % (3.rf * 2.rf)), " +
+        "((3.rf * 2.rf) - ($time % (3.rf * 2.rf))))",
+    )
+    for (symbol in listOf("rand", "randRange")) {
+      assertContains(source, "\nandroidx.compose.remote.creation.compose.state.$symbol\n")
+    }
+  }
+
+  @Test
+  fun `a computed colour is a RemoteColor built from its components`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|"))),
+          "color" to formula("rgb(1, 0.5, 0, select(on, 1.0, 0.5))"),
+        )
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(source, "RemoteColor.rgb(1.rf, 0.5f.rf, 0.rf, on.select(1.rf, 0.5f.rf))")
+    assertTrue("androidx.compose.remote.creation.compose.state.RemoteColor" in source.lines())
+  }
+
+  @Test
   fun `a tree that does not type is a located refusal, not source`() {
     val (_, refusals) = emit(mapOf("text" to formula("on * 2")))
 

@@ -41,6 +41,8 @@ fun resolveCanvasNode(
 class CanvasExpressions(
   private val stateKinds: Map<String, UiValueKind>,
   private val clock: UiExpressions.Clock,
+  /** The device `device.*` values read: the document's environment. */
+  private val device: UiExpressions.Device = UiExpressions.Device.DEFAULT,
 ) {
   internal fun evaluate(
     node: UiBuilderNode,
@@ -66,6 +68,7 @@ class CanvasExpressions(
         state = state,
         bindings = { key -> (arguments[key] as? JsonObject)?.get("value") as? JsonPrimitive },
         clock = clock,
+        device = device,
       )
     fun literal(value: JsonElement): JsonObject? =
       (UiExpressions.check(value, scope) as? UiExpressions.Checked.Ok)?.let {
@@ -133,6 +136,7 @@ class CanvasExpressions(
             ?: UiExpressions.Clock.of(
               (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
             ),
+        device = UiExpressions.Device.of(document.environment),
       )
   }
 }
