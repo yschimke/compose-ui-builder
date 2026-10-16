@@ -42,6 +42,10 @@ object RemoteJsonImporter {
 
   private const val ROOT_ID = "root"
 
+  /** `[1 -] touchX() [/ n] [* m]`: a scaled touch position, the corpus's touch expressions. */
+  private val TOUCH_EXPRESSION =
+    Regex("""(1\s*-\s*)?touch([XY])\(\)\s*(?:/\s*([0-9.]+))?\s*(?:\*\s*([0-9.]+))?""")
+
   /** The node kinds that can be written keyed, `{"<kind>": {…}}`. */
   private val KEYED_NODES =
     setOf("box", "column", "row", "canvas", "text", "spacer", "flow", "fitBox", "image")
@@ -401,6 +405,8 @@ object RemoteJsonImporter {
             "paint" -> paint = paint(paint, body as? JsonObject ?: throw Gap("not a paint"), scope)
             "variable" ->
               scope = variable(body as? JsonObject ?: throw Gap("not a variable"), scope)
+            "touchExpression" ->
+              touchExpression(body as? JsonObject ?: throw Gap("not a touch expression"))
             "save" ->
               ops += group(emptyMap(), (body as? JsonObject)?.get("commands"), at, paint, scope)
             // A transform or clip holds for the rest of its list: those commands go inside it.
@@ -606,6 +612,42 @@ object RemoteJsonImporter {
       globals[name] = formula
       return scope
     }
+
+    /**
+     * A touch expression as `dragX` / `dragY`: the corpus's are a touch position scaled (`touchX()
+     * / 480`, `touchY() / 400 * 11`, `1 - touchY() / 360`), and the player moves the value by the
+     * expression's change since the touch went down, so only the scale matters. The document's
+     * pixels are its dp here, so the scale per pixel is the scale per dp.
+     */
+    fun touchExpression(body: JsonObject) {
+      val name = body.string("name") ?: throw Gap("a touch expression needs a name")
+      val source =
+        (body["expression"] as? JsonPrimitive)?.contentOrNull
+          ?: throw Gap("touch expression `$name` has no expression the importer reads")
+      val match =
+        TOUCH_EXPRESSION.matchEntire(source.trim())
+          ?: throw Gap("touch expression `$name`'s `$source` is not a scaled touch position")
+      val (inverted, axis, divisor, factor) = match.destructured
+      val perPixel =
+        (if (inverted.isNotEmpty()) -1.0 else 1.0) / (divisor.toDoubleOrNull() ?: 1.0) *
+          (factor.toDoubleOrNull() ?: 1.0)
+      val min = body.number("min") ?: 0.0
+      val max = body.number("max") ?: 1.0
+      val default = body.number("defaultValue") ?: min
+      if (min >= max) throw Gap("touch expression `$name`'s minimum is not below its maximum")
+      // `dragX` / `dragY` stop gently: the codec's touch mode 0, which the corpus spells `gently`.
+      val touchMode = body.number("touchMode") ?: 0.0
+      val stopMode = body.string("stopMode") ?: "gently"
+      if (touchMode != 0.0 || stopMode != "gently") {
+        throw Gap("touch expression `$name` stops other than gently")
+      }
+      globals[name] =
+        "drag$axis(${plain(default)}, ${plain(min)}, ${plain(max)}, ${plain(perPixel)})"
+    }
+
+    private fun plain(value: Double): String =
+      if (value % 1.0 == 0.0 && kotlin.math.abs(value) < 1e15) value.toLong().toString()
+      else value.toString()
 
     /** The codec's number-to-text: `whole` digits before the point, `decimal` after. */
     fun textFromFloat(value: JsonObject, scope: Scope): String {

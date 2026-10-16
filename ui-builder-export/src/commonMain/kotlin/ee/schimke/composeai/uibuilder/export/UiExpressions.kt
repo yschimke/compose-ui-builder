@@ -346,6 +346,15 @@ object UiExpressions {
      * player's time-from-now attribute counts.
      */
     SECONDS_UNTIL("secondsUntil", 1..1),
+    /**
+     * `dragX(default, min, max, perDp)`: a value the viewer drags, starting at `default` and moving
+     * by `perDp` for each dp the touch moves across, held between `min` and `max` — the player's
+     * touch expression, which also eases to a stop when the finger lifts. The preview shows
+     * `default`. All four are literal.
+     */
+    DRAG_X("dragX", 4..4),
+    /** As [DRAG_X], moved by a touch up and down the screen. */
+    DRAG_Y("dragY", 4..4),
     MINUTES_UNTIL("minutesUntil", 1..1),
     HOURS_UNTIL("hoursUntil", 1..1),
     LERP("lerp", 3..3),
@@ -669,6 +678,16 @@ object UiExpressions {
       Op.SPLINE_LOOP ->
         if (call.args.drop(1).all { (it as? Expr.Literal)?.value?.doubleOrNull != null }) null
         else "`${call.op.wire}` takes literal numbers for its control points"
+      Op.DRAG_X,
+      Op.DRAG_Y -> {
+        val numbers = call.args.map { (it as? Expr.Literal)?.value?.doubleOrNull }
+        when {
+          numbers.any { it == null || !it.isFinite() } ->
+            "`${call.op.wire}` takes literal numbers: its default, minimum, maximum and change per dp"
+          numbers[1]!! >= numbers[2]!! -> "`${call.op.wire}`'s minimum must be below its maximum"
+          else -> null
+        }
+      }
       Op.SECONDS_UNTIL,
       Op.MINUTES_UNTIL,
       Op.HOURS_UNTIL ->
@@ -796,11 +815,21 @@ object UiExpressions {
       Op.SECONDS_UNTIL,
       Op.MINUTES_UNTIL,
       Op.HOURS_UNTIL -> if (kinds[0] == UiValueKind.STRING) UiValueKind.FLOAT else fail()
+      Op.DRAG_X,
+      Op.DRAG_Y -> if (kinds.indices.all { numeric(it) }) UiValueKind.FLOAT else fail()
     }
   }
 
   private val SELF_DYNAMIC: Set<Op> =
-    setOf(Op.RAND, Op.RAND_RANGE, Op.SECONDS_UNTIL, Op.MINUTES_UNTIL, Op.HOURS_UNTIL)
+    setOf(
+      Op.RAND,
+      Op.RAND_RANGE,
+      Op.SECONDS_UNTIL,
+      Op.MINUTES_UNTIL,
+      Op.HOURS_UNTIL,
+      Op.DRAG_X,
+      Op.DRAG_Y,
+    )
 
   /** Whether [expr] reads anything that changes while the document plays. */
   fun isDynamic(expr: Expr): Boolean =
@@ -1260,6 +1289,9 @@ object UiExpressions {
         num(monotonicSpline(r, splinePoints()).toDouble())
       }
       Op.CBRT -> num(cbrt(d(0)))
+      // Undragged: where the player starts it.
+      Op.DRAG_X,
+      Op.DRAG_Y -> num(d(0).coerceIn(d(1), d(2)))
       Op.COPY_SIGN -> num(d(0).withSign(d(1)))
       // Counted from the environment's clock by `evaluate` before it gets here.
       Op.SECONDS_UNTIL,
