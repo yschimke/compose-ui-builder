@@ -2400,7 +2400,7 @@ internal class RemoteContentEmitter(
           node.drawPx("yDp") ?: extent.centerY,
           paint,
           "panX = $pan.rf",
-          "panY = 0.rf",
+          "panY = ${UiDrawing.textPanY(node.properties["verticalAlign"]?.stringOrNull()).toInt()}.rf",
         )
       }
       UiDrawing.TEXT_CIRCLE -> {

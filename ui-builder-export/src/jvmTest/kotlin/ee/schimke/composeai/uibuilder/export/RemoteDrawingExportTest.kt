@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
@@ -209,6 +210,38 @@ class RemoteDrawingExportTest {
         refused.reasons.toString(),
       )
     }
+  }
+
+  @Test
+  fun `a text's vertical alignment is the player's panY, its sign the reverse of panX`() {
+    fun panY(verticalAlign: String?): String {
+      val alignment =
+        verticalAlign?.let { ""","verticalAlign":{"type":"enum","value":"$it"}""" }.orEmpty()
+      val label =
+        Json.decodeFromString<UiBuilderNode>(
+          """{"id":"label","componentId":"draw/text","properties":{
+            "text":{"type":"string","value":"42"}$alignment}}"""
+        )
+      val canvas = document.nodes.getValue("canvas")
+      val source =
+        assertIs<WearWidgetCodeExporter.Result.Emitted>(
+            WearWidgetCodeExporter.export(
+              document.copy(
+                nodes =
+                  document.nodes +
+                    ("label" to label) +
+                    ("canvas" to canvas.copy(slots = mapOf("ops" to listOf("label"))))
+              )
+            )
+          )
+          .source
+      return Regex("""panY = (-?\d+)\.rf""").find(source)!!.groupValues[1]
+    }
+
+    assertEquals("1", panY("top"))
+    assertEquals("0", panY("center"))
+    assertEquals("-1", panY("bottom"))
+    assertEquals("0", panY(null))
   }
 
   @Test
