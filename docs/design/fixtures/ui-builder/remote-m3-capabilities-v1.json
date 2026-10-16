@@ -1976,7 +1976,33 @@
                 "remoteCall",
                 "sharedElement"
             ],
-            "properties": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "viewportWidth",
+                    "notes": "Draw the operations in a space this wide, scaled to the canvas, instead of in dp. Needs viewportHeight too.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "viewportHeight",
+                    "notes": "Draw the operations in a space this tall, scaled to the canvas, instead of in dp. Needs viewportWidth too.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fit",
+                        "fill",
+                        "stretch"
+                    ],
+                    "jsonType": "string",
+                    "name": "viewportMode",
+                    "notes": "fit (the default): scaled evenly to fit, centred, so the whole viewport shows. fill: scaled evenly to cover the canvas, centred, its overflow clipped. stretch: scaled to the canvas in each direction.",
+                    "required": false
+                }
+            ],
             "role": "Container",
             "slots": [
                 {
@@ -2008,7 +2034,7 @@
             "wasm": {
                 "adapterStatus": "planned",
                 "canvas": null,
-                "notes": "RemoteCanvas: draws its operations in order, in dp from its top-left. Give it a size; an unsized canvas draws in whatever space its parent gives it.",
+                "notes": "RemoteCanvas: draws its operations in order, in dp from its top-left, or in its viewport's units when it has one. Give it a size; an unsized canvas draws in whatever space its parent gives it.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -3004,6 +3030,17 @@
                     "jsonType": "string",
                     "name": "align",
                     "notes": "Which end of the text sits at the anchor.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlign",
+                    "notes": "Which edge of the text sits at the anchor: its top, its middle (the default) or its bottom.",
                     "required": false
                 },
                 {
