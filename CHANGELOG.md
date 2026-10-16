@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.119.0](https://github.com/yschimke/compose-ui-builder/compare/v3.118.0...v3.119.0) (2026-10-16)
+
+
+### Features
+
+* **actions:** touch down, up and cancel on Remote layouts and canvases ([#910](https://github.com/yschimke/compose-ui-builder/issues/910)) ([37a611e](https://github.com/yschimke/compose-ui-builder/commit/37a611ecbb1e1086e15c06f8d8069d7b40dcb6c5))
+* **drawing:** draw/polyline, a path through points computed from their index ([#915](https://github.com/yschimke/compose-ui-builder/issues/915)) ([6df732e](https://github.com/yschimke/compose-ui-builder/commit/6df732e92e666cee63ffc1d67054dfba30b63d52))
+* **drawing:** place gradients, stop them where listed, tile them; scale groups per axis ([#901](https://github.com/yschimke/compose-ui-builder/issues/901)) ([cc93a67](https://github.com/yschimke/compose-ui-builder/commit/cc93a67ab90852baa7e94550a1639cc08f0594a0))
+* **editor:** developer toggle for a catalog runtime's preview engine ([#906](https://github.com/yschimke/compose-ui-builder/issues/906)) ([7f659de](https://github.com/yschimke/compose-ui-builder/commit/7f659de287991acb15450fc91bd026e25f3e9cbe))
+* **expressions:** canvas size, touch and sensor system values ([#899](https://github.com/yschimke/compose-ui-builder/issues/899)) ([a4ca64b](https://github.com/yschimke/compose-ui-builder/commit/a4ca64bcf0c323c26d01c1b081e7fedff6dd8702))
+* **expressions:** dragX / dragY, a value the viewer drags, as the player's touch expression ([#921](https://github.com/yschimke/compose-ui-builder/issues/921)) ([3118d05](https://github.com/yschimke/compose-ui-builder/commit/3118d05d422706acca1769e648b0dd60f00675aa))
+* **expressions:** splines, cube roots, copied signs and countdowns to an instant ([#900](https://github.com/yschimke/compose-ui-builder/issues/900)) ([3f01e15](https://github.com/yschimke/compose-ui-builder/commit/3f01e157617964bb549c8ced83a2a21a65d98c76))
+* **import:** import Remote Compose authoring JSON into a design ([#907](https://github.com/yschimke/compose-ui-builder/issues/907)) ([ee20a45](https://github.com/yschimke/compose-ui-builder/commit/ee20a452612e8898fec45ae100a9721d2b51bad9))
+* **import:** read global resources, folding fixed arrays into formulas ([#925](https://github.com/yschimke/compose-ui-builder/issues/925)) ([abdbb4a](https://github.com/yschimke/compose-ui-builder/commit/abdbb4a123b52df983d09ef6334331cf9c0c3b14))
+* **import:** read straight path expressions and line-built paths ([#922](https://github.com/yschimke/compose-ui-builder/issues/922)) ([595e0d8](https://github.com/yschimke/compose-ui-builder/commit/595e0d8941308b7a4db7015cf7c4cf5ec94457ff))
+* **inspector:** background, border and clip with editable colours and corners ([#918](https://github.com/yschimke/compose-ui-builder/issues/918)) ([3292f99](https://github.com/yschimke/compose-ui-builder/commit/3292f994e54a61e2f32b147d79771b43b76c5bf7))
+* **loops:** read row fields and the row index inside Remote expressions ([#909](https://github.com/yschimke/compose-ui-builder/issues/909)) ([6d2e1b4](https://github.com/yschimke/compose-ui-builder/commit/6d2e1b47f3cb2c53d29b72ac461ccf636bcba80a))
+* **lovelace:** edit and round-trip host-owned dashboards ([#908](https://github.com/yschimke/compose-ui-builder/issues/908)) ([90bb997](https://github.com/yschimke/compose-ui-builder/commit/90bb9977eda31291d0649d8888f46cca4fe6f303))
+* **ui-builder:** catalog-declared device preview panes ([#928](https://github.com/yschimke/compose-ui-builder/issues/928)) ([53e3664](https://github.com/yschimke/compose-ui-builder/commit/53e3664c35469d480270d48de7a98fc10097d0bf))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.64.5 ([#926](https://github.com/yschimke/compose-ui-builder/issues/926)) ([ea32c9b](https://github.com/yschimke/compose-ui-builder/commit/ea32c9b94b6f234bea445a62ef49bc61f90d0398))
+* **deps:** update dependency androidx.compose.ui:ui-tooling-preview to v1.12.1 ([#929](https://github.com/yschimke/compose-ui-builder/issues/929)) ([5e1cb91](https://github.com/yschimke/compose-ui-builder/commit/5e1cb916615b3b150dbe1546964e57c2b425c8af))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.2 ([#905](https://github.com/yschimke/compose-ui-builder/issues/905)) ([5a049d5](https://github.com/yschimke/compose-ui-builder/commit/5a049d51412b6b12c86c6e3da4bd9d789c694a12))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.3 ([#911](https://github.com/yschimke/compose-ui-builder/issues/911)) ([bf564ef](https://github.com/yschimke/compose-ui-builder/commit/bf564ef810ca4add07cd70a193837309e3c16022))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.4 ([#927](https://github.com/yschimke/compose-ui-builder/issues/927)) ([5d9d6b0](https://github.com/yschimke/compose-ui-builder/commit/5d9d6b063fe117b4e46587f1e70a8be0edc0b7b9))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.13.0 ([#902](https://github.com/yschimke/compose-ui-builder/issues/902)) ([42cbee9](https://github.com/yschimke/compose-ui-builder/commit/42cbee985a6ea0cee31c955551abc8009c1d3649))
+* **import:** a canvas's width and height apart, and no stranded commands ([#917](https://github.com/yschimke/compose-ui-builder/issues/917)) ([19cfb19](https://github.com/yschimke/compose-ui-builder/commit/19cfb190fc34c24982cbbc0d0f9c2a05fe8094e6))
+
 ## [3.118.0](https://github.com/yschimke/compose-ui-builder/compare/v3.117.0...v3.118.0) (2026-10-16)
 
 
