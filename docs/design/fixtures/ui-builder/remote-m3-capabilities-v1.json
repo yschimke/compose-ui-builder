@@ -3485,10 +3485,7 @@
             "modifierCapabilities": [],
             "properties": [
                 {
-                    "jsonType": [
-                        "number",
-                        "object"
-                    ],
+                    "jsonType": "number",
                     "name": "count",
                     "notes": "How many points, from 2 to 256; a literal. Required."
                 },

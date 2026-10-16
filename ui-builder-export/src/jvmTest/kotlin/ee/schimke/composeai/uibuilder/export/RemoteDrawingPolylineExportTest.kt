@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
@@ -87,5 +88,16 @@ class RemoteDrawingPolylineExportTest {
         )
       assertTrue(refused.reasons.any { reason in it }, refused.reasons.toString())
     }
+  }
+
+  @Test
+  fun `the point formulas read the polyline's own index`() {
+    assertEquals(UiValueKind.FLOAT, UiDrawing.indexKinds(wave, "wave")("i"))
+    assertEquals(null, UiDrawing.indexKinds(wave, "canvas")("i"))
+    assertTrue(
+      UiDrawing.BY_ID.getValue(UiDrawing.POLYLINE).properties.any {
+        it is UiDrawing.Property.Number && it.name == "count" && it.literal
+      }
+    )
   }
 }

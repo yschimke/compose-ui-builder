@@ -43,7 +43,13 @@ object UiDrawing {
     val name: String
     val notes: String
 
-    class Number(override val name: String, val unit: Unit, override val notes: String) : Property
+    /** @param literal whether it takes only a number, never state or a formula. */
+    class Number(
+      override val name: String,
+      val unit: Unit,
+      override val notes: String,
+      val literal: Boolean = false,
+    ) : Property
 
     class Color(override val name: String, override val notes: String) : Property
 
@@ -316,6 +322,7 @@ object UiDrawing {
             "count",
             Unit.COUNT,
             "How many points, from 2 to $MAX_POINTS; a literal. Required.",
+            literal = true,
           ),
           Property.Text(
             "index",
@@ -553,9 +560,14 @@ object UiDrawing {
     return indices.toList()
   }
 
-  /** The kind of each loop index in scope at [nodeId], for an expression's binding operands. */
+  /**
+   * The kind of each loop index in scope at [nodeId], for an expression's binding operands: those
+   * of the [REPEAT]s around it, and a [POLYLINE]'s own.
+   */
   fun indexKinds(document: UiBuilderDocument, nodeId: String): (String) -> UiValueKind? {
-    val indices = loopIndices(document, nodeId).toSet()
+    // A polyline's own index, which its point formulas read.
+    val own = document.nodes[nodeId]?.takeIf { it.componentId == POLYLINE }?.let(::indexName)
+    val indices = loopIndices(document, nodeId).toSet() + listOfNotNull(own)
     return { key -> if (key in indices) UiValueKind.FLOAT else null }
   }
 
