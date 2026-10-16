@@ -1763,6 +1763,7 @@ class UiBuilderEditorReducer(
               ?.get(field.name)
               ?.let { it as? JsonObject }
               ?.get("value")
+          else if (field.color) (modifier[field.name] as? JsonObject)?.get("value")
           else modifier[field.name]
         EditorModifierField(
           type = type,
@@ -1771,6 +1772,7 @@ class UiBuilderEditorReducer(
           value = raw?.primitiveOrNull()?.content.orEmpty(),
           choices = field.choices,
           index = index,
+          control = field.control,
         )
       }
     }
@@ -1817,6 +1819,42 @@ class UiBuilderEditorReducer(
         nodeId,
         "modifiers",
       )
+    }
+    if (!remote && (definition.color || definition.shape)) {
+      val text = draft.trim()
+      val element =
+        if (definition.color) {
+          // Hex or a scheme role, as every exporter writes one: `transparent` is a literal there.
+          if (parseHexColor(text) == null && !UiExpressions.isThemeRole(text)) {
+            return state.rejected(
+              sequence,
+              RejectionCode.INVALID_PROPERTY,
+              "${field.humanLabel()} must be a hex colour such as #FF6750A4 or a theme role such " +
+                "as primary",
+              nodeId,
+              "modifiers",
+            )
+          }
+          // A literal is a `color`, a role a `colorToken`, as the renderer and exporters read them.
+          val wrapper = if (text.startsWith("#")) "color" else "colorToken"
+          JsonObject(mapOf("type" to JsonPrimitive(wrapper), "value" to JsonPrimitive(text)))
+        } else {
+          if (
+            text !in MODIFIER_SHAPES &&
+              (text.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 } == null)
+          ) {
+            return state.rejected(
+              sequence,
+              RejectionCode.INVALID_PROPERTY,
+              "${field.humanLabel()} must be ${MODIFIER_SHAPES.joinToString(", ")} or a corner " +
+                "radius in dp",
+              nodeId,
+              "modifiers",
+            )
+          }
+          JsonPrimitive(text)
+        }
+      return writeModifierField(state, sequence, node, type, field, element, modifierIndex)
     }
     val choices = definition.choices
     val value =
@@ -1897,6 +1935,39 @@ class UiBuilderEditorReducer(
       sequence,
       listOf(DesignOperation.SetModifiers(nodeId, chain)),
       selectionAfter = nodeId,
+    )
+  }
+
+  /** [element] written as [field] of the [type] modifier at [modifierIndex], or its first. */
+  private fun writeModifierField(
+    state: UiBuilderEditorState,
+    sequence: Int,
+    node: UiBuilderNode,
+    type: String,
+    field: String,
+    element: JsonElement,
+    modifierIndex: Int?,
+  ): UiBuilderEditorState {
+    var written = false
+    val chain =
+      JsonArray(
+        node.modifiers.mapIndexed { index, modifier ->
+          if (
+            written ||
+              modifier !is JsonObject ||
+              modifierKey(modifier) != type ||
+              (modifierIndex != null && index != modifierIndex)
+          )
+            return@mapIndexed modifier
+          written = true
+          JsonObject(modifier + (field to element))
+        }
+      )
+    if (!written) return state
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetModifiers(node.id, chain)),
+      selectionAfter = node.id,
     )
   }
 

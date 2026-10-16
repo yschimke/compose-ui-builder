@@ -771,16 +771,14 @@ private fun InspectorBody(
                 key(node.id, index, field.field) {
                   val tuneTarget =
                     TunableTarget.Modifier(node.id, index, field.type, field.field).takeIf {
-                      field.choices.isEmpty() && state.document.canTune(it)
+                      field.control == EditorPropertyControl.Number && state.document.canTune(it)
                     }
                   Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
                       HoverEditorRow(
                         label = field.label,
                         value = field.value,
-                        control =
-                          if (field.choices.isEmpty()) EditorPropertyControl.Number
-                          else EditorPropertyControl.Enum,
+                        control = field.control,
                         choices = field.choices,
                         focused = false,
                         onFocusHandled = {},

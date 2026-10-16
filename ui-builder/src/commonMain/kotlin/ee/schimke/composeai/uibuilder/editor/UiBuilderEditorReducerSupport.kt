@@ -1218,6 +1218,39 @@ internal val MENU_MODIFIERS: List<MenuModifier> by lazy {
           put("bottomDp", 16)
         }
       },
+      MenuModifier("background", "Fill the background") {
+        buildJsonObject {
+          put("type", "background")
+          put(
+            "color",
+            buildJsonObject {
+              put("type", "colorToken")
+              put("value", "surfaceContainer")
+            },
+          )
+          put("shape", "medium")
+        }
+      },
+      MenuModifier("border", "Add a border") {
+        buildJsonObject {
+          put("type", "border")
+          put("widthDp", 1)
+          put(
+            "color",
+            buildJsonObject {
+              put("type", "colorToken")
+              put("value", "outlineVariant")
+            },
+          )
+          put("shape", "medium")
+        }
+      },
+      MenuModifier("clip", "Round the corners") {
+        buildJsonObject {
+          put("type", "clip")
+          put("shape", "medium")
+        }
+      },
       MenuModifier("align", "Align in the box", EditorLayoutScope.Box) {
         buildJsonObject {
           put("type", "align")
@@ -1338,7 +1371,7 @@ private val MOTION_MODIFIER_FIELDS: List<ModifierField> =
 
 /**
  * The values each modifier carries and their labels. Closed, like [EDITOR_OBJECT_VALUE_EDGES]:
- * shapes and colours have no one-line control, while alignments are a choice.
+ * numbers, choices such as alignments, colours (a hex literal or a theme role) and corner shapes.
  */
 internal val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
   mapOf(
@@ -1361,7 +1394,18 @@ internal val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
     "aspectRatio" to listOf(ModifierField("ratio", "Ratio")),
     "offset" to listOf(ModifierField("xDp", "X"), ModifierField("yDp", "Y")),
     "zIndex" to listOf(ModifierField("zIndex", "Z")),
-    "border" to listOf(ModifierField("widthDp", "Border")),
+    "border" to
+      listOf(
+        ModifierField("widthDp", "Border"),
+        ModifierField("color", "Colour", color = true),
+        ModifierField("shape", "Corners", shape = true),
+      ),
+    "background" to
+      listOf(
+        ModifierField("color", "Colour", color = true),
+        ModifierField("shape", "Corners", shape = true),
+      ),
+    "clip" to listOf(ModifierField("shape", "Corners", shape = true)),
     "alpha" to listOf(ModifierField("alpha", "Alpha")),
     "shadow" to listOf(ModifierField("elevationDp", "Elevation")),
     "rotate" to listOf(ModifierField("degrees", "Degrees")),
@@ -1379,7 +1423,24 @@ internal class ModifierField(
   val name: String,
   val label: String,
   val choices: List<String> = emptyList(),
-)
+  /** A colour: a hex literal in a `color` wrapper, or a theme role in a `colorToken` one. */
+  val color: Boolean = false,
+  /** A corner shape: one of [MODIFIER_SHAPES], or a corner radius in dp. */
+  val shape: Boolean = false,
+) {
+  /** The inspector control the field is edited with. */
+  val control: EditorPropertyControl
+    get() =
+      when {
+        color -> EditorPropertyControl.Color
+        shape -> EditorPropertyControl.Text
+        choices.isNotEmpty() -> EditorPropertyControl.Enum
+        else -> EditorPropertyControl.Number
+      }
+}
+
+/** The named corner shapes a modifier takes, as the exporters size them: 8, 12 and 16dp. */
+internal val MODIFIER_SHAPES: List<String> = listOf("small", "medium", "large")
 
 internal class MenuModifier(
   val type: String,

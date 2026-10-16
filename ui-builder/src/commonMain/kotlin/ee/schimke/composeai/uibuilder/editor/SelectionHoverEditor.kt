@@ -158,9 +158,7 @@ internal fun SelectionHoverEditor(
           HoverEditorRow(
             label = field.label,
             value = field.value,
-            control =
-              if (field.choices.isEmpty()) EditorPropertyControl.Number
-              else EditorPropertyControl.Enum,
+            control = field.control,
             choices = field.choices,
             focused = focusTarget == "modifier:${field.type}.${field.field}",
             onFocusHandled = onFocusHandled,

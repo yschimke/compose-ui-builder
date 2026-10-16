@@ -135,6 +135,9 @@ data class EditorModifierField(
   val choices: List<String> = emptyList(),
   /** Position in the ordered chain; repeated modifier types remain independently editable. */
   val index: Int = 0,
+  /** How it is edited: a number, a choice, a colour or a corner shape's text. */
+  val control: EditorPropertyControl =
+    if (choices.isEmpty()) EditorPropertyControl.Number else EditorPropertyControl.Enum,
 )
 
 enum class EditorComponentKind(val label: String) {
