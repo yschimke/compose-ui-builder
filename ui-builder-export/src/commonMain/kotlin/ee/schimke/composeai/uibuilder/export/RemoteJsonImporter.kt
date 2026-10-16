@@ -49,6 +49,13 @@ object RemoteJsonImporter {
   /** An inlined formula past this length is reported rather than written out. */
   private const val MAX_FORMULA = 4_000
 
+  /** `PathExpression`'s flags: straight segments, and a closed path. */
+  private const val PATH_LINEAR = 4
+  private const val PATH_LOOP = 1
+
+  /** A path expression's parameter, as its formulas read it. */
+  private val PARAMETER = Regex("""\ba\[0]""")
+
   private class Gap(message: String) : Exception(message)
 
   /** The paint the codec carries between commands. */
@@ -69,6 +76,8 @@ object RemoteJsonImporter {
     val gaps = mutableListOf<String>()
     /** Every variable defined so far, in document order, as a builder formula. */
     val globals = linkedMapOf<String, String>()
+    /** Every path expression defined so far, by its id, as the polyline geometry it draws. */
+    val pathExpressions = mutableMapOf<String, Map<String, JsonElement>>()
     val nodes = linkedMapOf<String, UiBuilderNode>()
     val ids = mutableMapOf<String, Int>()
     val header = source["header"] as? JsonObject
@@ -425,6 +434,8 @@ object RemoteJsonImporter {
             }
             "loop" -> ops += loop(body as JsonObject, at, paint, scope)
             "conditionalOperations" -> ops += conditional(body as JsonObject, at, paint, scope)
+            "pathExpression",
+            "polarPathExpression" -> pathExpression(name, body as JsonObject, scope)
             else ->
               ops +=
                 draw(name, body, paint, scope) ?: throw Gap("`$name` has no builder equivalent")
@@ -658,6 +669,13 @@ object RemoteJsonImporter {
                 "endYDp" to value(obj["y2"], scope),
               )
           "drawPath" -> {
+            val named = obj?.string("path")
+            if (named != null && named in pathExpressions) {
+              return add(painted(UiDrawing.POLYLINE, pathExpressions.getValue(named), paint))
+            }
+            if (named != null && named in failedPaths) {
+              throw Gap("path expression `$named` was not imported")
+            }
             val data =
               (body as? JsonPrimitive)?.contentOrNull
                 ?: obj?.string("pathData")
@@ -675,6 +693,15 @@ object RemoteJsonImporter {
           "drawTextAnchored" -> "draw/text" to anchoredText(obj!!, scope)
           else -> return null
         }
+      return add(painted(component, geometry, paint))
+    }
+
+    /** A drawing operation of [component]: its [geometry] with the codec's [paint] copied on. */
+    fun painted(
+      component: String,
+      geometry: Map<String, JsonElement>,
+      paint: Paint,
+    ): UiBuilderNode {
       val properties = geometry.toMutableMap()
       properties["color"] = color(paint.color)!!
       paint.alpha?.let { properties["alpha"] = it }
@@ -692,9 +719,72 @@ object RemoteJsonImporter {
             ?.let { properties["strokeJoin"] = enum(it) }
         }
       }
-      return add(
-        UiBuilderNode(nextId(component.removePrefix("draw/")), component, JsonObject(properties))
+      return UiBuilderNode(
+        nextId(component.removePrefix("draw/")),
+        component,
+        JsonObject(properties),
       )
+    }
+
+    /** Path expression ids whose definition was refused, so drawing them is not read as SVG. */
+    val failedPaths = mutableSetOf<String>()
+
+    /**
+     * A path expression as the polyline it draws. The player samples the expression at `count`
+     * values of `a[0]` spread evenly from `start` to `end` and, with the `LINEAR` flag, joins them
+     * with straight lines: a polyline whose point formulas read `a[0]` as `start` plus the point's
+     * index times the step. A `LOOP` path closes, and its points stop a step short of `end`, as the
+     * player's do. A polar one's expression is the radius at angle `a[0]` about its centre. The
+     * player's smoothed paths (no `LINEAR` flag) have no builder equivalent.
+     */
+    fun pathExpression(name: String, body: JsonObject, scope: Scope) {
+      val id = body.string("id") ?: throw Gap("a path expression needs an id")
+      failedPaths += id
+      val flags = body.number("flags")?.toInt() ?: 0
+      if (flags and PATH_LINEAR == 0) {
+        throw Gap("path expression `$id` is smoothed; only straight (`LINEAR`) ones are read")
+      }
+      val loop = flags and PATH_LOOP != 0
+      val count =
+        body.number("count")?.takeIf {
+          it == kotlin.math.floor(it) && it >= 2 && it <= UiDrawing.MAX_POINTS
+        }
+          ?: throw Gap(
+            "path expression `$id` needs a literal count from 2 to ${UiDrawing.MAX_POINTS}"
+          )
+      fun source(key: String): String {
+        val element = body[key] as? JsonPrimitive ?: throw Gap("path expression `$id` needs `$key`")
+        return element.contentOrNull ?: throw Gap("path expression `$id` needs `$key`")
+      }
+      val index =
+        generateSequence(0) { it + 1 }
+          .map { if (it == 0) "point" else "point$it" }
+          .first { it !in scope.indices && it !in globals }
+      val steps = number(if (loop) count else count - 1)
+      val start = source("start")
+      val end = source("end")
+      val parameter = "(($start) + $index * (($end) - ($start)) / $steps)"
+      val inner = scope.copy(indices = scope.indices + index)
+      fun at(key: String): String = source(key).replace(PARAMETER, parameter)
+      val (x, y) =
+        if (name == "polarPathExpression") {
+          val radius = at("expressionR")
+          val cx = (body["centerX"] ?: body["cx"])?.jsonPrimitive?.content ?: "0"
+          val cy = (body["centerY"] ?: body["cy"])?.jsonPrimitive?.content ?: "0"
+          "($cx) + ($radius) * cos($parameter)" to "($cy) + ($radius) * sin($parameter)"
+        } else at("expressionX") to at("expressionY")
+      pathExpressions[id] = buildMap {
+        put("count", float(count))
+        put("index", string(index))
+        put("pointXDp", parsed(formula(JsonPrimitive(x), inner)))
+        put("pointYDp", parsed(formula(JsonPrimitive(y), inner)))
+        if (loop)
+          put(
+            "closed",
+            JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true))),
+          )
+      }
+      failedPaths -= id
     }
 
     fun box(obj: JsonObject, scope: Scope): Map<String, JsonElement> {

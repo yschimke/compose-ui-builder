@@ -242,6 +242,48 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `a straight path expression draws as a polyline sampling its parameter`() {
+    val result =
+      imported(
+        """{"header":{"width":400,"height":400},"root":[{"type":"canvas","commands":[
+          {"variable":{"name":"endX","value":"componentWidth()"}},
+          {"pathExpression":{"id":"curve","expressionX":"a[0] * 2","expressionY":"200 + 150 * sin(a[0] + continuousSec())",
+            "start":0,"end":"@endX","count":128.0,"flags":4}},
+          {"polarPathExpression":{"id":"ring","expressionR":"100 + 10 * sin(a[0] * 6)",
+            "start":0,"end":6.2831853,"count":64,"cx":200,"cy":200,"flags":5}},
+          {"pathExpression":{"id":"smooth","expressionX":"a[0]","expressionY":"a[0]","start":0,"end":1,"count":8,"flags":0}},
+          {"paint":{"ops":[{"color":"#FF2E6F52"},{"style":"stroke"},{"strokeWidth":3}]}},
+          {"drawPath":{"path":"curve"}},
+          {"drawPath":{"path":"ring"}},
+          {"drawPath":{"path":"smooth"}}
+        ]}]}"""
+      )
+    val nodes = result.document.nodes
+    val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
+    val (curve, ring) = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)
+    assertEquals(UiDrawing.POLYLINE, curve.componentId)
+    fun text(node: UiBuilderNode, key: String) =
+      node.properties.getValue(key).jsonObject.let {
+        if (it["type"]!!.jsonPrimitive.content == "expr") UiExpressions.format(it)
+        else it["value"]!!.jsonPrimitive.content
+      }
+    assertEquals("128.0", text(curve, "count"))
+    assertEquals("point", text(curve, "index"))
+    // a[0] runs from start to end over count - 1 steps: the last point is at `end`.
+    assertEquals("(0 + @point * (canvas.width - 0) / 127) * 2", text(curve, "pointXDp"))
+    assertContains(text(curve, "pointYDp"), "time.continuousSecond")
+    assertEquals("stroke", text(curve, "style"))
+    // A loop closes, a step short of `end`; a polar radius turns about the centre.
+    assertEquals("true", text(ring, "closed"))
+    assertContains(text(ring, "pointXDp"), "cos(")
+    assertContains(text(ring, "pointXDp"), "/ 64")
+    // A smoothed path is reported where it is defined, and drawing it is not read as SVG data.
+    assertEquals(2, result.gaps.size, result.gaps.toString())
+    assertTrue(result.gaps[0].startsWith("root[0].commands[3]") && "smoothed" in result.gaps[0])
+    assertTrue("`smooth` was not imported" in result.gaps[1], result.gaps.toString())
+  }
+
+  @Test
   fun `what has no builder equivalent is skipped and reported where it is`() {
     val result =
       imported(

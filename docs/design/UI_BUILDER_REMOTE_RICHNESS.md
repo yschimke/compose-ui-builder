@@ -411,7 +411,11 @@ canvas becomes a `draw/canvas` whose viewport is the document's units, so its pi
 where the codec drew them. Its commands become drawing operations: the paint state the codec
 carries is copied onto each, a `rotate`/`translate`/`scale`/`clipRect` wraps the commands after it in
 a group or clip, a flat `save` … `restore` is a group, and `loop` / `conditionalOperations` become
-`draw/repeat` / `draw/if`.
+`draw/repeat` / `draw/if`. A straight (`LINEAR`) `pathExpression` or `polarPathExpression` is the
+`draw/polyline` it draws: the player samples `a[0]` at `count` even steps from `start` to `end` and
+joins the points with lines, so each point's formula reads `a[0]` as `start` plus the point's index
+times the step, a `LOOP` path closing a step short of `end`. The player's smoothed paths have no
+builder equivalent.
 
 `RemoteJsonFormulas` translates the codec's formulas. The codec writes each function as the
 remote-core operator of that name with its arguments pushed in order, so each is translated by what
