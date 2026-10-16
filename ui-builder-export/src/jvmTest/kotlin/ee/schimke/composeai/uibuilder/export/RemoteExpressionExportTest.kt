@@ -326,8 +326,8 @@ class RemoteExpressionExportTest {
     val time = "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)"
     assertContains(
       source,
-      "($time % (3.rf * 2.rf)).isLessThan(3.rf).select(($time % (3.rf * 2.rf)), " +
-        "((3.rf * 2.rf) - ($time % (3.rf * 2.rf))))",
+      "(abs($time) % (3.rf * 2.rf)).isLessThan(3.rf).select((abs($time) % (3.rf * 2.rf)), " +
+        "((3.rf * 2.rf) - (abs($time) % (3.rf * 2.rf))))",
     )
     for (symbol in listOf("rand", "randRange")) {
       assertContains(source, "\nandroidx.compose.remote.creation.compose.state.$symbol\n")

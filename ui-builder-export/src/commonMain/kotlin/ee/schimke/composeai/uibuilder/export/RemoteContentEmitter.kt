@@ -1955,7 +1955,7 @@ internal class RemoteContentEmitter(
       // part past max runs back down.
       UiExpressions.Op.PING_PONG -> {
         val period = "(${f(1)} * ${2f.floatLiteral()})"
-        val folded = "(${f(0)} % $period)"
+        val folded = "(${math("abs", f(0))} % $period)"
         "$folded.isLessThan(${f(1)}).select($folded, ($period - $folded))"
       }
       UiExpressions.Op.POW -> math("pow", f(0), f(1))

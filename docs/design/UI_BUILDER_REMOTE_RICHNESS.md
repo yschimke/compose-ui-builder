@@ -191,7 +191,7 @@ from its operands and refuses what does not type, with the path of the operand i
 | `uppercase(text)` `lowercase(text)` `trim(text)` `substring(text, start[, end])` | String; `start`/`end` are Int |
 | `hsv(hue, saturation, value[, alpha])` `rgb(red, green, blue[, alpha])` | Colour from components 0–1, hue as a fraction of a turn — `RemoteColor.hsv` / `rgb` |
 | `rand()` `randRange(from, to)` | Float drawn by the player; a preview shows the middle (0.5, the midpoint) |
-| `pingPong(x, max)` | Float: `x` folded between 0 and `max`, as the player's PINGPONG; written out over public operators |
+| `pingPong(x, max)` | Float: `x` folded between 0 and `max`, as the player's PINGPONG (from `abs(x)`, so negative `x` stays in range too); written out over public operators |
 | `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /

@@ -247,7 +247,8 @@ object UiExpressions {
     RAND_RANGE("randRange", 2..2),
     /**
      * `pingPong(x, max)`: x folded back and forth between 0 and max — up to max, back down to 0 —
-     * as the player's PINGPONG.
+     * as the player's PINGPONG. Folded from |x|, so a negative x mirrors a positive one rather than
+     * escaping below 0 as the player's bare remainder would.
      */
     PING_PONG("pingPong", 2..2),
     LERP("lerp", 3..3),
@@ -1018,7 +1019,8 @@ object UiExpressions {
       Op.RAND_RANGE -> num((d(0) + d(1)) / 2)
       Op.PING_PONG -> {
         val period = (d(1) * 2).toFloat()
-        val folded = d(0).toFloat() % period
+        // The fold is symmetric about zero, so a negative x folds as its magnitude does.
+        val folded = abs(d(0)).toFloat() % period
         num((if (folded < d(1).toFloat()) folded else period - folded).toDouble())
       }
       Op.LERP ->

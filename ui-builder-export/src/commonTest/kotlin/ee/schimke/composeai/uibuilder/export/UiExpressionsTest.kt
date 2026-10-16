@@ -395,6 +395,8 @@ class UiExpressionsTest {
     assertEquals(3.0, evaluate("pingPong(3, 4)"))
     assertEquals(3.0, evaluate("pingPong(5, 4)"))
     assertEquals(1.0, evaluate("pingPong(9, 4)"))
+    assertEquals(1.0, evaluate("pingPong(-1, 4)"))
+    assertEquals(3.0, evaluate("pingPong(-5, 4)"))
     assertTrue(UiExpressions.isDynamic(typed("rand()")))
     assertTrue(UiExpressions.isDynamic(typed("randRange(1, 2)")))
   }
