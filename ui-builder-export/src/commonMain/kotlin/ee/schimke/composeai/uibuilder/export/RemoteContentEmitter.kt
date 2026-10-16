@@ -2040,6 +2040,8 @@ internal class RemoteContentEmitter(
         val loop = expr.op == UiExpressions.Op.SPLINE_LOOP
         math("evalSpline", "RemoteFloatArray(listOf($points))", "$loop", f(0))
       }
+      UiExpressions.Op.DRAG_X,
+      UiExpressions.Op.DRAG_Y -> drag(expr, where)
       UiExpressions.Op.CBRT -> math("cbrt", f(0))
       UiExpressions.Op.COPY_SIGN -> math("copySign", f(0), f(1))
       UiExpressions.Op.SECONDS_UNTIL -> countdown(expr, "Seconds")
@@ -2286,18 +2288,21 @@ internal class RemoteContentEmitter(
         )
       } ?: stated
     val opsDepth = if (viewport == null) depth + 1 else depth + 2
+    val previousDrags = canvasDrags
+    val drags = linkedMapOf<String, String>()
+    canvasDrags = drags
     val ops =
       try {
         node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, opsDepth, hoisted) }
       } finally {
         canvasExtent = previous
+        canvasDrags = previousDrags
       }
+    val inner = INDENT.repeat(depth + 1)
     val body =
-      if (viewport == null) ops
-      else {
-        val inner = INDENT.repeat(depth + 1)
-        listOf(inner + viewportTransform(viewport, stated) + " {") + ops + listOf("$inner}")
-      }
+      drags.values.map { inner + it } +
+        if (viewport == null) ops
+        else listOf(inner + viewportTransform(viewport, stated) + " {") + ops + listOf("$inner}")
     val modifier = node.modifierExpression(pad)
     val head = if (modifier == null) "RemoteCanvas {" else "RemoteCanvas(modifier = $modifier) {"
     return hoisted.map { pad + it } + listOf(pad + head) + body + listOf("$pad}")
@@ -2802,6 +2807,52 @@ internal class RemoteContentEmitter(
     val y = node.drawFloat("scaleY") ?: both
     if (x == null && y == null) return null
     return (x ?: 1f.floatLiteral()) to (y ?: 1f.floatLiteral())
+  }
+
+  /**
+   * The touch expressions of the canvas being written, by their arguments, as the locals that
+   * declare them inside its draw block; null outside a canvas.
+   */
+  private var canvasDrags: MutableMap<String, String>? = null
+
+  /**
+   * A `dragX` / `dragY` as the player's touch expression: written with
+   * `RemoteComposeWriter.addTouch` inside the canvas's draw block, so the touch is the canvas's,
+   * and read as the `RemoteFloat` of its id. The released Compose API has no public touch
+   * expression, so this reaches the writer through the draw scope's `@RestrictTo` `document`; the
+   * generated local suppresses that lint.
+   *
+   * The expression is the raw touch position, scaled from pixels back to dp: the player moves the
+   * value by the expression's change since the touch went down, and flings it on release by the
+   * slope it finds through the touch position itself, so the position must be in the expression
+   * rather than behind another variable.
+   */
+  private fun drag(expr: UiExpressions.Expr.Call, where: String): String? {
+    val drags =
+      canvasDrags
+        ?: run {
+          refusals +=
+            "$where: `${expr.op.wire}` is read inside a ${UiDrawing.CANVAS}'s drawing, whose " +
+              "area takes the touch"
+          return null
+        }
+    val (authoredDefault, min, max, perDp) =
+      expr.args.map { (it as UiExpressions.Expr.Literal).value.content.toFloat() }
+    // The player starts from the default as written, unclamped: clamp it here, as the preview does.
+    val default = authoredDefault.coerceIn(min, max)
+    val axis = if (expr.op == UiExpressions.Op.DRAG_X) "X" else "Y"
+    val key = "$axis:$default:$min:$max:$perDp"
+    drags[key]?.let {
+      return it.substringAfter("val ").substringBefore(" =")
+    }
+    val name = localName("drag${drags.size}")
+    val float = { value: Float -> if (value % 1f == 0f) "${value.toInt()}f" else "${value}f" }
+    drags[key] =
+      "@Suppress(\"RestrictedApi\") val $name = $REMOTE_FLOAT_FQN(document.addTouch(" +
+        "${float(default)}, ${float(min)}, ${float(max)}, 0, Float.NaN, 0, null, null, " +
+        "$REMOTE_CONTEXT_FQN.FLOAT_TOUCH_POS_$axis, ${float(perDp)}, $FLOAT_EXPRESSION_FQN.MUL, " +
+        "$REMOTE_CONTEXT_FQN.FLOAT_DENSITY, $FLOAT_EXPRESSION_FQN.DIV))"
+    return name
   }
 
   /**
@@ -5005,6 +5056,9 @@ private const val REMOTE_BOOLEAN_FQN =
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_INT_FQN = "androidx.compose.remote.creation.compose.state.RemoteInt"
 private const val REMOTE_STATE_PACKAGE = "androidx.compose.remote.creation.compose.state"
+private const val REMOTE_CONTEXT_FQN = "androidx.compose.remote.core.RemoteContext"
+private const val FLOAT_EXPRESSION_FQN =
+  "androidx.compose.remote.core.operations.utilities.AnimatedFloatExpression"
 
 private const val REMOTE_MODIFIER_PACKAGE = "androidx.compose.remote.creation.compose.modifier"
 
