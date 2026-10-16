@@ -256,8 +256,13 @@ private fun PlayedRemoteDocumentVariant(
         }
       }
     } else {
-      ProvidePreviewPlayerTime(pane.document, timeRunning) {
-        RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
+      val host = pane.wearHostFrame
+      Box(
+        if (host != null) Modifier.fillMaxSize().wearHostFrame(host, densityRatio) else Modifier
+      ) {
+        ProvidePreviewPlayerTime(pane.document, timeRunning) {
+          RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
+        }
       }
     }
   }

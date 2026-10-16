@@ -1663,17 +1663,9 @@ internal fun VariantPane(
       overflow = TextOverflow.Ellipsis,
     )
     if (host != null) {
-      // A design with no Wear container of its own, drawn in the host's: its shape (a round host's
-      // 999dp radius clamps to a stadium), padding and the background a widget declaring none gets.
-      val radius = minOf(host.cornerRadiusDp, host.frameHeightDp / 2f)
       Box(
         Modifier.size((pane.widthDp * scale).dp, (pane.heightDp * scale).dp)
-          .clip(RoundedCornerShape((radius * scale).dp))
-          .background(WEAR_HOST_FRAME_BACKGROUND)
-          .padding(
-            horizontal = (host.horizontalPaddingDp * scale).dp,
-            vertical = (host.verticalPaddingDp * scale).dp,
-          )
+          .wearHostFrame(host, scale)
       ) {
         ConstrainedFramePane(
           document = pane.document,
@@ -1706,7 +1698,6 @@ internal fun VariantPane(
 }
 
 /** What a Wear widget host paints behind a widget that declares no background of its own. */
-private val WEAR_HOST_FRAME_BACKGROUND = Color(red = 39, green = 36, blue = 48)
 
 /** Room above a variant pane for its label, in canvas dp. */
 internal const val VARIANT_LABEL_ROOM_DP = 18f
