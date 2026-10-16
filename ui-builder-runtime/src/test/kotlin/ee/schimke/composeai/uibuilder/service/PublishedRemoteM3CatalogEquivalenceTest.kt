@@ -521,7 +521,7 @@ class PublishedRemoteM3CatalogEquivalenceTest {
   @Test
   fun `a published remote-m3 catalog is still served the builder's own vocabulary`() {
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("remote-m3"),
           published = mapOf("remote-m3" to composed),
         )

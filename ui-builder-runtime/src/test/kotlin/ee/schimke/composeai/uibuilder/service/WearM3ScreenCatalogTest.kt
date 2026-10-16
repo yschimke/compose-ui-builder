@@ -150,13 +150,13 @@ class WearM3ScreenCatalogTest {
   fun `a catalog with no adapter is refused`() {
     val failure =
       assertFailsWith<IllegalArgumentException> {
-        CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("wear-m3-catalog"))
+        fixtureCatalogExecutor(catalogSystemIds = setOf("wear-m3-catalog"))
       }
 
     assertTrue("wear-m3-catalog" in failure.message.orEmpty(), failure.message.orEmpty())
     // Names both routes (published and synthesised), so an operator looks for the right fix.
     assertTrue(
-      "neither published nor synthesised" in failure.message.orEmpty(),
+      "no usable published file" in failure.message.orEmpty(),
       failure.message.orEmpty(),
     )
   }
@@ -166,7 +166,7 @@ class WearM3ScreenCatalogTest {
     // `test-catalog` has no synthesiser and is servable only because it was handed in: the set of
     // possible catalogs is open. Composing the published file is `:server`'s job.
     val published =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = setOf("test-catalog"),
           published = mapOf("test-catalog" to testCatalog()),
         )
@@ -178,14 +178,14 @@ class WearM3ScreenCatalogTest {
   @Test
   fun `a published catalog is served with the Wear foundation, and says so`() {
     val executor =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
         catalogSystemIds = setOf("wear-m3", "m3-catalog"),
         published = mapOf("wear-m3" to testCatalog(id = "wear-m3")),
       )
 
     // The source of each catalog is answerable rather than inferred from shelf contents.
     assertEquals(
-      mapOf("wear-m3" to "published", "m3-catalog" to "synthesised"),
+      mapOf("wear-m3" to "published", "m3-catalog" to "published"),
       executor.catalogSources,
     )
     val wear = executor.listCatalogs().first { it.benchmark.catalogSystemId == "wear-m3" }
@@ -225,12 +225,13 @@ class WearM3ScreenCatalogTest {
         ),
       )
       .also {
-        if (id == "wear-m3") {
-          it.statusSemantics =
-            JsonObject(
-              mapOf(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("wear"))
+        it.statusSemantics =
+          JsonObject(
+            mapOf(
+              CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to
+                JsonPrimitive(if (id == "wear-m3") "wear" else "mobile")
             )
-        }
+          )
         it.exportCapabilities =
           ExportCapabilitiesV1.Builder()
             .also {

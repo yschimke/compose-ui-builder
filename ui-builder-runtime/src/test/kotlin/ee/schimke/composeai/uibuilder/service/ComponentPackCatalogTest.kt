@@ -96,7 +96,7 @@ class ComponentPackCatalogTest {
   @Test
   fun `a design holding a pack component validates against its pinned catalog`() {
     val executor =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
         catalogSystemIds = setOf("m3-catalog"),
         packs = listOf(confetti()),
       )
@@ -134,13 +134,13 @@ class ComponentPackCatalogTest {
   @Test
   fun `a pack is refused when it collides with a catalog, an enabled catalog or itself`() {
     assertFailsWith<IllegalArgumentException> {
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
         catalogSystemIds = setOf("m3-catalog"),
         packs = listOf(confetti().copy(id = "m3-catalog", components = emptyList())),
       )
     }
     assertFailsWith<IllegalArgumentException> {
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
         catalogSystemIds = setOf("m3-catalog"),
         packs = listOf(confetti(), confetti()),
       )
@@ -155,7 +155,7 @@ class ComponentPackCatalogTest {
       )
     }
     assertFailsWith<IllegalArgumentException> {
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
         catalogSystemIds = setOf("m3-catalog"),
         packs = listOf(confetti().copy(id = "bad/id", components = emptyList())),
       )
@@ -165,7 +165,7 @@ class ComponentPackCatalogTest {
   @Test
   fun `a pack for a platform no enabled catalog has is simply not offered`() {
     val executor =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
         catalogSystemIds = setOf("m3-catalog"),
         packs =
           listOf(
@@ -175,7 +175,7 @@ class ComponentPackCatalogTest {
     val catalog = executor.listCatalogs().single()
     assertNull(catalog.statusSemantics["componentPacks"])
     assertEquals(
-      CurrentM3UiBuilderCatalogExecutor().listCatalogs().single().components,
+      fixtureCatalogExecutor().listCatalogs().single().components,
       catalog.components,
     )
   }

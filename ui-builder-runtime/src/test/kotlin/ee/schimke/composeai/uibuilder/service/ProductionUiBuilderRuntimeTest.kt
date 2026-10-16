@@ -26,7 +26,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `catalog validation checks every supplied component argument against its property`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
     val placed =
       document()
@@ -76,7 +76,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `packaged current m3 catalog resolves only its exact pin and validates strictly`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
 
     assertEquals("m3-catalog", catalog.benchmark.catalogSystemId)
@@ -104,7 +104,10 @@ class ProductionUiBuilderRuntimeTest {
     val runtimeId = "m3-catalog-p2-deadbeef"
     val catalogs =
       CurrentM3UiBuilderCatalogExecutor.Builder()
-        .also { it.nativeRuntimeIds = mapOf("m3-catalog" to runtimeId) }
+        .also {
+          it.published = mapOf("m3-catalog" to benchmarkCatalog())
+          it.nativeRuntimeIds = mapOf("m3-catalog" to runtimeId)
+        }
         .build()
     val catalog = catalogs.listCatalogs().single()
     val reference = assertNotNull(catalogs.reference(catalog))
@@ -130,7 +133,7 @@ class ProductionUiBuilderRuntimeTest {
    */
   @Test
   fun `a placement of the design's own component validates against the body, not the catalog`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
     val placed =
       document().let { base ->
@@ -166,7 +169,7 @@ class ProductionUiBuilderRuntimeTest {
    */
   @Test
   fun `a placement's modifiers are judged by the body it draws`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
     val placed = document().withPlacement()
 
@@ -196,7 +199,7 @@ class ProductionUiBuilderRuntimeTest {
    */
   @Test
   fun `a placement may not hold children of its own`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
     val placed = document().withPlacement()
 
@@ -227,7 +230,7 @@ class ProductionUiBuilderRuntimeTest {
    */
   @Test
   fun `a component whose body places another component still resolves in a slot`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
     val nested =
       document().withPlacement().let { base ->
@@ -263,7 +266,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `a write is refused for the value kind its name states, and only on the write`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
     val text = document().nodes.getValue("text")
     fun coloured(value: UiValueV1) = text.copy(properties = text.properties + ("color" to value))
@@ -327,7 +330,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `an asset key is refused unless the catalog's registry lists it`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("m3-catalog"))
+    val catalogs = fixtureCatalogExecutor(catalogSystemIds = setOf("m3-catalog"))
     val catalog = catalogs.listCatalogs().single()
     fun image(key: UiValueV1) =
       DesignNodeV1(id = "photo", componentId = "asset/image", properties = mapOf("assetKey" to key))
@@ -441,10 +444,10 @@ class ProductionUiBuilderRuntimeTest {
     )
     assertNull(catalogs.resolve(document().catalogPin.copy(systemId = "wear-m3-catalog")))
     assertFailsWith<IllegalArgumentException> {
-      CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("remote/m3"))
+      fixtureCatalogExecutor(catalogSystemIds = setOf("remote/m3"))
     }
     assertFailsWith<IllegalArgumentException> {
-      CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("wear-m3-catalog"))
+      fixtureCatalogExecutor(catalogSystemIds = setOf("wear-m3-catalog"))
     }
   }
 
@@ -469,7 +472,7 @@ class ProductionUiBuilderRuntimeTest {
     // Which Kotlin a document becomes is `ScreenGenerator`'s answer (off this module's classpath).
     // This module owns the request: a saved revision always produces the same pinned export, and an
     // edit changes it, asserted against an echoing executor.
-    val catalog = CurrentM3UiBuilderCatalogExecutor().listCatalogs().single()
+    val catalog = fixtureCatalogExecutor().listCatalogs().single()
     val exporter = EchoingComposeExportExecutor()
     val first = exporter.export(pinned(document(), catalog))
     val repeated = exporter.export(pinned(document(), catalog))
@@ -499,7 +502,7 @@ class ProductionUiBuilderRuntimeTest {
 
   @Test
   fun `unsupported svg and png fail before the exporter and survive service restart`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalogs = fixtureCatalogExecutor()
     var exports = 0
     fun service() =
       PersistentUiBuilderService(
@@ -668,9 +671,7 @@ class ProductionUiBuilderRuntimeTest {
       }
     ProductionUiBuilderExportExecutor(renderer, EchoingComposeExportExecutor()).use { exporter ->
       val catalog =
-        CurrentM3UiBuilderCatalogExecutor(exportCapabilities = exporter.capabilities)
-          .listCatalogs()
-          .single()
+        fixtureCatalogExecutor(exportCapabilities = exporter.capabilities).listCatalogs().single()
       val initial = pinned(document(), catalog)
       val editedDocument =
         document()

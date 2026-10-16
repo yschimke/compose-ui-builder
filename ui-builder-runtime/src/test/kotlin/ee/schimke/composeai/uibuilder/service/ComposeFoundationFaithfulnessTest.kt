@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -185,17 +186,17 @@ class ComposeFoundationFaithfulnessTest {
 
   /**
    * Deliberate change: the donor is chosen by declared platform, not catalog id, so the palette
-   * agrees with the exporter. An undeclared platform now uses the mobile foundation.
+   * agrees with the exporter. A publication without a platform is refused.
    */
   @Test
-  fun `a declared Wear platform selects Wear and no declaration uses mobile`() {
+  fun `a declared Wear platform selects Wear and no declaration is refused`() {
     val wearVocabulary =
       foundationFor(served(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID))
         .components
         .map { it.componentId }
 
     fun vocabularyOf(catalog: CatalogCapabilityV1) =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds =
             linkedSetOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID),
           published = mapOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID to catalog),
@@ -210,14 +211,7 @@ class ComposeFoundationFaithfulnessTest {
       vocabularyOf(stub(platform = "wear")).toSortedSet(),
       "a published catalog's Wear declaration did not select the Wear foundation",
     )
-    assertEquals(
-      foundationFor(served(DEFAULT_CATALOG_SYSTEM_ID))
-        .components
-        .map { it.componentId }
-        .toSortedSet(),
-      vocabularyOf(stub()).toSortedSet(),
-      "an undeclared platform no longer uses the mobile foundation",
-    )
+    assertFailsWith<IllegalArgumentException> { vocabularyOf(stub()) }
   }
 
   /**
