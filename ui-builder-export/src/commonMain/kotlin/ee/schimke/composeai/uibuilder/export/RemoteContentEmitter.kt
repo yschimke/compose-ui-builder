@@ -1881,6 +1881,16 @@ internal class RemoteContentEmitter(
       UiValueKind.INT -> null
     }
 
+  /** The player's time-from-now attribute of a countdown's instant, in [unit]. */
+  private fun countdown(expr: UiExpressions.Expr.Call, unit: String): String {
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteLong"
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.deltaFromReferenceIn$unit"
+    return "deltaFromReferenceIn$unit(RemoteLong(${UiExpressions.instantMillis(expr)}L))"
+  }
+
+  /** A Kotlin `Float` literal: `1f`, `0.5f`. */
+  private fun Float.kotlinFloat(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
+
   private fun lowerCall(expr: UiExpressions.Expr.Call, where: String): String? {
     val args = expr.args.map { lower(it, where) ?: return null }
     val kinds = expr.args.map { it.kind }
@@ -1964,6 +1974,22 @@ internal class RemoteContentEmitter(
         "$folded.isLessThan(${f(1)}).select($folded, ($period - $folded))"
       }
       UiExpressions.Op.POW -> math("pow", f(0), f(1))
+      // The control points are literal (checked), written as the float array the player splines.
+      UiExpressions.Op.SPLINE,
+      UiExpressions.Op.SPLINE_LOOP -> {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteFloatArray"
+        val points =
+          expr.args.drop(1).joinToString {
+            (it as UiExpressions.Expr.Literal).value.content.toFloat().kotlinFloat()
+          }
+        val loop = expr.op == UiExpressions.Op.SPLINE_LOOP
+        math("evalSpline", "RemoteFloatArray($points)", "$loop", f(0))
+      }
+      UiExpressions.Op.CBRT -> math("cbrt", f(0))
+      UiExpressions.Op.COPY_SIGN -> math("copySign", f(0), f(1))
+      UiExpressions.Op.SECONDS_UNTIL -> countdown(expr, "Seconds")
+      UiExpressions.Op.MINUTES_UNTIL -> countdown(expr, "Minutes")
+      UiExpressions.Op.HOURS_UNTIL -> countdown(expr, "Hours")
       UiExpressions.Op.LERP ->
         if (expr.kind == UiValueKind.COLOR) {
           usedComponentImports += "$REMOTE_STATE_PACKAGE.tween"
