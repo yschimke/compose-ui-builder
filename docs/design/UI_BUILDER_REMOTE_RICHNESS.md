@@ -309,6 +309,7 @@ canvas stand-in and the Remote emitter.
 | `draw/text-path` | `text`, `pathData` in dp, `startDp` `offsetDp`, `textSizeSp` + colour | `drawTextOnPath`, inside a one-dp scale so the path is in dp and the glyphs keep their size |
 | `draw/morph` | `pathData`, `toPathData`, `progress` (0–1), viewport + paint | `drawTweenPath(from, to, tween = progress, paint)`, scaled to the canvas |
 | `draw/if` | `condition` (a flag, usually state or a formula); its own `ops` | `drawConditionally(condition) { … }` |
+| `draw/group` `scaleX` `scaleY` | across and down apart, each in place of `scale` on its axis | `scale(sx, sy, pivot)` inside the group's `withTransform` |
 | `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
 
 Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `strokeWidthDp`,
@@ -317,8 +318,12 @@ Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `
 `clear`; written as `RemotePaint.strokeJoin` / `blendMode`), and optionally a `gradient`
 (`horizontal`, `vertical`, `radial`, `sweep`) from `color` to `gradientColor` (transparent when
 absent), or through every colour `gradientColors` lists (hex or theme roles, comma-separated,
-evenly spaced). A gradient is laid across the whole
-canvas, not the shape: the Remote writer applies `RemoteBrush.<kind>Gradient(…)` to the paint over
+evenly spaced, or placed by `gradientStops`, one 0–1 position per colour). A gradient is laid
+across the whole canvas, not the shape, unless placed: `gradientStartDp`/`gradientEndDp` move a
+horizontal or vertical one's ends, `gradientCenterXDp`/`gradientCenterYDp` a radial or sweep one's
+centre, `gradientRadiusDp` a radial one's radius (in a path's viewport units on a path or morph),
+and `gradientTileMode` (`clamp`, `repeated`, `mirror`, `decal`; not on a sweep, which has none)
+says what it paints past its ends — the `RemoteBrush` arguments of the same names. Otherwise: the Remote writer applies `RemoteBrush.<kind>Gradient(…)` to the paint over
 the canvas's size, as `RemoteModifier.background(brush)` applies one over its component, so a sweep
 gradient on a ring turns round the canvas centre. `alpha` fades both ends. Rules every lane shares: geometry is dp from the canvas's top-left; an
 absent box is the whole canvas; a stroked shape whose box is defaulted is inset by half its stroke

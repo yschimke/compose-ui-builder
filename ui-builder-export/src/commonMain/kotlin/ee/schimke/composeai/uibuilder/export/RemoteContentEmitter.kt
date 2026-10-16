@@ -2672,11 +2672,20 @@ internal class RemoteContentEmitter(
                 "${node.drawPx("translateYDp") ?: "0.rf"})"
             else null,
             node.drawFloat("rotate")?.let { "rotate($it, $pivot)" },
-            node.drawFloat("scale")?.let { "scale($it, $it, $pivot)" },
+            scale(node)?.let { (x, y) -> "scale($x, $y, $pivot)" },
           )
         block("withTransform({ ${transforms.joinToString("; ")} })")
       }
     }
+  }
+
+  /** A group's scale across and down: `scaleX`/`scaleY`, each falling back to `scale`, then 1. */
+  private fun scale(node: UiBuilderNode): Pair<String, String>? {
+    val both = node.drawFloat("scale")
+    val x = node.drawFloat("scaleX") ?: both
+    val y = node.drawFloat("scaleY") ?: both
+    if (x == null && y == null) return null
+    return (x ?: 1f.floatLiteral()) to (y ?: 1f.floatLiteral())
   }
 
   /**
@@ -2766,14 +2775,94 @@ internal class RemoteContentEmitter(
       UiDrawing.gradientColors(node)?.map { gradientStop(node, it, hoisted) ?: return null }
         ?: listOf(from, drawColor(node, hoisted, "gradientColor", transparentWhenAbsent = true))
     // A path is drawn under a viewport-to-canvas scale, which scales the shader too, so its
-    // gradient spans the viewport rather than the canvas.
-    val size =
-      if (node.componentId == "draw/path" || node.componentId == UiDrawing.MORPH)
-        "${node.drawFloat("viewportWidth") ?: 24f.floatLiteral()}, " +
-          (node.drawFloat("viewportHeight") ?: 24f.floatLiteral())
-      else "${extent.width}, ${extent.height}"
-    return "with(RemoteBrush.$factory(listOf(${colours.joinToString()}))) { " +
-      "applyTo(this@RemotePaint, RemoteSize($size)) }"
+    // gradient spans the viewport rather than the canvas, and its geometry is in viewport units.
+    val inViewport = node.componentId == "draw/path" || node.componentId == UiDrawing.MORPH
+    val width =
+      if (inViewport) node.drawFloat("viewportWidth") ?: 24f.floatLiteral() else extent.width
+    val height =
+      if (inViewport) node.drawFloat("viewportHeight") ?: 24f.floatLiteral() else extent.height
+    fun length(name: String): String? = if (inViewport) node.drawFloat(name) else node.drawPx(name)
+    val geometry = gradientGeometry(node, kind, ::length, width, height) ?: return null
+    val stops = UiDrawing.gradientStops(node)
+    val brush =
+      if (stops == null) {
+        (listOf("listOf(${colours.joinToString()})") + geometry).joinToString()
+      } else {
+        if (
+          UiDrawing.gradientColors(node)?.size != stops.size ||
+            stops.any { it == null || it !in 0f..1f }
+        ) {
+          refusals +=
+            "nodes.${node.id}.gradientStops: one number from 0 to 1 per gradientColors entry, " +
+              "separated by commas"
+          return null
+        }
+        // The stops overload of a horizontal or vertical gradient has no defaults for its ends.
+        val ends =
+          when (kind) {
+              "horizontal" -> listOf("startX", "endX")
+              "vertical" -> listOf("startY", "endY")
+              else -> emptyList()
+            }
+            .filter { end -> geometry.none { it.startsWith("$end =") } }
+            .map { "$it = null" }
+        (stops.zip(colours) { stop, colour -> "${stop!!.floatLiteral()} to $colour" } +
+            geometry +
+            ends)
+          .joinToString()
+      }
+    return "with(RemoteBrush.$factory($brush)) { " +
+      "applyTo(this@RemotePaint, RemoteSize($width, $height)) }"
+  }
+
+  /**
+   * A gradient's ends, centre, radius and tile mode as `RemoteBrush` arguments, in pixels from the
+   * canvas's top-left; null, refused, when the tile mode is not one or the gradient cannot take it.
+   */
+  private fun gradientGeometry(
+    node: UiBuilderNode,
+    kind: String,
+    length: (String) -> String?,
+    width: String,
+    height: String,
+  ): List<String>? {
+    val arguments = mutableListOf<String>()
+    when (kind) {
+      "horizontal",
+      "vertical" -> {
+        val axis = if (kind == "horizontal") "X" else "Y"
+        length("gradientStartDp")?.let { arguments += "start$axis = $it" }
+        length("gradientEndDp")?.let { arguments += "end$axis = $it" }
+      }
+      else -> {
+        val x = length("gradientCenterXDp")
+        val y = length("gradientCenterYDp")
+        if (x != null || y != null) {
+          usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteOffset"
+          arguments +=
+            "center = RemoteOffset(${x ?: "($width / 2.rf)"}, ${y ?: "($height / 2.rf)"})"
+        }
+        if (kind == "radial") {
+          // A shader's radius must be above 0; a computed one is the player's to keep there.
+          val literal = node.properties["gradientRadiusDp"]?.numberOrNull()
+          if (literal != null && literal <= 0f) {
+            refusals += "nodes.${node.id}.gradientRadiusDp: a radial gradient's radius is above 0"
+            return null
+          }
+          length("gradientRadiusDp")?.let { arguments += "radius = $it" }
+        }
+      }
+    }
+    val tileMode = node.properties["gradientTileMode"]?.stringOrNull() ?: return arguments
+    if (tileMode !in UiDrawing.GRADIENT_TILE_MODES || kind == "sweep") {
+      refusals +=
+        "nodes.${node.id}.gradientTileMode: `$tileMode` is not one of " +
+          "${UiDrawing.GRADIENT_TILE_MODES} on a horizontal, vertical or radial gradient"
+      return null
+    }
+    usedComponentImports += "androidx.compose.ui.graphics.TileMode"
+    arguments += "tileMode = TileMode.${tileMode.replaceFirstChar(Char::uppercaseChar)}"
+    return arguments
   }
 
   /**
