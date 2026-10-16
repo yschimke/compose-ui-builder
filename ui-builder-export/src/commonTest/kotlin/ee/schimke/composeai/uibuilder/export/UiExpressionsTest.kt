@@ -2,8 +2,8 @@ package ee.schimke.composeai.uibuilder.export
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -433,6 +433,11 @@ class UiExpressionsTest {
     assertTrue(UiExpressions.isDynamic(typed("secondsUntil(\"2030-01-01T00:00:00Z\")")))
     assertNotNull(issue("secondsUntil(\"tomorrow\")"))
     assertNotNull(issue("secondsUntil(\"2030-13-01T00:00:00Z\")"))
+    // A day the month does not have is no instant, rather than one rolled into the next month.
+    assertNotNull(issue("secondsUntil(\"2026-02-31T00:00:00Z\")"))
+    assertNotNull(issue("secondsUntil(\"2026-02-29T00:00:00Z\")"))
+    assertEquals(0.0, evaluate("secondsUntil(\"2024-05-16T10:10:30Z\")"))
+    assertTrue(UiExpressions.Clock.instantMillis("2028-02-29T00:00:00Z") != null)
   }
 
   @Test

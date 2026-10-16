@@ -937,7 +937,7 @@ object UiExpressions {
         // A well-shaped but invalid instant (month 13) is none, so it draws at the default.
         if (
           month.toInt() !in 1..12 ||
-            day.toInt() !in 1..31 ||
+            day.toInt() !in 1..daysIn(year.toInt(), month.toInt()) ||
             hour.toInt() !in 0..23 ||
             minute.toInt() !in 0..59 ||
             second.toInt() !in 0..60
@@ -1010,6 +1010,17 @@ object UiExpressions {
 
       private val ISO_INSTANT =
         Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]00:?00)?""")
+
+      /** How many days [month] of [year] has, February counting leap years. */
+      private fun daysIn(year: Int, month: Int): Int =
+        when (month) {
+          2 -> if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) 29 else 28
+          4,
+          6,
+          9,
+          11 -> 30
+          else -> 31
+        }
 
       /** Monday = 1 … Sunday = 7, by Sakamoto's method. */
       private fun isoDayOfWeek(year: Int, month: Int, day: Int): Int {

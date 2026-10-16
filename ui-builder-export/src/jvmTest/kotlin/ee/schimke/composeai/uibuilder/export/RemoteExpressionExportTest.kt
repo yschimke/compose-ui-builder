@@ -403,8 +403,11 @@ class RemoteExpressionExportTest {
 
     assertTrue(refusals.isEmpty(), refusals.toString())
     val time = "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)"
-    assertContains(source, "evalSpline(RemoteFloatArray(0f, 1.5f, 0f), false, $time)")
-    assertContains(source, "evalSpline(RemoteFloatArray(0f, 1f), true, $time)")
+    assertContains(
+      source,
+      "evalSpline(RemoteFloatArray(listOf(0.rf, 1.5f.rf, 0.rf)), false, $time)",
+    )
+    assertContains(source, "evalSpline(RemoteFloatArray(listOf(0.rf, 1.rf)), true, $time)")
     assertContains(source, "cbrt(count.toRemoteFloat())")
     assertContains(source, "copySign(2.rf, $time)")
     assertContains(source, "deltaFromReferenceInSeconds(RemoteLong(1798156800000L))")

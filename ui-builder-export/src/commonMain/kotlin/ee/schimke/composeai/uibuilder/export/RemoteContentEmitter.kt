@@ -1888,9 +1888,6 @@ internal class RemoteContentEmitter(
     return "deltaFromReferenceIn$unit(RemoteLong(${UiExpressions.instantMillis(expr)}L))"
   }
 
-  /** A Kotlin `Float` literal: `1f`, `0.5f`. */
-  private fun Float.kotlinFloat(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
-
   private fun lowerCall(expr: UiExpressions.Expr.Call, where: String): String? {
     val args = expr.args.map { lower(it, where) ?: return null }
     val kinds = expr.args.map { it.kind }
@@ -1978,12 +1975,13 @@ internal class RemoteContentEmitter(
       UiExpressions.Op.SPLINE,
       UiExpressions.Op.SPLINE_LOOP -> {
         usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteFloatArray"
+        // The list constructor, which every revision of RemoteFloatArray has.
         val points =
           expr.args.drop(1).joinToString {
-            (it as UiExpressions.Expr.Literal).value.content.toFloat().kotlinFloat()
+            (it as UiExpressions.Expr.Literal).value.content.toFloat().floatLiteral()
           }
         val loop = expr.op == UiExpressions.Op.SPLINE_LOOP
-        math("evalSpline", "RemoteFloatArray($points)", "$loop", f(0))
+        math("evalSpline", "RemoteFloatArray(listOf($points))", "$loop", f(0))
       }
       UiExpressions.Op.CBRT -> math("cbrt", f(0))
       UiExpressions.Op.COPY_SIGN -> math("copySign", f(0), f(1))
