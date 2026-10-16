@@ -192,6 +192,9 @@ from its operands and refuses what does not type, with the path of the operand i
 | `hsv(hue, saturation, value[, alpha])` `rgb(red, green, blue[, alpha])` | Colour from components 0–1, hue as a fraction of a turn — `RemoteColor.hsv` / `rgb` |
 | `rand()` `randRange(from, to)` | Float drawn by the player; a preview shows the middle (0.5, the midpoint) |
 | `pingPong(x, max)` | Float: `x` folded between 0 and `max`, as the player's PINGPONG (from `abs(x)`, so negative `x` stays in range too); written out over public operators |
+| `spline(t, v0, v1, …)` `splineLoop(t, v0, v1, …)` | Float: the player's monotonic spline through 2–64 literal control points spaced evenly from `t` = 0 to 1, a straight line past the ends; `splineLoop` first wraps `t` into 0 up to 1 (repeat the first point last for a seamless loop). Exports as `evalSpline(RemoteFloatArray(…), loop, t)`; the preview runs remote-core's `MonotonicSpline` in Float |
+| `cbrt(x)` `copySign(magnitude, sign)` | Float |
+| `secondsUntil(instant)` `minutesUntil(instant)` `hoursUntil(instant)` | Float: from now until a literal ISO-8601 UTC instant (`"2026-12-25T00:00:00Z"`), negative once it has passed — the player's time-from-now, `deltaFromReferenceInSeconds(RemoteLong(…))`; a preview counts from its clock |
 | `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /

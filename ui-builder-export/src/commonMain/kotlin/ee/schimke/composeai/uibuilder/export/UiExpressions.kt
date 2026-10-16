@@ -6,10 +6,12 @@ import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan
 import kotlin.math.atan2
+import kotlin.math.cbrt
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
+import kotlin.math.hypot
 import kotlin.math.ln
 import kotlin.math.log10
 import kotlin.math.pow
@@ -19,6 +21,7 @@ import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tan
+import kotlin.math.withSign
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -327,6 +330,24 @@ object UiExpressions {
      * escaping below 0 as the player's bare remainder would.
      */
     PING_PONG("pingPong", 2..2),
+    /**
+     * `spline(t, v0, v1, …)`: the player's monotonic spline through literal control points, evenly
+     * spaced from t = 0 to 1, extrapolated outside them.
+     */
+    SPLINE("spline", 3..65),
+    /** As [SPLINE], with t wrapped into 0 up to 1 first, as the player's looping spline does. */
+    SPLINE_LOOP("splineLoop", 3..65),
+    CBRT("cbrt", 1..1),
+    /** `copySign(magnitude, sign)`: the first's size with the second's sign. */
+    COPY_SIGN("copySign", 2..2),
+    /**
+     * Seconds, minutes or hours from now until a literal ISO-8601 UTC instant
+     * (`secondsUntil("2026-12-25T00:00:00Z")`), negative once it has passed: a countdown, as the
+     * player's time-from-now attribute counts.
+     */
+    SECONDS_UNTIL("secondsUntil", 1..1),
+    MINUTES_UNTIL("minutesUntil", 1..1),
+    HOURS_UNTIL("hoursUntil", 1..1),
     LERP("lerp", 3..3),
     TO_INT("toInt", 1..1),
     TO_FLOAT("toFloat", 1..1),
@@ -572,7 +593,8 @@ object UiExpressions {
         if (args.size !in op.arity)
           throw ExpressionIssue("$where: `${op.wire}` takes ${op.arity.describe()}")
         Expr.Call(op, args, resultKind(op, args.map { it.kind }, where)).also {
-          (animationSpecIssue(it) ?: formatSpecIssue(it))?.let { issue ->
+          (animationSpecIssue(it) ?: formatSpecIssue(it) ?: literalArgumentIssue(it))?.let { issue
+            ->
             throw ExpressionIssue("$where: $issue")
           }
         }
@@ -640,6 +662,29 @@ object UiExpressions {
    * counts when the document is written, so they are whole literals: up to six decimals, a whole
    * part padded to between one and nine digits.
    */
+  /** A spline's control points and a countdown's instant are written into the document as is. */
+  private fun literalArgumentIssue(call: Expr.Call): String? =
+    when (call.op) {
+      Op.SPLINE,
+      Op.SPLINE_LOOP ->
+        if (call.args.drop(1).all { (it as? Expr.Literal)?.value?.doubleOrNull != null }) null
+        else "`${call.op.wire}` takes literal numbers for its control points"
+      Op.SECONDS_UNTIL,
+      Op.MINUTES_UNTIL,
+      Op.HOURS_UNTIL ->
+        if (instantMillis(call) != null) null
+        else "`${call.op.wire}` takes a literal ISO-8601 UTC instant, like \"2026-12-25T00:00:00Z\""
+      else -> null
+    }
+
+  /** A countdown's instant, in milliseconds since the epoch; null when it is not one. */
+  fun instantMillis(call: Expr.Call): Long? =
+    (call.args.firstOrNull() as? Expr.Literal)
+      ?.takeIf { it.kind == UiValueKind.STRING }
+      ?.value
+      ?.content
+      ?.let(Clock::instantMillis)
+
   private fun formatSpecIssue(call: Expr.Call): String? {
     if (call.op != Op.FORMAT) return null
     val spec = call.args.drop(1)
@@ -744,8 +789,18 @@ object UiExpressions {
       Op.CONCAT -> if (kinds.none { it == UiValueKind.COLOR }) UiValueKind.STRING else fail()
       Op.TO_STRING -> if (kinds[0] != UiValueKind.COLOR) UiValueKind.STRING else fail()
       Op.FORMAT -> if (kinds.indices.all { numeric(it) }) UiValueKind.STRING else fail()
+      Op.SPLINE,
+      Op.SPLINE_LOOP -> if (kinds.indices.all { numeric(it) }) UiValueKind.FLOAT else fail()
+      Op.CBRT -> if (numeric(0)) UiValueKind.FLOAT else fail()
+      Op.COPY_SIGN -> if (numeric(0, 1)) UiValueKind.FLOAT else fail()
+      Op.SECONDS_UNTIL,
+      Op.MINUTES_UNTIL,
+      Op.HOURS_UNTIL -> if (kinds[0] == UiValueKind.STRING) UiValueKind.FLOAT else fail()
     }
   }
+
+  private val SELF_DYNAMIC: Set<Op> =
+    setOf(Op.RAND, Op.RAND_RANGE, Op.SECONDS_UNTIL, Op.MINUTES_UNTIL, Op.HOURS_UNTIL)
 
   /** Whether [expr] reads anything that changes while the document plays. */
   fun isDynamic(expr: Expr): Boolean =
@@ -755,7 +810,8 @@ object UiExpressions {
       is Expr.State,
       is Expr.System -> true
       // A random number is drawn by the player, so it changes even with no operand that does.
-      is Expr.Call -> expr.op == Op.RAND || expr.op == Op.RAND_RANGE || expr.args.any(::isDynamic)
+      // A countdown runs with the clock though its instant is fixed.
+      is Expr.Call -> expr.op in SELF_DYNAMIC || expr.args.any(::isDynamic)
     }
 
   // ---- Preview evaluation ----------------------------------------------------------------------
@@ -872,19 +928,21 @@ object UiExpressions {
       /**
        * `environment.fixedTime`, an ISO-8601 UTC instant, or [DEFAULT] when absent or unreadable.
        */
-      fun of(fixedTime: String?): Clock {
-        val match = fixedTime?.let(ISO_INSTANT::matchEntire) ?: return DEFAULT
+      fun of(fixedTime: String?): Clock = fixedTime?.let(::parse) ?: DEFAULT
+
+      private fun parse(instant: String): Clock? {
+        val match = ISO_INSTANT.matchEntire(instant) ?: return null
         val (year, month, day, hour, minute, second) = match.destructured
         val fraction = match.groupValues[7]
-        // A well-shaped but invalid instant (month 13) draws at the default rather than crashing.
+        // A well-shaped but invalid instant (month 13) is none, so it draws at the default.
         if (
           month.toInt() !in 1..12 ||
-            day.toInt() !in 1..31 ||
+            day.toInt() !in 1..daysIn(year.toInt(), month.toInt()) ||
             hour.toInt() !in 0..23 ||
             minute.toInt() !in 0..59 ||
             second.toInt() !in 0..60
         )
-          return DEFAULT
+          return null
         return Clock(
           hour = hour.toInt(),
           minute = minute.toInt(),
@@ -896,6 +954,9 @@ object UiExpressions {
           month = month.toInt(),
         )
       }
+
+      /** An ISO-8601 UTC instant in milliseconds since the epoch; null when it is not one. */
+      fun instantMillis(instant: String): Long? = parse(instant)?.epochMillis
 
       /**
        * The local time at [epochMillis] in a zone [utcOffsetSeconds] ahead of UTC: what a live
@@ -949,6 +1010,17 @@ object UiExpressions {
 
       private val ISO_INSTANT =
         Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]00:?00)?""")
+
+      /** How many days [month] of [year] has, February counting leap years. */
+      private fun daysIn(year: Int, month: Int): Int =
+        when (month) {
+          2 -> if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) 29 else 28
+          4,
+          6,
+          9,
+          11 -> 30
+          else -> 31
+        }
 
       /** Monday = 1 … Sunday = 7, by Sakamoto's method. */
       private fun isoDayOfWeek(year: Int, month: Int, day: Int): Int {
@@ -1038,8 +1110,18 @@ object UiExpressions {
           expr.value.id.startsWith("touch.") || expr.value.id.startsWith("sensor.") -> 0.0
           else -> environment.clock.read(expr.value.id)
         }
-      is Expr.Call -> call(expr, expr.args.map { evaluate(it, environment) })
+      is Expr.Call ->
+        when (expr.op) {
+          Op.SECONDS_UNTIL -> until(expr, environment) / 1000.0
+          Op.MINUTES_UNTIL -> until(expr, environment) / 60_000.0
+          Op.HOURS_UNTIL -> until(expr, environment) / 3_600_000.0
+          else -> call(expr, expr.args.map { evaluate(it, environment) })
+        }
     }
+
+  /** Milliseconds from the preview's clock to a countdown's instant. */
+  private fun until(call: Expr.Call, environment: Environment): Double =
+    ((instantMillis(call) ?: 0L) - environment.clock.epochMillis).toDouble()
 
   private fun coerce(raw: String?, kind: UiValueKind): Any =
     when (kind) {
@@ -1050,6 +1132,57 @@ object UiExpressions {
       UiValueKind.COLOR -> raw?.let(::literalColor) ?: "#00000000"
     }
 
+  /**
+   * remote-core's `MonotonicSpline.getPos` over [points] spaced evenly from 0 to 1, in Float as the
+   * player runs it: Hermite segments whose tangents are limited to keep each one monotonic, and a
+   * straight line past either end along the slope the player reads there.
+   */
+  internal fun monotonicSpline(t: Float, points: FloatArray): Float {
+    val n = points.size
+    val time = FloatArray(n) { it / (n - 1).toFloat() }
+    val slope = FloatArray(n - 1) { (points[it + 1] - points[it]) / (time[it + 1] - time[it]) }
+    val tangent = FloatArray(n)
+    for (i in 0 until n - 1) tangent[i] = if (i == 0) slope[0] else (slope[i - 1] + slope[i]) * 0.5f
+    tangent[n - 1] = slope[n - 2]
+    for (i in 0 until n - 1) {
+      if (slope[i] == 0f) {
+        tangent[i] = 0f
+        tangent[i + 1] = 0f
+      } else {
+        val a = tangent[i] / slope[i]
+        val b = tangent[i + 1] / slope[i]
+        val h = hypot(a.toDouble(), b.toDouble()).toFloat()
+        if (h > 9f) {
+          val k = 3f / h
+          tangent[i] = k * a * slope[i]
+          tangent[i + 1] = k * b * slope[i]
+        }
+      }
+    }
+    // `getSlope` clamps t to the ends and then only ever looks at the first segment: at 0 that is
+    // its tangent there; at 1 it is the last tangent with two points, and 0 with more.
+    if (t <= time[0]) return points[0] + (t - time[0]) * tangent[0]
+    if (t >= time[n - 1])
+      return points[n - 1] + (t - time[n - 1]) * (if (n == 2) tangent[1] else 0f)
+    for (i in 0 until n - 1) {
+      if (t < time[i + 1]) {
+        val h = time[i + 1] - time[i]
+        val x = (t - time[i]) / h
+        val x2 = x * x
+        val x3 = x2 * x
+        val y1 = points[i]
+        val y2 = points[i + 1]
+        val t1 = tangent[i]
+        val t2 = tangent[i + 1]
+        return -2 * x3 * y2 + 3 * x2 * y2 + 2 * x3 * y1 - 3 * x2 * y1 +
+          y1 +
+          h * t2 * x3 +
+          h * t1 * x3 - h * t2 * x2 - 2 * h * t1 * x2 + h * t1 * x
+      }
+    }
+    return 0f
+  }
+
   private fun call(expr: Expr.Call, values: List<Any>): Any {
     // The player computes in Float, so every operand and result is rounded to a Float as it is
     // here: `16777216.0 + 1.0 == 16777216.0` is true on the watch and must be true in the preview.
@@ -1057,6 +1190,7 @@ object UiExpressions {
     fun b(i: Int) = values[i] as Boolean
     val integral = expr.kind == UiValueKind.INT
     fun num(value: Double): Any = if (integral) value.toInt() else value.toFloat().toDouble()
+    fun splinePoints(): FloatArray = FloatArray(values.size - 1) { d(it + 1).toFloat() }
     return when (expr.op) {
       Op.ADD -> num(d(0) + d(1))
       Op.SUB -> num(d(0) - d(1))
@@ -1118,6 +1252,19 @@ object UiExpressions {
         val folded = abs(d(0)).toFloat() % period
         num((if (folded < d(1).toFloat()) folded else period - folded).toDouble())
       }
+      Op.SPLINE -> num(monotonicSpline(d(0).toFloat(), splinePoints()).toDouble())
+      // As the player loops it: t minus its whole part, brought up into 0 up to 1.
+      Op.SPLINE_LOOP -> {
+        val t = d(0).toFloat()
+        val r = (t - t.toInt()).let { if (it < 0f) it + 1f else it }
+        num(monotonicSpline(r, splinePoints()).toDouble())
+      }
+      Op.CBRT -> num(cbrt(d(0)))
+      Op.COPY_SIGN -> num(d(0).withSign(d(1)))
+      // Counted from the environment's clock by `evaluate` before it gets here.
+      Op.SECONDS_UNTIL,
+      Op.MINUTES_UNTIL,
+      Op.HOURS_UNTIL -> error("${expr.op.wire} is evaluated against the clock")
       Op.LERP ->
         if (expr.kind == UiValueKind.COLOR)
           mixColors(values[0] as String, values[1] as String, d(2))
