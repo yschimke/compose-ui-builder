@@ -152,7 +152,8 @@ private fun drawProperty(property: UiDrawing.Property): PropertyCapabilityV1 {
     when (property) {
       // A number may also be a state read or, once the wire carries one, a computed value.
       is UiDrawing.Property.Number ->
-        JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object")))
+        if (property.literal) JsonPrimitive("number")
+        else JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object")))
       is UiDrawing.Property.Flag -> JsonPrimitive("boolean")
       is UiDrawing.Property.Color,
       is UiDrawing.Property.Choice,

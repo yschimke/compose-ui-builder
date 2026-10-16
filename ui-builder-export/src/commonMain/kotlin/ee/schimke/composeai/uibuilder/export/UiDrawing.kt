@@ -20,6 +20,7 @@ object UiDrawing {
   const val IF: String = "draw/if"
   const val REPEAT: String = "draw/repeat"
   const val MORPH: String = "draw/morph"
+  const val POLYLINE: String = "draw/polyline"
   const val TEXT_CIRCLE: String = "draw/text-circle"
   const val TEXT_PATH: String = "draw/text-path"
   const val OPS_SLOT: String = "ops"
@@ -42,7 +43,13 @@ object UiDrawing {
     val name: String
     val notes: String
 
-    class Number(override val name: String, val unit: Unit, override val notes: String) : Property
+    /** @param literal whether it takes only a number, never state or a formula. */
+    class Number(
+      override val name: String,
+      val unit: Unit,
+      override val notes: String,
+      val literal: Boolean = false,
+    ) : Property
 
     class Color(override val name: String, override val notes: String) : Property
 
@@ -307,6 +314,35 @@ object UiDrawing {
         ) + paint,
       ),
       Operation(
+        POLYLINE,
+        "Polyline",
+        "drawPath",
+        listOf(
+          Property.Number(
+            "count",
+            Unit.COUNT,
+            "How many points, from 2 to $MAX_POINTS; a literal. Required.",
+            literal = true,
+          ),
+          Property.Text(
+            "index",
+            "The name `pointXDp` and `pointYDp` read the point's index by, from 0, as `@i` in a " +
+              "formula. `i` when absent.",
+          ),
+          Property.Number(
+            "pointXDp",
+            Unit.DP,
+            "Each point across: a formula reading the index, state or time. Required.",
+          ),
+          Property.Number(
+            "pointYDp",
+            Unit.DP,
+            "Each point down: a formula reading the index, state or time. Required.",
+          ),
+          Property.Flag("closed", "Join the last point back to the first."),
+        ) + paint,
+      ),
+      Operation(
         MORPH,
         "Path morph",
         "drawTweenPath",
@@ -471,12 +507,18 @@ object UiDrawing {
       ),
     )
 
+  /**
+   * Most points a [POLYLINE] has. Each is written into the document as its own path segment, so the
+   * count is a literal and bounded.
+   */
+  const val MAX_POINTS: Int = 256
+
   /** Most iterations a canvas draws for one [REPEAT]; the player has no cap, the preview does. */
   const val MAX_ITERATIONS: Int = 1_000
 
   /**
-   * The index name a [REPEAT] node binds: `i` when absent, null when not a literal string (the
-   * export needs a name for the lambda).
+   * The index name a [REPEAT] or [POLYLINE] node binds: `i` when absent, null when not a literal
+   * string (the export needs a name for the lambda).
    */
   fun indexName(node: UiBuilderNode): String? {
     val authored = node.properties["index"] ?: return "i"
@@ -518,9 +560,14 @@ object UiDrawing {
     return indices.toList()
   }
 
-  /** The kind of each loop index in scope at [nodeId], for an expression's binding operands. */
+  /**
+   * The kind of each loop index in scope at [nodeId], for an expression's binding operands: those
+   * of the [REPEAT]s around it, and a [POLYLINE]'s own.
+   */
   fun indexKinds(document: UiBuilderDocument, nodeId: String): (String) -> UiValueKind? {
-    val indices = loopIndices(document, nodeId).toSet()
+    // A polyline's own index, which its point formulas read.
+    val own = document.nodes[nodeId]?.takeIf { it.componentId == POLYLINE }?.let(::indexName)
+    val indices = loopIndices(document, nodeId).toSet() + listOfNotNull(own)
     return { key -> if (key in indices) UiValueKind.FLOAT else null }
   }
 
