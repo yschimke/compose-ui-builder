@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.118.0](https://github.com/yschimke/compose-ui-builder/compare/v3.117.0...v3.118.0) (2026-10-16)
+
+
+### Features
+
+* **drawing:** anchor drawn text by its top, middle or bottom ([#890](https://github.com/yschimke/compose-ui-builder/issues/890)) ([e08a98a](https://github.com/yschimke/compose-ui-builder/commit/e08a98a20766c64ac09fe9f5b33eaec3a9bb40ed))
+* **drawing:** let a canvas draw in a viewport scaled to its size ([#883](https://github.com/yschimke/compose-ui-builder/issues/883)) ([1754025](https://github.com/yschimke/compose-ui-builder/commit/175402543d36fce7e5799c821d4c23ddcb414c06))
+* **drawing:** stroke joins, blend modes and gradients through listed colours ([#895](https://github.com/yschimke/compose-ui-builder/issues/895)) ([be99e71](https://github.com/yschimke/compose-ui-builder/commit/be99e710ccc2c836cf71e4b4a7e135a8c761605d))
+* **expressions:** add inverse trig, logarithms and GLSL shaping functions ([#882](https://github.com/yschimke/compose-ui-builder/issues/882)) ([9f2a6af](https://github.com/yschimke/compose-ui-builder/commit/9f2a6af134ea708bbcc605898f1496f4d71f9432))
+* **expressions:** date, device and frame values; random, ping-pong, colour and text functions ([#894](https://github.com/yschimke/compose-ui-builder/issues/894)) ([5384e9f](https://github.com/yschimke/compose-ui-builder/commit/5384e9ff90b6b87c930e71159499770a2e009012))
+* **expressions:** format numbers with fixed decimals and zero padding ([#889](https://github.com/yschimke/compose-ui-builder/issues/889)) ([fee00ac](https://github.com/yschimke/compose-ui-builder/commit/fee00ac8bd0dadc2a3d16ad6e4208d8c87fc8853))
+
+
+### Bug Fixes
+
+* **catalog:** declare canvas viewport and text verticalAlign in the bundled remote-m3 catalog ([#893](https://github.com/yschimke/compose-ui-builder/issues/893)) ([ac5a5e3](https://github.com/yschimke/compose-ui-builder/commit/ac5a5e3d1f75c472352fdad02474479f97b4b88d))
+* **deps:** update compose-ai-tools to v2.64.2 ([#888](https://github.com/yschimke/compose-ui-builder/issues/888)) ([87ca667](https://github.com/yschimke/compose-ui-builder/commit/87ca6678802ea7e4764672b8b688086668005f97))
+* **deps:** update dependency ee.schimke.composeai:compose-ai-tools-bom to v2.64.3 ([#897](https://github.com/yschimke/compose-ui-builder/issues/897)) ([2eeb85c](https://github.com/yschimke/compose-ui-builder/commit/2eeb85caf2fc8b3fa39b2fd09314c164427e9ac0))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.1 ([#884](https://github.com/yschimke/compose-ui-builder/issues/884)) ([4b1e452](https://github.com/yschimke/compose-ui-builder/commit/4b1e452e1b557664f14d770e8633c2320c8af4ff))
+* **expressions:** preview format's rounding and sign as the player prints them ([#891](https://github.com/yschimke/compose-ui-builder/issues/891)) ([c7f6f4b](https://github.com/yschimke/compose-ui-builder/commit/c7f6f4b1b60fa063d3ef65537e930a702c114141))
+
 ## [3.117.0](https://github.com/yschimke/compose-ui-builder/compare/v3.116.0...v3.117.0) (2026-10-15)
 
 
