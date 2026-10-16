@@ -415,7 +415,11 @@ a group or clip, a flat `save` … `restore` is a group, and `loop` / `condition
 `draw/polyline` it draws: the player samples `a[0]` at `count` even steps from `start` to `end` and
 joins the points with lines, so each point's formula reads `a[0]` as `start` plus the point's index
 times the step, a `LOOP` path closing a step short of `end`. The player's smoothed paths have no
-builder equivalent.
+builder equivalent. A path built by commands — `pathCreate`, `pathAppendLineTo`s, `pathAppendClose`
+— is drawn as it stands at each `drawPath`: as SVG path data when every point is a number, else as a
+polyline whose point formulas pick each point's coordinates by its index, so live points stay live.
+It must be built in one loop or condition body and drawn inside it; a path appended to from a loop
+it was not created in is reported, since each pass of the player's loop adds points to it.
 
 `RemoteJsonFormulas` translates the codec's formulas. The codec writes each function as the
 remote-core operator of that name with its arguments pushed in order, so each is translated by what
@@ -425,7 +429,7 @@ the operator does with them: `clamp(a, b, x)` is `min(max(a, x), b)`, `step(a, b
 `device.density`, and `componentWidth`/`componentHeight` to `canvas.width`/`height`. Variables are
 the document's and inline where they are read; a loop's index is the builder's `@index`.
 
-What has no builder equivalent — 3D, particles, runtime paths, touch expressions, shaders, arrays —
+What has no builder equivalent — 3D, particles, curved runtime paths, touch expressions, shaders, arrays —
 is skipped and reported by its path, so a document imports as far as it can.
 `RemoteJsonImporterTest` imports a corpus checkout given `-PremoteJsonCorpus=<dir>` and writes
 `ui-builder-export/build/remote-json-import/report.md`, every gap with the documents it stops.

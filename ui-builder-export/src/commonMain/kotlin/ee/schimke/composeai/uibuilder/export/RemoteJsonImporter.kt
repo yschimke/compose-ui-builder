@@ -69,8 +69,29 @@ object RemoteJsonImporter {
     val textSize: JsonObject? = null,
   )
 
-  /** The loop indices in scope. */
-  private data class Scope(val indices: Set<String> = emptySet())
+  /**
+   * The loop indices in scope, and the loop or condition body being read: a path is built where the
+   * player builds it only while every command appending to it is in the body that created it.
+   */
+  private data class Scope(
+    val indices: Set<String> = emptySet(),
+    val bodies: List<Int> = listOf(0),
+  ) {
+    val body: Int
+      get() = bodies.last()
+
+    fun inBody(body: Int): Scope = copy(bodies = bodies + body)
+  }
+
+  /**
+   * A path built by commands — `pathCreate`, then `pathAppendLineTo`s and `pathAppendClose` — as
+   * its points so far, each a builder formula with its literal value when it has one.
+   */
+  private class LinePath(val body: Int) {
+    val points = mutableListOf<Pair<String, String>>()
+    val literals = mutableListOf<Pair<Double, Double>?>()
+    var closed = false
+  }
 
   private class Importer(val source: JsonObject) {
     val gaps = mutableListOf<String>()
@@ -78,6 +99,9 @@ object RemoteJsonImporter {
     val globals = linkedMapOf<String, String>()
     /** Every path expression defined so far, by its id, as the polyline geometry it draws. */
     val pathExpressions = mutableMapOf<String, Map<String, JsonElement>>()
+    /** Every path built by commands so far, by its id. */
+    val linePaths = mutableMapOf<String, LinePath>()
+    var bodyCount = 0
     val nodes = linkedMapOf<String, UiBuilderNode>()
     val ids = mutableMapOf<String, Int>()
     val header = source["header"] as? JsonObject
@@ -436,6 +460,9 @@ object RemoteJsonImporter {
             "conditionalOperations" -> ops += conditional(body as JsonObject, at, paint, scope)
             "pathExpression",
             "polarPathExpression" -> pathExpression(name, body as JsonObject, scope)
+            "pathCreate",
+            "pathAppendLineTo",
+            "pathAppendClose" -> linePath(name, body as JsonObject, scope)
             else ->
               ops +=
                 draw(name, body, paint, scope) ?: throw Gap("`$name` has no builder equivalent")
@@ -520,7 +547,7 @@ object RemoteJsonImporter {
     fun loop(body: JsonObject, path: String, paint: Paint, scope: Scope): String {
       val index = body.string("index") ?: "i"
       val id = nextId("repeat")
-      val inner = scope.copy(indices = scope.indices + index)
+      val inner = scope.copy(indices = scope.indices + index).inBody(++bodyCount)
       // The bounds first: a loop refused for them must not leave its commands behind as nodes
       // nothing reaches.
       val properties = buildMap {
@@ -564,7 +591,7 @@ object RemoteJsonImporter {
           nested((body["commands"] as? JsonArray).orEmpty()),
           "$path.commands",
           paint,
-          scope,
+          scope.inBody(++bodyCount),
         )
       return add(
         UiBuilderNode(
@@ -673,8 +700,14 @@ object RemoteJsonImporter {
             if (named != null && named in pathExpressions) {
               return add(painted(UiDrawing.POLYLINE, pathExpressions.getValue(named), paint))
             }
+            named?.let(linePaths::get)?.let {
+              if (it.body !in scope.bodies) {
+                throw Gap("path `$named` is drawn outside the loop or condition that built it")
+              }
+              return add(painted(it, paint, scope))
+            }
             if (named != null && named in failedPaths) {
-              throw Gap("path expression `$named` was not imported")
+              throw Gap("path `$named` was not imported")
             }
             val data =
               (body as? JsonPrimitive)?.contentOrNull
@@ -726,6 +759,118 @@ object RemoteJsonImporter {
       )
     }
 
+    /**
+     * A command building a path. Its points are translated where they are written, so a loop's
+     * index reads that iteration's; appending from another loop or condition body than the one that
+     * created the path would build it differently from the player, and is refused.
+     */
+    fun linePath(name: String, body: JsonObject, scope: Scope) {
+      val id =
+        (if (name == "pathCreate") body.string("id") else body.string("path"))
+          ?: throw Gap("`$name` names no path")
+      if (name == "pathCreate") {
+        failedPaths -= id
+        pathExpressions -= id
+        linePaths[id] = LinePath(scope.body)
+      }
+      val path =
+        linePaths[id]
+          ?: run {
+            if (id !in failedPaths) throw Gap("path `$id` is not created before here")
+            return
+          }
+      fun refuse(reason: String): Nothing {
+        linePaths -= id
+        failedPaths += id
+        throw Gap("path `$id` $reason")
+      }
+      if (path.body != scope.body)
+        refuse("is appended to from another loop or condition than created it")
+      if (path.closed) refuse("is appended to after it is closed")
+      if (name == "pathAppendClose") {
+        path.closed = true
+        return
+      }
+      if (path.points.size >= UiDrawing.MAX_POINTS)
+        refuse("has more than ${UiDrawing.MAX_POINTS} points")
+      val x =
+        try {
+          formula(body["x"], scope)
+        } catch (e: Gap) {
+          refuse(": ${e.message}")
+        }
+      val y =
+        try {
+          formula(body["y"], scope)
+        } catch (e: Gap) {
+          refuse(": ${e.message}")
+        }
+      path.points += x to y
+      val lx = (body["x"] as? JsonPrimitive)?.doubleOrNull
+      val ly = (body["y"] as? JsonPrimitive)?.doubleOrNull
+      path.literals += if (lx != null && ly != null) lx to ly else null
+    }
+
+    /**
+     * A path built by commands as an operation: its SVG path data when every point is a number,
+     * else a polyline whose point formulas pick each point's coordinates by its index, so they stay
+     * live.
+     */
+    fun painted(path: LinePath, paint: Paint, scope: Scope): UiBuilderNode {
+      if (path.points.size < 2) throw Gap("a path needs a line to draw")
+      val literals = path.literals.filterNotNull()
+      if (literals.size == path.points.size) {
+        val data = buildString {
+          literals.forEachIndexed { i, (x, y) ->
+            if (i > 0) append(' ')
+            append(if (i == 0) "M" else "L").append(number(x)).append(' ').append(number(y))
+          }
+          if (path.closed) append(" Z")
+        }
+        return painted(
+          "draw/path",
+          mapOf(
+            "pathData" to string(data),
+            "viewportWidth" to float(viewport.first),
+            "viewportHeight" to float(viewport.second),
+          ),
+          paint,
+        )
+      }
+      val index = freeIndex(scope)
+      fun pick(values: List<String>, from: Int): String =
+        if (values.size == 1) values.single()
+        else {
+          val half = values.size / 2
+          "select(@$index < ${from + half}, ${pick(values.subList(0, half), from)}, " +
+            "${pick(values.subList(half, values.size), from + half)})"
+        }
+      val x = pick(path.points.map { it.first }, 0)
+      val y = pick(path.points.map { it.second }, 0)
+      if (x.length + y.length > MAX_FORMULA) throw Gap("a path's points are too long to write out")
+      return painted(
+        UiDrawing.POLYLINE,
+        buildMap {
+          put("count", float(path.points.size.toDouble()))
+          put("index", string(index))
+          put("pointXDp", parsed(x))
+          put("pointYDp", parsed(y))
+          if (path.closed)
+            put(
+              "closed",
+              JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true))),
+            )
+        },
+        paint,
+      )
+    }
+
+    /** A polyline's index name, free of the loops around it and the document's variables. */
+    fun freeIndex(scope: Scope): String =
+      generateSequence(0) { it + 1 }
+        .map { if (it == 0) "point" else "point$it" }
+        .first { it !in scope.indices && it !in globals }
+
     /** Path expression ids whose definition was refused, so drawing them is not read as SVG. */
     val failedPaths = mutableSetOf<String>()
 
@@ -739,6 +884,7 @@ object RemoteJsonImporter {
      */
     fun pathExpression(name: String, body: JsonObject, scope: Scope) {
       val id = body.string("id") ?: throw Gap("a path expression needs an id")
+      linePaths -= id
       failedPaths += id
       val flags = body.number("flags")?.toInt() ?: 0
       if (flags and PATH_LINEAR == 0) {
@@ -756,10 +902,7 @@ object RemoteJsonImporter {
         val element = body[key] as? JsonPrimitive ?: throw Gap("path expression `$id` needs `$key`")
         return element.contentOrNull ?: throw Gap("path expression `$id` needs `$key`")
       }
-      val index =
-        generateSequence(0) { it + 1 }
-          .map { if (it == 0) "point" else "point$it" }
-          .first { it !in scope.indices && it !in globals }
+      val index = freeIndex(scope)
       val steps = number(if (loop) count else count - 1)
       val start = source("start")
       val end = source("end")

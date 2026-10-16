@@ -284,6 +284,60 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `a path built by commands is its path data, or a polyline when its points are live`() {
+    val result =
+      imported(
+        """{"header":{"width":300,"height":300},"root":[{"type":"canvas","commands":[
+          {"pathCreate":{"id":"tri","x":150.0,"y":40.0}},
+          {"pathAppendLineTo":{"path":"tri","x":260,"y":260.0}},
+          {"pathAppendLineTo":{"path":"tri","x":40.0,"y":260.0}},
+          {"pathAppendClose":{"path":"tri"}},
+          {"paint":{"ops":[{"color":"#FF2E6F52"}]}},
+          {"drawPath":{"path":"tri"}},
+          {"pathCreate":{"id":"live","x":0,"y":0}},
+          {"pathAppendLineTo":{"path":"live","x":"width - 40","y":10}},
+          {"pathAppendLineTo":{"path":"live","x":5,"y":"continuousSec()"}},
+          {"drawPath":{"path":"live"}},
+          {"loop":{"index":"i","from":0,"until":3,"commands":[
+            {"pathCreate":{"id":"fan","x":150,"y":150}},
+            {"pathAppendLineTo":{"path":"fan","x":"150 + i","y":0}},
+            {"drawPath":{"path":"fan"}}]}},
+          {"pathCreate":{"id":"wave","x":0,"y":0}},
+          {"loop":{"index":"i","from":0,"until":3,"commands":[
+            {"pathAppendLineTo":{"path":"wave","x":"i","y":"i"}}]}},
+          {"drawPath":{"path":"wave"}}
+        ]}]}"""
+      )
+    val nodes = result.document.nodes
+    val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
+    val (tri, live, repeat) = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)
+    fun text(node: UiBuilderNode, key: String) =
+      node.properties.getValue(key).jsonObject.let {
+        if (it["type"]!!.jsonPrimitive.content == "expr") UiExpressions.format(it)
+        else it["value"]!!.jsonPrimitive.content
+      }
+    assertEquals("draw/path", tri.componentId)
+    assertEquals("M150 40 L260 260 L40 260 Z", text(tri, "pathData"))
+    assertEquals("#FF2E6F52", text(tri, "color"))
+    assertEquals(UiDrawing.POLYLINE, live.componentId)
+    assertEquals("3.0", text(live, "count"))
+    assertEquals(
+      "select(@point < 1, 0, select(@point < 2, 10, time.continuousSecond))",
+      text(live, "pointYDp"),
+    )
+    // A path built and drawn in each pass of a loop is a polyline in the repeat.
+    val fan = nodes.getValue(repeat.slots.getValue(UiDrawing.OPS_SLOT).single())
+    assertEquals(UiDrawing.POLYLINE, fan.componentId)
+    assertContains(text(fan, "pointXDp"), "150 + @i")
+    // Appending from inside a loop to a path made outside it builds a different path.
+    assertTrue(
+      result.gaps.any { "`wave` is appended to from another loop" in it },
+      result.gaps.toString(),
+    )
+    assertTrue(result.gaps.any { "`wave` was not imported" in it }, result.gaps.toString())
+  }
+
+  @Test
   fun `what has no builder equivalent is skipped and reported where it is`() {
     val result =
       imported(
