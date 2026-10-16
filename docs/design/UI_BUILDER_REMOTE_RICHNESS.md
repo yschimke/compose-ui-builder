@@ -180,6 +180,8 @@ from its operands and refuses what does not type, with the path of the operand i
 | --- | --- |
 | `add` `sub` `mul` `div` `mod` `min` `max` `clamp` `abs` `neg` | Int stays Int; mixing promotes to Float |
 | `floor` `ceil` `round` `sqrt` `pow` `sin` `cos` `tan` (radians) `lerp` `toFloat` | Float |
+| `asin` `acos` `atan` `atan2(y, x)` (radians) `degrees` `radians` `exp` `ln` `log10` `sign` `hypot(x, y)` | Float |
+| `fract(x)` (`x - floor(x)`) `step(edge, x)` `smoothstep(edge0, edge1, x)` | Float, with their GLSL meaning; written out over the public operators |
 | `toInt` | Int |
 | `eq` `ne` `lt` `le` `gt` `ge` | Boolean |
 | `and` `or` `not` | Boolean |
