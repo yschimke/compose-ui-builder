@@ -94,6 +94,30 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `a scaled touch position is a drag the canvas's operations read`() {
+    val result =
+      imported(
+        """{"header":{"width":360,"height":100},"root":[{"type":"canvas","commands":[
+          {"touchExpression":{"name":"stage","defaultValue":0.42,"min":0.0,"max":1.0,
+            "stopMode":"gently","expression":"touchX() / 480"}},
+          {"touchExpression":{"name":"lift","defaultValue":4.0,"min":1.0,"max":10.0,
+            "expression":"1 - touchY() / 400 * 11"}},
+          {"drawCircle":{"cx":"@stage * 360","cy":"@lift * 10","radius":4}}
+        ]}]}"""
+      )
+    assertEquals(emptyList(), result.gaps)
+    val dot = result.document.nodes.values.single { it.componentId == "draw/circle" }
+    assertEquals(
+      UiExpressions.parseFormula("(dragX(0.42, 0, 1, 0.0020833333333333333)) * 360", emptySet()),
+      dot.properties.getValue("centerXDp"),
+    )
+    assertEquals(
+      UiExpressions.parseFormula("(dragY(4, 1, 10, -0.0275)) * 10", emptySet()),
+      dot.properties.getValue("centerYDp"),
+    )
+  }
+
+  @Test
   fun `a canvas sized by a width and a height apart takes them as its viewport`() {
     val result =
       imported(
