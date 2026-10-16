@@ -57,6 +57,7 @@ fun UiBuilderDrawCanvas(
   val steps = collectSteps(entry.slot(UiDrawing.OPS_SLOT), resolveColor)
   val measurer = rememberTextMeasurer()
   val stated = entry.node.statedSizeDp()
+  val viewport = UiDrawing.Viewport.of(entry.node)
   Canvas(modifier) {
     // A canvas that states its size draws in that size, as the export does; see `CanvasExtent`
     // in the Remote emitter for why the export reads the stated size rather than the measured one.
@@ -65,7 +66,23 @@ fun UiBuilderDrawCanvas(
         stated.first?.let { it * density } ?: size.width,
         stated.second?.let { it * density } ?: size.height,
       )
-    steps.forEach { it.draw(this, measurer, extent) }
+    if (viewport == null) {
+      steps.forEach { it.draw(this, measurer, extent) }
+      return@Canvas
+    }
+    // Operations are in viewport units, drawn as dp would be, then scaled onto the canvas as the
+    // export's `withTransform` scales them; inside, the whole canvas is the viewport.
+    val transform = viewport.transform(extent.width / density, extent.height / density)
+    val offsetX = transform.x * density
+    val offsetY = transform.y * density
+    val inner = Size(viewport.width * density, viewport.height * density)
+    withTransform({
+      if (viewport.mode == "fill") clipRect(0f, 0f, extent.width, extent.height)
+      translate(offsetX, offsetY)
+      scale(transform.scaleX, transform.scaleY, pivot = Offset.Zero)
+    }) {
+      steps.forEach { it.draw(this, measurer, inner) }
+    }
   }
 }
 

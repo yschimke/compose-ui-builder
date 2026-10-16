@@ -480,6 +480,7 @@ object CapabilityCatalogParser {
     // A draw operation states what each number measures, so its range comes from there rather than
     // from a name rule: an angle, a fraction and a dp offset are three different controls.
     (UiDrawing.BY_ID[componentId]?.properties
+        ?: UiDrawing.CANVAS_PROPERTIES.takeIf { componentId == UiDrawing.CANVAS }
         ?: UiTimeText.PROPERTIES.takeIf { componentId == UiTimeText.ID }
         ?: UiRemoteTheme.PROPERTIES.takeIf { componentId == UiRemoteTheme.ID })
       ?.firstOrNull { it.name == property.name }

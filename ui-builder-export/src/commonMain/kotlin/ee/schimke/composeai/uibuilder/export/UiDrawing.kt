@@ -433,4 +433,89 @@ object UiDrawing {
   val COMPONENT_IDS: List<String> = listOf(CANVAS) + OPERATIONS.map { it.componentId }
 
   fun isDrawing(componentId: String): Boolean = componentId == CANVAS || componentId in BY_ID
+
+  /** How a canvas's viewport maps onto the space the canvas has. */
+  val VIEWPORT_MODES: List<String> = listOf("fit", "fill", "stretch")
+
+  /**
+   * A canvas's own properties. With a viewport its operations are drawn in viewport units rather
+   * than dp — a 500 × 400 chart is authored at 500 × 400 whatever size it is shown at — and scaled
+   * onto the canvas when it draws.
+   */
+  val CANVAS_PROPERTIES: List<Property> =
+    listOf(
+      Property.Number(
+        "viewportWidth",
+        Unit.VIEWPORT,
+        "Draw the operations in a space this wide, scaled to the canvas, instead of in dp. Needs " +
+          "viewportHeight too.",
+      ),
+      Property.Number(
+        "viewportHeight",
+        Unit.VIEWPORT,
+        "Draw the operations in a space this tall, scaled to the canvas, instead of in dp. Needs " +
+          "viewportWidth too.",
+      ),
+      Property.Choice(
+        "viewportMode",
+        VIEWPORT_MODES,
+        "fit (the default): scaled evenly to fit, centred, so the whole viewport shows. fill: " +
+          "scaled evenly to cover the canvas, centred, its overflow clipped. stretch: scaled to " +
+          "the canvas in each direction.",
+      ),
+    )
+
+  /** A viewport's size in its own units, and how it maps onto the canvas. */
+  class Viewport(val width: Float, val height: Float, val mode: String) {
+    /**
+     * The scale and offset that draw this viewport in a canvas [canvasWidth] × [canvasHeight]:
+     * `translate(x, y)` then `scale(scaleX, scaleY)`, in the same units as the canvas.
+     */
+    fun transform(canvasWidth: Float, canvasHeight: Float): Transform {
+      val sx = canvasWidth / width
+      val sy = canvasHeight / height
+      val even =
+        when (mode) {
+          "stretch" -> return Transform(sx, sy, 0f, 0f)
+          "fill" -> maxOf(sx, sy)
+          else -> minOf(sx, sy)
+        }
+      return Transform(
+        even,
+        even,
+        (canvasWidth - width * even) / 2f,
+        (canvasHeight - height * even) / 2f,
+      )
+    }
+
+    class Transform(val scaleX: Float, val scaleY: Float, val x: Float, val y: Float)
+
+    companion object {
+      /**
+       * [canvas]'s viewport, or null when it draws in dp: both sides must be literal numbers above
+       * 0, and an unknown mode is `fit`.
+       */
+      fun of(canvas: UiBuilderNode): Viewport? {
+        fun side(name: String): Float? =
+          canvas.properties[name]?.let(::literalNumber)?.takeIf { it > 0f && it.isFinite() }
+        val width = side("viewportWidth") ?: return null
+        val height = side("viewportHeight") ?: return null
+        val mode =
+          ((canvas.properties["viewportMode"] as? JsonObject)?.get("value") as? JsonPrimitive)
+            ?.content
+            ?.takeIf { it in VIEWPORT_MODES } ?: "fit"
+        return Viewport(width, height, mode)
+      }
+
+      private fun literalNumber(value: kotlinx.serialization.json.JsonElement): Float? {
+        val primitive =
+          (value as? JsonObject)
+            ?.takeIf { (it["type"] as? JsonPrimitive)?.content in NUMERIC }
+            ?.get("value") as? JsonPrimitive ?: value as? JsonPrimitive
+        return primitive?.takeIf { !it.isString }?.content?.toFloatOrNull()
+      }
+
+      private val NUMERIC = setOf("float", "int")
+    }
+  }
 }
