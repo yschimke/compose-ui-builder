@@ -418,8 +418,10 @@ times the step, a `LOOP` path closing a step short of `end`. The player's smooth
 builder equivalent. A path built by commands — `pathCreate`, `pathAppendLineTo`s, `pathAppendClose`
 — is drawn as it stands at each `drawPath`: as SVG path data when every point is a number, else as a
 polyline whose point formulas pick each point's coordinates by its index, so live points stay live.
-It must be built in one loop or condition body and drawn inside it; a path appended to from a loop
-it was not created in is reported, since each pass of the player's loop adds points to it.
+It must be built in one loop or condition body and drawn inside it. A loop with number bounds whose
+only command appends a line to a path made outside it is a run of the polyline's points, the loop's
+index read from the point's number; any other loop appending to an outer path is reported, since
+each of the player's passes adds to it.
 
 `RemoteJsonFormulas` translates the codec's formulas. The codec writes each function as the
 remote-core operator of that name with its arguments pushed in order, so each is translated by what

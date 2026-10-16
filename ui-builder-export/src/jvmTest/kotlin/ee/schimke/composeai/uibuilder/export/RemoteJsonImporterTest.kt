@@ -303,9 +303,15 @@ class RemoteJsonImporterTest {
             {"pathAppendLineTo":{"path":"fan","x":"150 + i","y":0}},
             {"drawPath":{"path":"fan"}}]}},
           {"pathCreate":{"id":"wave","x":0,"y":0}},
+          {"loop":{"index":"i","from":1,"until":4,"commands":[
+            {"pathAppendLineTo":{"path":"wave","x":"i * 5","y":"sin(i)"}}]}},
+          {"pathAppendLineTo":{"path":"wave","x":20,"y":0}},
+          {"drawPath":{"path":"wave"}},
+          {"pathCreate":{"id":"mixed","x":0,"y":0}},
           {"loop":{"index":"i","from":0,"until":3,"commands":[
-            {"pathAppendLineTo":{"path":"wave","x":"i","y":"i"}}]}},
-          {"drawPath":{"path":"wave"}}
+            {"variable":{"name":"v","value":"i * 2"}},
+            {"pathAppendLineTo":{"path":"mixed","x":"@v","y":"i"}}]}},
+          {"drawPath":{"path":"mixed"}}
         ]}]}"""
       )
     val nodes = result.document.nodes
@@ -329,12 +335,21 @@ class RemoteJsonImporterTest {
     val fan = nodes.getValue(repeat.slots.getValue(UiDrawing.OPS_SLOT).single())
     assertEquals(UiDrawing.POLYLINE, fan.componentId)
     assertContains(text(fan, "pointXDp"), "150 + @i")
-    // Appending from inside a loop to a path made outside it builds a different path.
+    // A loop whose every pass appends a line is a run of points, reading the loop's index from
+    // the point's number: points 1..3 are passes 1..3, point 4 the line after the loop.
+    val wave = canvas.slots.getValue(UiDrawing.OPS_SLOT).map(nodes::getValue)[3]
+    assertEquals(UiDrawing.POLYLINE, wave.componentId)
+    assertEquals("5.0", text(wave, "count"))
+    assertEquals(
+      "select(@point < 1, 0, select(@point < 4, (1 + (@point - 1) * 1) * 5, 20))",
+      text(wave, "pointXDp"),
+    )
+    // A loop doing more than appending builds a different path each pass, and is refused.
     assertTrue(
-      result.gaps.any { "`wave` is appended to from another loop" in it },
+      result.gaps.any { "`mixed` is appended to from another loop" in it },
       result.gaps.toString(),
     )
-    assertTrue(result.gaps.any { "`wave` was not imported" in it }, result.gaps.toString())
+    assertTrue(result.gaps.any { "`mixed` was not imported" in it }, result.gaps.toString())
   }
 
   @Test

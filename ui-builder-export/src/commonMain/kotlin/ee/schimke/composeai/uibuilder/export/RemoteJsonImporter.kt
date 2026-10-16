@@ -85,13 +85,25 @@ object RemoteJsonImporter {
 
   /**
    * A path built by commands — `pathCreate`, then `pathAppendLineTo`s and `pathAppendClose` — as
-   * its points so far, each a builder formula with its literal value when it has one.
+   * its runs of points so far. A polyline draws it, reading each point's number as [index].
    */
-  private class LinePath(val body: Int) {
-    val points = mutableListOf<Pair<String, String>>()
-    val literals = mutableListOf<Pair<Double, Double>?>()
+  private class LinePath(val body: Int, val index: String) {
+    val runs = mutableListOf<Run>()
     var closed = false
+    val size: Int
+      get() = runs.sumOf { it.size }
   }
+
+  /**
+   * [size] points of a [LinePath] in a row: one appended point, its [literal] value when it has
+   * one, or a loop's, whose formulas read the path's index for the loop's.
+   */
+  private class Run(
+    val size: Int,
+    val x: String,
+    val y: String,
+    val literal: Pair<Double, Double>? = null,
+  )
 
   private class Importer(val source: JsonObject) {
     val gaps = mutableListOf<String>()
@@ -456,7 +468,8 @@ object RemoteJsonImporter {
               ops += clip(body as JsonObject, rest, "$path[${index + 1}..]", paint, scope)
               return ops
             }
-            "loop" -> ops += loop(body as JsonObject, at, paint, scope)
+            "loop" ->
+              if (!appendingLoop(body as JsonObject, scope)) ops += loop(body, at, paint, scope)
             "conditionalOperations" -> ops += conditional(body as JsonObject, at, paint, scope)
             "pathExpression",
             "polarPathExpression" -> pathExpression(name, body as JsonObject, scope)
@@ -771,7 +784,7 @@ object RemoteJsonImporter {
       if (name == "pathCreate") {
         failedPaths -= id
         pathExpressions -= id
-        linePaths[id] = LinePath(scope.body)
+        linePaths[id] = LinePath(scope.body, freeIndex(scope))
       }
       val path =
         linePaths[id]
@@ -791,8 +804,7 @@ object RemoteJsonImporter {
         path.closed = true
         return
       }
-      if (path.points.size >= UiDrawing.MAX_POINTS)
-        refuse("has more than ${UiDrawing.MAX_POINTS} points")
+      if (path.size >= UiDrawing.MAX_POINTS) refuse("has more than ${UiDrawing.MAX_POINTS} points")
       val x =
         try {
           formula(body["x"], scope)
@@ -805,10 +817,52 @@ object RemoteJsonImporter {
         } catch (e: Gap) {
           refuse(": ${e.message}")
         }
-      path.points += x to y
       val lx = (body["x"] as? JsonPrimitive)?.doubleOrNull
       val ly = (body["y"] as? JsonPrimitive)?.doubleOrNull
-      path.literals += if (lx != null && ly != null) lx to ly else null
+      path.runs += Run(1, x, y, if (lx != null && ly != null) lx to ly else null)
+    }
+
+    /**
+     * A loop whose every pass appends one line to a path made outside it, as one run of that path's
+     * points: the loop's index, at the path's point number `p` of a run starting at `k`, is `from +
+     * (p - k) * step`. The loop's bounds must be numbers, so the run's length is known as the
+     * design is written. False when the loop is not one, and is read as any other.
+     */
+    fun appendingLoop(body: JsonObject, scope: Scope): Boolean {
+      val commands = nested((body["commands"] as? JsonArray).orEmpty())
+      val append = (commands.singleOrNull() as? JsonObject)?.get("pathAppendLineTo") as? JsonObject
+      val id = append?.string("path") ?: return false
+      val path = linePaths[id]?.takeIf { it.body == scope.body && !it.closed } ?: return false
+      val from = body.number("from") ?: if (body["from"] == null) 0.0 else return false
+      val until = body.number("until") ?: return false
+      val step = body.number("step") ?: if (body["step"] == null) 1.0 else return false
+      if (step <= 0) return false
+      // The player's loop adds the step to a float until it reaches `until`.
+      var passes = 0
+      var at = from.toFloat()
+      while (at < until.toFloat() && passes <= UiDrawing.MAX_POINTS) {
+        passes++
+        at += step.toFloat()
+      }
+      if (passes == 0) return true
+      if (path.size + passes > UiDrawing.MAX_POINTS) {
+        linePaths -= id
+        failedPaths += id
+        throw Gap("path `$id` has more than ${UiDrawing.MAX_POINTS} points")
+      }
+      val index = body.string("index") ?: "i"
+      val pass = "(${number(from)} + (@${path.index} - ${path.size}) * ${number(step)})"
+      val inner = scope.copy(indices = scope.indices - index + path.index)
+      fun at(key: String) =
+        try {
+          formula(append[key], inner, mapOf(index to pass))
+        } catch (e: Gap) {
+          linePaths -= id
+          failedPaths += id
+          throw Gap("path `$id`: ${e.message}")
+        }
+      path.runs += Run(passes, at("x"), at("y"))
+      return true
     }
 
     /**
@@ -817,9 +871,9 @@ object RemoteJsonImporter {
      * live.
      */
     fun painted(path: LinePath, paint: Paint, scope: Scope): UiBuilderNode {
-      if (path.points.size < 2) throw Gap("a path needs a line to draw")
-      val literals = path.literals.filterNotNull()
-      if (literals.size == path.points.size) {
+      if (path.size < 2) throw Gap("a path needs a line to draw")
+      val literals = path.runs.mapNotNull { it.literal }
+      if (literals.size == path.size) {
         val data = buildString {
           literals.forEachIndexed { i, (x, y) ->
             if (i > 0) append(' ')
@@ -837,21 +891,25 @@ object RemoteJsonImporter {
           paint,
         )
       }
-      val index = freeIndex(scope)
-      fun pick(values: List<String>, from: Int): String =
-        if (values.size == 1) values.single()
+      val index = path.index
+      if (index in scope.indices)
+        throw Gap("a path is drawn in a loop whose index is its own, `$index`")
+      val starts = path.runs.runningFold(0) { at, run -> at + run.size }
+      // A balanced choice between the runs by the point's number, each run from where it starts.
+      fun pick(value: (Run) -> String, runs: IntRange): String =
+        if (runs.first == runs.last) value(path.runs[runs.first])
         else {
-          val half = values.size / 2
-          "select(@$index < ${from + half}, ${pick(values.subList(0, half), from)}, " +
-            "${pick(values.subList(half, values.size), from + half)})"
+          val half = (runs.first + runs.last + 1) / 2
+          "select(@$index < ${starts[half]}, ${pick(value, runs.first until half)}, " +
+            "${pick(value, half..runs.last)})"
         }
-      val x = pick(path.points.map { it.first }, 0)
-      val y = pick(path.points.map { it.second }, 0)
+      val x = pick({ it.x }, path.runs.indices)
+      val y = pick({ it.y }, path.runs.indices)
       if (x.length + y.length > MAX_FORMULA) throw Gap("a path's points are too long to write out")
       return painted(
         UiDrawing.POLYLINE,
         buildMap {
-          put("count", float(path.points.size.toDouble()))
+          put("count", float(path.size.toDouble()))
           put("index", string(index))
           put("pointXDp", parsed(x))
           put("pointYDp", parsed(y))
@@ -996,14 +1054,18 @@ object RemoteJsonImporter {
       return parsed(formula)
     }
 
-    fun formula(element: JsonElement?, scope: Scope): String {
+    fun formula(
+      element: JsonElement?,
+      scope: Scope,
+      bindings: Map<String, String> = emptyMap(),
+    ): String {
       val primitive = element as? JsonPrimitive ?: throw Gap("expected a number or a formula")
       primitive.doubleOrNull?.let {
         return number(it)
       }
       val translated =
         try {
-          RemoteJsonFormulas.translate(primitive.content, globals, scope.indices)
+          RemoteJsonFormulas.translate(primitive.content, globals + bindings, scope.indices)
         } catch (e: RemoteJsonFormulas.Untranslatable) {
           throw Gap(e.message.orEmpty())
         }
