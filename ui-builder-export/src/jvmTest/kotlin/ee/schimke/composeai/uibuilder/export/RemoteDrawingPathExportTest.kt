@@ -87,7 +87,7 @@ class RemoteDrawingPathExportTest {
         "clipPath(remotePathOf(\"M12 2 L22 22 L2 22 Z\")); " +
         "scale(24.rf / 96.rdp.toPx(), 24.rf / 96.rdp.toPx()) }) {",
     )
-    assertContains(source, "import androidx.compose.remote.creation.compose.path.RemotePath")
+    assertContains(source, "import androidx.compose.remote.creation.RemotePath")
   }
 
   @Test
@@ -145,14 +145,14 @@ class RemoteDrawingPathExportTest {
         "PathTypes",
       )
 
-    // `RemoteDrawScope.drawPath` takes the compose path's `RemotePath`, which has no string
-    // constructor; the core writer's `androidx.compose.remote.creation.RemotePath` does, and an
-    // export that wrote it did not compile.
+    // `RemoteDrawScope.drawPath`, `clipPath` and `drawTweenPath` take the core writer's
+    // `androidx.compose.remote.creation.RemotePath` in the released 1.0.0-alpha21; the
+    // `compose.path` one an earlier export imported does not exist there, and did not compile.
     assertContains(source, "drawPath(remotePathOf(\"M2 2 A10 10 0 0 1 22 2 Z\"), ")
-    assertContains(source, "import androidx.compose.remote.creation.compose.path.RemotePath")
+    assertContains(source, "import androidx.compose.remote.creation.RemotePath")
     assertContains(source, "import androidx.compose.ui.graphics.vector.PathParser")
     assertContains(source, "import androidx.compose.ui.graphics.PathSegment")
-    assertTrue("import androidx.compose.remote.creation.RemotePath\n" !in source, source)
+    assertTrue("creation.compose.path" !in source, source)
     assertEquals(1, Regex("private fun remotePathOf\\(").findAll(source).count(), source)
   }
 

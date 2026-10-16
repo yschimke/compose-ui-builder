@@ -5030,11 +5030,10 @@ internal fun kotlinx.serialization.json.JsonElement.intOrNull(): Int? =
   (this as? JsonObject)?.get("value")?.jsonPrimitive?.intOrNull
 
 /**
- * SVG path data as the `RemotePath` `RemoteDrawScope` draws:
- * `androidx.compose.remote.creation.compose.path`'s, which has no string constructor, not
- * `androidx.compose.remote.creation.RemotePath`, the core writer's, which does but which no draw
- * call takes. Compose's `PathParser` reads the data, arcs and smooth curves included, and its
- * segments are replayed, as the catalog's device preview does.
+ * SVG path data as the `RemotePath` `RemoteDrawScope` draws, clips to and tweens:
+ * `androidx.compose.remote.creation.RemotePath`, the core writer's. Compose's `PathParser` reads
+ * the data, arcs and smooth curves included, and its segments are replayed, as the catalog's device
+ * preview does.
  */
 internal val REMOTE_PATH_HELPER: String =
   """
@@ -5061,7 +5060,7 @@ internal val REMOTE_PATH_HELPER: String =
 
 internal val REMOTE_PATH_HELPER_IMPORTS: List<String> =
   listOf(
-    "androidx.compose.remote.creation.compose.path.RemotePath",
+    "androidx.compose.remote.creation.RemotePath",
     "androidx.compose.ui.graphics.PathSegment",
     "androidx.compose.ui.graphics.vector.PathParser",
   )
