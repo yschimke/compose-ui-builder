@@ -430,7 +430,7 @@ private sealed interface DrawStep {
             glyphs.forEach { glyph ->
               val middle = along + glyph.size.width / 2f / radius
               val point = Offset(center.x + radius * cos(middle), center.y + radius * sin(middle))
-              drawGlyph(glyph, point, middle / DEGREES_TO_RADIANS + 90f, brush)
+              drawGlyph(glyph, point, middle / DEGREES_TO_RADIANS + 90f, brush, paint.blendMode)
               along += glyph.size.width / radius
             }
           }
@@ -452,7 +452,7 @@ private sealed interface DrawStep {
               // Positive offset is to the path's right: a quarter turn clockwise of its heading.
               val point =
                 measure.getPosition(middle) + Offset(-sin(angle) * offset, cos(angle) * offset)
-              drawGlyph(glyph, point, angle / DEGREES_TO_RADIANS, brush)
+              drawGlyph(glyph, point, angle / DEGREES_TO_RADIANS, brush, paint.blendMode)
               distance += glyph.size.width
             }
           }
@@ -545,12 +545,14 @@ private fun DrawScope.drawGlyph(
   point: Offset,
   degrees: Float,
   brush: Brush,
+  blendMode: BlendMode = BlendMode.SrcOver,
 ) =
   rotate(degrees, point) {
     drawText(
       glyph,
       brush = brush,
       topLeft = Offset(point.x - glyph.size.width / 2f, point.y - glyph.firstBaseline),
+      blendMode = blendMode,
     )
   }
 

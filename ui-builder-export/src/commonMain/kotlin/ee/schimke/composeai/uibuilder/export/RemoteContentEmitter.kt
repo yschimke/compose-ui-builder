@@ -2726,7 +2726,7 @@ internal class RemoteContentEmitter(
           usesColorLiteral = true
           "Color(0x00000000).rc"
         }
-        COLOR_ROLE.matches(token) -> {
+        token in PropertyValueKinds.CANVAS_COLOR_TOKENS -> {
           usesTheme = true
           val name = localName("drawColor")
           hoisted += "val $name = RemoteMaterialTheme.colorScheme.$token"
@@ -2735,7 +2735,7 @@ internal class RemoteContentEmitter(
         else -> {
           refusals +=
             "nodes.${node.id}.gradientColors: `$token` is neither a #RRGGBB/#AARRGGBB colour " +
-              "nor a theme role"
+              "nor a theme role the canvas draws"
           return null
         }
       }

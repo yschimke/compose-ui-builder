@@ -298,6 +298,8 @@ class RemoteDrawingExportTest {
         "strokeJoin" to """{"type":"enum","value":"pointy"}""",
         "blendMode" to """{"type":"enum","value":"hardLight"}""",
         "gradientColors" to """{"type":"string","value":"#FF0000, not a colour"}""",
+        // Shaped like a role, but not one the theme has: the export would not compile.
+        "gradientColors" to """{"type":"string","value":"#FF0000, banana"}""",
       )) {
       val document =
         sweepWith("gradient" to """{"type":"enum","value":"vertical"}""", property to value)
