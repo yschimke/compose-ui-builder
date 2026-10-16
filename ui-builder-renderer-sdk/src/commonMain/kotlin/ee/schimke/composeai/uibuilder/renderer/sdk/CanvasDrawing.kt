@@ -204,7 +204,9 @@ private fun collectSteps(
       gradientColors = gradientColors,
       gradientStops =
         UiDrawing.gradientStops(node)
-          ?.takeIf { stops -> stops.size == gradientColors?.size && stops.none { it == null } }
+          ?.takeIf { stops ->
+            stops.size == gradientColors?.size && stops.all { it != null && it in 0f..1f }
+          }
           ?.map { it!! },
       geometry = GradientGeometry.of(node),
     )
@@ -349,7 +351,8 @@ private class GradientGeometry(
         endDp = node.number("gradientEndDp"),
         centerXDp = node.number("gradientCenterXDp"),
         centerYDp = node.number("gradientCenterYDp"),
-        radiusDp = node.number("gradientRadiusDp"),
+        // Android throws on a radius of 0 or less, so the preview draws the default instead.
+        radiusDp = node.number("gradientRadiusDp")?.takeIf { it > 0f },
         tileMode =
           when (node.text("gradientTileMode")) {
             "repeated" -> TileMode.Repeated

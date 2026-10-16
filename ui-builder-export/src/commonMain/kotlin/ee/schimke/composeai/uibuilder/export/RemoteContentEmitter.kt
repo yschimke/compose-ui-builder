@@ -2764,9 +2764,12 @@ internal class RemoteContentEmitter(
       if (stops == null) {
         (listOf("listOf(${colours.joinToString()})") + geometry).joinToString()
       } else {
-        if (UiDrawing.gradientColors(node)?.size != stops.size || stops.any { it == null }) {
+        if (
+          UiDrawing.gradientColors(node)?.size != stops.size ||
+            stops.any { it == null || it !in 0f..1f }
+        ) {
           refusals +=
-            "nodes.${node.id}.gradientStops: one number per gradientColors entry, " +
+            "nodes.${node.id}.gradientStops: one number from 0 to 1 per gradientColors entry, " +
               "separated by commas"
           return null
         }
@@ -2815,7 +2818,15 @@ internal class RemoteContentEmitter(
           arguments +=
             "center = RemoteOffset(${x ?: "($width / 2.rf)"}, ${y ?: "($height / 2.rf)"})"
         }
-        if (kind == "radial") length("gradientRadiusDp")?.let { arguments += "radius = $it" }
+        if (kind == "radial") {
+          // A shader's radius must be above 0; a computed one is the player's to keep there.
+          val literal = node.properties["gradientRadiusDp"]?.numberOrNull()
+          if (literal != null && literal <= 0f) {
+            refusals += "nodes.${node.id}.gradientRadiusDp: a radial gradient's radius is above 0"
+            return null
+          }
+          length("gradientRadiusDp")?.let { arguments += "radius = $it" }
+        }
       }
     }
     val tileMode = node.properties["gradientTileMode"]?.stringOrNull() ?: return arguments

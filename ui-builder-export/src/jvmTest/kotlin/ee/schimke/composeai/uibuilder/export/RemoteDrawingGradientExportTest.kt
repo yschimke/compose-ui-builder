@@ -154,6 +154,15 @@ class RemoteDrawingGradientExportTest {
           "gradientStops":{"type":"string","value":"0, 0.5, 1"}""",
       )
     assertTrue(stops.any { "nodes.track.gradientStops" in it }, stops.toString())
+    val outside =
+      refused(
+        "horizontal",
+        ""","gradientColors":{"type":"string","value":"#FF0000, #0000FF"},
+          "gradientStops":{"type":"string","value":"0, 2"}""",
+      )
+    assertTrue(outside.any { "nodes.track.gradientStops" in it }, outside.toString())
+    val flat = refused("radial", ""","gradientRadiusDp":{"type":"float","value":0}""")
+    assertTrue(flat.any { "nodes.track.gradientRadiusDp" in it }, flat.toString())
   }
 
   @Test
