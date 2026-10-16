@@ -2,8 +2,12 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
@@ -73,8 +77,35 @@ fun CanvasRenderNode.prepare(
   } else if (node.eventBindings["click"] != null && !handlesClick) {
     measured = measured.clickable(enabled = enabled, onClick = activate)
   }
+  if (enabled && TOUCH_EVENTS.any { node.eventBindings[it] != null }) {
+    // Remote Compose's `onTouchDown` / `onTouchUp` / `onTouchCancel`. Nothing is consumed, so a
+    // click on the same node still fires.
+    val touch = rememberUpdatedState(dispatch)
+    measured =
+      measured.pointerInput(node.id) {
+        awaitEachGesture {
+          awaitFirstDown(requireUnconsumed = false)
+          touch.value("touchDown")
+          // Released is an up even when a click consumed it; a move another handler took while
+          // still pressed (a scroll) cancels the touch.
+          while (true) {
+            val changes = awaitPointerEvent().changes
+            if (changes.none { it.pressed }) {
+              touch.value("touchUp")
+              break
+            }
+            if (changes.any { it.isConsumed }) {
+              touch.value("touchCancel")
+              break
+            }
+          }
+        }
+      }
+  }
   return PreparedCanvasNode(measured, enabled, dispatch)
 }
+
+private val TOUCH_EVENTS = listOf("touchDown", "touchUp", "touchCancel")
 
 /** Execute one event's ordered state and navigation actions. */
 fun dispatchCanvasEvent(

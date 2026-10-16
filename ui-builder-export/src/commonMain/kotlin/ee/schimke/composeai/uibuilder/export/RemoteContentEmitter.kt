@@ -4193,6 +4193,16 @@ internal class RemoteContentEmitter(
           modifierCall("clickable($it)")
         }
       } else null
+    // Touch down, up and cancel, each with its own ordered actions, after the click.
+    val touches =
+      if (!modifierClick) emptyList()
+      else
+        TOUCH_EVENTS.filter { (event, _) -> bound(event) }
+          .map { (_, call) ->
+            // The event key is the call without `on`, as for the click parameters.
+            val action = actionExpression(this, TargetParameter.Builder(call, "Action").build())
+            modifierCall("$call(${action ?: return null})")
+          }
     // The frame's fill comes before [leading], as the container applies it. Omitted only when the
     // chain already starts with it; a later fill (`size(48.dp).fillMaxSize()`) is not equivalent.
     val frame =
@@ -4207,7 +4217,8 @@ internal class RemoteContentEmitter(
         frame +
         leading +
         modifiers.flatMap { element -> modifierCalls(element) } +
-        listOfNotNull(click)
+        listOfNotNull(click) +
+        touches
     if (parts.isEmpty()) return null
     usesModifier = true
     val single = parts.joinToString(".", prefix = "RemoteModifier.")
@@ -4895,8 +4906,13 @@ public val MOTION_EXITS: List<String> =
 /** The colour editor's `transparent`: not a Material scheme role, so written as a literal. */
 private const val TRANSPARENT_TOKEN = "transparent"
 
-/** The events a layout node takes: `RemoteModifier.combinedClickable`'s three. */
-internal val LAYOUT_EVENTS: List<String> = listOf("click", "longClick", "doubleClick")
+/** The events a layout node takes: `combinedClickable`'s three and the three touch modifiers. */
+internal val LAYOUT_EVENTS: List<String> =
+  listOf("click", "longClick", "doubleClick", "touchDown", "touchUp", "touchCancel")
+
+/** The touch events and the `RemoteModifier` call each is written as. */
+private val TOUCH_EVENTS: List<Pair<String, String>> =
+  listOf("touchDown" to "onTouchDown", "touchUp" to "onTouchUp", "touchCancel" to "onTouchCancel")
 
 /** An Int literal in written Remote source, which needs the `ri` import. */
 private val INT_LITERAL = Regex("""\b\d+\.ri\b""")
