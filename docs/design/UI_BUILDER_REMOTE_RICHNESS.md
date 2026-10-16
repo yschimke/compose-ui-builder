@@ -192,6 +192,9 @@ from its operands and refuses what does not type, with the path of the operand i
 | `hsv(hue, saturation, value[, alpha])` `rgb(red, green, blue[, alpha])` | Colour from components 0–1, hue as a fraction of a turn — `RemoteColor.hsv` / `rgb` |
 | `rand()` `randRange(from, to)` | Float drawn by the player; a preview shows the middle (0.5, the midpoint) |
 | `pingPong(x, max)` | Float: `x` folded between 0 and `max`, as the player's PINGPONG (from `abs(x)`, so negative `x` stays in range too); written out over public operators |
+| `spline(t, v0, v1, …)` `splineLoop(t, v0, v1, …)` | Float: the player's monotonic spline through 2–64 literal control points spaced evenly from `t` = 0 to 1, a straight line past the ends; `splineLoop` first wraps `t` into 0 up to 1 (repeat the first point last for a seamless loop). Exports as `evalSpline(RemoteFloatArray(…), loop, t)`; the preview runs remote-core's `MonotonicSpline` in Float |
+| `cbrt(x)` `copySign(magnitude, sign)` | Float |
+| `secondsUntil(instant)` `minutesUntil(instant)` `hoursUntil(instant)` | Float: from now until a literal ISO-8601 UTC instant (`"2026-12-25T00:00:00Z"`), negative once it has passed — the player's time-from-now, `deltaFromReferenceInSeconds(RemoteLong(…))`; a preview counts from its clock |
 | `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /
@@ -306,6 +309,7 @@ canvas stand-in and the Remote emitter.
 | `draw/text-path` | `text`, `pathData` in dp, `startDp` `offsetDp`, `textSizeSp` + colour | `drawTextOnPath`, inside a one-dp scale so the path is in dp and the glyphs keep their size |
 | `draw/morph` | `pathData`, `toPathData`, `progress` (0–1), viewport + paint | `drawTweenPath(from, to, tween = progress, paint)`, scaled to the canvas |
 | `draw/if` | `condition` (a flag, usually state or a formula); its own `ops` | `drawConditionally(condition) { … }` |
+| `draw/group` `scaleX` `scaleY` | across and down apart, each in place of `scale` on its axis | `scale(sx, sy, pivot)` inside the group's `withTransform` |
 | `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
 
 Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `strokeWidthDp`,
@@ -314,8 +318,12 @@ Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `
 `clear`; written as `RemotePaint.strokeJoin` / `blendMode`), and optionally a `gradient`
 (`horizontal`, `vertical`, `radial`, `sweep`) from `color` to `gradientColor` (transparent when
 absent), or through every colour `gradientColors` lists (hex or theme roles, comma-separated,
-evenly spaced). A gradient is laid across the whole
-canvas, not the shape: the Remote writer applies `RemoteBrush.<kind>Gradient(…)` to the paint over
+evenly spaced, or placed by `gradientStops`, one 0–1 position per colour). A gradient is laid
+across the whole canvas, not the shape, unless placed: `gradientStartDp`/`gradientEndDp` move a
+horizontal or vertical one's ends, `gradientCenterXDp`/`gradientCenterYDp` a radial or sweep one's
+centre, `gradientRadiusDp` a radial one's radius (in a path's viewport units on a path or morph),
+and `gradientTileMode` (`clamp`, `repeated`, `mirror`, `decal`; not on a sweep, which has none)
+says what it paints past its ends — the `RemoteBrush` arguments of the same names. Otherwise: the Remote writer applies `RemoteBrush.<kind>Gradient(…)` to the paint over
 the canvas's size, as `RemoteModifier.background(brush)` applies one over its component, so a sweep
 gradient on a ring turns round the canvas centre. `alpha` fades both ends. Rules every lane shares: geometry is dp from the canvas's top-left; an
 absent box is the whole canvas; a stroked shape whose box is defaulted is inset by half its stroke

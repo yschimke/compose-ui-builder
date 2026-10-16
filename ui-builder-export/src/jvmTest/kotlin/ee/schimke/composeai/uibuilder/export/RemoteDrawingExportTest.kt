@@ -296,6 +296,35 @@ class RemoteDrawingExportTest {
   }
 
   @Test
+  fun `a group scales across and down apart, each falling back to scale`() {
+    val hand = document.nodes.getValue("hand")
+    val scaled =
+      document.copy(
+        nodes =
+          document.nodes +
+            ("hand" to
+              hand.copy(
+                properties =
+                  JsonObject(
+                    hand.properties +
+                      ("scale" to Json.parseToJsonElement("""{"type":"float","value":2}""")) +
+                      ("scaleY" to Json.parseToJsonElement("""{"type":"float","value":0.5}"""))
+                  )
+              ))
+      )
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(scaled, packageName = "proof.draw")
+        )
+        .source
+
+    assertContains(
+      source,
+      "scale(2.rf, 0.5f.rf, RemoteOffset((96.rdp.toPx() / 2.rf), (96.rdp.toPx() / 2.rf)))",
+    )
+  }
+
+  @Test
   fun `a paint's join, blend mode and listed gradient colours are written onto it`() {
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(

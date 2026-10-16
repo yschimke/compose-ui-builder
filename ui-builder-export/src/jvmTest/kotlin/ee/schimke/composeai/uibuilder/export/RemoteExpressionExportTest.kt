@@ -388,6 +388,45 @@ class RemoteExpressionExportTest {
   }
 
   @Test
+  fun `splines, cube roots, copied signs and countdowns lower to the player's operators`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            formula(
+              "toString(spline(time.animation, 0, 1.5, 0) + splineLoop(time.animation, 0, 1) + " +
+                "cbrt(count) + copySign(2, time.animation) + " +
+                "secondsUntil(\"2026-12-25T00:00:00Z\") + hoursUntil(\"2026-12-25T00:00:00Z\"))"
+            )
+        )
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    val time = "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)"
+    assertContains(
+      source,
+      "evalSpline(RemoteFloatArray(listOf(0.rf, 1.5f.rf, 0.rf)), false, $time)",
+    )
+    assertContains(source, "evalSpline(RemoteFloatArray(listOf(0.rf, 1.rf)), true, $time)")
+    assertContains(source, "cbrt(count.toRemoteFloat())")
+    assertContains(source, "copySign(2.rf, $time)")
+    assertContains(source, "deltaFromReferenceInSeconds(RemoteLong(1798156800000L))")
+    assertContains(source, "deltaFromReferenceInHours(RemoteLong(1798156800000L))")
+    for (symbol in
+      listOf(
+        "evalSpline",
+        "RemoteFloatArray",
+        "cbrt",
+        "copySign",
+        "RemoteLong",
+        "deltaFromReferenceInSeconds",
+        "deltaFromReferenceInHours",
+      )) {
+      assertContains(source, "\nandroidx.compose.remote.creation.compose.state.$symbol\n")
+    }
+  }
+
+  @Test
   fun `a tree that does not type is a located refusal, not source`() {
     val (_, refusals) = emit(mapOf("text" to formula("on * 2")))
 

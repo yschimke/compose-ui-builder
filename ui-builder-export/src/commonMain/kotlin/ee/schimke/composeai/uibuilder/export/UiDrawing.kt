@@ -119,6 +119,9 @@ object UiDrawing {
   /** The gradients a paint can be, each laid across the whole canvas as `RemoteBrush` lays it. */
   val GRADIENTS: List<String> = listOf("horizontal", "vertical", "radial", "sweep")
 
+  /** What a gradient does past its ends, as Compose's `TileMode` names it. */
+  val GRADIENT_TILE_MODES: List<String> = listOf("clamp", "repeated", "mirror", "decal")
+
   /**
    * The edges of a `draw/text` that can sit at its anchor, top to bottom. Declared before
    * [OPERATIONS], which reads it while the object initialises.
@@ -139,6 +142,44 @@ object UiDrawing {
         "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by " +
           "commas. Replaces color → gradientColor when set.",
       ),
+      Property.Text(
+        "gradientStops",
+        "Where each of gradientColors sits, 0 to 1 along the gradient, separated by commas: one " +
+          "per colour, in order. Evenly spaced when absent.",
+      ),
+      Property.Number(
+        "gradientStartDp",
+        Unit.DP,
+        "A horizontal or vertical gradient's start, from the canvas's left or top. The edge " +
+          "when absent.",
+      ),
+      Property.Number(
+        "gradientEndDp",
+        Unit.DP,
+        "A horizontal or vertical gradient's end, from the canvas's left or top. The far edge " +
+          "when absent.",
+      ),
+      Property.Number(
+        "gradientCenterXDp",
+        Unit.DP,
+        "A radial or sweep gradient's centre across. The canvas's centre when absent.",
+      ),
+      Property.Number(
+        "gradientCenterYDp",
+        Unit.DP,
+        "A radial or sweep gradient's centre down. The canvas's centre when absent.",
+      ),
+      Property.Number(
+        "gradientRadiusDp",
+        Unit.DP,
+        "A radial gradient's radius. Half the canvas's shorter side when absent.",
+      ),
+      Property.Choice(
+        "gradientTileMode",
+        GRADIENT_TILE_MODES,
+        "What a horizontal, vertical or radial gradient paints past its ends: its end colours " +
+          "(clamp, the default), the gradient again, the gradient mirrored, or nothing.",
+      ),
       // Not a gradient, but every paint that can take one can take a blend mode too.
       blendMode,
     )
@@ -148,6 +189,16 @@ object UiDrawing {
    * A paint's `gradientColors`: the hex colours and theme roles it lists, in order, or null when it
    * lists fewer than two.
    */
+  /**
+   * A paint's `gradientStops` as numbers, in order; null when absent, and a list holding null for
+   * an entry that is not a number.
+   */
+  fun gradientStops(node: UiBuilderNode): List<Float?>? =
+    ((node.properties["gradientStops"] as? JsonObject)?.get("value") as? JsonPrimitive)
+      ?.content
+      ?.split(',')
+      ?.map { it.trim().toFloatOrNull() }
+
   fun gradientColors(node: UiBuilderNode): List<String>? =
     ((node.properties["gradientColors"] as? JsonObject)?.get("value") as? JsonPrimitive)
       ?.content
@@ -356,6 +407,16 @@ object UiDrawing {
           Property.Number("translateYDp", Unit.DP, "Moves its operations down."),
           Property.Number("rotate", Unit.DEGREES, "Turns its operations about the pivot."),
           Property.Number("scale", Unit.SCALE, "Scales its operations about the pivot."),
+          Property.Number(
+            "scaleX",
+            Unit.SCALE,
+            "Scales its operations across about the pivot, in place of scale on that axis.",
+          ),
+          Property.Number(
+            "scaleY",
+            Unit.SCALE,
+            "Scales its operations down about the pivot, in place of scale on that axis.",
+          ),
           Property.Number("pivotXDp", Unit.DP, "Pivot across. The canvas centre when absent."),
           Property.Number("pivotYDp", Unit.DP, "Pivot down. The canvas centre when absent."),
         ),

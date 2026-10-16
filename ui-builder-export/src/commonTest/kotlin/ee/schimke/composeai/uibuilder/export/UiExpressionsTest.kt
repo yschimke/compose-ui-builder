@@ -29,6 +29,9 @@ class UiExpressionsTest {
   private fun typed(text: String): UiExpressions.Expr =
     assertIs<UiExpressions.Checked.Ok>(UiExpressions.check(parse(text), scope)).expr
 
+  private fun issue(text: String): String =
+    assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text).message
+
   private fun evaluate(
     text: String,
     state: Map<String, String?> = emptyMap(),
@@ -403,6 +406,38 @@ class UiExpressionsTest {
       assertEquals(0.0, evaluate(id), id)
       assertEquals(UiValueKind.FLOAT, typed(id).kind, id)
     }
+  }
+
+  @Test
+  fun `a spline runs through its control points as the player's monotonic spline does`() {
+    assertEquals(0.5, evaluate("spline(0.5, 0, 1)"))
+    assertEquals(1.0, evaluate("spline(0.5, 0, 1, 0)"))
+    assertEquals(0.625, evaluate("spline(0.25, 0, 1, 0)"))
+    // Past the ends it carries on along the slope the player reads there.
+    assertEquals(-1.0, evaluate("spline(-0.5, 0, 1, 0)"))
+    assertEquals(0.0, evaluate("spline(1.5, 0, 1, 0)"))
+    // A looping spline wraps t into 0 up to 1 first, negative t included.
+    assertEquals(0.625, evaluate("splineLoop(1.25, 0, 1, 0)"))
+    assertEquals(0.625, evaluate("splineLoop(-0.75, 0, 1, 0)"))
+    assertNotNull(issue("spline(0.5, count, 1)"))
+  }
+
+  @Test
+  fun `cube roots, copied signs and countdowns to an instant`() {
+    assertEquals(3.0, evaluate("cbrt(27)"))
+    assertEquals(-3.0, evaluate("copySign(3, -1)"))
+    // The default preview clock is 2024-05-16 at 10:10:30 UTC.
+    assertEquals(60.0, evaluate("secondsUntil(\"2024-05-16T10:11:30Z\")"))
+    assertEquals(1.0, evaluate("minutesUntil(\"2024-05-16T10:11:30Z\")"))
+    assertEquals(-1.0, evaluate("hoursUntil(\"2024-05-16T09:10:30Z\")"))
+    assertTrue(UiExpressions.isDynamic(typed("secondsUntil(\"2030-01-01T00:00:00Z\")")))
+    assertNotNull(issue("secondsUntil(\"tomorrow\")"))
+    assertNotNull(issue("secondsUntil(\"2030-13-01T00:00:00Z\")"))
+    // A day the month does not have is no instant, rather than one rolled into the next month.
+    assertNotNull(issue("secondsUntil(\"2026-02-31T00:00:00Z\")"))
+    assertNotNull(issue("secondsUntil(\"2026-02-29T00:00:00Z\")"))
+    assertEquals(0.0, evaluate("secondsUntil(\"2024-05-16T10:10:30Z\")"))
+    assertTrue(UiExpressions.Clock.instantMillis("2028-02-29T00:00:00Z") != null)
   }
 
   @Test
