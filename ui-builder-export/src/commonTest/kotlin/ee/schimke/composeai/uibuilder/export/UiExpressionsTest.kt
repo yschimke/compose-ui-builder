@@ -324,6 +324,36 @@ class UiExpressionsTest {
   }
 
   @Test
+  fun `format prints fixed decimals and a zero-padded whole part`() {
+    assertEquals("3.14", evaluate("format(3.14159, 2)"))
+    assertEquals("07.5", evaluate("format(7.5, 1, 2)"))
+    assertEquals("42", evaluate("format(41.6, 0)"))
+    assertEquals("-0.50", evaluate("format(-0.5, 2)"))
+    // Ties round to the even neighbour, as the player's DecimalFormat default does.
+    assertEquals("2", evaluate("format(2.5, 0)"))
+    assertEquals("4", evaluate("format(3.5, 0)"))
+    // A negative that rounds to zero prints without a sign.
+    assertEquals("0.0", evaluate("format(-0.01, 1)"))
+    assertEquals("05", evaluate("format(count, 0, 2)", mapOf("count" to "5")))
+    assertEquals(UiValueKind.STRING, typed("format(progress, 1)").kind)
+  }
+
+  @Test
+  fun `a format's spec is a whole literal in range`() {
+    for (text in
+      listOf(
+        "format(1.0, count)",
+        "format(1.0, 1.5)",
+        "format(1.0, 7)",
+        "format(1.0, 1, 0)",
+        "format(1.0, 1, 10)",
+        "format(name, 1)",
+      )) {
+      assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text)
+    }
+  }
+
+  @Test
   fun `inverse trig, angles and logarithms evaluate in Float`() {
     fun close(expected: Double, text: String) {
       val actual = evaluate(text) as Double

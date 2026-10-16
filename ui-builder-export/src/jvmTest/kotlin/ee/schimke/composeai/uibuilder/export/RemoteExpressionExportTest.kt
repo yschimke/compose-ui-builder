@@ -244,6 +244,26 @@ class RemoteExpressionExportTest {
   }
 
   @Test
+  fun `format writes the player's text-from-float format`() {
+    val (source, refusals) =
+      emit(mapOf("text" to formula("concat(format(time.animation, 1, 2), \" s\")")))
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(
+      source,
+      "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME).toRemoteString(" +
+        "DecimalFormat(\"00.0\", DecimalFormatSymbols(Locale.ROOT)))",
+    )
+    for (import in
+      listOf("java.text.DecimalFormat", "java.text.DecimalFormatSymbols", "java.util.Locale")) {
+      assertTrue(import in source.lines(), "$import is not imported:\n$source")
+    }
+    // A whole-number format has no point at all.
+    val (whole, _) = emit(mapOf("text" to formula("format(time.animation, 0)")))
+    assertContains(whole, "DecimalFormat(\"0\", DecimalFormatSymbols(Locale.ROOT))")
+  }
+
+  @Test
   fun `a tree that does not type is a located refusal, not source`() {
     val (_, refusals) = emit(mapOf("text" to formula("on * 2")))
 
