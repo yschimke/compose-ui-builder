@@ -72,3 +72,30 @@ Release UI Builder first, then pin that version in compose-preview-server and re
 Harc's design-server image pins that server archive. Publish harc's Lovelace catalog and card preview
 entry, update deployed catalog configuration, then deploy the host image. No contracts repository
 change is needed: the existing catalog, JSON export and embedding seams carry this target.
+
+### Reproduce the cross-repository browser check
+
+Use the matching harc checkout; the browser harness serves its actual host resources and the
+builder's packaged Wasm distribution. The WebSocket transport is intercepted only for the reserved
+`dashboard-fixture.invalid` test host. Saves in this harness cannot reach Home Assistant.
+
+```bash
+python3 "$HARC_CHECKOUT/lovelace-catalog/generate.py"
+LOVELACE_PUBLICATION_DIR="$HARC_CHECKOUT/build/lovelace-catalog" \
+LOVELACE_DASHBOARD_FIXTURE="$HARC_CHECKOUT/design-server/src/main/resources/dashboard/fixture.json" \
+LOVELACE_CAPABILITIES_OUTPUT=/tmp/lovelace-capabilities.json \
+  ./gradlew :ui-builder-runtime:test --tests '*LovelacePublishedCatalogIntegrationTest'
+./gradlew :ui-builder:wasmFrontendDist
+(cd "$HARC_CHECKOUT" && ./gradlew :rc-converter:testDebugUnitTest \
+  --tests '*LovelaceDashboardRenderTest' -PlovelaceRenderEvidence=/tmp/lovelace-native-rc)
+(cd scripts/ui-builder-web-smoke && npm ci && npx playwright install --with-deps chromium)
+LOVELACE_RC_FIXTURES=/tmp/lovelace-native-rc \
+  node scripts/ui-builder-web-smoke/lovelace-dashboard.mjs \
+  ui-builder/build/wasmDist "$HARC_CHECKOUT" /tmp/lovelace-capabilities.json \
+  build/lovelace-browser
+```
+
+The harness writes a report and screenshots, checks the renderer's undrawn-node report, and compares
+canvas output after changing the host's style. Native captures separately assert deterministic output
+for repeated inputs and changed bytes for live values and styling. Without `LOVELACE_RC_FIXTURES`,
+the harness uses a committed RC fixture and labels that reduced validation in its report.

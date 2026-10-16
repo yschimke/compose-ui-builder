@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
 const [dist, harc, capabilities, evidence = 'build/lovelace-browser'] = process.argv.slice(2);
@@ -114,7 +114,7 @@ try {
       if (!classic.equals(styled)) break;
     } while (Date.now()<deadline);
     assert.ok(!classic.equals(styled), 'actual RC card styling must change the rendered canvas');
-    await import('node:fs/promises').then(fs=>fs.writeFile(path.join(evidence,'cards-braun-dark.png'),styled));
+    await writeFile(path.join(evidence,'cards-braun-dark.png'),styled);
     await page.locator('#style').selectOption('classic'); await page.locator('#dark').uncheck();
   }
   await page.locator('#columns').selectOption('12');
@@ -224,7 +224,9 @@ try {
 
   await readFile(path.join(evidence,'dashboard.png'));
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({passed:true,renders,evidence,renderSource:rcDirectory ? 'actual harc converter capture matrix' : 'committed RC playback fixture',checks:['fixture round trip','view tab switching','large integer import/export/preview','grid resize','unknown custom preservation','delete/undo through editor keyboard','undo edit','section/view templates','template capture/import/reuse','invalid import cannot save','JSON download','RC playback and rendered style change','host HA save/undo conflicts','preview failures preserve conflict feedback','live state/style inputs','admin and YAML save restrictions']}));
+  const report = {passed:true,renders,evidence,renderSource:rcDirectory ? 'actual harc converter capture matrix' : 'committed RC playback fixture',checks:['fixture round trip','view tab switching','large integer import/export/preview','grid resize','unknown custom preservation','delete/undo through editor keyboard','undo edit','section/view templates','template capture/import/reuse','invalid import cannot save','JSON download','RC playback and rendered style change','host HA save/undo conflicts','preview failures preserve conflict feedback','live state/style inputs','admin and YAML save restrictions']};
+  await writeFile(path.join(evidence,'report.json'),JSON.stringify(report,null,2)+'\n');
+  console.log(JSON.stringify(report));
 } catch (error) {
   await mkdir(evidence, {recursive:true});
   if (page) { await page.screenshot({path:path.join(evidence,'failure.png')}); console.error(await page.evaluate(() => ({status:document.getElementById('status')?.textContent,messages:window.dashboardMessages?.slice(-8)}))); }

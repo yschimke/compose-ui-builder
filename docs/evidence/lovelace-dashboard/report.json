@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "renders": 23,
+  "evidence": "docs/evidence/lovelace-dashboard",
+  "renderSource": "actual harc converter capture matrix",
+  "checks": [
+    "fixture round trip",
+    "view tab switching",
+    "large integer import/export/preview",
+    "grid resize",
+    "unknown custom preservation",
+    "delete/undo through editor keyboard",
+    "undo edit",
+    "section/view templates",
+    "template capture/import/reuse",
+    "invalid import cannot save",
+    "JSON download",
+    "RC playback and rendered style change",
+    "host HA save/undo conflicts",
+    "preview failures preserve conflict feedback",
+    "live state/style inputs",
+    "admin and YAML save restrictions"
+  ]
+}
