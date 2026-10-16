@@ -432,7 +432,7 @@ the operator does with them: `clamp(a, b, x)` is `min(max(a, x), b)`, `step(a, b
 `device.density`, and `componentWidth`/`componentHeight` to `canvas.width`/`height`. Variables are
 the document's and inline where they are read; a loop's index is the builder's `@index`.
 
-What has no builder equivalent — 3D, particles, curved runtime paths, touch expressions, shaders, arrays —
+What has no builder equivalent — 3D, particles, curved runtime paths, shaders, arrays —
 is skipped and reported by its path, so a document imports as far as it can.
 `RemoteJsonImporterTest` imports a corpus checkout given `-PremoteJsonCorpus=<dir>` and writes
 `ui-builder-export/build/remote-json-import/report.md`, every gap with the documents it stops.
