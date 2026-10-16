@@ -316,6 +316,11 @@ class UiExpressionsTest {
     assertEquals(-1.0, evaluate("sign(-3.5)"))
     assertEquals(0.0, evaluate("sign(0)"))
     assertEquals(5.0, evaluate("hypot(3, 4)"))
+    // Squared in Float, as the player squares: 3e19² is past Float's range.
+    assertEquals(
+      Double.POSITIVE_INFINITY,
+      evaluate("hypot(30000000000000000000.0, 40000000000000000000.0)"),
+    )
   }
 
   @Test

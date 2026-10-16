@@ -824,7 +824,13 @@ object UiExpressions {
       Op.FRACT -> num(d(0) - floor(d(0)))
       Op.STEP -> num(if (d(1) >= d(0)) 1.0 else 0.0)
       Op.SMOOTHSTEP -> num(smoothstep(d(0), d(1), d(2)))
-      Op.HYPOT -> num(sqrt(d(0) * d(0) + d(1) * d(1)))
+      // Squared and summed in Float, as the written-out `sqrt(x * x + y * y)` is on the player, so
+      // a square past Float's range is infinite here too.
+      Op.HYPOT -> {
+        val x = d(0).toFloat()
+        val y = d(1).toFloat()
+        num(sqrt(x * x + y * y).toDouble())
+      }
       Op.LERP ->
         if (expr.kind == UiValueKind.COLOR)
           mixColors(values[0] as String, values[1] as String, d(2))
