@@ -94,6 +94,42 @@ class RemoteJsonImporterTest {
   }
 
   @Test
+  fun `a canvas sized by a width and a height apart takes them as its viewport`() {
+    val result =
+      imported(
+        """{"header":{"width":360,"height":360},"root":[{"type":"canvas",
+          "modifiers":[{"width":120},{"height":48}],
+          "commands":[{"drawRect":{"left":0,"top":0,"right":120,"bottom":48}}]}]}"""
+      )
+    val canvas = result.document.nodes.values.single { it.componentId == UiDrawing.CANVAS }
+    fun viewport(name: String) =
+      canvas.properties[name]!!.jsonObject["value"]!!.jsonPrimitive.content
+    assertEquals("120.0", viewport("viewportWidth"))
+    assertEquals("48.0", viewport("viewportHeight"))
+  }
+
+  @Test
+  fun `a loop or clip refused for its bounds leaves no unreachable commands`() {
+    val result =
+      imported(
+        """{"header":{"width":100,"height":100},"root":[{"type":"canvas","commands":[
+          {"loop":{"index":"i","from":0,"commands":[{"drawCircle":{"cx":"i * 10","cy":50,"radius":4}}]}},
+          {"drawRect":{"left":0,"top":0,"right":10,"bottom":10}}
+        ]}]}"""
+      )
+    assertTrue(result.gaps.any { "until" in it }, result.gaps.toString())
+    val document = result.document
+    val reachable = mutableSetOf<String>()
+    fun walk(id: String) {
+      if (!reachable.add(id)) return
+      document.nodes.getValue(id).slots.values.flatten().forEach(::walk)
+    }
+    document.roots.forEach(::walk)
+    assertEquals(document.nodes.keys, reachable)
+    assertTrue(document.nodes.values.none { it.componentId == "draw/circle" })
+  }
+
+  @Test
   fun `a canvas's commands become operations carrying the paint before them`() {
     val result =
       imported(
