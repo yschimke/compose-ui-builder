@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.export
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -22,7 +23,22 @@ class RemoteLoopRowExpressionExportTest {
     )
   }
 
-  private fun emit(text: JsonObject, rows: String): Pair<String, List<String>> {
+  private fun label(text: JsonObject) =
+    UiBuilderNode(
+      "label",
+      REMOTE_TEXT_COMPONENT_ID,
+      properties = JsonObject(mapOf("text" to text)),
+      modifiers = JsonArray(emptyList()),
+    )
+
+  private fun emit(text: JsonObject, rows: String): Pair<String, List<String>> =
+    emit(rows, "label", label(text))
+
+  private fun emit(
+    rows: String,
+    template: String,
+    vararg nodes: UiBuilderNode,
+  ): Pair<String, List<String>> {
     val refusals = mutableListOf<String>()
     val emitter =
       RemoteContentEmitter(
@@ -55,16 +71,9 @@ class RemoteLoopRowExpressionExportTest {
                   "layout/for-each",
                   properties =
                     JsonObject(mapOf("data" to Json.parseToJsonElement(rows).jsonObject)),
-                  slots = mapOf("template" to listOf("label")),
-                ),
-              "label" to
-                UiBuilderNode(
-                  "label",
-                  REMOTE_TEXT_COMPONENT_ID,
-                  properties = JsonObject(mapOf("text" to text)),
-                  modifiers = JsonArray(emptyList()),
-                ),
-            ),
+                  slots = mapOf("template" to listOf(template)),
+                )
+            ) + nodes.associateBy { it.id },
         ),
         refusals,
       )
@@ -137,5 +146,71 @@ class RemoteLoopRowExpressionExportTest {
 
     assertTrue(refusals.isEmpty(), refusals.toString())
     assertContains(source, "UiRows0(7.rf)")
+  }
+
+  @Test
+  fun `a field read directly and inside an expression is two row properties`() {
+    val column =
+      UiBuilderNode(
+        "column",
+        "layout/column",
+        properties =
+          JsonObject(
+            mapOf(
+              "verticalSpacingDp" to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive("goal"))
+                )
+            )
+          ),
+        slots = mapOf("children" to listOf("label")),
+      )
+    val (source, refusals) =
+      emit(
+        rows,
+        "column",
+        column,
+        label(UiExpressions.parseFormula("format(@goal, 0)", emptySet())),
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(source, "val argument0: kotlin.Float")
+    assertContains(
+      source,
+      "val argument1: androidx.compose.remote.creation.compose.state.RemoteFloat",
+    )
+    assertContains(source, "UiRows0(10.0f, 10.rf")
+  }
+
+  @Test
+  fun `the editor and validator scope reads the enclosing loop's row fields`() {
+    val document =
+      UiBuilderDocument(
+        schema = "ui-builder-design-v1",
+        id = "rows",
+        title = "Rows",
+        revision = 1,
+        catalogPin = JsonObject(emptyMap()),
+        environment = JsonObject(emptyMap()),
+        stateVariables = JsonObject(emptyMap()),
+        roots = listOf("loop"),
+        nodes =
+          mapOf(
+            "loop" to
+              UiBuilderNode(
+                "loop",
+                "layout/for-each",
+                properties = JsonObject(mapOf("data" to Json.parseToJsonElement(rows).jsonObject)),
+                slots = mapOf("template" to listOf("label")),
+              ),
+            "label" to label(JsonObject(emptyMap())),
+          ),
+      )
+    val kinds = UiDrawing.indexKinds(document, "label")
+
+    assertEquals(UiValueKind.STRING, kinds("name"))
+    assertEquals(UiValueKind.FLOAT, kinds("goal"))
+    assertEquals(UiValueKind.FLOAT, kinds("index"))
+    assertEquals(null, UiDrawing.indexKinds(document, "loop")("name"))
   }
 }
