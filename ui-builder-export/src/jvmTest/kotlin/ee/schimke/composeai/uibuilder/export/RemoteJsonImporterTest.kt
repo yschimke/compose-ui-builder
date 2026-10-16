@@ -19,7 +19,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class RemoteJsonImporterTest {
   private fun imported(json: String): RemoteJsonImporter.Result =
-    RemoteJsonImporter.import(Json.parseToJsonElement(json) as JsonObject)
+    RemoteJsonImporter.import(Json.parseToJsonElement(json) as JsonObject, SYSTEM_ID)
 
   private fun formula(
     text: String,
@@ -251,7 +251,7 @@ class RemoteJsonImporterTest {
           file.parentFile.name
         continue
       }
-      val result = RemoteJsonImporter.import(json, id = file.parentFile.name)
+      val result = RemoteJsonImporter.import(json, SYSTEM_ID, id = file.parentFile.name)
       if (result.gaps.isEmpty()) clean++
       result.gaps
         .map { gap ->
@@ -295,3 +295,5 @@ class RemoteJsonImporterTest {
     println(report.lines().take(40).joinToString("\n"))
   }
 }
+
+private const val SYSTEM_ID = "remote-m3"

@@ -27,9 +27,18 @@ import kotlinx.serialization.json.jsonPrimitive
 object RemoteJsonImporter {
   class Result(val document: UiBuilderDocument, val gaps: List<String>)
 
-  /** Lengths are taken 1:1 as dp: the document's units are the design's. */
-  fun import(source: JsonObject, id: String = "imported", title: String = "Imported"): Result =
-    Importer(source).run(id, title)
+  /**
+   * Lengths are taken 1:1 as dp: the document's units are the design's.
+   *
+   * @param systemId the catalog the document is pinned to: the one whose layout and drawing
+   *   components play Remote Compose, which the caller knows and the importer does not.
+   */
+  fun import(
+    source: JsonObject,
+    systemId: String,
+    id: String = "imported",
+    title: String = "Imported",
+  ): Result = Importer(source).run(systemId, id, title)
 
   private const val ROOT_ID = "root"
 
@@ -66,7 +75,7 @@ object RemoteJsonImporter {
     val width = header?.number("width") ?: 360.0
     val height = header?.number("height") ?: 360.0
 
-    fun run(id: String, title: String): Result {
+    fun run(systemId: String, id: String, title: String): Result {
       // A list of nodes, or the one node.
       val roots =
         when (val root = source["root"]) {
@@ -94,7 +103,7 @@ object RemoteJsonImporter {
           catalogPin =
             JsonObject(
               mapOf(
-                "systemId" to JsonPrimitive("remote-m3"),
+                "systemId" to JsonPrimitive(systemId),
                 "catalogRevision" to JsonPrimitive("candidate"),
                 "capabilityDigest" to JsonPrimitive("candidate"),
                 "nativeRuntimeId" to JsonPrimitive("candidate"),
