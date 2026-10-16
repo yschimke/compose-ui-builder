@@ -55,7 +55,16 @@ fun CanvasRenderNode.renderStructure(
 internal fun CanvasRenderNode.repeatedTemplateEntries(): List<CanvasRenderNode> {
   val template = node.slots["template"].orEmpty().firstOrNull() ?: return emptyList()
   return node.forEachRows().mapIndexedNotNull { index, row ->
-    occurrenceChild(template, index, row)
+    // `@index` is the row's position unless the row authors a field of that name.
+    val fields =
+      if ("index" in row) row
+      else
+        JsonObject(
+          row +
+            ("index" to
+              JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(index))))
+        )
+    occurrenceChild(template, index, fields)
   }
 }
 

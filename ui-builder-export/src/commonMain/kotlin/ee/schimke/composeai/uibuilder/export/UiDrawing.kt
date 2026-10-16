@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -562,14 +563,70 @@ object UiDrawing {
 
   /**
    * The kind of each loop index in scope at [nodeId], for an expression's binding operands: those
-   * of the [REPEAT]s around it, and a [POLYLINE]'s own.
+   * of the [REPEAT]s around it and a [POLYLINE]'s own, else a field of the nearest
+   * `layout/for-each` row it is repeated in.
    */
   fun indexKinds(document: UiBuilderDocument, nodeId: String): (String) -> UiValueKind? {
     // A polyline's own index, which its point formulas read.
     val own = document.nodes[nodeId]?.takeIf { it.componentId == POLYLINE }?.let(::indexName)
     val indices = loopIndices(document, nodeId).toSet() + listOfNotNull(own)
-    return { key -> if (key in indices) UiValueKind.FLOAT else null }
+    val rows = enclosingRowKinds(document, nodeId)
+    return { key -> if (key in indices) UiValueKind.FLOAT else rows[key] }
   }
+
+  /**
+   * The row fields an expression at [nodeId] may read: those of the nearest `layout/for-each` whose
+   * template it is in, by [rowFieldKinds].
+   */
+  fun enclosingRowKinds(document: UiBuilderDocument, nodeId: String): Map<String, UiValueKind> {
+    val parents = HashMap<String, String>()
+    document.nodes.values.forEach { node ->
+      node.slots.values.forEach { children ->
+        children.forEach { child -> parents.getOrPut(child) { node.id } }
+      }
+    }
+    val seen = HashSet<String>()
+    var current = parents[nodeId]
+    while (current != null && seen.add(current)) {
+      val node = document.nodes[current] ?: break
+      if (node.componentId == FOR_EACH) {
+        val rows = (node.properties["data"] as? JsonObject)?.get("values") as? JsonArray
+        return rowFieldKinds(rows ?: JsonArray(emptyList()))
+      }
+      current = parents[current]
+    }
+    return emptyMap()
+  }
+
+  /**
+   * The fields of a `layout/for-each`'s rows an expression may read: each one every row gives the
+   * same Remote-typed kind, and `@index`, the row's position, unless a row authors a field of that
+   * name. Ints are left out, as for component arguments: a Remote expression reads no Int
+   * parameter.
+   */
+  fun rowFieldKinds(rows: JsonArray): Map<String, UiValueKind> {
+    val kinds = rows.map { row ->
+      ((row as? JsonObject)?.get("fields") as? JsonObject).orEmpty().mapValues { (_, value) ->
+        ((value as? JsonObject)?.get("type") as? JsonPrimitive)
+          ?.content
+          ?.let(UiExpressions::kindOfWrapper)
+      }
+    }
+    val keys = kinds.flatMap { it.keys }.toSet()
+    val authored =
+      keys
+        .mapNotNull { key ->
+          val kind = kinds.map { it[key] }.distinct().singleOrNull()
+          if (kind == null || kind == UiValueKind.INT) null else key to kind
+        }
+        .toMap()
+    return if (LOOP_INDEX in keys) authored else authored + (LOOP_INDEX to UiValueKind.FLOAT)
+  }
+
+  /** A `layout/for-each` row's position, read as `@index` like a draw loop's. */
+  const val LOOP_INDEX: String = "index"
+
+  private const val FOR_EACH = "layout/for-each"
 
   /** The expression scope at [nodeId]: the document's state plus the loop indices around it. */
   fun expressionScope(document: UiBuilderDocument, nodeId: String): UiExpressions.Scope =
