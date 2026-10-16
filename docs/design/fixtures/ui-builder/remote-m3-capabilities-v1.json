@@ -2134,6 +2134,17 @@
                     "required": false
                 },
                 {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": [
                         "number",
@@ -2160,6 +2171,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
@@ -2257,6 +2296,17 @@
                     "required": false
                 },
                 {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": [
                         "number",
@@ -2283,6 +2333,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
@@ -2390,6 +2468,17 @@
                     "required": false
                 },
                 {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": [
                         "number",
@@ -2416,6 +2505,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
@@ -2550,6 +2667,17 @@
                     "required": false
                 },
                 {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": [
                         "number",
@@ -2576,6 +2704,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
@@ -2700,6 +2856,34 @@
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -2793,6 +2977,17 @@
                     "required": false
                 },
                 {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": [
                         "number",
@@ -2819,6 +3014,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
@@ -2930,6 +3153,17 @@
                     "required": false
                 },
                 {
+                    "allowedValues": [
+                        "miter",
+                        "round",
+                        "bevel"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeJoin",
+                    "notes": "How a stroke's corners are drawn: mitred (the default), rounded or bevelled.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": [
                         "number",
@@ -2956,6 +3190,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
@@ -3078,6 +3340,34 @@
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -3196,6 +3486,34 @@
                     "jsonType": "string",
                     "name": "gradientColor",
                     "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColors",
+                    "notes": "The colours the gradient runs through, evenly spaced: hex or theme roles, separated by commas. Replaces color → gradientColor when set.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "srcOver",
+                        "multiply",
+                        "screen",
+                        "overlay",
+                        "darken",
+                        "lighten",
+                        "plus",
+                        "difference",
+                        "xor",
+                        "srcIn",
+                        "srcAtop",
+                        "dstOut",
+                        "clear"
+                    ],
+                    "jsonType": "string",
+                    "name": "blendMode",
+                    "notes": "How the paint combines with what is already drawn. srcOver, drawing on top, when absent.",
                     "required": false
                 }
             ],
