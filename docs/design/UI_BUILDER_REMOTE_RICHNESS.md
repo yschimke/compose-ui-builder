@@ -187,7 +187,7 @@ from its operands and refuses what does not type, with the path of the operand i
 | `and` `or` `not` | Boolean |
 | `select(condition, ifTrue, ifFalse)` | the branches' kind |
 | `concat(…)` `toString(x)` | String; numbers print as the player prints them |
-| `format(x, decimals[, minDigits])` | String: exactly `decimals` (0–6, literal) digits after the point, ties to even, the whole part zero-padded to `minDigits` (1–9, literal), no grouping — `format(7.5, 1, 2)` is `07.5`. Exports as `x.toRemoteString(DecimalFormat("00.0", DecimalFormatSymbols(Locale.ROOT)))` (`java.text`, the released API's type), the player's text-from-float |
+| `format(x, decimals[, minDigits])` | String: exactly `decimals` (0–6, literal) digits after the point, ties away from zero (the player adds half a unit and truncates), a negative always signed, the whole part zero-padded to `minDigits` (1–9, literal), no grouping — `format(7.5, 1, 2)` is `07.5`. Exports as `x.toRemoteString(DecimalFormat("00.0", DecimalFormatSymbols(Locale.ROOT)))` (`java.text`, the released API's type), the player's text-from-float |
 | `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /
