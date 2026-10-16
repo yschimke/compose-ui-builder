@@ -304,11 +304,12 @@ object RemoteJsonImporter {
       val modifierList = modifiers(obj["modifiers"], "$path.modifiers")
       // The commands are in the document's pixels; a viewport of the canvas's stated size, or the
       // document's, draws them there whatever size the canvas ends up.
-      val stated = modifierList.firstNotNullOfOrNull { m ->
-        (m as JsonObject).takeIf { it.string("type") == "size" }
+      // A size, or a width and a height apart, is the canvas's stated extent on that axis.
+      fun stated(type: String, field: String) = modifierList.firstNotNullOfOrNull { m ->
+        (m as JsonObject).takeIf { it.string("type") == type }?.number(field)
       }
-      val viewportWidth = stated?.number("widthDp") ?: width
-      val viewportHeight = stated?.number("heightDp") ?: height
+      val viewportWidth = stated("size", "widthDp") ?: stated("width", "widthDp") ?: width
+      val viewportHeight = stated("size", "heightDp") ?: stated("height", "heightDp") ?: height
       val ops =
         commands(obj["commands"], "$path.commands", Paint(), Scope(), viewportWidth, viewportHeight)
       return add(
@@ -493,12 +494,13 @@ object RemoteJsonImporter {
       scope: Scope,
     ): String {
       val id = nextId("clip")
+      val bounds = JsonObject(box(body, scope))
       val ops = commandList(rest, path, paint, scope)
       return add(
         UiBuilderNode(
           id,
           UiDrawing.CLIP,
-          JsonObject(box(body, scope)),
+          bounds,
           slots = mapOf(UiDrawing.OPS_SLOT to ops),
         )
       )
@@ -508,6 +510,14 @@ object RemoteJsonImporter {
       val index = body.string("index") ?: "i"
       val id = nextId("repeat")
       val inner = scope.copy(indices = scope.indices + index)
+      // The bounds first: a loop refused for them must not leave its commands behind as nodes
+      // nothing reaches.
+      val properties = buildMap {
+        put("from", value(body["from"] ?: JsonPrimitive(0), scope))
+        put("until", value(body["until"] ?: throw Gap("a loop needs `until`"), scope))
+        put("step", value(body["step"] ?: JsonPrimitive(1), scope))
+        put("index", string(index))
+      }
       val ops =
         commandList(
           nested((body["commands"] as? JsonArray).orEmpty()),
@@ -515,12 +525,6 @@ object RemoteJsonImporter {
           paint,
           inner,
         )
-      val properties = buildMap {
-        put("from", value(body["from"] ?: JsonPrimitive(0), scope))
-        put("until", value(body["until"] ?: throw Gap("a loop needs `until`"), scope))
-        put("step", value(body["step"] ?: JsonPrimitive(1), scope))
-        put("index", string(index))
-      }
       return add(
         UiBuilderNode(
           id,
