@@ -15,8 +15,9 @@ import kotlinx.serialization.json.JsonObject
  * be the one the runtime declares: a property added to [UiDrawing] and missing here has no control
  * there, and a design that sets it is reported as undeclared.
  *
- * Regenerate the drawing entries by running this test with `WRITE_DRAW_CATALOG=<file>`, which
- * writes the runtime's entries by component id for merging into the fixture.
+ * Regenerate the drawing entries with `./gradlew :ui-builder-runtime:test --tests
+ * '*BundledDrawCatalogTest' -PwriteDrawCatalog=<file>`, which writes the runtime's entries by
+ * component id for merging into the fixture.
  */
 class BundledDrawCatalogTest {
   private val json = Json {
@@ -39,7 +40,13 @@ class BundledDrawCatalogTest {
           checkNotNull(remoteDrawComponent(id, declared)) { "$id did not derive" },
         )
       }
-    System.getenv("WRITE_DRAW_CATALOG")?.let { File(it).writeText(JsonObject(live).toString()) }
+    System.getProperty("writeDrawCatalog")?.let { File(it).writeText(JsonObject(live).toString()) }
+
+    assertEquals(
+      UiDrawing.COMPONENT_IDS.toSet(),
+      declared.keys.filterTo(mutableSetOf()) { it.startsWith("draw/") },
+      "the bundled remote-m3 catalog's drawing components are not the runtime's",
+    )
 
     val stale = live.filter { (id, component) ->
       declared[id]?.let { json.encodeToJsonElement(ComponentCapabilityV1.serializer(), it) } !=
@@ -49,7 +56,7 @@ class BundledDrawCatalogTest {
       emptySet(),
       stale.keys,
       "these drawing components in the bundled remote-m3 catalog differ from the runtime's; " +
-        "regenerate them with WRITE_DRAW_CATALOG",
+        "regenerate them with -PwriteDrawCatalog",
     )
   }
 }

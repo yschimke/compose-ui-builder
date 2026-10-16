@@ -62,6 +62,16 @@ tasks.named<Test>("test") {
   } else {
     exclude("**/ExternalTypedCatalogSmokeTest*")
   }
+  // BundledDrawCatalogTest checks the bundled remote-m3 catalog, and writes the runtime's drawing
+  // entries to -PwriteDrawCatalog=<file> for regenerating it.
+  inputs
+    .file(rootProject.file("docs/design/fixtures/ui-builder/remote-m3-capabilities-v1.json"))
+    .withPathSensitivity(PathSensitivity.RELATIVE)
+  providers.gradleProperty("writeDrawCatalog").orNull?.let {
+    val target = rootProject.file(it)
+    systemProperty("writeDrawCatalog", target.absolutePath)
+    outputs.file(target)
+  }
 }
 
 tasks.processResources {
