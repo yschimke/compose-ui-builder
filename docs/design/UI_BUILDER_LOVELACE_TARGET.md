@@ -15,7 +15,8 @@ Assistant's `lovelace/config` returns and `lovelace/config/save` accepts.
 
 A user should be able to:
 
-1. Open a Home Assistant dashboard in UI Builder, with each card drawn as it really looks.
+1. Open a Home Assistant dashboard in UI Builder, with each card drawn as it really looks where
+   harc can render it, and a labelled placeholder where it can't.
 2. Drag cards within and between sections, reorder sections, and add or remove cards from a
    palette.
 3. Resize cards on the sections grid (`grid_options`) and edit a card's options in the inspector.
@@ -53,8 +54,13 @@ homeassistant-remotecompose repo, as its `ha-cards` catalog already is. The stru
 the slot model `CapabilityCatalog.kt:188-221` already enforces (`acceptedRoles`, `acceptedTraits`,
 `cardinality`):
 
-- **`lovelace/view`** is the `screen-root` builtin. It has a `sections` slot that accepts only the
-  `LovelaceSection` trait, and properties `title`, `path`, `icon` and `max_columns`.
+- **`lovelace/dashboard`** is the `screen-root` builtin and the design's one root. A dashboard
+  holds several views (its tabs), and a design may have only one root
+  (`validateTopology`, `PersistentUiBuilderServiceSupport.kt:757-766`). It has a `views` slot that
+  accepts only the `LovelaceView` trait, plus the dashboard's own `title`.
+- **`lovelace/view`** has the trait `LovelaceView`, a `sections` slot that accepts only the
+  `LovelaceSection` trait, and properties `title`, `path`, `icon` and `max_columns`. The editor
+  shows one view at a time, like Home Assistant's tabs.
 - **`lovelace/section`** has the trait `LovelaceSection`, a `cards` slot that accepts only
   `LovelaceCard`, and properties `title`, `column_span` and `row_span`.
 - **`lovelace/card/<type>`** has the trait `LovelaceCard`, one component per card type (`tile`,
@@ -70,10 +76,10 @@ harc's `CardConfig.raw` keeps the whole object.
 
 ## The canvas: draw the real card
 
-The canvas must look like the dashboard, not a wireframe. This is where Home Assistant differs
+The canvas should look like the dashboard, not a wireframe. This is where Home Assistant differs
 from A2UI, and where harc already has what is needed. In order of effort:
 
-1. **Placeholders (free).** `canvasMapping` points views and sections at existing adapters
+1. **Placeholders (free).** `canvasMapping` points the dashboard, views and sections at existing adapters
    (`layout/column`, `layout/box`), and cards fall back to `NativeOnlyPlaceholder` (a named dashed
    box). It is enough to prove structure editing.
 2. **Real cards as Remote Compose (recommended).** harc renders every Lovelace card to a Remote
@@ -86,6 +92,13 @@ from A2UI, and where harc already has what is needed. In order of effort:
    - **The adapter:** a canvas adapter (`CanvasAdapterRegistry`, `JvmCanvasAdapterProvider`) for
      `lovelace/card/*` that fetches and plays that document gives true-to-life cards. They come in
      whichever card style the user picked (LCD, Braun, …), drawn exactly as the app will draw them.
+   - **Not every card type renders.** harc's converters are hand-written one type at a time.
+     Some types are unfinished (picture, map, the graph cards), and iframe and most `custom:*` HACS
+     cards are out of scope. harc shows a custom card that names entities as a generic entities
+     card, and anything else as a "not yet supported" placeholder. The adapter must fall back the
+     same way, keeping the card's raw config, so a dashboard with unsupported cards still opens,
+     arranges and saves. Converting more types is work on harc's side; Home Assistant's own
+     frontend in an iframe is a possible later fallback for the rest.
 3. **A catalog-owned runtime.** A `nativeRuntimeId` iframe renderer
    ([UI_BUILDER_CATALOG_RENDERER_RUNTIME.md](UI_BUILDER_CATALOG_RENDERER_RUNTIME.md)) only if
    the adapter route proves too limited.
