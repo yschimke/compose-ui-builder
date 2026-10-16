@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorPropertyControl
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
@@ -38,6 +39,9 @@ class EditorModifierMenuTest {
         "verticalScroll",
         "horizontalScroll",
         "padding",
+        "background",
+        "border",
+        "clip",
       ),
       box.map { it.type },
     )
@@ -130,6 +134,73 @@ class EditorModifierMenuTest {
     assertTrue(outcome is CommandOutcome.Rejected, outcome.toString())
     assertEquals("modifiers", outcome.field)
     assertEquals(moved.document, refused.document)
+  }
+
+  @Test
+  fun `a background's colour and corners are edited as a colour and a shape`() {
+    val state = reducer.initial(document, selectedNodeId = "main-background")
+    val filled =
+      reducer.reduce(state, UiBuilderEditorEvent.ToggleModifier("main-background", "background"))
+    fun fields(state: ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState) =
+      reducer.modifierFields(state).filter { it.type == "background" }.associateBy { it.field }
+
+    assertTrue(fields(filled).isNotEmpty(), filled.lastOutcome.toString())
+    assertEquals("surfaceContainer", fields(filled).getValue("color").value)
+    assertEquals(EditorPropertyControl.Color, fields(filled).getValue("color").control)
+    assertEquals("medium", fields(filled).getValue("shape").value)
+
+    fun set(
+      state: ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState,
+      field: String,
+      draft: String,
+    ) =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.SetModifierValue("main-background", "background", field, draft),
+      )
+    val hex = set(filled, "color", "#FF6750A4")
+    val written = hex.document.nodes.getValue("main-background").modifiers.last().jsonObject
+    assertEquals(
+      Json.parseToJsonElement("""{"type":"color","value":"#FF6750A4"}"""),
+      written.getValue("color"),
+    )
+    val role = set(hex, "color", "secondary")
+    assertEquals("secondary", fields(role).getValue("color").value)
+    assertEquals(
+      Json.parseToJsonElement("""{"type":"colorToken","value":"secondary"}"""),
+      role.document.nodes.getValue("main-background").modifiers.last().jsonObject.getValue("color"),
+    )
+    val radius = set(role, "shape", "20")
+    assertEquals("20", fields(radius).getValue("shape").value)
+    assertEquals("large", fields(set(radius, "shape", "large")).getValue("shape").value)
+
+    // Neither a colour nor a shape the exporters can write is accepted.
+    for ((field, draft) in
+      listOf(
+        "color" to "pinkish",
+        "color" to "transparent",
+        "color" to "tertiaryFixedDim",
+        "shape" to "-4",
+        "shape" to "huge",
+      )) {
+      val refused = set(radius, field, draft)
+      val outcome = refused.lastOutcome
+      assertTrue(outcome is CommandOutcome.Rejected, "$field=$draft: $outcome")
+      assertEquals(radius.document, refused.document)
+    }
+  }
+
+  @Test
+  fun `a border and a clip are added with defaults the renderer applies`() {
+    val state = reducer.initial(document, selectedNodeId = "main-background")
+    for (type in listOf("border", "clip")) {
+      val added =
+        reducer.reduce(state, UiBuilderEditorEvent.ToggleModifier("main-background", type))
+      assertTrue(
+        reducer.modifierFields(added).any { it.type == type && it.field == "shape" },
+        added.lastOutcome.toString(),
+      )
+    }
   }
 
   @Test
