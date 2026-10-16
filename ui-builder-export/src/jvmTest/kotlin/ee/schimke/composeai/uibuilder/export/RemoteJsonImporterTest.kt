@@ -252,6 +252,7 @@ class RemoteJsonImporterTest {
           {"polarPathExpression":{"id":"ring","expressionR":"100 + 10 * sin(a[0] * 6)",
             "start":0,"end":6.2831853,"count":64,"cx":200,"cy":200,"flags":5}},
           {"pathExpression":{"id":"smooth","expressionX":"a[0]","expressionY":"a[0]","start":0,"end":1,"count":8,"flags":0}},
+          {"pathExpression":{"id":"wound","expressionX":"a[0]","expressionY":"a[0]","start":0,"end":1,"count":8,"flags":16777220}},
           {"paint":{"ops":[{"color":"#FF2E6F52"},{"style":"stroke"},{"strokeWidth":3}]}},
           {"drawPath":{"path":"curve"}},
           {"drawPath":{"path":"ring"}},
@@ -278,9 +279,11 @@ class RemoteJsonImporterTest {
     assertContains(text(ring, "pointXDp"), "cos(")
     assertContains(text(ring, "pointXDp"), "/ 64")
     // A smoothed path is reported where it is defined, and drawing it is not read as SVG data.
-    assertEquals(2, result.gaps.size, result.gaps.toString())
+    // So is one asking for a winding the polyline's fill would not keep.
+    assertEquals(3, result.gaps.size, result.gaps.toString())
     assertTrue(result.gaps[0].startsWith("root[0].commands[3]") && "smoothed" in result.gaps[0])
-    assertTrue("`smooth` was not imported" in result.gaps[1], result.gaps.toString())
+    assertTrue(result.gaps[1].startsWith("root[0].commands[4]") && "winding" in result.gaps[1])
+    assertTrue("`smooth` was not imported" in result.gaps[2], result.gaps.toString())
   }
 
   @Test
