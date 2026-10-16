@@ -287,6 +287,11 @@ jobs:
           ./gradlew -PuiBuilderRemoteCompose=true
           :ui-builder-export:jvmTest :ui-builder:jvmTest :ui-builder-runtime:test
           :ui-builder:compileKotlinWasmJs
+      # The export tests above write the Remote Kotlin they assert on under
+      # `ui-builder-export/build/*-proof`. Compile it against the released AndroidX libraries a
+      # consumer builds it with, so an API the emitter assumes is checked by kotlinc.
+      - name: Compile the exported Remote Kotlin
+        run: ./gradlew -p experiments/remote-export-compile compileDebugKotlin
 
   # The shipped Wasm editor, opened in a real browser. Every other job proves the editor on the JVM;
   # this is the one that would notice the page itself failing to start (Skiko on WebGL, the Wasm
