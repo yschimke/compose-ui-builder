@@ -1839,7 +1839,10 @@ class UiBuilderEditorReducer(
           val wrapper = if (text.startsWith("#")) "color" else "colorToken"
           JsonObject(mapOf("type" to JsonPrimitive(wrapper), "value" to JsonPrimitive(text)))
         } else {
-          if (text !in MODIFIER_SHAPES && (text.toDoubleOrNull()?.takeIf { it >= 0 } == null)) {
+          if (
+            text !in MODIFIER_SHAPES &&
+              (text.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 } == null)
+          ) {
             return state.rejected(
               sequence,
               RejectionCode.INVALID_PROPERTY,

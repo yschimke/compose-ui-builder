@@ -181,6 +181,8 @@ class EditorModifierMenuTest {
         "color" to "transparent",
         "color" to "tertiaryFixedDim",
         "shape" to "-4",
+        "shape" to "Infinity",
+        "shape" to "1e309",
         "shape" to "huge",
       )) {
       val refused = set(radius, field, draft)
