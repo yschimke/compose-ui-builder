@@ -241,6 +241,12 @@ tasks.named<Test>("jvmTest") {
   // so a jvmTest restored from the build cache restores them too.
   outputs.dir(layout.buildDirectory.dir("draw-proof")).withPropertyName("drawProof")
   outputs.dir(layout.buildDirectory.dir("remote-call-proof")).withPropertyName("remoteCallProof")
+  // `RemoteJsonImporterTest` imports a RemoteCompose-Examples checkout when given one.
+  providers.gradleProperty("remoteJsonCorpus").orNull?.let {
+    val corpus = rootProject.file(it)
+    inputs.dir(corpus).withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("remoteJsonCorpus", corpus.absolutePath)
+  }
   val classpath = desktopComposeClasspath.incoming.files
   val plugin = composeCompilerPlugin.incoming.files
   inputs
