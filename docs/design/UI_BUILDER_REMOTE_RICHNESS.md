@@ -195,6 +195,7 @@ from its operands and refuses what does not type, with the path of the operand i
 | `spline(t, v0, v1, …)` `splineLoop(t, v0, v1, …)` | Float: the player's monotonic spline through 2–64 literal control points spaced evenly from `t` = 0 to 1, a straight line past the ends; `splineLoop` first wraps `t` into 0 up to 1 (repeat the first point last for a seamless loop). Exports as `evalSpline(RemoteFloatArray(…), loop, t)`; the preview runs remote-core's `MonotonicSpline` in Float |
 | `cbrt(x)` `copySign(magnitude, sign)` | Float |
 | `secondsUntil(instant)` `minutesUntil(instant)` `hoursUntil(instant)` | Float: from now until a literal ISO-8601 UTC instant (`"2026-12-25T00:00:00Z"`), negative once it has passed — the player's time-from-now, `deltaFromReferenceInSeconds(RemoteLong(…))`; a preview counts from its clock |
+| `dragX(default, min, max, perDp)` `dragY(…)` | Float: a value the viewer drags, starting at `default` and moving by `perDp` for each dp the touch moves across (or down), held between `min` and `max`, easing to a stop on release — the player's touch expression, readable only inside a `draw/canvas`, whose area takes the touch. All four are literal. The released Compose API has no public touch expression, so the export writes one through the draw scope's `@RestrictTo` `document.addTouch(…)` with `@Suppress("RestrictedApi")`, its expression the raw touch position over the density (the player flings by the slope it finds through that position). The preview shows `default` |
 | `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /
@@ -438,7 +439,7 @@ the numbers by halves, truncating the index as the player does. Its integers and
 variables; its plain colours resolve `@colors.name` paints, text and backgrounds, while a colour with
 light and dark values has no builder equivalent and is reported.
 
-What has no builder equivalent — 3D, particles, curved runtime paths, touch expressions, shaders, live arrays —
+What has no builder equivalent — 3D, particles, curved runtime paths, shaders, live arrays —
 is skipped and reported by its path, so a document imports as far as it can.
 `RemoteJsonImporterTest` imports a corpus checkout given `-PremoteJsonCorpus=<dir>` and writes
 `ui-builder-export/build/remote-json-import/report.md`, every gap with the documents it stops.
