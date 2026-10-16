@@ -1,14 +1,20 @@
 # The catalog-owned cutover: one flag, the evidence for flipping it, and how the code moves
 
-**Status: staged, 2026-10-07. The flag exists and defaults off; nothing reads the new paths in a
-deployment.** This is the plan that finishes [#64](https://github.com/yschimke/compose-ui-builder/issues/64),
-[#191](https://github.com/yschimke/compose-ui-builder/issues/191) and
-[#333](https://github.com/yschimke/compose-ui-builder/issues/333) without another flag day. It replaces
-the parked big-bang PR ([#329](https://github.com/yschimke/compose-ui-builder/pull/329), and the
-draft before it, [#231](https://github.com/yschimke/compose-ui-builder/pull/231)) with the same end
-state reached in reversible steps: first every reader learns the catalog-owned answer behind one
-flag, then a test proves each catalog would be served correctly with the flag on, then the flag is
-flipped per catalog, and only then is the Kotlin deleted.
+**Runtime cutover: published definitions are mandatory.** The runtime no longer synthesises an
+M3 fallback or guesses the platform of a publication. Every enabled catalog must be supplied through
+`Builder.published` and must declare `statusSemantics.platform`. Missing definitions are refused with
+the catalog id. `Builder.catalogOwnership` and the executor's ownership property remain deprecated
+binary compatibility shims; changing them cannot restore a fallback. Frozen
+`LegacySynthesisedReferences` remain so designs made against the retired definitions still reopen,
+including pins stamped with a host's configured renderer runtime.
+
+The packaged source still supplies the builder's own foundation vocabulary and Remote Compose
+seams. Tests that validate the historical Jetcaster document now pass its benchmark catalog
+explicitly. This change does not delete the separate Kotlin seed factories, browser chooser
+branches, JVM canvas adapters, or captured publication tests described below. The remaining steps
+are tracked in [server #1530](https://github.com/yschimke/compose-preview-server/issues/1530).
+
+The sections below record the staged rollout and its historical default-off flag.
 
 Read [`UI_BUILDER_CATALOG_AGNOSTICISM.md`](UI_BUILDER_CATALOG_AGNOSTICISM.md) for why each of these
 facts is in the wrong place, and [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md)

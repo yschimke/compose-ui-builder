@@ -139,7 +139,7 @@ class SlotAcceptanceTest {
    */
   @Test
   fun `the server refuses a lazy grid in a scaffold's top bar`() {
-    val executor = CurrentM3UiBuilderCatalogExecutor()
+    val executor = fixtureCatalogExecutor()
     val catalog = executor.listCatalogs().single()
     val document =
       productionDocument()

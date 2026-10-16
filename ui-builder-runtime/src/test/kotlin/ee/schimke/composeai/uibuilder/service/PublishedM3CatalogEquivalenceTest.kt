@@ -206,7 +206,7 @@ class PublishedM3CatalogEquivalenceTest {
   @Test
   fun `a published catalog is still served the builder's own vocabulary`() {
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("m3-catalog"),
           published = mapOf("m3-catalog" to composed),
         )
@@ -222,7 +222,7 @@ class PublishedM3CatalogEquivalenceTest {
     )
     assertEquals(
       "published",
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("m3-catalog"),
           published = mapOf("m3-catalog" to composed),
         )
@@ -248,7 +248,7 @@ class PublishedM3CatalogEquivalenceTest {
         }
         .build()
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("wear-m3"),
           published = mapOf("wear-m3" to wearShaped),
         )
@@ -276,7 +276,7 @@ class PublishedM3CatalogEquivalenceTest {
   @Test
   fun `the donor's asset registry travels with the image component`() {
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("m3-catalog"),
           published = mapOf("m3-catalog" to composed),
         )
@@ -316,7 +316,7 @@ class PublishedM3CatalogEquivalenceTest {
   @Test
   fun `the donor's menu entries travel with the injected components`() {
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("m3-catalog"),
           published = mapOf("m3-catalog" to composed),
         )
@@ -416,7 +416,7 @@ class PublishedM3CatalogEquivalenceTest {
   @Test
   fun `injected groups follow the donor's order, not the injection order`() {
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("m3-catalog"),
           published = mapOf("m3-catalog" to composed),
         )
@@ -454,7 +454,7 @@ class PublishedM3CatalogEquivalenceTest {
             JsonObject(mapOf("keys" to JsonArray(listOf(JsonPrimitive("catalog.own"))))))
       )
     val served =
-      CurrentM3UiBuilderCatalogExecutor(
+      fixtureCatalogExecutor(
           catalogSystemIds = linkedSetOf("m3-catalog"),
           published =
             mapOf(

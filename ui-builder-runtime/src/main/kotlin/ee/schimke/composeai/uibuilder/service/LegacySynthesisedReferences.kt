@@ -4,8 +4,8 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 
 /**
  * The pins the synthesised Kotlin catalogs gave designs created against them, frozen so `resolve`
- * can still accept them once the generators stop running. `CatalogCutoverReadinessTest` holds every
- * row equal to the generator while both exist. Only ids this build ever synthesised are listed.
+ * can still accept them after the generators were retired. `CatalogCutoverReadinessTest` checks
+ * that published catalogs accept every frozen pin. Only ids this build ever synthesised are listed.
  */
 internal object LegacySynthesisedReferences {
 

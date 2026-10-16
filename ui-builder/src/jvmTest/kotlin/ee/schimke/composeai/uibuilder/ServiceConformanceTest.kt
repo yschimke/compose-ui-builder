@@ -51,7 +51,18 @@ import kotlinx.serialization.json.jsonObject
  * name.
  */
 class ServiceConformanceTest {
-  private val executor = CurrentM3UiBuilderCatalogExecutor()
+  private val executor =
+    CurrentM3UiBuilderCatalogExecutor.Builder()
+      .also {
+        it.published =
+          mapOf(
+            "m3-catalog" to
+              Json.decodeFromString<CatalogCapabilityV1>(
+                checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+              )
+          )
+      }
+      .build()
   private val catalogV1: CatalogCapabilityV1 =
     executor.listCatalogs().single { it.benchmark.catalogSystemId == "m3-catalog" }
   private val catalog =

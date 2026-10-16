@@ -34,9 +34,9 @@ class CatalogCutoverReadinessTest {
   private val ids = CatalogCutoverFixtures.catalogIds
 
   @Test
-  fun `the flag is off unless somebody turns it on`() {
+  fun `runtime ownership is unconditional while legacy flag parsing stays compatible`() {
     assertEquals(
-      CatalogOwnership.NONE,
+      CatalogOwnership.ALL,
       CurrentM3UiBuilderCatalogExecutor.Builder().catalogOwnership,
     )
     assertEquals(CatalogOwnership.NONE, CatalogOwnership.parse(null))
@@ -108,11 +108,6 @@ class CatalogCutoverReadinessTest {
 
     assertEquals(ids.toSet(), executor.listCatalogs().map { it.benchmark.catalogSystemId }.toSet())
     assertEquals(ids.associateWith { "published" }, executor.catalogSources)
-    assertEquals(
-      emptySet(),
-      executor.synthesisedCatalogIds,
-      "a catalog-owned executor must not run the Kotlin catalog generators it is about to lose",
-    )
     for (catalog in executor.listCatalogs()) {
       val id = catalog.benchmark.catalogSystemId
       // A catalog whose branch carries no `runtime.zip` (remote-widgets: its launcher widgets have
@@ -126,13 +121,23 @@ class CatalogCutoverReadinessTest {
   }
 
   @Test
-  fun `with the flag off, only the packaged M3 catalog is synthesised`() {
+  fun `legacy ownership settings cannot bring back the Kotlin fallback`() {
     val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.NONE)
-
-    assertEquals(
-      setOf(CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID),
-      executor.synthesisedCatalogIds,
-    )
+    assertEquals(ids.associateWith { "published" }, executor.catalogSources)
+    for (ownership in listOf(CatalogOwnership.NONE, CatalogOwnership.ALL)) {
+      for (id in listOf("m3-catalog", "wear-m3", "unknown-catalog")) {
+        val failure =
+          assertFailsWith<IllegalArgumentException> {
+            CurrentM3UiBuilderCatalogExecutor.Builder()
+              .also {
+                it.catalogSystemIds = setOf(id)
+                it.catalogOwnership = ownership
+              }
+              .build()
+          }
+        assertTrue("$id has no usable published file" in failure.message.orEmpty(), failure.message)
+      }
+    }
   }
 
   @Test

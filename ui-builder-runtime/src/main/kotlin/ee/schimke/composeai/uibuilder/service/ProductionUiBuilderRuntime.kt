@@ -76,7 +76,6 @@ private data class Configuration(
   val packs: List<UiBuilderComponentPackSource>,
   val published: Map<String, CatalogCapabilityV1>,
   val nativeRuntimeIds: Map<String, String> = emptyMap(),
-  val catalogOwnership: CatalogOwnership = CatalogOwnership.NONE,
   val unlistedCatalogIds: Set<String> = emptySet(),
 )
 
@@ -103,16 +102,12 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val exportCapabilities = configuration.exportCapabilities
   private val composeExportFor = configuration.composeExportFor
   private val packs = configuration.packs
-  private val published = configuration.published
+  private val published = configuration.published.filterKeys(catalogSystemIds::contains)
   private val nativeRuntimeIds = configuration.nativeRuntimeIds
 
-  /**
-   * Which catalogs are served only from what they publish (`UI_BUILDER_CATALOG_CUTOVER.md`). An
-   * owned catalog without a usable published file is refused at construction, must declare its
-   * platform, and never runs the synthesised generator; legacy pins come from
-   * [LegacySynthesisedReferences].
-   */
-  public val catalogOwnership: CatalogOwnership = configuration.catalogOwnership
+  /** Every served catalog must come from its published definition. */
+  @Deprecated("All catalogs are catalog-owned; this compatibility property always returns ALL")
+  public val catalogOwnership: CatalogOwnership = CatalogOwnership.ALL
 
   /**
    * Served catalogs left out of what people are offered (`CatalogListing`): each is marked
@@ -144,9 +139,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     packs: List<UiBuilderComponentPackSource> = emptyList(),
     /**
      * Catalogs composed from what a catalog repository published, keyed by system id
-     * (`docs/design/UI_BUILDER_CATALOG_CONTRACT.md`). Preferred over the synthesised catalog of the
-     * same id; a catalog with no synthesiser is served from here alone. Composed by `:server`,
-     * which can read component records.
+     * (`docs/design/UI_BUILDER_CATALOG_CONTRACT.md`). Every enabled catalog must be present.
+     * Composed by the host, which can read component records.
      */
     published: Map<String, CatalogCapabilityV1> = emptyMap(),
   ) : this(
@@ -172,6 +166,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 
   /** Additive host configuration for catalogs delivered with immutable renderer runtimes. */
   public class Builder {
+    /** Builder foundation vocabulary and shared seams; never an implicitly served catalog. */
     public var source: String = packagedM3CatalogSource()
     public var catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID)
     public var exportCapabilities: ExportCapabilitiesV1 = defaultExportCapabilities()
@@ -180,8 +175,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     public var published: Map<String, CatalogCapabilityV1> = emptyMap()
     public var nativeRuntimeIds: Map<String, String> = emptyMap()
 
-    /** See [CurrentM3UiBuilderCatalogExecutor.catalogOwnership]. Off by default. */
-    public var catalogOwnership: CatalogOwnership = CatalogOwnership.NONE
+    /** Retained for compiled hosts; every catalog now requires its published definition. */
+    @Deprecated("All catalogs are catalog-owned; setting this property has no effect")
+    public var catalogOwnership: CatalogOwnership = CatalogOwnership.ALL
 
     /**
      * See [CurrentM3UiBuilderCatalogExecutor.unlistedCatalogIds]. Empty by default; a host flag's
@@ -199,7 +195,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           packs = packs,
           published = published,
           nativeRuntimeIds = nativeRuntimeIds,
-          catalogOwnership = catalogOwnership,
           unlistedCatalogIds = unlistedCatalogIds,
         )
       )
@@ -212,22 +207,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .newBuilder()
       .also { it.exportCapabilities = exportCapabilities }
       .build()
-  private val synthesisers: Map<String, () -> CatalogCapabilityV1> =
-    mapOf(DEFAULT_CATALOG_SYSTEM_ID to { baseCatalog })
-
-  /**
-   * The Kotlin catalogs this build synthesises, excluding owned catalogs so their generators never
-   * run ([synthesisedCatalogIds] lets tests check that).
-   */
-  private val synthesisedCatalogs: Map<String, CatalogCapabilityV1> =
-    synthesisers
-      .filterKeys { !catalogOwnership.owns(it) }
-      .mapValues { (_, synthesise) -> synthesise() }
-
-  /** Which Kotlin catalog generators this executor ran: none for a catalog it does not own. */
-  internal val synthesisedCatalogIds: Set<String>
-    get() = synthesisedCatalogs.keys
-
   /**
    * Where the `remote-compose/` seams come from: the packaged catalog, overridden by any
    * `remote-m3` publishes itself. Read from `published`, since served catalogs already have seams
@@ -247,8 +226,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
    * The builder vocabulary donated to published catalogs, curated per platform by
    * [composeFoundationCatalog], for the platforms this deployment publishes.
    *
-   * [platformFor] falls back to the synthesised catalog's platform when a published catalog
-   * declares none. [donorFor] uses `getOrElse` so callers outside construction still get a donor.
+   * Each published catalog must declare its platform. [donorFor] uses `getOrElse` so callers
+   * outside construction still get a donor.
    */
   private val composeFoundation: Map<String, CatalogCapabilityV1> =
     published.values.map(::platformFor).distinct().associateWith {
@@ -256,17 +235,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     }
 
   private fun platformFor(catalog: CatalogCapabilityV1): String =
-    catalog.declaredPlatform
-      ?: synthesisedCatalogs[catalog.benchmark.catalogSystemId]?.platform
-      ?: run {
-        // A catalog that answers for itself has nothing to borrow a platform from, and guessing
-        // `mobile` for a watch catalog would hand its palette the phone's builder vocabulary.
-        require(!catalogOwnership.owns(catalog.benchmark.catalogSystemId)) {
-          "UI-builder catalog ${catalog.benchmark.catalogSystemId} is catalog-owned and its " +
-            "published file declares no platform"
-        }
-        DEFAULT_PLATFORM
-      }
+    requireNotNull(catalog.declaredPlatform) {
+      "UI-builder catalog ${catalog.benchmark.catalogSystemId}'s published file declares no platform"
+    }
 
   private fun donorFor(catalog: CatalogCapabilityV1): CatalogCapabilityV1 =
     platformFor(catalog).let { platform ->
@@ -333,11 +304,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .build()
   }
 
-  // A published catalog wins over a synthesised one of the same id. A union, not an overlay, so an
-  // id nothing synthesises is still servable.
-  private val availableCatalogs =
-    (synthesisedCatalogs + published.mapValues { (_, catalog) -> withBuilderVocabulary(catalog) })
-      .mapValues { (_, catalog) -> withFontSettingsVocabulary(catalog) }
+  private val availableCatalogs = published.mapValues { (_, catalog) ->
+    withFontSettingsVocabulary(withBuilderVocabulary(catalog))
+  }
   private val catalogs =
     catalogSystemIds
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }
@@ -354,13 +323,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       }
       .associateWith { systemId ->
         require(SAFE_SYSTEM_ID.matches(systemId)) { "invalid UI-builder catalog id: $systemId" }
-        require(!catalogOwnership.owns(systemId) || systemId in published) {
-          "UI-builder catalog $systemId is catalog-owned but has no usable published file; " +
-            "this build no longer falls back to its synthesised definition"
-        }
         val catalog =
           requireNotNull(availableCatalogs[systemId]) {
-            "UI-builder catalog $systemId is neither published nor synthesised by this build"
+            "UI-builder catalog $systemId has no usable published file; " +
+              "every served catalog must publish its definition"
           }
         catalog
           .newBuilder()
@@ -437,12 +403,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           .withPacks(packs.filter { it.platform == catalog.platform })
           .let { if (systemId in unlistedCatalogIds) CatalogListing.markUnlisted(it) else it }
       }
-  /**
-   * Where each enabled catalog came from — `published` or `synthesised` — for the startup line, so
-   * a source switch is visible to operators.
-   */
-  public val catalogSources: Map<String, String> =
-    catalogs.keys.associateWith { if (it in published) "published" else "synthesised" }
+  /** Source diagnostic retained for hosts: every enabled catalog is published. */
+  public val catalogSources: Map<String, String> = catalogs.keys.associateWith { "published" }
 
   private fun referenceOf(catalog: CatalogCapabilityV1) =
     CatalogReferenceV1(
@@ -457,35 +419,26 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val references = catalogs.mapValues { (_, catalog) -> referenceOf(catalog) }
 
   /**
-   * Every reference a stored design may be pinned to for a served catalog: both the synthesised and
-   * published sources', so flipping `--ui-builder-published-catalogs` does not strand designs. One
-   * direction only (asserted by `CatalogSourceFlipTest`); pins naming neither are refused.
+   * Served pins plus the frozen pins used before catalogs published their definitions. Keeping
+   * these references lets stored designs reopen after the Kotlin catalog fallback is retired.
    */
   private val acceptedReferences: Map<String, Set<CatalogReferenceV1>> =
     catalogs.mapValues { (systemId, catalog) ->
       setOfNotNull(
         referenceOf(catalog),
-        synthesisedCatalogs[systemId]?.let(::referenceOf),
-        // A catalog whose generator did not run (owned, or like `a2ui-catalog` no longer in this
-        // build) takes its legacy pin from the frozen table; `CatalogCutoverReadinessTest` keeps
-        // the rest equal to their generators.
-        LegacySynthesisedReferences.forCatalog(systemId).takeIf {
-          systemId !in synthesisedCatalogs
+        LegacySynthesisedReferences.forCatalog(systemId),
+        LegacySynthesisedReferences.forCatalog(systemId)?.let { legacy ->
+          nativeRuntimeIds[systemId]?.let { runtimeId ->
+            CatalogReferenceV1(
+              systemId = legacy.systemId,
+              catalogRevision = legacy.catalogRevision,
+              capabilityDigest = legacy.capabilityDigest,
+              nativeRuntimeId = runtimeId,
+            )
+          }
         },
-        // …and the same pin as a host that configured a runtime for the synthesised catalog
-        // stamped it, with that runtime in place of `candidate`.
-        LegacySynthesisedReferences.forCatalog(systemId)
-          ?.takeIf { systemId !in synthesisedCatalogs }
-          ?.let { legacy ->
-            nativeRuntimeIds[systemId]?.let { runtimeId ->
-              CatalogReferenceV1(
-                systemId = legacy.systemId,
-                catalogRevision = legacy.catalogRevision,
-                capabilityDigest = legacy.capabilityDigest,
-                nativeRuntimeId = runtimeId,
-              )
-            }
-          },
+        // A configured renderer runtime overrides the served pin, but designs stamped with
+        // the publication's original runtime still resolve.
         published[systemId]?.let(::referenceOf),
       )
     }
