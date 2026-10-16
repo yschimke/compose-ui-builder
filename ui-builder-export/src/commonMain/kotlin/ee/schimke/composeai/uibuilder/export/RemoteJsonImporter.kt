@@ -63,6 +63,7 @@ object RemoteJsonImporter {
   /** `PathExpression`'s flags: straight segments, and a closed path. */
   private const val PATH_LINEAR = 4
   private const val PATH_LOOP = 1
+  private const val PATH_WINDING_MASK = 0x3000000
 
   /** A path expression's parameter, as its formulas read it. */
   private val PARAMETER = Regex("""\ba\[0]""")
@@ -1038,6 +1039,10 @@ object RemoteJsonImporter {
       val flags = body.number("flags")?.toInt() ?: 0
       if (flags and PATH_LINEAR == 0) {
         throw Gap("path expression `$id` is smoothed; only straight (`LINEAR`) ones are read")
+      }
+      // A polyline fills by the builder's default rule; a path asking for another is not it.
+      if (flags and PATH_WINDING_MASK != 0) {
+        throw Gap("path expression `$id` sets a winding the builder's polyline does not keep")
       }
       val loop = flags and PATH_LOOP != 0
       val count =
