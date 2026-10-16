@@ -1967,6 +1967,24 @@ internal class RemoteContentEmitter(
       UiExpressions.Op.CONCAT ->
         args.indices.joinToString(" + ", "(", ")") { stringOperand(kinds[it], args[it]) }
       UiExpressions.Op.TO_STRING -> stringOperand(kinds[0], args[0])
+      // The spec is literal (checked when the tree is typed), so it is written as the format.
+      UiExpressions.Op.FORMAT -> {
+        fun literal(index: Int): Int? =
+          (expr.args.getOrNull(index) as? UiExpressions.Expr.Literal)
+            ?.value
+            ?.content
+            ?.toDouble()
+            ?.toInt()
+        val decimals = literal(1) ?: 0
+        val minDigits = literal(2) ?: 1
+        // The released Android API takes a `java.text.DecimalFormat`, read from its pattern and
+        // digit counts; root symbols keep the point a `.` whatever the writing machine's locale.
+        usedComponentImports += "java.text.DecimalFormat"
+        usedComponentImports += "java.text.DecimalFormatSymbols"
+        usedComponentImports += "java.util.Locale"
+        val pattern = "0".repeat(minDigits) + if (decimals > 0) "." + "0".repeat(decimals) else ""
+        "${f(0)}.toRemoteString(DecimalFormat(\"$pattern\", DecimalFormatSymbols(Locale.ROOT)))"
+      }
       UiExpressions.Op.TWEEN,
       UiExpressions.Op.SPRING -> animated(expr, f(0))
     }

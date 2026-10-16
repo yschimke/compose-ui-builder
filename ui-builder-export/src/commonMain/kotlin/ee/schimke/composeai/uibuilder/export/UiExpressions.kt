@@ -177,6 +177,12 @@ object UiExpressions {
     CONCAT("concat", 1..16),
     TO_STRING("toString", 1..1),
     /**
+     * `format(x, decimals[, minDigits])`: a number as text with exactly `decimals` digits after the
+     * point and the whole part zero-padded to `minDigits` (`format(7.5, 1, 2)` is `07.5`), as the
+     * player's text-from-float prints it. The spec is literal.
+     */
+    FORMAT("format", 2..3),
+    /**
      * Its first argument, animated: whenever it changes the player moves toward it over a duration
      * in milliseconds, with an optional [EASINGS] name. A preview shows where it settles.
      */
@@ -400,7 +406,9 @@ object UiExpressions {
         if (args.size !in op.arity)
           throw ExpressionIssue("$where: `${op.wire}` takes ${op.arity.describe()}")
         Expr.Call(op, args, resultKind(op, args.map { it.kind }, where)).also {
-          animationSpecIssue(it)?.let { issue -> throw ExpressionIssue("$where: $issue") }
+          (animationSpecIssue(it) ?: formatSpecIssue(it))?.let { issue ->
+            throw ExpressionIssue("$where: $issue")
+          }
         }
       }
       else -> throw ExpressionIssue("$where: `$type` cannot appear in an expression")
@@ -458,6 +466,24 @@ object UiExpressions {
       else ->
         if (numbers.any { it <= 0.0 }) "a spring's stiffness and damping must be more than 0"
         else null
+    }
+  }
+
+  /**
+   * What is wrong with a `format`'s spec, or null. The player's text-from-float takes its digit
+   * counts when the document is written, so they are whole literals: up to six decimals, a whole
+   * part padded to between one and nine digits.
+   */
+  private fun formatSpecIssue(call: Expr.Call): String? {
+    if (call.op != Op.FORMAT) return null
+    val spec = call.args.drop(1)
+    val counts = spec.map { (it as? Expr.Literal)?.value?.doubleOrNull }
+    return when {
+      counts.any { it == null || it % 1.0 != 0.0 } ->
+        "`format` takes whole literal numbers for its decimals and minimum digits"
+      counts[0]!! !in 0.0..6.0 -> "`format` shows 0 to 6 decimals"
+      counts.size > 1 && counts[1]!! !in 1.0..9.0 -> "`format` pads to 1 to 9 digits"
+      else -> null
     }
   }
 
@@ -539,6 +565,7 @@ object UiExpressions {
       Op.SPRING -> if (kinds.indices.all { numeric(it) }) UiValueKind.FLOAT else fail()
       Op.CONCAT -> if (kinds.none { it == UiValueKind.COLOR }) UiValueKind.STRING else fail()
       Op.TO_STRING -> if (kinds[0] != UiValueKind.COLOR) UiValueKind.STRING else fail()
+      Op.FORMAT -> if (kinds.indices.all { numeric(it) }) UiValueKind.STRING else fail()
     }
   }
 
@@ -852,6 +879,12 @@ object UiExpressions {
       Op.SPRING -> num(d(0))
       Op.CONCAT -> values.joinToString("") { it.display() }
       Op.TO_STRING -> values[0].display()
+      Op.FORMAT ->
+        formatNumber(
+          d(0),
+          (values[1] as Number).toInt(),
+          (values.getOrNull(2) as? Number)?.toInt() ?: 1,
+        )
     }
   }
 
@@ -862,6 +895,29 @@ object UiExpressions {
   private fun smoothstep(edge0: Double, edge1: Double, x: Double): Double {
     val t = ((x - edge0).toFloat() / (edge1 - edge0).toFloat()).coerceIn(0f, 1f).toDouble()
     return t * t * (3.0 - 2.0 * t)
+  }
+
+  /**
+   * [value] with exactly [decimals] fraction digits, rounded half to even as the player's
+   * `DecimalFormat` default, and its whole part zero-padded to [minDigits]; no grouping.
+   */
+  internal fun formatNumber(value: Double, decimals: Int, minDigits: Int): String {
+    val scale = 10.0.pow(decimals)
+    val scaled = abs(value) * scale
+    // Half to even: a tie rounds to the even neighbour, otherwise to the nearest.
+    val floor = floor(scaled)
+    val rounded =
+      when {
+        scaled - floor > 0.5 -> floor + 1
+        scaled - floor < 0.5 -> floor
+        floor % 2.0 == 0.0 -> floor
+        else -> floor + 1
+      }.toLong()
+    val digits = rounded.toString().padStart(decimals + 1, '0')
+    val whole = digits.dropLast(decimals).padStart(minDigits, '0')
+    val fraction = digits.takeLast(decimals)
+    val sign = if (value < 0 && rounded != 0L) "-" else ""
+    return sign + whole + if (decimals > 0) ".$fraction" else ""
   }
 
   private fun Any.normalised(): Any = if (this is Number) toDouble() else this
