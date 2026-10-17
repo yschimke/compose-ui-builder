@@ -1,13 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
-import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.catalogOwnedNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.isPrimary
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.export.CatalogListing
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -19,10 +16,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-/**
- * The new-design chooser under the catalog-owned flag: built from what the served catalog says,
- * ordered as the host served it, and — with the flag off — exactly the built-in chooser.
- */
+/** The chooser uses only published catalog metadata, including order and visibility. */
 class CatalogOwnedNewDesignTest {
 
   private fun catalog(id: String, platform: String, label: String?, templates: List<String>?) =
@@ -62,14 +56,21 @@ class CatalogOwnedNewDesignTest {
   private val m3 =
     catalog("m3-catalog", "mobile", "Mobile", listOf("ui-builder/designs/blank.json"))
 
-  private fun builtIn(catalog: CatalogCapabilityV1) =
-    UiBuilderNewDesignCatalog(
-      systemId = catalog.benchmark.catalogSystemId,
-      label = "built-in ${catalog.benchmark.catalogSystemId}",
-      templates = listOf(UiBuilderNewDesignTemplate("built-in", "Built in", "")),
-    )
+  @Test
+  fun `numeric template ids keep their published list order`() {
+    val card =
+      catalogOwnedNewDesignCatalog(
+        catalog("numbered", "mobile", null, listOf("10.json", "2.json", "1.json"))
+      )
+    assertEquals(listOf("10", "2", "1"), card.templates.map { it.id })
+  }
 
-  private val builtInOrder = listOf("m3-catalog", "wear-m3", "remote-m3", "a2ui-catalog")
+  @Test
+  fun `the current chooser needs no ownership flag or built-in catalog table`() {
+    val cards = newDesignCatalogs(listOf(a2ui, wear, m3))
+    assertEquals(listOf("a2ui-catalog", "wear-m3", "m3-catalog"), cards.map { it.systemId })
+    assertEquals(listOf("wear-screen", "wear-list"), cards[1].templates.map { it.id })
+  }
 
   @Test
   fun `an owned card is the catalog's own templates, in its order`() {
@@ -78,8 +79,7 @@ class CatalogOwnedNewDesignTest {
     assertEquals(UiBuilderCatalogPlatform.WEAR, card.platform)
     assertEquals(listOf("wear-screen", "wear-list"), card.templates.map { it.id })
     assertEquals(listOf("Wear Screen", "Wear List"), card.templates.map { it.label })
-    assertTrue(card.catalogOwned)
-    assertTrue(card.isPrimary)
+    assertFalse(card.isPrimary)
   }
 
   @Test
@@ -90,43 +90,13 @@ class CatalogOwnedNewDesignTest {
     assertFalse(card.isPrimary)
   }
 
-  @Test
-  fun `with the flag off the chooser is the built-in one`() {
-    val cards =
-      newDesignCatalogs(listOf(a2ui, wear, m3), CatalogOwnership.NONE, builtInOrder, ::builtIn)
-    assertEquals(listOf("m3-catalog", "wear-m3", "a2ui-catalog"), cards.map { it.systemId })
-    assertTrue(cards.all { !it.catalogOwned && it.templates.single().id == "built-in" })
-  }
-
-  @Test
-  fun `with the flag on, cards come from the catalogs in the order they were served`() {
-    val cards =
-      newDesignCatalogs(listOf(a2ui, wear, m3), CatalogOwnership.ALL, builtInOrder, ::builtIn)
-    assertEquals(listOf("a2ui-catalog", "wear-m3", "m3-catalog"), cards.map { it.systemId })
-    assertTrue(cards.all { it.catalogOwned })
-  }
-
-  @Test
-  fun `the flag can move one catalog at a time`() {
-    val cards =
-      newDesignCatalogs(
-        listOf(wear, m3),
-        CatalogOwnership.of(setOf("wear-m3")),
-        builtInOrder,
-        ::builtIn,
-      )
-    assertEquals(listOf(false, true), cards.map { it.catalogOwned })
-  }
-
   private val wearPilot =
     CatalogListing.markUnlisted(catalog("wear-m3-typed-pilot", "wear", "Wear OS", null))
 
   @Test
-  fun `an unlisted catalog gets no card, with the flag off or on`() {
-    for (ownership in listOf(CatalogOwnership.NONE, CatalogOwnership.ALL)) {
-      val cards = newDesignCatalogs(listOf(wear, wearPilot, m3), ownership, builtInOrder, ::builtIn)
-      assertEquals(setOf("m3-catalog", "wear-m3"), cards.map { it.systemId }.toSet(), "$ownership")
-    }
+  fun `an unlisted catalog gets no card`() {
+    val cards = newDesignCatalogs(listOf(wear, wearPilot, m3))
+    assertEquals(setOf("m3-catalog", "wear-m3"), cards.map { it.systemId }.toSet())
   }
 
   @Test
@@ -134,9 +104,6 @@ class CatalogOwnedNewDesignTest {
     val cards =
       newDesignCatalogs(
         listOf(wear, wearPilot, m3),
-        CatalogOwnership.NONE,
-        builtInOrder,
-        ::builtIn,
         revealed = setOf("wear-m3-typed-pilot"),
       )
     assertTrue("wear-m3-typed-pilot" in cards.map { it.systemId })
@@ -150,32 +117,21 @@ class CatalogOwnedNewDesignTest {
     val plain =
       newDesignCatalogs(
         listOf(wear, unlistedM3),
-        CatalogOwnership.NONE,
-        builtInOrder,
-        ::builtIn,
         revealed = revealedNewDesignCatalogs(null),
       )
     assertEquals(listOf("wear-m3"), plain.map { it.systemId })
     val named =
       newDesignCatalogs(
         listOf(wear, unlistedM3),
-        CatalogOwnership.NONE,
-        builtInOrder,
-        ::builtIn,
         revealed = revealedNewDesignCatalogs("m3-catalog"),
       )
-    assertEquals(listOf("m3-catalog", "wear-m3"), named.map { it.systemId })
+    assertEquals(listOf("wear-m3", "m3-catalog"), named.map { it.systemId })
   }
 
   @Test
   fun `by default every served catalog is listed`() {
     val cards =
-      newDesignCatalogs(
-        listOf(wear, catalog("wear-m3-typed-pilot", "wear", "Wear OS", null), m3),
-        CatalogOwnership.NONE,
-        builtInOrder,
-        ::builtIn,
-      )
+      newDesignCatalogs(listOf(wear, catalog("wear-m3-typed-pilot", "wear", "Wear OS", null), m3))
     assertEquals(3, cards.size)
   }
 
@@ -223,10 +179,7 @@ class CatalogOwnedNewDesignTest {
           withNewDesign(wear, """{"order": 2}"""),
           withNewDesign(m3, """{"order": 1}"""),
           a2ui,
-        ),
-        CatalogOwnership.ALL,
-        builtInOrder,
-        ::builtIn,
+        )
       )
     assertEquals(listOf("m3-catalog", "wear-m3", "a2ui-catalog"), cards.map { it.systemId })
   }
@@ -244,12 +197,7 @@ class CatalogOwnedNewDesignTest {
       catalogOwnedNewDesignCatalog(described).templates.map { it.id },
     )
     val cards =
-      newDesignCatalogs(
-        listOf(a2ui, withNewDesign(m3, """{"order": ${Int.MAX_VALUE}}""")),
-        CatalogOwnership.ALL,
-        builtInOrder,
-        ::builtIn,
-      )
+      newDesignCatalogs(listOf(a2ui, withNewDesign(m3, """{"order": ${Int.MAX_VALUE}}""")))
     assertEquals(listOf("m3-catalog", "a2ui-catalog"), cards.map { it.systemId })
   }
 

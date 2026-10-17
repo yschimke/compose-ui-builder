@@ -29,22 +29,33 @@ class NewDesignTypesTest {
     description: String? = null,
     primary: Boolean? = null,
     platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.MOBILE,
-    owned: Boolean = false,
   ) =
     UiBuilderNewDesignCatalog(
       systemId = id,
       label = label,
       templates = templates,
       platform = platform,
-      catalogOwned = owned,
       description = description,
       primary = primary,
     )
 
-  private val m3 = card("m3-catalog", "Mobile app")
-  private val wear = card("wear-m3", "Wear app", platform = UiBuilderCatalogPlatform.WEAR)
+  private val m3 = card("m3-catalog", "Mobile app", description = "Phone & tablet", primary = true)
+  private val wear =
+    card(
+      "wear-m3",
+      "Wear app",
+      description = "Watch screens",
+      primary = true,
+      platform = UiBuilderCatalogPlatform.WEAR,
+    )
   private val remote =
-    card("remote-m3", "Wear widget", platform = UiBuilderCatalogPlatform.REMOTE_COMPOSE)
+    card(
+      "remote-m3",
+      "Remote Compose",
+      description = "Watch widgets & clocks",
+      primary = true,
+      platform = UiBuilderCatalogPlatform.REMOTE_COMPOSE,
+    )
   private val launcher =
     card("remote-widgets", "Launcher widget", platform = UiBuilderCatalogPlatform.REMOTE_COMPOSE)
   private val a2ui = card("a2ui-catalog", "A2UI surface", platform = UiBuilderCatalogPlatform.A2UI)
@@ -64,11 +75,10 @@ class NewDesignTypesTest {
       haTemplates,
       description = "Dashboard cards and widgets",
       primary = true,
-      owned = true,
     )
 
   @Test
-  fun `the three built-in catalogs keep the words preview coo ee has always shown`() {
+  fun `type cards use the catalogs declared copy and primary placement`() {
     val options = newDesignTypeOptions(listOf(m3, wear, remote, launcher, a2ui))
     assertEquals(
       listOf(
@@ -83,7 +93,7 @@ class NewDesignTypesTest {
   }
 
   @Test
-  fun `a catalog's own description replaces the built-in words, and primary promotes it`() {
+  fun `a catalog supplies its description and primary placement`() {
     assertEquals(
       NewDesignTypeChoice("ha-cards", "Home Assistant", "Dashboard cards and widgets"),
       newDesignTypeChoice(ha),
@@ -115,7 +125,7 @@ class NewDesignTypesTest {
   @Test
   fun `a brand that narrows the catalogs shows every one of them in the row`() {
     val brand = UiBuilderBrand(name = "Home Assistant", catalogs = listOf("ha-cards", "ha-tiles"))
-    val tiles = card("ha-tiles", "Tiles", owned = true)
+    val tiles = card("ha-tiles", "Tiles")
     val options = newDesignTypeOptions(listOf(ha, tiles, a2ui), brand)
     assertEquals(
       listOf("ha-cards", "ha-tiles", "a2ui-catalog"),
@@ -173,18 +183,18 @@ class NewDesignTypesTest {
   fun `a design's kind and widget shape come from its catalog`() {
     val offered = listOf(m3, remote, launcher, ha)
     assertEquals("Mobile app", homeDesignKindLabel("m3-catalog", offered))
-    assertEquals("Wear widget", homeDesignKindLabel("remote-m3", offered))
+    assertEquals("Remote Compose", homeDesignKindLabel("remote-m3", offered))
     assertEquals("Home Assistant", homeDesignKindLabel("ha-cards", offered))
     assertEquals("Launcher widget", homeDesignKindLabel("remote-widgets", offered))
-    assertEquals("A2UI surface", homeDesignKindLabel("a2ui-catalog", emptyList()))
+    assertEquals("a2ui-catalog", homeDesignKindLabel("a2ui-catalog", emptyList()))
     assertEquals("gone-catalog", homeDesignKindLabel("gone-catalog", offered))
 
     assertTrue(isWidgetDesign("remote-m3", offered))
     assertTrue(isWidgetDesign("remote-widgets", offered))
     assertFalse(isWidgetDesign("m3-catalog", offered))
     assertFalse(isWidgetDesign("ha-cards", offered))
-    // Not offered here: only the id this builder has always known to be a widget.
-    assertTrue(isWidgetDesign("remote-m3", emptyList()))
+    // A missing catalog has no platform metadata.
+    assertFalse(isWidgetDesign("remote-m3", emptyList()))
     assertFalse(isWidgetDesign("gone-catalog", emptyList()))
   }
 }
