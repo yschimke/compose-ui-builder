@@ -1,7 +1,6 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.export.CatalogListing
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -43,7 +42,6 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
     chooser?.string("label")
       ?: semantics[PLATFORM_LABEL]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
   return UiBuilderNewDesignCatalog(
-    catalogOwned = true,
     systemId = systemId,
     label = label ?: titleOf(systemId),
     platform = UiBuilderCatalogPlatform.from(semantics),
@@ -87,54 +85,22 @@ private fun JsonObject.string(key: String): String? =
 
 private fun JsonObject.int(key: String): Int? = (get(key) as? JsonPrimitive)?.intOrNull
 
-/**
- * The chooser's cards in order: catalogs [ownership] names use [catalogOwnedNewDesignCatalog],
- * others their built-in card from [builtIn].
- *
- * Once all are owned, served order is used. Until then [builtInOrder] decides, with unnamed
- * catalogs after in served order, so unmoved cards keep their place. With the flag off this is the
- * original chooser.
- *
- * Unlisted catalogs ([CatalogListing]) get no card, except one named in [revealed] — the catalog
- * the page's URL asked for, so `/ui-builder/<unlisted>/` still offers its own templates.
- */
+/** Cards from published metadata, ordered by the catalog's order then the host's listing. */
 fun newDesignCatalogs(
   catalogs: List<CatalogCapabilityV1>,
-  ownership: CatalogOwnership,
-  builtInOrder: List<String>,
-  builtIn: (CatalogCapabilityV1) -> UiBuilderNewDesignCatalog?,
   revealed: Set<String> = emptySet(),
-): List<UiBuilderNewDesignCatalog> {
-  @Suppress("NAME_SHADOWING")
-  val catalogs = catalogs.filter {
-    !CatalogListing.isUnlisted(it) || it.benchmark.catalogSystemId in revealed
-  }
-  val served = catalogs.map { it.benchmark.catalogSystemId }
-  val allOwned = served.all(ownership::owns)
-  val cards = catalogs.mapNotNull { catalog ->
-    if (ownership.owns(catalog.benchmark.catalogSystemId)) catalogOwnedNewDesignCatalog(catalog)
-    else builtIn(catalog)
-  }
-  // Every card owned: the catalogs' own `newDesign.order`, then the order the host served them in.
-  if (allOwned) {
-    val order = catalogs.associate { it.benchmark.catalogSystemId to it.newDesignOrder() }
-    return cards
-      .withIndex()
-      .sortedWith(
-        compareBy(
-          { order[it.value.systemId] == null },
-          { order[it.value.systemId] ?: 0 },
-          { it.index },
-        )
+): List<UiBuilderNewDesignCatalog> =
+  catalogs
+    .filter { !CatalogListing.isUnlisted(it) || it.benchmark.catalogSystemId in revealed }
+    .withIndex()
+    .sortedWith(
+      compareBy(
+        { it.value.newDesignOrder() == null },
+        { it.value.newDesignOrder() ?: 0 },
+        { it.index },
       )
-      .map { it.value }
-  }
-  if (ownership.isNone) return cards.sortedBy { builtInOrder.indexOf(it.systemId) }
-  return cards.sortedBy { card ->
-    builtInOrder.indexOf(card.systemId).takeIf { it >= 0 }
-      ?: (builtInOrder.size + served.indexOf(card.systemId))
-  }
-}
+    )
+    .map { catalogOwnedNewDesignCatalog(it.value) }
 
 /**
  * The catalogs [newDesignCatalogs] shows even when unlisted: the one the page's URL named, if any.
@@ -146,14 +112,11 @@ fun revealedNewDesignCatalogs(urlCatalogSystemId: String?): Set<String> =
 
 /**
  * Whether the chooser lists this card among the primary types rather than under "other types": what
- * the catalog's `newDesign.primary` says, else whether it is one of the three catalogs the row has
- * always held. A brand that narrows the catalogs puts every one in the row regardless
- * ([newDesignTypeOptions]).
+ * the catalog's `newDesign.primary` says, else false. A brand that narrows the catalogs puts every
+ * one in the row regardless ([newDesignTypeOptions]).
  */
 val UiBuilderNewDesignCatalog.isPrimary: Boolean
-  get() = primary ?: (systemId in BUILT_IN_PRIMARY_CATALOGS)
-
-private val BUILT_IN_PRIMARY_CATALOGS = listOf("m3-catalog", "wear-m3", "remote-m3")
+  get() = primary ?: false
 
 private const val TEMPLATES = "templates"
 private const val PLATFORM_LABEL = "platformLabel"

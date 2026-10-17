@@ -40,10 +40,6 @@ data class UiBuilderNewDesignCatalog(
   val platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.MOBILE,
   val previewCatalog: CapabilityCatalog? = null,
   /**
-   * Built by `catalogOwnedNewDesignCatalog` from the catalog's own data, not the built-in table.
-   */
-  val catalogOwned: Boolean = false,
-  /**
    * The type card's second line, from the catalog's `newDesign.description`. Declaring it makes the
    * card the catalog's own: [label] over this, instead of the built-in words for the catalogs this
    * builder has always named.

@@ -79,6 +79,11 @@ some:
   precedes the optional catalog-list request, and verifies a catalog-list outage leaves the design open.
   It holds font and identity responses independently to prove they overlap with IndexedDB startup,
   while composition waits for fonts and design requests wait for identity. A 401 still blocks the open.
+- `published` — warms a catalog and its published template documents through the browser API,
+  removes all mocked API routes, disables networking, then opens a fresh tab and creates a design
+  from IndexedDB. It checks the persisted document's nodes, environment, revision and catalog pin.
+  The synthetic catalog has no built-in Kotlin template. Online chooser and offline creation
+  screenshots are saved when a screenshot directory is supplied.
 - `cache` — starts Chromium three times with the same temporary disk profile and checks the second
   and third visits consume compiled-code cache entries for both Wasm modules. The profile is removed
   afterwards; `wasm-cache.json` and per-visit Wasm traces are kept beside the screenshots.

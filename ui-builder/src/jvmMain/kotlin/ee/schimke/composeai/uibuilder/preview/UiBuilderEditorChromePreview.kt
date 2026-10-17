@@ -360,22 +360,24 @@ fun UiBuilderNewDesignPreview() {
           ),
         )
         .map { choice ->
-          choice.withTemplatePreviews(
-            // Wear and Remote M3 are no longer packaged as fixtures; they come from their
-            // published delivery branches like the other JVM previews.
-            UiBuilderDocument::class
-              .java
-              .getResource("/${choice.systemId}-capabilities-v1.json")
-              ?.let { CapabilityCatalogParser.parse(it.readText()) }
-              ?: publishedPreviewCatalog(choice.systemId),
-            Json.parseToJsonElement(
-                UiBuilderDocument::class
-                  .java
-                  .getResource("/jetcaster-discover-operations-v1.json")!!
-                  .readText()
-              )
-              .jsonObject,
-          )
+          choice
+            .copy(primary = true)
+            .withTemplatePreviews(
+              // Wear and Remote M3 are no longer packaged as fixtures; they come from their
+              // published delivery branches like the other JVM previews.
+              UiBuilderDocument::class
+                .java
+                .getResource("/${choice.systemId}-capabilities-v1.json")
+                ?.let { CapabilityCatalogParser.parse(it.readText()) }
+                ?: publishedPreviewCatalog(choice.systemId),
+              Json.parseToJsonElement(
+                  UiBuilderDocument::class
+                    .java
+                    .getResource("/jetcaster-discover-operations-v1.json")!!
+                    .readText()
+                )
+                .jsonObject,
+            )
         },
     initialCatalogSystemId = "m3-catalog",
     onCreatePublic = { _, _, _, _ -> },

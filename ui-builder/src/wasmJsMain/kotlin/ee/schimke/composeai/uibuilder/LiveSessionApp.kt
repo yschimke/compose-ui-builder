@@ -78,15 +78,12 @@ import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
-import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
@@ -94,7 +91,9 @@ import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineController
 import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.local.BrowserStorageEstimate
+import ee.schimke.composeai.uibuilder.local.CachingLocalCatalogSource
 import ee.schimke.composeai.uibuilder.local.EditorEditRoute
+import ee.schimke.composeai.uibuilder.local.LocalCatalogTemplates
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalDesignSyncBack
 import ee.schimke.composeai.uibuilder.local.LocalPersistence
@@ -136,7 +135,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.Image
 
@@ -820,56 +818,31 @@ private fun LiveSessionApp(
       awaitBrowserPaintOpportunity()
     }
     suspend fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
-      val fixture = runCatchingCancellable {
-        val path = "jetcaster-discover-operations-v1.json"
-        Json.parseToJsonElement(localSession?.text?.text(path) { fetchText(it) } ?: fetchText(path))
-          .jsonObject
-      }
-        .getOrNull()
+      CachingLocalCatalogSource(
+          BrowserLocalDesignStorage(),
+          { availableCatalogs },
+        )
+        .catalogs()
       catalogCapabilities = availableCatalogs
       // A white-labelled host offers only its own catalogs; the server refuses the rest anyway.
       val offeredCatalogs = availableCatalogs.filter {
         uiBuilderBrand?.allows(it.benchmark.catalogSystemId) ?: true
       }
+      val cache = localSession?.templates ?: LocalCatalogTemplates(BrowserLocalDesignStorage())
+      for (capability in offeredCatalogs) {
+        val id = capability.benchmark.catalogSystemId
+        runCatchingCancellable {
+          cache.load(capability) {
+            fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(id)}/templates")
+          }
+        }
+      }
       newDesignCatalogs =
         orderedNewDesignCatalogs(
-            offeredCatalogs,
-            // Only the server seeds catalog-owned templates (it holds the published documents).
-            // Browser-created designs use `createLocalDesign`'s built-in templates, so they get the
-            // built-in cards.
-            if (localSession == null && config.canWrite) catalogOwnership()
-            else CatalogOwnership.NONE,
-            NEW_DESIGN_CATALOG_ORDER,
-            ::newDesignCatalog,
-            // An unlisted catalog is offered only on its own page (`/ui-builder/<catalog>/`).
-            revealed = revealedNewDesignCatalogs(config.urlCatalogSystemId),
-          )
-          .map { choice ->
-            val capability = availableCatalogs.first {
-              it.benchmark.catalogSystemId == choice.systemId
-            }
-            run {
-              // Previews are decoration: a catalog whose record fails validation keeps its plain
-              // entry instead of breaking the list. Catalog-owned cards have none, since their
-              // seeds live on the server.
-              if (fixture == null || choice.catalogOwned) choice
-              else
-                runCatching {
-                    choice.withTemplatePreviews(
-                      CapabilityCatalogParser.parse(
-                        Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
-                      ),
-                      fixture,
-                    )
-                  }
-                  .onFailure { failure ->
-                    println(
-                      "compose-ui-builder: no template previews for ${choice.systemId}: $failure"
-                    )
-                  }
-                  .getOrDefault(choice)
-            }
-          }
+          offeredCatalogs,
+          // An unlisted catalog is offered only on its own page (`/ui-builder/<catalog>/`).
+          revealed = revealedNewDesignCatalogs(config.urlCatalogSystemId),
+        )
     }
     if (config.localStorage || config.startWithNewDesign) {
       // A local session may be asked for a catalog never cached (first offline visit); explain that
@@ -1210,7 +1183,7 @@ private fun LiveSessionApp(
   /**
    * Making a design, by whichever of the two routes this session has. A server design is created by
    * the New design form (its `303` puts the permalink in history). A local design is seeded in-page
-   * from the same [UiBuilderNewDesignSeed], written to this browser, and the URL rewritten.
+   * from the cached published templates, written to this browser, and the URL rewritten.
    */
   val createPublicDesign: ((String, String, String, List<NewDesignState>) -> Unit)? =
     if (localSession == null && config.canWrite && config.designVisibilitySupported) {

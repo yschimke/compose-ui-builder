@@ -17,6 +17,10 @@
 > The cost estimate in *The decision* also stands, and is now being paid rather than predicted:
 > every change spanning the editor and the routes that serve it is two pull requests. Read it as
 > the record of what was known before, not as a claim about where the code is.
+>
+> The editor archive declares its required server API in `ui-builder-web.json`. Deployments upgrade
+> the editor and server together; API 2 requires published template documents and the server
+> rejects older API pins and archives without a readable manifest.
 
 
 **Status: normative.** The repository boundary now enforces rule 1 structurally. The four allowed

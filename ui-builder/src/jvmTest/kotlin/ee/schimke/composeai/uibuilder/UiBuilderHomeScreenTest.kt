@@ -56,7 +56,8 @@ class UiBuilderHomeScreenTest {
     listOf(
       UiBuilderNewDesignCatalog(
         systemId = "m3-catalog",
-        label = "Mobile",
+        label = "Mobile app",
+        primary = true,
         templates = listOf(UiBuilderNewDesignTemplate("blank", "Blank", "An empty scaffold")),
       )
     )
@@ -252,7 +253,7 @@ class UiBuilderHomeScreenTest {
             listOf(
               UiBuilderNewDesignCatalog(
                 "m3-catalog",
-                "Android app",
+                "Mobile app",
                 listOf(
                   UiBuilderNewDesignTemplate("blank", "Blank screen", ""),
                   UiBuilderNewDesignTemplate("hello", "Hello sample", ""),
@@ -281,7 +282,7 @@ class UiBuilderHomeScreenTest {
         listOf(
             UiBuilderNewDesignCatalog(
               "m3-catalog",
-              "Android app",
+              "Mobile app",
               listOf(
                 UiBuilderNewDesignTemplate("blank", "Blank screen", "Empty phone screen"),
                 UiBuilderNewDesignTemplate("hello", "Hello sample", "Phone starter"),
@@ -289,7 +290,7 @@ class UiBuilderHomeScreenTest {
             ),
             UiBuilderNewDesignCatalog(
               "wear-m3",
-              "Wear",
+              "Wear app",
               listOf(
                 UiBuilderNewDesignTemplate("wear-screen", "Blank screen", "Empty watch screen"),
                 UiBuilderNewDesignTemplate("wear-list", "Activity list", "Watch starter"),
@@ -297,7 +298,7 @@ class UiBuilderHomeScreenTest {
             ),
             UiBuilderNewDesignCatalog(
               "remote-m3",
-              "RemoteCompose",
+              "Remote Compose",
               listOf(
                 UiBuilderNewDesignTemplate(
                   "wear-widget-small",
@@ -316,11 +317,15 @@ class UiBuilderHomeScreenTest {
           .map { choice ->
             if (choice.systemId == "a2ui") choice
             else
-              choice.withTemplatePreviews(
-                CapabilityCatalogParser.parse(resource("/${choice.systemId}-capabilities-v1.json")),
-                Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json"))
-                  .jsonObject,
-              )
+              choice
+                .copy(primary = true)
+                .withTemplatePreviews(
+                  CapabilityCatalogParser.parse(
+                    resource("/${choice.systemId}-capabilities-v1.json")
+                  ),
+                  Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json"))
+                    .jsonObject,
+                )
           }
       setContent {
         UiBuilderNewDesignScreen(
@@ -494,7 +499,6 @@ class UiBuilderHomeScreenTest {
       label = "Home Assistant",
       description = "Dashboard cards and widgets",
       primary = true,
-      catalogOwned = true,
       templates =
         listOf(
           UiBuilderNewDesignTemplate(
@@ -611,7 +615,6 @@ class UiBuilderHomeScreenTest {
           systemId = "ha-tiles",
           label = "Wall tablet",
           description = "Full-screen kiosk panels",
-          catalogOwned = true,
           templates = listOf(UiBuilderNewDesignTemplate("panel", "Panel", "A blank panel.")),
         )
       setContent {

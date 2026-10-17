@@ -62,20 +62,9 @@ fun newDesignTypeOptions(
   return NewDesignTypeOptions(primary.map(::newDesignTypeChoice), other)
 }
 
-/**
- * A catalog's card: what the catalog says about itself once it declares `newDesign.description`,
- * else the built-in words for the three catalogs this builder has always named, else its label.
- */
-fun newDesignTypeChoice(catalog: UiBuilderNewDesignCatalog): NewDesignTypeChoice {
-  val builtIn = BUILT_IN_TYPE_CARDS[catalog.systemId]
-  val (title, subtitle) =
-    when {
-      catalog.description != null -> catalog.label to catalog.description
-      builtIn != null -> builtIn.title to builtIn.subtitle
-      else -> catalog.label to null
-    }
-  return NewDesignTypeChoice(catalog.systemId, title, subtitle)
-}
+/** A type card uses the catalog's published label and description. */
+fun newDesignTypeChoice(catalog: UiBuilderNewDesignCatalog): NewDesignTypeChoice =
+  NewDesignTypeChoice(catalog.systemId, catalog.label, catalog.description)
 
 /**
  * The template groups a catalog offers as separate targets, in the order its templates first name
@@ -95,44 +84,14 @@ fun templatesForTarget(
   if (group == null) catalog.templates
   else catalog.templates.filter { it.group == null || it.group == group }
 
-/**
- * What a design made against [systemId] is called in the home screen's lists: the catalog's own
- * label once it describes itself, else the built-in word, else the catalog's label or its id.
- */
-fun homeDesignKindLabel(systemId: String, catalogs: List<UiBuilderNewDesignCatalog>): String {
-  val catalog = catalogs.firstOrNull { it.systemId == systemId }
-  if (catalog?.description != null) return catalog.label
-  return BUILT_IN_KIND_LABELS[systemId] ?: catalog?.label ?: systemId
-}
+/** The published label for a design's catalog, or its id when no catalog was offered. */
+fun homeDesignKindLabel(systemId: String, catalogs: List<UiBuilderNewDesignCatalog>): String =
+  catalogs.firstOrNull { it.systemId == systemId }?.label ?: systemId
 
-/**
- * Whether a design made against [systemId] is a widget, whose thumbnail is drawn at its own aspect
- * ratio with rounded corners: a Remote Compose catalog. A catalog the page was not offered falls
- * back to the one id known to be one.
- */
-fun isWidgetDesign(systemId: String, catalogs: List<UiBuilderNewDesignCatalog>): Boolean {
-  val catalog = catalogs.firstOrNull { it.systemId == systemId }
-  return if (catalog != null) catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE
-  else systemId == "remote-m3"
-}
+/** Widget thumbnail geometry is determined by the offered catalog's platform. */
+fun isWidgetDesign(systemId: String, catalogs: List<UiBuilderNewDesignCatalog>): Boolean =
+  catalogs.firstOrNull { it.systemId == systemId }?.platform ==
+    UiBuilderCatalogPlatform.REMOTE_COMPOSE
 
 private fun startingPoints(count: Int): String =
   if (count == 1) "1 starting point" else "$count starting points"
-
-private data class BuiltInTypeCard(val title: String, val subtitle: String)
-
-/** The words preview.coo.ee has always shown; a catalog's `newDesign.description` replaces them. */
-private val BUILT_IN_TYPE_CARDS =
-  mapOf(
-    "m3-catalog" to BuiltInTypeCard("Mobile app", "Phone & tablet"),
-    "wear-m3" to BuiltInTypeCard("Wear app", "Watch screens"),
-    "remote-m3" to BuiltInTypeCard("Remote Compose", "Watch widgets & clocks"),
-  )
-
-private val BUILT_IN_KIND_LABELS =
-  mapOf(
-    "m3-catalog" to "Mobile app",
-    "wear-m3" to "Wear app",
-    "remote-m3" to "Wear widget",
-    "a2ui-catalog" to "A2UI surface",
-  )

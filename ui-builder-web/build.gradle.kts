@@ -24,8 +24,9 @@ version =
 
 // The editor <-> server HTTP API version; compose-preview-server serves a pinned editor only when
 // `ServeUiBuilderEditor.SUPPORTED_SERVER_API` contains it. Bump only for route changes an older
-// server cannot answer, after landing server support.
-val serverApiVersion = 1
+// server cannot answer. Deploy the matching server and editor together.
+// Version 2 requires the published template-document endpoint for browser creation.
+val serverApiVersion = 2
 
 // The host-bridge postMessage contract (`HostBridgeApp.kt`) for IDE hosts embedding the editor over
 // a document they own (e.g. VS Code's `.uid` editor). Hosts refuse unsupported numbers. Bump only

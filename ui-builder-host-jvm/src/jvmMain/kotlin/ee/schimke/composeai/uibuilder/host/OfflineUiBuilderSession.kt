@@ -26,7 +26,6 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderFileDesigns
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.agentChatContext
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
@@ -607,16 +606,17 @@ public enum class OfflineCatalog(
     } else {
       UiBuilderNewDesignSeed.document(
         designId = designId,
-        catalogSystemId = systemId,
         templateId =
           (templateId ?: startTemplateId).also {
             require(it in templateIds) { "catalog '$systemId' has no template '$it'" }
           },
-        catalogRevision = catalogRevision,
-        nativeRuntimeId = nativeRuntimeId,
-        fixture =
-          Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
-        ownership = CatalogOwnership.of(setOf(systemId)),
+        catalogPin =
+          ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1(
+            systemId,
+            catalogRevision,
+            "candidate",
+            nativeRuntimeId,
+          ),
         published = loaded().templates,
       )
     }

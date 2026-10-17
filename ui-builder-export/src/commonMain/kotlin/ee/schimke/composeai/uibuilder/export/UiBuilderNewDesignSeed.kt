@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignHomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
@@ -8,6 +9,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 /**
  * What a new design starts as — one answer shared by the browser bootstrap and the server's create
@@ -123,6 +125,39 @@ object UiBuilderNewDesignSeed {
       catalogPin = catalogPin,
       environment = mobileScreenEnvironment(fixtureDocument.environment),
       state = state,
+    )
+  }
+
+  /** Create from a validated publication without depending on the benchmark operations fixture. */
+  fun document(
+    designId: String,
+    templateId: String,
+    catalogPin: CatalogReferenceV1,
+    published: CatalogSeedTemplates,
+    state: List<NewDesignState> = emptyList(),
+  ): UiBuilderDocument {
+    require(designId.isNotBlank()) { "a new design needs an id" }
+    require(published.catalogSystemId == catalogPin.systemId) {
+      "templates published by ${published.catalogSystemId} cannot seed ${catalogPin.systemId}"
+    }
+    val pin = seedJson.encodeToJsonElement(CatalogReferenceV1.serializer(), catalogPin).jsonObject
+    published[templateId]?.let {
+      return it.seed(designId, pin).withDeclaredState(state)
+    }
+    require(templateId == BLANK_TEMPLATE && published.templates.isEmpty()) {
+      "${catalogPin.systemId} does not publish a `$templateId` template"
+    }
+    return blankUiBuilderDocument(
+      designId,
+      pin,
+      mobileScreenEnvironment(
+        seedJson
+          .parseToJsonElement(
+            """{"theme":"light","locale":"en-US","fontScale":1.0,"layoutDirection":"ltr"}"""
+          )
+          .jsonObject
+      ),
+      state,
     )
   }
 

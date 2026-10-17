@@ -56,26 +56,17 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
-import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
-import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
-import ee.schimke.composeai.uibuilder.editor.supportingText
-import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
-import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
-import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
-import ee.schimke.composeai.uibuilder.export.RemoteClockTemplates
-import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
-import ee.schimke.composeai.uibuilder.export.WearWidgetSample
 import ee.schimke.composeai.uibuilder.local.CachedLocalText
 import ee.schimke.composeai.uibuilder.local.CachingLocalCatalogSource
 import ee.schimke.composeai.uibuilder.local.LocalCatalogSource
+import ee.schimke.composeai.uibuilder.local.LocalCatalogTemplates
 import ee.schimke.composeai.uibuilder.local.LocalDesignStorageException
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalSyncResult
@@ -83,6 +74,7 @@ import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
 import ee.schimke.composeai.uibuilder.local.localCheckoutRecord
 import ee.schimke.composeai.uibuilder.local.localCopyRecord
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
@@ -1597,6 +1589,7 @@ internal class BrowserLocalSession(config: LiveSessionConfig) {
         )
       },
     )
+  val templates = LocalCatalogTemplates(storage)
   val text: CachedLocalText = CachedLocalText(storage)
   val service: LocalUiBuilderService =
     LocalUiBuilderService(store, catalogs, clock = ::browserNowMillis)
@@ -1934,205 +1927,6 @@ internal suspend fun loadLiveCatalogs(
     }
     is UiBuilderHttpResult.ServiceError -> error(result.error.message)
     is UiBuilderHttpResult.SnapshotRequired -> error(result.error.message)
-  }
-
-/**
- * The catalog-owned cutover flag as the host served this page: the shell's `<meta
- * name="ui-builder-catalog-ownership">`, or a `?catalogOwnership=` override (`all`, `none`, or a
- * comma-separated list), default `none`. Unparseable values are `none`. See
- * `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`.
- */
-internal fun catalogOwnership(): CatalogOwnership = runCatching {
-  CatalogOwnership.parse(catalogOwnershipParameter())
-}
-  .getOrDefault(CatalogOwnership.NONE)
-
-@JsFun(
-  """() => new URL(globalThis.location.href).searchParams.get('catalogOwnership') ||
-    globalThis.document?.querySelector('meta[name="ui-builder-catalog-ownership"]')?.content || ''"""
-)
-private external fun catalogOwnershipParameter(): String
-
-/** The heading `remote-m3`'s widget templates sit under, apart from its plain Remote content. */
-private const val WIDGET_GROUP = "Wear widget"
-
-/** The chooser's order. Anything not named here (there is nothing today) sorts first. */
-internal val NEW_DESIGN_CATALOG_ORDER =
-  listOf(
-    "m3-catalog",
-    "wear-m3",
-    "remote-m3",
-    LauncherWidgetTemplates.CATALOG_SYSTEM_ID,
-    A2uiDocumentExporter.CATALOG_SYSTEM_ID,
-  )
-
-/**
- * Labelled by what a person is making (phone screen, watch screen, RemoteCompose widget) rather
- * than by the catalog that draws it.
- */
-internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCatalog? =
-  when (catalog.benchmark.catalogSystemId) {
-    "m3-catalog" ->
-      UiBuilderNewDesignCatalog(
-        systemId = "m3-catalog",
-        label = "Mobile app",
-        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
-        templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = "blank",
-              label = "Blank screen",
-              supportingText = "A Material scaffold with an empty content container.",
-            ),
-            UiBuilderNewDesignTemplate(
-              id = UiBuilderNewDesignSeed.HELLO_TEMPLATE,
-              label = "Hello sample",
-              supportingText = "The same scaffold with a headline and a line of text to edit.",
-            ),
-            UiBuilderNewDesignTemplate(
-              "list-detail",
-              "List-detail",
-              "A fixed list beside flexible details; one pane at compact widths.",
-            ),
-            UiBuilderNewDesignTemplate(
-              "supporting-pane",
-              "Supporting pane",
-              "Main content with a contextual supporting pane.",
-            ),
-            UiBuilderNewDesignTemplate(
-              "adaptive-feed",
-              "Adaptive feed",
-              "Cards in a grid that changes column count with available width.",
-            ),
-            UiBuilderNewDesignTemplate(
-              "adaptive-navigation",
-              "Adaptive navigation",
-              "A navigation bar on phones and a rail on larger windows.",
-            ),
-          ),
-      )
-    "remote-m3" ->
-      UiBuilderNewDesignCatalog(
-        systemId = "remote-m3",
-        label = "Wear widget",
-        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
-        templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = "wear-widget-small",
-              label = "Blank small widget",
-              supportingText = "216×76dp host with a single content slot.",
-              group = WIDGET_GROUP,
-            ),
-            UiBuilderNewDesignTemplate(
-              id = "wear-widget-large",
-              label = "Blank large widget",
-              supportingText = "216×124dp host with a single content slot.",
-              group = WIDGET_GROUP,
-            ),
-            UiBuilderNewDesignTemplate(
-              id = AdaptiveWearWidget.TEMPLATE_ID,
-              label = "Adaptive widget (experimental)",
-              supportingText =
-                "A starting point: headline, supporting and action slots, laid out for both " +
-                  "sizes. Small drops the supporting line.",
-              group = WIDGET_GROUP,
-            ),
-          ) +
-            // Worked samples after the empty scaffolds: blank first for starting fresh, samples for
-            // exploring.
-            WearWidgetSample.entries.map {
-              UiBuilderNewDesignTemplate(
-                id = it.templateId,
-                label = it.label,
-                supportingText = it.supportingText,
-                group = WIDGET_GROUP,
-              )
-            } +
-            // Not widgets: Remote content whose canvas animates with the time.
-            RemoteClockTemplates.offered.map {
-              UiBuilderNewDesignTemplate(
-                id = it.templateId,
-                label = it.label,
-                supportingText = it.supportingText,
-                group = "Remote content",
-              )
-            },
-      )
-    "wear-m3" ->
-      UiBuilderNewDesignCatalog(
-        systemId = "wear-m3",
-        label = "Wear app",
-        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
-        templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
-              label = "Blank screen",
-              supportingText =
-                "A starting point: a ScreenScaffold with its clock and scroll indicator, over an " +
-                  "empty list.",
-            ),
-            // After the empty one, like the widget samples.
-            UiBuilderNewDesignTemplate(
-              id = UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
-              label = "Activity list",
-              supportingText = "Six title cards under a list header, row for row the reference's.",
-            ),
-          ),
-      )
-    LauncherWidgetTemplates.CATALOG_SYSTEM_ID ->
-      UiBuilderNewDesignCatalog(
-        systemId = LauncherWidgetTemplates.CATALOG_SYSTEM_ID,
-        label = "Launcher widget",
-        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
-        templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = LauncherWidgetTemplates.HELLO_TEMPLATE,
-              label = "Hello widget",
-              supportingText =
-                "\"Hello, World!\" centred on a 3x1 home-screen widget; exports as a " +
-                  "RemoteComposeWidget.",
-            )
-          ),
-      )
-    A2uiDocumentExporter.CATALOG_SYSTEM_ID ->
-      UiBuilderNewDesignCatalog(
-        systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
-        label = "A2UI surface",
-        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
-        templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
-              label = "Column",
-              supportingText =
-                "A Column root with a headline: exports as A2UI messages and as the Kotlin " +
-                  "that sends them.",
-            )
-          ),
-      )
-    // A catalog this build has no templates for still gets a card, named after itself, with the
-    // server's blank seed.
-    else ->
-      UiBuilderNewDesignCatalog(
-        systemId = catalog.benchmark.catalogSystemId,
-        label =
-          catalog.benchmark.catalogSystemId
-            .split('-', '_', '.')
-            .filter(String::isNotEmpty)
-            .joinToString(" ") { word -> word.replaceFirstChar(Char::uppercaseChar) },
-        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
-        templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = "blank",
-              label = "Blank screen",
-              supportingText = "An empty starting point for this catalog.",
-            )
-          ),
-      )
   }
 
 @JsFun("""() => new URL(globalThis.location.href).searchParams.get('catalog') || 'm3-catalog'""")
@@ -3081,8 +2875,7 @@ internal fun sessionModeLabel(config: LiveSessionConfig, session: BrowserLocalSe
 
 /**
  * Seeds one design into this browser, or says why it could not be. Uses [UiBuilderNewDesignSeed]
- * like the server's New design form; the operations fixture goes through the remembered-text cache
- * so it works offline.
+ * with the validated published documents stored under the remembered catalog pin.
  */
 internal suspend fun createLocalDesign(
   session: BrowserLocalSession,
@@ -3097,15 +2890,21 @@ internal suspend fun createLocalDesign(
       ?: return "this browser has no stored $catalogSystemId catalog to pin a new design to"
   val document =
     try {
+      val published =
+        session.templates.load(catalog) {
+          fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/templates")
+        }
       UiBuilderNewDesignSeed.document(
         designId = designId,
-        catalogSystemId = catalogSystemId,
         templateId = templateId,
-        catalogRevision = catalog.benchmark.catalogRevision,
-        nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-        fixture =
-          Json.parseToJsonElement(session.text.text(NEW_DESIGN_FIXTURE_PATH) { fetchText(it) })
-            .jsonObject,
+        catalogPin =
+          CatalogReferenceV1(
+            catalogSystemId,
+            catalog.benchmark.catalogRevision,
+            "candidate",
+            catalog.benchmark.nativeRuntimeId,
+          ),
+        published = published,
         state = state,
       )
     } catch (failure: Exception) {
@@ -3193,8 +2992,6 @@ internal fun syncStatus(result: LocalSyncResult): String =
   }
 
 /** The operations fixture every new design reads its environment from, beside the Wasm bundle. */
-private const val NEW_DESIGN_FIXTURE_PATH = "jetcaster-discover-operations-v1.json"
-
 internal const val LOCAL_COMMENTS_UNAVAILABLE =
   "Comments need the server. This design is kept in this browser, so there is nobody to discuss it with yet."
 
