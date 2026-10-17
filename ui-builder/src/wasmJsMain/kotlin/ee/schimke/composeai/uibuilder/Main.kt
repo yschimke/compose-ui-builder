@@ -47,7 +47,6 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
-import ee.schimke.composeai.uibuilder.editor.CatalogRuntimePreviewEngine
 import ee.schimke.composeai.uibuilder.editor.EditorOverlays
 import ee.schimke.composeai.uibuilder.editor.ProvideUiBuilderBrand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasInspection
@@ -133,7 +132,6 @@ private external fun suppressBrowserContextMenu()
 
 fun main() {
   recordStartupMark("kotlin-start")
-  initPreviewEngineSetting()
   // Which nodes a canvas did not draw as themselves, where a harness or an agent driving the page
   // can read them: `globalThis.__uiBuilderUndrawn["<designId>@<revision>"]`.
   UiBuilderUndrawnNodes.listener = { key, nodes ->
@@ -384,21 +382,10 @@ internal fun CatalogRuntimeCanvas(
   // unroll only to a runtime that listed it.
   // Per runtime: a surface that moves to another catalog's runtime starts with none.
   var capabilities by remember(surfaceId, runtimeId) { mutableStateOf(emptySet<String>()) }
-  // The developer's preview engine rides in the environment, to a runtime that takes one; read here
-  // so changing it re-sends the design.
-  val previewEngine = CatalogRuntimePreviewEngine.selected
   val documentJson =
-    remember(runtimeDocument, capabilities, previewEngine) {
-      inspectionJson.encodeToString(
-        UiBuilderDocument.serializer(),
-        CatalogRuntimePreviewEngine.applyTo(runtimeDocument, capabilities),
-      )
+    remember(runtimeDocument) {
+      inspectionJson.encodeToString(UiBuilderDocument.serializer(), runtimeDocument)
     }
-  LaunchedEffect(capabilities) {
-    if (CatalogRuntimePreviewEngine.CAPABILITY in capabilities) {
-      CatalogRuntimePreviewEngine.offered = true
-    }
-  }
   // Why the runtime drew nothing, or empty while it has not refused; shown in the pane.
   var runtimeError by remember(surfaceId) { mutableStateOf("") }
   var lastUndrawn by remember(surfaceId) { mutableStateOf("") }
@@ -3034,26 +3021,6 @@ private external fun readBrowserSetting(key: String): String
   }"""
 )
 private external fun writeBrowserSetting(key: String, value: String)
-
-private const val PREVIEW_ENGINE_KEY = "ui-builder.preview-engine.v1"
-
-/**
- * The developer's preview-engine choice ([CatalogRuntimePreviewEngine]). `?previewEngine=` shows
- * the toolbar menu, and `?previewEngine=live|capture` also picks one; a choice made in the menu is
- * kept in this browser and keeps the menu shown until it is reset to the runtime default.
- */
-private fun initPreviewEngineSetting() {
-  val stored = CatalogRuntimePreviewEngine.parse(readBrowserSetting(PREVIEW_ENGINE_KEY))
-  val requested =
-    if (liveConfigPresent("previewEngine")) {
-      CatalogRuntimePreviewEngine.parse(liveConfigValue("previewEngine", ""))
-    } else null
-  CatalogRuntimePreviewEngine.enabled = liveConfigPresent("previewEngine") || stored != null
-  CatalogRuntimePreviewEngine.persist = {
-    writeBrowserSetting(PREVIEW_ENGINE_KEY, it?.id.orEmpty())
-  }
-  (requested ?: stored)?.let(CatalogRuntimePreviewEngine::select)
-}
 
 private const val HOME_FOLDERS_KEY = "ui-builder.home-folders.v1"
 

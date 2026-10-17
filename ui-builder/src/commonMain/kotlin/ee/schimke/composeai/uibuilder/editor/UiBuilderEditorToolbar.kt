@@ -217,10 +217,6 @@ internal fun MobileEditorToolbar(
               )
             }
           }
-          // The preview engine, as rows for the same reason, when the page asked for the choice.
-          if (CatalogRuntimePreviewEngine.enabled && CatalogRuntimePreviewEngine.offered) {
-            addAll(previewEngineMenuEntries(labelPrefix = "Engine: ") { expanded = false })
-          }
           if (onNewDesign != null) {
             add(
               UiBuilderMenuEntry.Action("New design") {
@@ -632,10 +628,6 @@ internal fun EditorToolbar(
           WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
         }
       }
-      // A developer option, shown only when the page asked for it and a runtime offers a choice.
-      if (CatalogRuntimePreviewEngine.enabled && CatalogRuntimePreviewEngine.offered) {
-        PreviewEngineMenu()
-      }
       if (showPresence && !foldToMore) {
         Spacer(Modifier.width(6.dp))
         PresenceRow(collaborators)
@@ -1005,55 +997,6 @@ private fun WidgetHostShapeMenu(
         },
     )
   }
-}
-
-/**
- * Which engine the catalog runtime draws with ([CatalogRuntimePreviewEngine]). Like the host shape,
- * it changes the view, not the document.
- */
-@Composable
-private fun PreviewEngineMenu() {
-  var open by remember { mutableStateOf(false) }
-  val selected = CatalogRuntimePreviewEngine.selected
-  val label = selected?.label ?: "Default"
-  Box {
-    TextButton(
-      onClick = { open = true },
-      modifier = Modifier.semantics { contentDescription = "Preview engine ($label)" },
-    ) {
-      Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-      Text("Engine: $label", Modifier.padding(start = 6.dp))
-      Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
-    }
-    LocalUiBuilderChrome.current.PopupMenu(
-      expanded = open,
-      onDismissRequest = { open = false },
-      entries = previewEngineMenuEntries { open = false },
-    )
-  }
-}
-
-/** The preview engines as menu rows; [onPicked] closes whichever menu holds them. */
-private fun previewEngineMenuEntries(
-  labelPrefix: String = "",
-  onPicked: () -> Unit,
-): List<UiBuilderMenuEntry> {
-  val selected = CatalogRuntimePreviewEngine.selected
-  fun row(label: String, detail: String, engine: CatalogRuntimePreviewEngine.Engine?) =
-    UiBuilderMenuEntry.Action(
-      label = labelPrefix + label,
-      detail = detail,
-      detailStyle = UiBuilderMenuDetailStyle.Body,
-      selected = engine == selected,
-      reserveIconSpace = true,
-      compactLeadingIcon = true,
-      onClick = {
-        CatalogRuntimePreviewEngine.select(engine)
-        onPicked()
-      },
-    )
-  return listOf(row("Runtime default", "Whatever the catalog runtime ships with", null)) +
-    CatalogRuntimePreviewEngine.Engine.entries.map { row(it.label, it.detail, it) }
 }
 
 /**
