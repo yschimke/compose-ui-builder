@@ -19,14 +19,16 @@ import kotlinx.serialization.json.JsonPrimitive
 
 class LocalCatalogTemplatesTest {
   private val storage = InMemoryLocalDesignStorage()
-  private val catalog =
+
+  private fun catalog(revision: String = "revision-7") =
     CatalogCapabilityV1.Builder(
         "compose-ui-builder-catalog/v1",
-        CatalogBenchmarkV1.Builder("watch", "source", "watch-kit", "revision-7", "runtime-7")
-          .build(),
+        CatalogBenchmarkV1.Builder("watch", "source", "watch-kit", revision, "runtime-7").build(),
         emptyList(),
       )
       .build()
+
+  private val catalog = catalog()
   private val template =
     localDesignJson.decodeFromString<UiBuilderDocument>(
       """{"schema":"compose-ui-builder-document/v1-candidate","id":"published-card","title":"Published card","revision":19,
@@ -123,6 +125,48 @@ class LocalCatalogTemplatesTest {
       }
       assertFailsWith<LocalDesignStorageException> {
         LocalCatalogTemplates(storage).load(catalog) { error("offline") }
+      }
+    }
+
+  @Test
+  fun `catalog upgrades replace old templates within a single publication quota`() =
+    runBlocking<Unit> {
+      // Enough for one publication, but never two complete copies under different revision keys.
+      val bounded = InMemoryLocalDesignStorage(payload().length + 200)
+      for (revision in listOf("revision-7", "revision-8", "revision-9")) {
+        LocalCatalogTemplates(bounded).load(catalog(revision)) { payload(revision) }
+        assertEquals(1, bounded.keys().size)
+        assertEquals(
+          template,
+          LocalCatalogTemplates(bounded)
+            .load(catalog(revision)) { error("offline") }["card"]!!
+            .document,
+        )
+      }
+      // Replacing an entry never allows a newer publication to satisfy an older catalog pin.
+      assertFailsWith<LocalDesignStorageException> {
+        LocalCatalogTemplates(bounded).load(catalog) { error("offline") }
+      }
+    }
+
+  @Test
+  fun `a refused replacement retains the previous matching publication`() =
+    runBlocking<Unit> {
+      val bounded = InMemoryLocalDesignStorage(payload().length + 200)
+      LocalCatalogTemplates(bounded).load(catalog) { payload() }
+      val revision = "revision-" + "x".repeat(500)
+      assertEquals(
+        template,
+        LocalCatalogTemplates(bounded)
+          .load(catalog(revision)) { payload(revision) }["card"]!!
+          .document,
+      )
+      assertEquals(
+        template,
+        LocalCatalogTemplates(bounded).load(catalog) { error("offline") }["card"]!!.document,
+      )
+      assertFailsWith<LocalDesignStorageException> {
+        LocalCatalogTemplates(bounded).load(catalog(revision)) { error("offline") }
       }
     }
 

@@ -11,7 +11,9 @@ import kotlinx.serialization.encodeToString
 /**
  * Network-first template documents. Validation precedes storage, so a refresh racing the catalog
  * list cannot replace a good cached set with templates for another revision. A new cache instance
- * can create from the same documents with the server down. Quota failures leave online use intact.
+ * can create from the same documents with the server down. One entry per catalog bounds storage
+ * across upgrades; its envelope must still match the complete requested pin. Quota failures leave
+ * online use intact.
  */
 class LocalCatalogTemplates(private val storage: LocalDesignStorage) {
   suspend fun load(
@@ -27,11 +29,7 @@ class LocalCatalogTemplates(private val storage: LocalDesignStorage) {
         "candidate",
         benchmark.nativeRuntimeId,
       )
-    val key =
-      "ui-builder.local.templates." +
-        localDesignJson.encodeToString(
-          listOf(pin.systemId, pin.catalogRevision, pin.capabilityDigest, pin.nativeRuntimeId)
-        )
+    val key = "ui-builder.local.templates." + localDesignJson.encodeToString(pin.systemId)
     fun decode(text: String): CatalogSeedTemplates {
       val payload = localDesignJson.decodeFromString<CatalogTemplateDocumentsV1>(text)
       require(payload.schemaVersion == 1) {
@@ -69,11 +67,18 @@ class LocalCatalogTemplates(private val storage: LocalDesignStorage) {
     } catch (cancelled: CancellationException) {
       throw cancelled
     } catch (failure: Exception) {
-      storage.read(key)?.let(::decode)
-        ?: throw LocalDesignStorageException(
-          "this browser has not stored ${pin.systemId} templates",
-          failure,
+      try {
+        storage.read(key)?.let(::decode)
+          ?: throw LocalDesignStorageException(
+            "this browser has not stored ${pin.systemId} templates",
+            failure,
+          )
+      } catch (invalid: IllegalArgumentException) {
+        throw LocalDesignStorageException(
+          "this browser has not stored matching ${pin.systemId} templates",
+          invalid,
         )
+      }
     }
   }
 }
