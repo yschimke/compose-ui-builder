@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.120.0](https://github.com/yschimke/compose-ui-builder/compare/v3.119.0...v3.120.0) (2026-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **runtime:** require published catalog definitions ([#932](https://github.com/yschimke/compose-ui-builder/issues/932))
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools ([#939](https://github.com/yschimke/compose-ui-builder/issues/939)) ([21555ac](https://github.com/yschimke/compose-ui-builder/commit/21555ac7547516fcfccb7321fe47a4403add0ecf))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.5 ([#935](https://github.com/yschimke/compose-ui-builder/issues/935)) ([2e59741](https://github.com/yschimke/compose-ui-builder/commit/2e597419cfee68061f9d00b9e3100dfcaf4e8e30))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.13.1 ([#937](https://github.com/yschimke/compose-ui-builder/issues/937)) ([a12a29f](https://github.com/yschimke/compose-ui-builder/commit/a12a29f1fd8523d366008462bfa0376aed9b27d5))
+
+
+### Code Refactoring
+
+* **runtime:** require published catalog definitions ([#932](https://github.com/yschimke/compose-ui-builder/issues/932)) ([34d4529](https://github.com/yschimke/compose-ui-builder/commit/34d452990d3903fe7ffa0aa3f058808ea6def35c))
+
 ## [3.119.0](https://github.com/yschimke/compose-ui-builder/compare/v3.118.0...v3.119.0) (2026-10-16)
 
 
