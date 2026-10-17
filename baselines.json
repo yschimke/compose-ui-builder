@@ -836,7 +836,7 @@
     "functionName": "UiBuilderNewDesignPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignPreview-7e7db055.png",
-    "sha256": "f98728336ce1387e8be78f251d45f3b7fba68004ae8827b22c4bd6250126c9e4",
+    "sha256": "0f50d4c62ff4efa128434198acb87baadcb2b5f918de69312547262250432133",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderPreviewModePreview": {
