@@ -7,11 +7,13 @@ import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
@@ -56,6 +58,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilterChip
@@ -63,6 +66,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorPosition
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -73,6 +78,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,9 +89,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -93,13 +103,18 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 /**
@@ -1227,7 +1242,13 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
     offset: DpOffset,
   ) {
     TrackEditorOverlay(expanded)
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest, offset = offset) {
+    // Material's popup constrains to the window and scrolls; cap tall menus on large displays too.
+    DropdownMenu(
+      expanded = expanded,
+      onDismissRequest = onDismissRequest,
+      offset = offset,
+      modifier = Modifier.heightIn(max = 720.dp),
+    ) {
       entries.forEach { entry ->
         when (entry) {
           UiBuilderMenuEntry.Divider -> HorizontalDivider()
@@ -1357,8 +1378,19 @@ private fun MaterialCatalogAddButton(model: UiBuilderCatalogTileModel) {
 }
 
 @Composable
-private fun MaterialMenuAction(entry: UiBuilderMenuEntry.Action) {
+private fun MaterialMenuAction(
+  entry: UiBuilderMenuEntry.Action,
+  initialFocus: FocusRequester? = null,
+) {
   var submenuOpen by remember(entry.label) { mutableStateOf(false) }
+  val focusRequester = initialFocus ?: remember { FocusRequester() }
+  val childFocusRequester = remember { FocusRequester() }
+  val openKey =
+    if (LocalLayoutDirection.current == LayoutDirection.Ltr) Key.DirectionRight
+    else Key.DirectionLeft
+  val closeKey =
+    if (LocalLayoutDirection.current == LayoutDirection.Ltr) Key.DirectionLeft
+    else Key.DirectionRight
   val iconModifier = if (entry.compactLeadingIcon) Modifier.size(18.dp) else Modifier
   val leadingIcon: (@Composable () -> Unit)? =
     when {
@@ -1379,7 +1411,7 @@ private fun MaterialMenuAction(entry: UiBuilderMenuEntry.Action) {
   val trailingIcon: (@Composable () -> Unit)? =
     when {
       entry.children.isNotEmpty() -> {
-        { Text("›") }
+        { Text(if (LocalLayoutDirection.current == LayoutDirection.Ltr) "›" else "‹") }
       }
       entry.shortcut != null -> {
         {
@@ -1416,12 +1448,78 @@ private fun MaterialMenuAction(entry: UiBuilderMenuEntry.Action) {
       enabled = entry.enabled,
       leadingIcon = leadingIcon,
       trailingIcon = trailingIcon,
-      modifier = Modifier.semantics { contentDescription = entry.contentDescription },
+      modifier =
+        Modifier.focusRequester(focusRequester)
+          .onPreviewKeyEvent {
+            if (
+              entry.enabled &&
+                entry.children.isNotEmpty() &&
+                it.type == KeyEventType.KeyDown &&
+                it.key == openKey
+            ) {
+              submenuOpen = true
+              true
+            } else false
+          }
+          .semantics {
+            contentDescription = entry.contentDescription
+            if (entry.children.isNotEmpty())
+              stateDescription = if (submenuOpen) "Expanded submenu" else "Collapsed submenu"
+            else if (entry.reserveIconSpace) selected = entry.selected
+          },
       onClick = { if (entry.children.isEmpty()) entry.onClick() else submenuOpen = true },
     )
     TrackEditorOverlay(submenuOpen)
-    DropdownMenu(expanded = submenuOpen, onDismissRequest = { submenuOpen = false }) {
-      entry.children.forEach { child -> MaterialMenuAction(child) }
+    DropdownMenuPopup(
+      expanded = submenuOpen,
+      onDismissRequest = { submenuOpen = false },
+      // End tries the opposite side before clamping to the viewport, and mirrors in RTL.
+      popupPositionProvider =
+        MenuDefaults.rememberDropdownMenuPopupPositionProvider(MenuAnchorPosition.End),
+    ) {
+      val submenuFocusManager = LocalFocusManager.current
+      val inputModeManager = LocalInputModeManager.current
+      Surface(
+        shape = MenuDefaults.shape,
+        color = MenuDefaults.containerColor,
+        tonalElevation = MenuDefaults.TonalElevation,
+        shadowElevation = MenuDefaults.ShadowElevation,
+      ) {
+        Column(
+          Modifier.heightIn(max = 600.dp)
+            .padding(vertical = 8.dp)
+            .width(IntrinsicSize.Max)
+            .verticalScroll(rememberScrollState())
+            .onPreviewKeyEvent {
+              if (it.type != KeyEventType.KeyDown) false
+              else
+                when (it.key) {
+                  closeKey,
+                  Key.Escape -> {
+                    submenuOpen = false
+                    focusRequester.requestFocus()
+                    true
+                  }
+                  Key.DirectionDown,
+                  Key.DirectionUp -> {
+                    inputModeManager.requestInputMode(InputMode.Keyboard)
+                    submenuFocusManager.moveFocus(
+                      if (it.key == Key.DirectionDown) FocusDirection.Next
+                      else FocusDirection.Previous
+                    )
+                    true
+                  }
+                  else -> false
+                }
+            }
+        ) {
+          val firstEnabled = entry.children.indexOfFirst { it.enabled }
+          entry.children.forEachIndexed { index, child ->
+            MaterialMenuAction(child, if (index == firstEnabled) childFocusRequester else null)
+          }
+          if (firstEnabled >= 0) LaunchedEffect(Unit) { childFocusRequester.requestFocus() }
+        }
+      }
     }
   }
 }
