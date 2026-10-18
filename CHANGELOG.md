@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.121.0](https://github.com/yschimke/compose-ui-builder/compare/v3.120.0...v3.121.0) (2026-10-18)
+
+
+### Features
+
+* **ui-builder:** cache published templates for offline creation ([#944](https://github.com/yschimke/compose-ui-builder/issues/944)) ([380cd5d](https://github.com/yschimke/compose-ui-builder/commit/380cd5d8da68636943411e18dec6e2cf749def48))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.68.2 ([#949](https://github.com/yschimke/compose-ui-builder/issues/949)) ([1dbbf0d](https://github.com/yschimke/compose-ui-builder/commit/1dbbf0d167569395ceff9d57c9b3e5a1b06dd9ef))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.6 ([#943](https://github.com/yschimke/compose-ui-builder/issues/943)) ([40e068f](https://github.com/yschimke/compose-ui-builder/commit/40e068f728c3f7fbb788c0809036b888cee9327a))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.15.0 ([#950](https://github.com/yschimke/compose-ui-builder/issues/950)) ([9abc539](https://github.com/yschimke/compose-ui-builder/commit/9abc5398521efe2f54698fd382d77627ad0ff6ee))
+
 ## [3.120.0](https://github.com/yschimke/compose-ui-builder/compare/v3.119.0...v3.120.0) (2026-10-17)
 
 
