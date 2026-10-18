@@ -58,7 +58,7 @@ abstract class WriteUiBuilderWebManifest : DefaultTask() {
       .asFile
       .writeText(
         """{"schema":"compose-ui-builder-web/v1","version":"${editorVersion.get()}",""" +
-          """"serverApi":${serverApi.get()},"hostBridge":${hostBridge.get()},""" +
+          """"serverApi":${serverApi.get()},"rootOffline":1,"hostBridge":${hostBridge.get()},""" +
           """"mcpApp":${mcpApp.get()}}""" +
           "\n"
       )

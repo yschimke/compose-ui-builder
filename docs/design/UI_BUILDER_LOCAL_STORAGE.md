@@ -225,7 +225,8 @@ cache or not at all. `ui-builder-sw.js`, at the root of the web bundle, keeps it
 on the origin, including every automated harness lane that drives one, so the boot script
 (`ui-builder-boot.js`) registers it only when a person asked for offline: the editor running as an
 installed app (`display-mode: standalone` and friends), a `?storage=local` page, or `?offline=1`.
-`?sw=off` unregisters it and deletes its caches. It is never registered inside a frame (an IDE
+`?sw=off` deletes its caches and unregisters a standalone editor worker. A root host's shared
+notification registration stays registered to preserve its push subscription. It is never registered inside a frame (an IDE
 webview, an MCP App) or outside a secure context.
 
 **The contract with the host:**
@@ -241,6 +242,21 @@ webview, an MCP App) or outside a secure context.
 The editor root is computed in the page: the path up to and including `/ui-builder/` when the page
 is under one, else the page's own directory — so the same bundle served as plain files registers at
 the directory it was served from.
+
+A host serving the editor at `/` must explicitly support offline loading there. The archive
+declares `rootOffline: 1` in `ui-builder-web.json`; a compatible host adds
+`<meta name="ui-builder-offline-worker" content="/push-sw.js">` beside its
+`ui-builder-base-path=/` meta tag. The boot script then reuses the root notification registration
+at `/push-sw.js`, rather than replacing it with an editor-only worker. Hosts without this
+advertisement keep their existing registration untouched.
+
+The combined worker retains its notification listeners and imports `/ui-builder/ui-builder-sw.js`
+after setting `self.composeUiBuilderOffline` with `assetBase: '/ui-builder/'` and `reservedPaths`,
+the host's top-level server-route list. Root navigation caching excludes those paths, the designs
+and projects indexes, and per-design management pages. Bundle assets stay under `assetBase`;
+only explicitly precached bundle JSON fixtures have aliases at the page root. The host includes
+the editor bundle digest in the wrapper's bytes and computes its ETag from the whole response,
+so frontend-only updates and changes to reserved routes both install the updated worker.
 
 **What it caches, and how:**
 

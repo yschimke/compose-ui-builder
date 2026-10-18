@@ -1,0 +1,44 @@
+{
+  "networkDisabled": true,
+  "fixtureRoutesRemoved": true,
+  "templateRequestsBeforeOffline": 1,
+  "rootHost": true,
+  "sharedNotificationRegistration": true,
+  "seed": {
+    "schema": "compose-ui-builder-document/v1-candidate",
+    "id": "petty-waffle",
+    "title": "Published offline card",
+    "revision": 0,
+    "catalogPin": {
+      "systemId": "published-only",
+      "catalogRevision": "candidate",
+      "capabilityDigest": "candidate",
+      "nativeRuntimeId": "candidate"
+    },
+    "environment": {
+      "widthDp": 320,
+      "heightDp": 480,
+      "density": 1,
+      "theme": "dark",
+      "locale": "en-US",
+      "fontScale": 1,
+      "layoutDirection": "ltr",
+      "exportDevices": [
+        "id:pixel_6"
+      ]
+    },
+    "stateVariables": {},
+    "roots": [
+      "published-root"
+    ],
+    "nodes": {
+      "published-root": {
+        "id": "published-root",
+        "componentId": "layout/column",
+        "slots": {
+          "content": []
+        }
+      }
+    }
+  }
+}

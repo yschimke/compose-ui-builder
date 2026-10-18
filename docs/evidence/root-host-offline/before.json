@@ -1,0 +1,8 @@
+{
+  "baseline": "compose-ui-builder 3.121.0 boot script",
+  "rootHost": true,
+  "registrations": 0,
+  "networkDisabled": true,
+  "freshTab": true,
+  "error": "net::ERR_INTERNET_DISCONNECTED"
+}

@@ -115,14 +115,24 @@
     at >= 0
       ? location.pathname.slice(0, at + marker.length)
       : location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
-  const scope = new URL(root, location.origin).href;
-  const script = new URL('ui-builder-sw.js', scope).href;
+  const basePath = (
+    document.querySelector('meta[name="ui-builder-base-path"]')?.getAttribute('content') || ''
+  ).trim();
+  const rooted = basePath !== '' && basePath.replace(/\/+/g, '') === '';
+  // A root host shares its registration with notifications. The host advertises this only when
+  // its worker composes push handling with this bundle's root-aware offline handler.
+  const sharedWorker = document.querySelector('meta[name="ui-builder-offline-worker"]')?.getAttribute('content');
+  if (rooted && sharedWorker !== '/push-sw.js') return;
+  const scope = new URL(rooted ? '/' : root, location.origin).href;
+  const script = rooted ? new URL(sharedWorker, location.origin).href
+    : new URL('ui-builder-sw.js', scope).href;
 
   if (params.get('sw') === 'off') {
     navigator.serviceWorker
       .getRegistrations()
       .then((registrations) =>
-        Promise.all(registrations.filter((r) => r.scope === scope).map((r) => r.unregister())),
+        // Unregistering the shared root worker would discard its notification subscription.
+        Promise.all(registrations.filter((r) => !rooted && r.scope === scope).map((r) => r.unregister())),
       )
       .then(() => globalThis.caches?.keys())
       .then((names) =>
@@ -133,16 +143,6 @@
       .catch((error) => console.warn('ui-builder: could not remove the offline worker', error));
     return;
   }
-
-  // A root-mode host (`<meta name="ui-builder-base-path" content="/">`, compose-preview-server's
-  // --ui-builder-host-root) serves pages at `/<design>`, outside the worker's `/ui-builder/` path,
-  // so those pages run without it; its `/ui-builder/` pages still offer it.
-  const basePath = (
-    document.querySelector('meta[name="ui-builder-base-path"]')?.getAttribute('content') || ''
-  ).trim();
-  // Only a path made of nothing but slashes is the root; an empty or absent meta is `/ui-builder/`,
-  // as normalizeUiBuilderBasePath reads it.
-  if (basePath !== '' && basePath.replace(/\/+/g, '') === '') return;
 
   const installed = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'].some(
     (mode) => globalThis.matchMedia?.('(display-mode: ' + mode + ')').matches,

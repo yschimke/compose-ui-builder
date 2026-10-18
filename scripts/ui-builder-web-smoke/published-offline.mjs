@@ -17,7 +17,7 @@ async function pollBrowserValue(page, read, timeout = 30000) {
 // The template has no Kotlin factory. Warm the real browser stores, cut the network, reload,
 // and use the chooser to create a new design. The worker supplies the app; IndexedDB supplies
 // the catalog and published starting document. Nothing is written to a server.
-export async function verifyPublishedOfflineCreation(base, root, launchOptions, shots) {
+export async function verifyPublishedOfflineCreation(base, root, launchOptions, shots, rooted = false) {
   const catalog = JSON.parse(await readFile(join(root, 'm3-catalog-capabilities-v1.json'), 'utf8'));
   const system = 'published-only';
   catalog.benchmark.catalogSystemId = system;
@@ -56,10 +56,24 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
       }});
     });
     page = watch(await context.newPage());
-    const url = `${base}/index.html?session=live&storage=local&catalog=${system}`;
+    const url = `${base}/${rooted ? '' : 'index.html'}?session=live&storage=local&catalog=${system}`;
     await page.goto(url);
     await page.waitForFunction(() => document.documentElement.dataset.uiBuilderReady === 'true', null, {timeout: 120000});
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, {timeout: 120000});
+    if (rooted) {
+      const registration = await page.evaluate(async () => {
+        const rows = await navigator.serviceWorker.getRegistrations();
+        return rows.map(row => ({scope: row.scope, script: row.active?.scriptURL}));
+      });
+      assert.deepEqual(registration, [{scope: base + '/', script: base + '/push-sw.js'}]);
+      // Notification settings registers this same URL. It must reuse the offline registration.
+      assert.equal(await page.evaluate(async () => {
+        const existing = await navigator.serviceWorker.getRegistration('/');
+        const forPush = await navigator.serviceWorker.register('/push-sw.js', {scope: '/'});
+        return existing.scope === forPush.scope && existing.active?.scriptURL === forPush.active?.scriptURL
+          && (await navigator.serviceWorker.getRegistrations()).length === 1;
+      }), true);
+    }
     // Wait for the cache entry to reach IndexedDB, not just the page's in-memory mirror.
     await pollBrowserValue(page, () => new Promise((resolve, reject) => {
       const opening = indexedDB.open('ui-builder-local');
@@ -126,6 +140,7 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
       await page.screenshot({path: join(shots, 'published-offline-created.png')});
       await writeFile(join(shots, 'published-offline.json'), JSON.stringify({
         networkDisabled: true, fixtureRoutesRemoved: true, templateRequestsBeforeOffline: requests,
+        rootHost: rooted, sharedNotificationRegistration: rooted,
         seed: record.seed,
       }, null, 2) + '\n');
     }

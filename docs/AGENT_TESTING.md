@@ -64,7 +64,7 @@ Traps:
 editor looks right. It needs the Wasm build, which is the heaviest thing in the repo to compile, so
 prefer CI for it.
 
-It runs five lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
+It runs six lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
 some:
 
 - `desktop` — the capture modes at 1400×900.
