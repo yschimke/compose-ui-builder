@@ -28,6 +28,7 @@ const SCOPE = new URL(self.registration.scope);
 // The shell is cached under the scope root whatever design it was fetched for: it is the same app
 // for every design, which reads its design id back out of the address bar.
 const SHELL_KEY = new URL('./', SCOPE).href;
+const PRECACHE_KEY = new URL('__ui-builder-precache-complete', SCOPE).href;
 // Supplied by a root host's shared notification worker, never inferred from a broad scope.
 const ROOT_CONFIG = self.composeUiBuilderOffline;
 const ASSET_ROOT = ROOT_CONFIG ? new URL(ROOT_CONFIG.assetBase, SCOPE) : SCOPE;
@@ -57,6 +58,18 @@ self.addEventListener('activate', (event) => {
 // The page asks for this when a person presses Reload on the update notice.
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data?.type === 'ENSURE_PRECACHE') {
+    event.waitUntil((async () => {
+      try {
+        const cache = await caches.open(CACHE);
+        if (!await cache.match(PRECACHE_KEY)) await precache();
+        event.ports?.[0]?.postMessage({ ok: true });
+      } catch (_) {
+        // Offline visits may use an existing shell even when a refresh cannot finish.
+        event.ports?.[0]?.postMessage({ ok: false });
+      }
+    })());
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -131,6 +144,7 @@ async function precache() {
     await cache.put(url, response);
   }
   await cache.put(SHELL_KEY, shellResponse);
+  await cache.put(PRECACHE_KEY, new Response('complete'));
 }
 
 /** Every same-origin file the shell names: `src`/`href` attributes and import-map targets. */

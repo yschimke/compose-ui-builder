@@ -257,6 +257,11 @@ and projects indexes, and per-design management pages. Bundle assets stay under 
 only explicitly precached bundle JSON fixtures have aliases at the page root. The host includes
 the editor bundle digest in the wrapper's bytes and computes its ETag from the whole response,
 so frontend-only updates and changes to reserved routes both install the updated worker.
+Turning notifications off or receiving an authentication refusal only unsubscribes from push;
+notification cleanup retains this registration. After `?sw=off`, a later opt-in sends
+`ENSURE_PRECACHE` to the retained worker. A completion marker distinguishes a complete bundle
+from opportunistically cached resources, so the worker restores missing caches without
+redownloading a complete bundle on every visit.
 
 **What it caches, and how:**
 

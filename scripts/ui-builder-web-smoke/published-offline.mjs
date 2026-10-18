@@ -89,6 +89,14 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.equal(requests, 1, 'the chooser must fetch the published set before the network goes away');
     if (shots) await page.screenshot({path: join(shots, 'published-online-chooser.png')});
+    if (rooted) {
+      // Clearing offline mode retains the notification worker. Re-enabling must restore the
+      // full bundle without relying on an install event for the unchanged registration.
+      await page.goto(url + '&sw=off');
+      await page.waitForFunction(() => document.documentElement.dataset.uiBuilderOffline === 'disabled');
+      await page.goto(url);
+      await page.waitForFunction(() => document.documentElement.dataset.uiBuilderPrecached === 'ready', null, {timeout: 120000});
+    }
     await page.close();
     // Remove the fixture responses too: an intercepted reply must not masquerade as offline data.
     await context.unrouteAll({behavior: 'wait'});
@@ -140,7 +148,7 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
       await page.screenshot({path: join(shots, 'published-offline-created.png')});
       await writeFile(join(shots, 'published-offline.json'), JSON.stringify({
         networkDisabled: true, fixtureRoutesRemoved: true, templateRequestsBeforeOffline: requests,
-        rootHost: rooted, sharedNotificationRegistration: rooted,
+        rootHost: rooted, sharedNotificationRegistration: rooted, rootCacheRecoveryVerified: rooted,
         seed: record.seed,
       }, null, 2) + '\n');
     }

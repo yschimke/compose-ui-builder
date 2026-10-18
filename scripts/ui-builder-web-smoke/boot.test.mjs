@@ -92,22 +92,32 @@ function offlineBoot({rooted = true, shared = '/push-sw.js', search = '?storage=
   const registrations = [];
   const removed = [];
   const deleted = [];
+  const messages = [];
   const context = {
     isSecureContext: true,
     location: {origin: 'https://example.test', pathname: rooted ? '/' : '/ui-builder/', search},
     URL, URLSearchParams,
+    MessageChannel: class {
+      constructor() {
+        this.port1 = {close() {}};
+        this.port2 = {postMessage: data => this.port1.onmessage({data})};
+      }
+    },
     document: {readyState: 'complete', documentElement: {dataset: {}}, getElementById: () => null,
       querySelector: selector => ({getAttribute: () => selector.includes('base-path') ? (rooted ? '/' : '') : shared})},
     caches: {keys: async () => ['ui-builder-shell-old', 'notification-data'], delete: async name => deleted.push(name)},
     navigator: {serviceWorker: {getRegistrations: async () => [{scope: 'https://example.test' + (rooted ? '/' : '/ui-builder/'), unregister: async () => removed.push(true)}], addEventListener() {}, register: async (url, options) => {
       registrations.push({url, scope: options.scope});
-      return {addEventListener() {}};
+      return {addEventListener() {}, active: {postMessage(message, ports) {
+        messages.push(message.type);
+        ports[0].postMessage({ok: true});
+      }}};
     }}},
   };
   // runInContext receives the same context object as its globalThis.
   context.top = context;
   const page = bootPage({withBoot: false, browser: context});
-  return {registrations, page, removed, deleted};
+  return {registrations, page, removed, deleted, messages};
 }
 
 test('root offline uses the host-advertised notification worker and the same root registration', () => {
@@ -134,4 +144,13 @@ test('clearing offline caches preserves the shared notification registration', a
   assert.deepEqual(prefixed.removed, [true]);
   assert.deepEqual(root.deleted, ['ui-builder-shell-old']);
   assert.deepEqual(prefixed.deleted, ['ui-builder-shell-old']);
+});
+
+test('opting into a retained root registration asks it to restore complete caches', async () => {
+  const root = offlineBoot();
+  const prefixed = offlineBoot({rooted: false});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(root.messages, ['ENSURE_PRECACHE']);
+  assert.equal(root.page.context.document.documentElement.dataset.uiBuilderPrecached, 'ready');
+  assert.deepEqual(prefixed.messages, []);
 });

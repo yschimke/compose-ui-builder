@@ -142,7 +142,9 @@ interface CommentNotificationHost {
   /** Drops this browser's subscription, if it has one. Never throws. */
   suspend fun unsubscribe()
 
-  /** Unregisters the push worker, if it is registered. Never throws. */
+  /**
+   * Legacy host hook. Notification cleanup must retain registrations shared with offline loading.
+   */
   suspend fun unregisterWorker()
 
   /** A same-origin JSON request to the host's push routes. Never throws: status 0 instead. */
@@ -366,14 +368,12 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
         )
       if (response.status == 401) {
         host.unsubscribe()
-        host.unregisterWorker()
         bound = false
         return CommentNotificationsState.Hidden
       }
       // 404 is "not subscribed", which is where this is going anyway.
       host.unsubscribe()
     }
-    host.unregisterWorker()
     bound = false
     kinds = emptySet()
     return CommentNotificationsState.Toggle(on = false)
@@ -390,7 +390,6 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
       // Signed out since the subscription was bound: it must not keep delivering the previous
       // account's notifications to this browser, as every other 401 path already ensures.
       host.unsubscribe()
-      host.unregisterWorker()
       bound = false
       kinds = emptySet()
       return CommentNotificationsState.Hidden

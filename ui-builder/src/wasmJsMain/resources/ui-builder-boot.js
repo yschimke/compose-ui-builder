@@ -140,6 +140,7 @@
           (names || []).filter((n) => n.startsWith('ui-builder-shell-')).map((n) => caches.delete(n)),
         ),
       )
+      .then(() => { document.documentElement.dataset.uiBuilderOffline = 'disabled'; })
       .catch((error) => console.warn('ui-builder: could not remove the offline worker', error));
     return;
   }
@@ -198,6 +199,16 @@
       .register(script, { scope, updateViaCache: 'none' })
       .then((registration) => {
         document.documentElement.dataset.uiBuilderOffline = 'registered';
+        // A retained root worker does not reinstall after sw=off cleared its caches.
+        // Ask it to restore the complete bundle before the next cold offline visit.
+        if (rooted && registration.active) {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = (event) => {
+            document.documentElement.dataset.uiBuilderPrecached = event.data?.ok ? 'ready' : 'failed';
+            channel.port1.close();
+          };
+          registration.active.postMessage({ type: 'ENSURE_PRECACHE' }, [channel.port2]);
+        }
         offerUpdate(registration);
         registration.addEventListener('updatefound', () => {
           const incoming = registration.installing;

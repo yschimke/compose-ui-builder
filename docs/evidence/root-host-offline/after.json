@@ -1,12 +1,13 @@
 {
   "networkDisabled": true,
   "fixtureRoutesRemoved": true,
-  "templateRequestsBeforeOffline": 1,
+  "templateRequestsBeforeOffline": 2,
   "rootHost": true,
   "sharedNotificationRegistration": true,
+  "rootCacheRecoveryVerified": true,
   "seed": {
     "schema": "compose-ui-builder-document/v1-candidate",
-    "id": "petty-waffle",
+    "id": "brazen-noodle",
     "title": "Published offline card",
     "revision": 0,
     "catalogPin": {

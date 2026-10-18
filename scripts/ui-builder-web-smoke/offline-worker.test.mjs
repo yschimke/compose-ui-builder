@@ -91,3 +91,42 @@ test('prefixed worker continues to serve only editor routes and bundle resources
   assert.equal(fetch('/ui-builder/runtime/pin/app.js', { mode: 'cors' }), undefined);
   assert.equal(fetch('/ui-builder/projects'), undefined);
 });
+
+test('retained root worker restores every bundle resource after caches are cleared', async () => {
+  const listeners = new Map();
+  const entries = new Map();
+  const requests = [];
+  const cache = {
+    match: async key => entries.get(key),
+    put: async (key, value) => entries.set(key, value)
+  };
+  runInContext(source.replace('@UI_BUILDER_SW_BUNDLE@', '["unused.json"]'), createContext({
+    self: {
+      registration: {scope: 'https://example.test/'},
+      composeUiBuilderOffline: {assetBase: '/ui-builder/', reservedPaths: ['api']},
+      addEventListener: (type, listener) => listeners.set(type, listener)
+    }, URL, Set, Response,
+    fetch: async url => { requests.push(url); return new Response('<html></html>'); },
+    caches: {open: async () => cache}
+  }));
+  async function ensure() {
+    let done;
+    let ok;
+    listeners.get('message')({
+      data: {type: 'ENSURE_PRECACHE'},
+      ports: [{postMessage: value => {ok = value.ok;}}],
+      waitUntil: promise => {done = promise;}
+    });
+    await done;
+    assert.equal(ok, true);
+  }
+  await ensure();
+  assert.ok(entries.has('https://example.test/unused.json'));
+  const count = requests.length;
+  await ensure();
+  assert.equal(requests.length, count, 'complete caches do not redownload the bundle');
+  entries.clear();
+  await ensure();
+  assert.ok(entries.has('https://example.test/unused.json'));
+  assert.equal(requests.length, count * 2, 'cleared caches restore even unused resources');
+});
