@@ -1311,23 +1311,7 @@ internal fun editorSelectionMenuEntries(
   // Layout before container verbs: the chain is the node's own business, wrapping its parent's.
   if (modifierToggles.isNotEmpty()) {
     add(UiBuilderMenuEntry.Divider)
-    modifierToggles.forEach { toggle ->
-      add(
-        UiBuilderMenuEntry.Action(
-          label = toggle.label,
-          // The tick says what is already true. A menu of layout verbs with no state is one people
-          // press twice to find out what it did.
-          selected = toggle.applied,
-          reserveIconSpace = true,
-          contentDescription =
-            if (toggle.applied) "Remove ${toggle.label}" else "Apply ${toggle.label}",
-          onClick = {
-            onDismiss()
-            onToggleModifier(toggle.type)
-          },
-        )
-      )
-    }
+    addAll(modifierMenuEntries(modifierToggles, onDismiss, onToggleModifier))
   }
   if (
     wrapCandidates.isNotEmpty() ||
