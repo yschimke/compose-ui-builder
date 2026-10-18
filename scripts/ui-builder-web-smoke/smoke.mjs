@@ -24,6 +24,7 @@ import { chromium } from 'playwright';
 import { verifyCompiledWasmCache } from './cache.mjs';
 import { verifyDesignFirstStartup } from './live-startup.mjs';
 import { verifyPublishedOfflineCreation } from './published-offline.mjs';
+import { verifyRootPublishedOfflineCreation } from './root-offline.mjs';
 
 const root = resolve(process.argv[2] ?? 'ui-builder/build/wasmDist');
 const shots = process.argv[3] ? resolve(process.argv[3]) : null;
@@ -249,7 +250,8 @@ if (LANES.includes('live')) {
   catch (error) { console.error(`FAIL live: ${error.stack}`); failures++; }
 }
 if (LANES.includes('published')) {
-  try { await verifyPublishedOfflineCreation(base, root, launchOptions, shots); }
+  try { await verifyPublishedOfflineCreation(base, root, launchOptions, shots);
+    await verifyRootPublishedOfflineCreation(root, launchOptions, shots); }
   catch (error) { console.error(`FAIL published: ${error.stack}`); failures++; }
 }
 server.close();

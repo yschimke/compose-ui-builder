@@ -1050,7 +1050,8 @@ edited with no network once this browser has opened its catalog online. To also 
 offline, the app itself has to be on the device: the editor keeps it there with a service worker,
 which it registers only when you ask — running as an installed app, on any `?storage=local` page,
 or by adding `?offline=1` to an editor URL. The first visit installs it; from then on a cold start
-with no network opens the last version you had. `?sw=off` on any editor URL removes it again. When
+with no network opens the last version you had. `?sw=off` on any editor URL clears the offline
+cache; a shared notification worker stays registered so notifications keep working. When
 a newer editor has been installed in the background, a small **Reload** notice offers it.
 
 Offline still has limits, each said in the editor where it applies: **exports** (SVG, PNG) and the

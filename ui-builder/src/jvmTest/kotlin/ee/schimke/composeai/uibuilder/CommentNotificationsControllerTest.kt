@@ -323,7 +323,7 @@ class CommentNotificationsControllerTest {
   }
 
   @Test
-  fun turningOffDeletesTheSubscriptionAndTheWorker() = runBlocking {
+  fun turningOffDeletesTheSubscriptionAndRetainsTheSharedWorker() = runBlocking {
     val host =
       FakeHost(permission = PushPermission.Granted, subscription = SUBSCRIPTION).apply {
         respond(
@@ -342,8 +342,28 @@ class CommentNotificationsControllerTest {
       host.bodies.getValue("DELETE /api/push/subscribe").single(),
     )
     assertNull(host.subscription)
-    assertTrue("unregisterWorker" in host.calls)
+    assertFalse("unregisterWorker" in host.calls)
     assertEquals(0, host.permissionRequests, "turning off never prompts")
+  }
+
+  @Test
+  fun unauthorizedTurnOffUnsubscribesAndRetainsTheSharedWorker() = runBlocking {
+    val host =
+      FakeHost(permission = PushPermission.Granted, subscription = SUBSCRIPTION).apply {
+        respond(
+          "POST",
+          "/api/push/subscribe",
+          201,
+          """{"kinds":["mentions","replies"],"devices":1}""",
+        )
+        respond("DELETE", "/api/push/subscribe", 401)
+      }
+    val controller = CommentNotificationsController(host)
+    controller.load()
+    controller.toggle()
+    assertEquals(CommentNotificationsState.Hidden, controller.state.value)
+    assertNull(host.subscription)
+    assertFalse("unregisterWorker" in host.calls)
   }
 
   @Test
@@ -412,7 +432,7 @@ class CommentNotificationsControllerTest {
     controller.toggle()
     assertEquals(CommentNotificationsState.Hidden, controller.state.value)
     assertNull(host.subscription, "the previous account's subscription must not keep delivering")
-    assertTrue("unregisterWorker" in host.calls)
+    assertFalse("unregisterWorker" in host.calls)
   }
 
   @Test
