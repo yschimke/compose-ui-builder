@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.122.0](https://github.com/yschimke/compose-ui-builder/compare/v3.121.0...v3.122.0) (2026-10-18)
+
+
+### Features
+
+* **editor:** organize modifier context menus adaptively ([#954](https://github.com/yschimke/compose-ui-builder/issues/954)) ([6110322](https://github.com/yschimke/compose-ui-builder/commit/61103220eebac589bb5cdc00fc5404fa6439ad5a))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.7 ([#952](https://github.com/yschimke/compose-ui-builder/issues/952)) ([9433bed](https://github.com/yschimke/compose-ui-builder/commit/9433bed32b080d10ca1acb59ec0b2b9c12e08d59))
+* **editor:** preserve cold offline creation on root hosts ([#956](https://github.com/yschimke/compose-ui-builder/issues/956)) ([52f65dd](https://github.com/yschimke/compose-ui-builder/commit/52f65ddf17404ae20b95855c30231aa318972ea2))
+
 ## [3.121.0](https://github.com/yschimke/compose-ui-builder/compare/v3.120.0...v3.121.0) (2026-10-18)
 
 
