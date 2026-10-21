@@ -14,6 +14,13 @@ explicitly. This change does not delete the separate Kotlin seed factories, brow
 branches, JVM canvas adapters, or captured publication tests described below. The remaining steps
 are tracked in [server #1530](https://github.com/yschimke/compose-preview-server/issues/1530).
 
+**Seeding is published-first everywhere a host can supply the set.** The server, the browser's
+local creation and `OfflineUiBuilderSession` seed from published templates. An embedding host
+(`HostBridgeApp`) does too when its `seed` carries `templates`, the catalog's
+`CatalogTemplateDocumentsV1`; the VS Code extension sends it. A host that sends none still gets
+the built-in per-id seed, so the Kotlin seed factories can go once every host sends templates and
+the chooser's thumbnails (`withTemplatePreviews`) are drawn from published documents too.
+
 The sections below record the staged rollout and its historical default-off flag.
 
 Read [`UI_BUILDER_CATALOG_AGNOSTICISM.md`](UI_BUILDER_CATALOG_AGNOSTICISM.md) for why each of these
