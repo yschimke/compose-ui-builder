@@ -291,9 +291,5 @@ class A2uiComposeExporterTest {
     assertEquals("a2ui/Column", seed.nodes.getValue("a2ui-column").componentId)
     assertIs<A2uiDocumentExporter.Result.Emitted>(A2uiDocumentExporter.export(seed))
     assertIs<A2uiComposeExporter.Result.Emitted>(A2uiComposeExporter.export(seed))
-    assertEquals(
-      setOf(UiBuilderNewDesignSeed.A2UI_TEMPLATE),
-      UiBuilderNewDesignSeed.templateIds(A2uiDocumentExporter.CATALOG_SYSTEM_ID),
-    )
   }
 }

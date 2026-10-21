@@ -14,12 +14,16 @@ explicitly. This change does not delete the separate Kotlin seed factories, brow
 branches, JVM canvas adapters, or captured publication tests described below. The remaining steps
 are tracked in [server #1530](https://github.com/yschimke/compose-preview-server/issues/1530).
 
-**Seeding is published-first everywhere a host can supply the set.** The server, the browser's
-local creation and `OfflineUiBuilderSession` seed from published templates. An embedding host
-(`HostBridgeApp`) does too when its `seed` carries `templates`, the catalog's
-`CatalogTemplateDocumentsV1`; the VS Code extension sends it. A host that sends none still gets
-the built-in per-id seed, so the Kotlin seed factories can go once every host sends templates and
-the chooser's thumbnails (`withTemplatePreviews`) are drawn from published documents too.
+**Every new design is seeded from what its catalog publishes.** The server, the browser's local
+creation, `OfflineUiBuilderSession` and an embedding host (`HostBridgeApp`, whose `seed` carries the
+catalog's `CatalogTemplateDocumentsV1`) all seed through `UiBuilderNewDesignSeed.document(designId,
+templateId, catalogPin, published)`; a catalog that publishes nothing gets the generic blank. The
+per-catalog-id seed path (`templateIds(id)`, the fixture-reading `document` overload and the
+ownership overloads) is deleted. The one seed no catalog publishes, the Jetcaster benchmark, is
+`fixtureDocument`. The Kotlin document builders the deleted path called (`wearScreenUiBuilderDocument`,
+`WearWidgetSample`, `LauncherWidgetTemplates`, `AdaptiveScreenTemplates`, `RemoteClockTemplates`,
+…) no longer seed anything; tests and `@Preview`s still build documents with them, and moving them
+to test fixtures is the remaining cleanup.
 
 The sections below record the staged rollout and its historical default-off flag.
 
@@ -64,8 +68,8 @@ Where each reader takes the flag:
 - `CurrentM3UiBuilderCatalogExecutor.Builder.catalogOwnership` (`:ui-builder-runtime`; removed
   once every catalog became catalog-owned).
 - `UiBuilderNewDesignSeed.templateIds(id, ownership, published)` and
-  `UiBuilderNewDesignSeed.document(…, ownership, published)` (`:ui-builder-export`). The old
-  overloads are untouched, so the server's compiled calls keep their meaning.
+  `UiBuilderNewDesignSeed.document(…, ownership, published)` (`:ui-builder-export`; removed with
+  the per-id seed path once every host seeded from published templates).
 - `CatalogExportRouting.route(catalog, ownership)` (`:ui-builder-export`).
 - The browser chooser reads the shell's `<meta name="ui-builder-catalog-ownership">` (or a
   `?catalogOwnership=` override; `Main.kt`'s `catalogOwnership()`); the host that serves the page

@@ -370,13 +370,8 @@ fun UiBuilderNewDesignPreview() {
                 .getResource("/${choice.systemId}-capabilities-v1.json")
                 ?.let { CapabilityCatalogParser.parse(it.readText()) }
                 ?: publishedPreviewCatalog(choice.systemId),
-              Json.parseToJsonElement(
-                  UiBuilderDocument::class
-                    .java
-                    .getResource("/jetcaster-discover-operations-v1.json")!!
-                    .readText()
-                )
-                .jsonObject,
+              // Thumbnails are the documents each catalog publishes, as Create seeds them.
+              publishedPreviewTemplates(choice.systemId),
             )
         },
     initialCatalogSystemId = "m3-catalog",

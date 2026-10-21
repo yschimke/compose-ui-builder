@@ -96,13 +96,12 @@ class UnlistedCatalogTest {
         )
         .jsonObject
     val document =
-      UiBuilderNewDesignSeed.document(
-          designId = "pilot-design",
-          catalogSystemId = wearM3,
+      publishedTestSeed(
+          systemId = wearM3,
           templateId = UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
+          designId = "pilot-design",
           catalogRevision = wear.benchmark.catalogRevision,
           nativeRuntimeId = wear.benchmark.nativeRuntimeId,
-          fixture = fixture,
         )
         .toDesignDocumentV1()
     assertIs<UiBuilderServiceResponse.Snapshot>(

@@ -1,8 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -19,23 +17,19 @@ class GlimmerRecordExportTest {
 
   @Test
   fun `every glimmer seed exports through its records, as Glimmer and not Material 3`() {
-    val ownership = CatalogOwnership.of(setOf(id))
     val catalog = CatalogCutoverFixtures.catalog(id)
     val templates = CatalogCutoverFixtures.templates(id)
     val record = CatalogCutoverFixtures.exportRecord(id)
-    val ids = UiBuilderNewDesignSeed.templateIds(id, ownership, templates)
+    val ids = templates.ids
     assertTrue(ids.isNotEmpty(), "glimmer publishes seed templates")
     for (templateId in ids) {
       val document =
-        UiBuilderNewDesignSeed.document(
-            designId = "glimmer-export",
-            catalogSystemId = id,
+        publishedTestSeed(
+            systemId = id,
             templateId = templateId,
+            designId = "glimmer-export",
             catalogRevision = catalog.benchmark.catalogRevision,
             nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-            fixture = CatalogCutoverProbe.fixture,
-            ownership = ownership,
-            published = templates,
           )
           .toDesignDocumentV1()
       val source =

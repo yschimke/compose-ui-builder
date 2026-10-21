@@ -25,34 +25,47 @@ import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.frameGeometry
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-/** Preview the same seed as Create, pinned to the catalog the host actually serves. */
+/**
+ * Preview the same seed as Create: each template from the catalog's [published] documents, pinned
+ * to the catalog the host actually serves. A template the set does not publish gets no preview.
+ */
 internal fun UiBuilderNewDesignCatalog.withTemplatePreviews(
   catalog: CapabilityCatalog,
-  fixture: JsonObject,
-): UiBuilderNewDesignCatalog =
-  copy(
+  published: CatalogSeedTemplates,
+): UiBuilderNewDesignCatalog {
+  val pin =
+    CatalogReferenceV1(
+      systemId,
+      catalog.benchmark.catalogRevision,
+      "candidate",
+      catalog.benchmark.nativeRuntimeId,
+    )
+  return copy(
     previewCatalog = catalog,
     templates =
       templates.map { template ->
         template.copy(
-          previewDocument =
-            UiBuilderNewDesignSeed.document(
-              designId = "template-$systemId-${template.id}",
-              catalogSystemId = systemId,
-              templateId = template.id,
-              catalogRevision = catalog.benchmark.catalogRevision,
-              nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-              fixture = fixture,
-            )
+          previewDocument = runCatching {
+              UiBuilderNewDesignSeed.document(
+                designId = "template-$systemId-${template.id}",
+                templateId = template.id,
+                catalogPin = pin,
+                published = published,
+              )
+            }
+              .getOrNull()
         )
       },
   )
+}
 
 /**
  * A still miniature in the same frame as saved-design thumbnails, with no template interactions.

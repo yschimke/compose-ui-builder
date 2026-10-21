@@ -13,8 +13,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
-import kotlinx.serialization.json.JsonObject
 
 /**
  * Everything that is not clean about serving one catalog catalog-owned, from what it publishes
@@ -31,14 +31,12 @@ internal object OwnedCatalogCheck {
    *   export through it (launcher emitter, record-free emitter, or record export against
    *   [exportRecord]).
    *
-   * [fixture] is the operations fixture new designs seed from; [packComponents] are the composed
-   * catalog's records for the record-free emitters.
+   * [packComponents] are the composed catalog's records for the record-free emitters.
    */
   fun findings(
     catalogId: String,
     published: CatalogCapabilityV1,
     templates: CatalogSeedTemplates?,
-    fixture: JsonObject,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     exportRecord: ComponentRecordFile? = null,
     nativeRuntimeId: String? = null,
@@ -67,17 +65,22 @@ internal object OwnedCatalogCheck {
           "$catalogId: declares ${route.adapter}/v${route.version}, which this build does not ship"
         )
       }
-      UiBuilderNewDesignSeed.templateIds(catalogId, ownership, templates).forEach { templateId ->
+      val published = templates ?: CatalogSeedTemplates(catalogId, emptyList())
+      val pin =
+        CatalogReferenceV1(
+          catalogId,
+          catalog.benchmark.catalogRevision,
+          "candidate",
+          catalog.benchmark.nativeRuntimeId,
+        )
+      val templateIds = published.ids.ifEmpty { listOf(UiBuilderNewDesignSeed.BLANK_TEMPLATE) }
+      templateIds.forEach { templateId ->
         val document =
           UiBuilderNewDesignSeed.document(
               designId = "shadow",
-              catalogSystemId = catalogId,
               templateId = templateId,
-              catalogRevision = catalog.benchmark.catalogRevision,
-              nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-              fixture = fixture,
-              ownership = ownership,
-              published = templates,
+              catalogPin = pin,
+              published = published,
             )
             .toDesignDocumentV1()
         executor.validate(document, catalog)?.let {

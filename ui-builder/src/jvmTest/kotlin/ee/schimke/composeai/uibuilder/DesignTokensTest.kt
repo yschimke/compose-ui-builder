@@ -9,7 +9,6 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.editor.heldValue
 import ee.schimke.composeai.uibuilder.editor.tuned
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlin.test.Test
@@ -32,14 +31,12 @@ class DesignTokensTest {
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val seed =
-    UiBuilderNewDesignSeed.document(
-      designId = "wear-tokens",
-      catalogSystemId = "wear-m3",
+    publishedTestSeed(
+      systemId = "wear-m3",
       templateId = "wear-screen",
+      designId = "wear-tokens",
       catalogRevision = "wear-screen-scaffold-v1",
       nativeRuntimeId = "candidate",
-      fixture =
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
     )
 
   /** A scaffold over a list of two buttons, with a column of one more inside the second. */

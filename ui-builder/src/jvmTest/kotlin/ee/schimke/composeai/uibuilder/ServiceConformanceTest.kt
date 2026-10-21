@@ -68,18 +68,18 @@ class ServiceConformanceTest {
   private val catalog =
     CapabilityCatalogParser.parse(Json.encodeToString(CatalogCapabilityV1.serializer(), catalogV1))
   private val seed: DesignDocumentV1 =
-    UiBuilderNewDesignSeed.document(
-        designId = DESIGN_ID,
-        catalogSystemId = "m3-catalog",
-        templateId = UiBuilderNewDesignSeed.FIXTURE_TEMPLATE,
-        catalogRevision = catalog.benchmark.catalogRevision,
-        nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-        fixture =
-          Json.parseToJsonElement(
-              checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
-                .readText()
-            )
-            .jsonObject,
+    UiBuilderNewDesignSeed.fixtureDocument(
+        DESIGN_ID,
+        ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1(
+          "m3-catalog",
+          catalog.benchmark.catalogRevision,
+          "candidate",
+          catalog.benchmark.nativeRuntimeId,
+        ),
+        Json.parseToJsonElement(
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+          )
+          .jsonObject,
       )
       .toDesignDocumentV1()
       .let { it.copy(catalogPin = requireNotNull(executor.reference(catalogV1))) }

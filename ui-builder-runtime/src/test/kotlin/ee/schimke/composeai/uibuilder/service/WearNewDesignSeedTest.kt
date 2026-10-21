@@ -39,13 +39,12 @@ class WearNewDesignSeedTest {
       .jsonObject
 
   private fun seed(templateId: String) =
-    UiBuilderNewDesignSeed.document(
-        designId = "wear-seed",
-        catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+    publishedTestSeed(
+        systemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         templateId = templateId,
+        designId = "wear-seed",
         catalogRevision = wear.benchmark.catalogRevision,
         nativeRuntimeId = wear.benchmark.nativeRuntimeId,
-        fixture = fixture,
       )
       .toDesignDocumentV1()
 

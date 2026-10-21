@@ -64,25 +64,49 @@ class HostDesignSeedingTest {
   }
 
   @Test
-  fun `a host that sends no templates keeps the built-in seed for the catalog id`() {
-    val wear = catalog
+  fun `without templates only the Jetcaster fixture seeds, and only its own catalog`() {
     val fixture = checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+    val m3 = publishedTestCatalog("m3-catalog")
     val seeded =
       hostSeedDocument(
-        wear,
+        m3,
+        "my-phone",
+        UiBuilderNewDesignSeed.FIXTURE_TEMPLATE,
+        fixture.readText(),
+        templates = "",
+      )
+
+    assertEquals("my-phone", seeded.id)
+    assertEquals(0, seeded.revision)
+    assertEquals(JsonPrimitive("m3-catalog"), seeded.catalogPin["systemId"])
+    assertEquals(
+      JsonPrimitive(m3.benchmark.catalogRevision),
+      seeded.catalogPin["catalogRevision"],
+    )
+    // The fixture is an m3-catalog design: re-pinning it would hide that wear-m3 lacks its parts.
+    val wrongCatalog =
+      assertFailsWith<IllegalArgumentException> {
+        hostSeedDocument(
+          catalog,
+          "my-watch",
+          UiBuilderNewDesignSeed.FIXTURE_TEMPLATE,
+          fixture.readText(),
+          templates = "",
+        )
+      }
+    assertTrue("cannot seed wear-m3" in wrongCatalog.message.orEmpty(), wrongCatalog.message)
+    // A template the catalog publishes still needs the published set: no built-in seed answers.
+    assertFailsWith<IllegalArgumentException> {
+      hostSeedDocument(
+        catalog,
         "my-watch",
         UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
         fixture.readText(),
         templates = "",
       )
-
-    assertEquals("my-watch", seeded.id)
-    assertEquals(JsonPrimitive("wear-m3"), seeded.catalogPin["systemId"])
-    assertFailsWith<IllegalArgumentException> {
-      hostSeedDocument(wear, "my-watch", "card", fixture.readText(), templates = "")
     }
     assertFailsWith<IllegalArgumentException> {
-      hostSeedDocument(wear, "my-watch", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE, "", "")
+      hostSeedDocument(m3, "my-phone", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE, "", "")
     }
   }
 }

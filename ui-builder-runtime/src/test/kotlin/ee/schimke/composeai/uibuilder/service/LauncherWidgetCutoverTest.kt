@@ -2,11 +2,9 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
-import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComposeSourceExportCapabilityV1
 import kotlin.test.Test
@@ -61,37 +59,19 @@ class LauncherWidgetCutoverTest {
   }
 
   private fun seed(templateId: String): UiBuilderDocument =
-    UiBuilderNewDesignSeed.document(
-      designId = "probe",
-      catalogSystemId = id,
+    publishedTestSeed(
+      systemId = id,
       templateId = templateId,
+      designId = "probe",
       catalogRevision = "revision",
       nativeRuntimeId = "candidate",
-      fixture = CatalogCutoverProbe.fixture,
-      ownership = CatalogOwnership.ALL,
-      published = CatalogCutoverFixtures.templates(id),
     )
 
   @Test
-  fun `off the flag it is offered the builder's launcher seed, on it its own`() {
-    assertEquals(LauncherWidgetTemplates.ids, UiBuilderNewDesignSeed.templateIds(id))
-    assertEquals(
-      LauncherWidgetTemplates.ids,
-      UiBuilderNewDesignSeed.templateIds(
-        id,
-        CatalogOwnership.NONE,
-        CatalogCutoverFixtures.templates(id),
-      ),
-      "the flag off ignores what the catalog publishes",
-    )
+  fun `it is offered exactly the templates it publishes`() {
     assertEquals(
       listOf("hello-widget", "launcher-widget-2x1", "counter-widget"),
-      UiBuilderNewDesignSeed.templateIds(
-          id,
-          CatalogOwnership.ALL,
-          CatalogCutoverFixtures.templates(id),
-        )
-        .toList(),
+      CatalogCutoverFixtures.templates(id).ids,
     )
   }
 

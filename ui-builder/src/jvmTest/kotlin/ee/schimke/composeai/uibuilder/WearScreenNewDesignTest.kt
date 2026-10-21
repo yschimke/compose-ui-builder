@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlin.test.Test
@@ -11,28 +10,27 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Creating a Wear screen from the New design chooser: `wear-m3` must offer templates through
- * `UiBuilderNewDesignSeed.templateIds`.
+ * Creating a Wear screen from the New design chooser: `wear-m3` must offer templates through its
+ * published templates.
  */
 class WearScreenNewDesignTest {
   private val fixture =
     Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
 
   private fun seed(templateId: String) =
-    UiBuilderNewDesignSeed.document(
-      designId = "watch",
-      catalogSystemId = "wear-m3",
+    publishedTestSeed(
+      systemId = "wear-m3",
       templateId = templateId,
+      designId = "watch",
       catalogRevision = "wear-screen-scaffold-v1",
       nativeRuntimeId = "candidate",
-      fixture = fixture,
     )
 
   @Test
   fun `the wear catalog offers the empty screen and the worked list`() {
     assertEquals(
       setOf("wear-screen", "wear-list"),
-      UiBuilderNewDesignSeed.templateIds("wear-m3"),
+      publishedTestTemplates("wear-m3").ids.toSet(),
     )
   }
 
