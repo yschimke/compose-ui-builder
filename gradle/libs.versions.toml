@@ -261,7 +261,7 @@ composeai-contracts = "3.37.0"
 # enter/exit across a StateLayout switch (rc-players#604, rc-players#606).
 rc-players = "2.17.0"
 kotlinx-coroutines = "1.11.0"
-kotlinx-serialization = "1.11.0"
+kotlinx-serialization = "1.12.0"
 ktor = "3.6.0"
 # The Model Context Protocol Kotlin SDK, behind `:mcp`. Same version compose-ai-tools' `:mcp` was
 # on when the module moved here (compose-ai-tools#5176) — a move is not the moment to also change
