@@ -4,8 +4,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-/** Material adaptive starting points, available to both server seeds and the New design chooser. */
-object AdaptiveScreenTemplates {
+/**
+ * Material adaptive sample documents, kept for the tests that drive the adaptive pane scaffolds.
+ * New designs no longer start from them: `m3-catalog` publishes its own adaptive templates.
+ */
+internal object AdaptiveScreenTemplates {
   val ids: Set<String> =
     setOf("list-detail", "supporting-pane", "adaptive-feed", "adaptive-navigation")
 

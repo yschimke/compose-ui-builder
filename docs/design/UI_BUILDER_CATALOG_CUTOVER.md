@@ -20,10 +20,13 @@ catalog's `CatalogTemplateDocumentsV1`) all seed through `UiBuilderNewDesignSeed
 templateId, catalogPin, published)`; a catalog that publishes nothing gets the generic blank. The
 per-catalog-id seed path (`templateIds(id)`, the fixture-reading `document` overload and the
 ownership overloads) is deleted. The one seed no catalog publishes, the Jetcaster benchmark, is
-`fixtureDocument`. The Kotlin document builders the deleted path called (`wearScreenUiBuilderDocument`,
-`WearWidgetSample`, `LauncherWidgetTemplates`, `AdaptiveScreenTemplates`, `RemoteClockTemplates`,
-…) no longer seed anything; tests and `@Preview`s still build documents with them, and moving them
-to test fixtures is the remaining cleanup.
+`fixtureDocument`. Of the Kotlin document builders the deleted path called, the unused ones are
+gone (`helloUiBuilderDocument`, `blankWearScreenUiBuilderDocument`) and the single-test ones moved
+into their tests (`a2uiUiBuilderDocument`, `AdaptiveScreenTemplates`). The rest
+(`wearScreenUiBuilderDocument`, `wearWidgetUiBuilderDocument`, `WearWidgetSample`,
+`RemoteClockTemplates`, `LauncherWidgetTemplates`) remain public sample builders: `@Preview`s, this
+repository's tests across modules and compose-preview-server's tests build documents with them, and
+no new design is seeded from them.
 
 The sections below record the staged rollout and its historical default-off flag.
 

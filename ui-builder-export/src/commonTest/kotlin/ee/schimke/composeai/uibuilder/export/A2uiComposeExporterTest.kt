@@ -293,3 +293,54 @@ class A2uiComposeExporterTest {
     assertIs<A2uiComposeExporter.Result.Emitted>(A2uiComposeExporter.export(seed))
   }
 }
+
+/**
+ * A new A2UI design: an `a2ui/Column` root with one `a2ui/Text` headline. The smallest surface that
+ * draws and exports; [A2uiDocumentExporter] renames the column `root`.
+ */
+private fun a2uiUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+): UiBuilderDocument {
+  require(designId.isNotBlank()) { "a2ui design id must not be blank" }
+  val columnId = "a2ui-column"
+  val headlineId = "a2ui-headline"
+  return UiBuilderDocument(
+    schema = "compose-ui-builder-document/v1-candidate",
+    id = designId,
+    title = "Untitled A2UI surface",
+    revision = 0,
+    catalogPin = catalogPin,
+    environment = environment,
+    stateVariables = JsonObject(emptyMap()),
+    roots = listOf(columnId),
+    nodes =
+      mapOf(
+        columnId to
+          UiBuilderNode(
+            id = columnId,
+            componentId = "${A2uiDocumentExporter.COMPONENT_PREFIX}Column",
+            properties = JsonObject(emptyMap()),
+            modifiers = JsonArray(emptyList()),
+            slots = mapOf("children" to listOf(headlineId)),
+          ),
+        headlineId to
+          UiBuilderNode(
+            id = headlineId,
+            componentId = "${A2uiDocumentExporter.COMPONENT_PREFIX}Text",
+            properties =
+              JsonObject(
+                mapOf(
+                  "text" to literal("string", JsonPrimitive("Hello, A2UI")),
+                  "variant" to literal("enum", JsonPrimitive("h2")),
+                )
+              ),
+            modifiers = JsonArray(emptyList()),
+          ),
+      ),
+  )
+}
+
+private fun literal(type: String, value: JsonPrimitive): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
