@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -67,7 +68,8 @@ class SeedTemplateCatalogReadinessTest {
       "m3-catalog" to publishedTestCatalog("m3-catalog"),
       "wear-m3" to publishedTestCatalog("wear-m3"),
       "remote-m3" to publishedTestCatalog("remote-m3"),
-      A2uiDocumentExporter.CATALOG_SYSTEM_ID to SyntheticCatalogs.a2ui,
+      A2uiDocumentExporter.CATALOG_SYSTEM_ID to
+        publishedTestCatalog(A2uiDocumentExporter.CATALOG_SYSTEM_ID),
     )
 
   @Test
@@ -144,7 +146,12 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `jetcaster refuses for reasons no component record fixes`() {
     val catalog = catalogs.getValue("m3-catalog")
-    val document = seed("m3-catalog", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE)
+    val document =
+      UiBuilderNewDesignSeed.fixtureDocument(
+        "m3-catalog-jetcaster",
+        CatalogReferenceV1("m3-catalog", "readiness", "candidate", "readiness"),
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
+      )
 
     val reasons =
       assertIs<Generated.Refused>(

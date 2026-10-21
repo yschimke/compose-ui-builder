@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
@@ -53,7 +54,13 @@ class MobileScreenNewDesignTest {
    */
   @Test
   fun `the worked template keeps its own canvas`() {
-    val environment = seed(UiBuilderNewDesignSeed.FIXTURE_TEMPLATE).environment
+    val environment =
+      UiBuilderNewDesignSeed.fixtureDocument(
+          "screen",
+          CatalogReferenceV1("m3-catalog", "candidate", "candidate", "candidate"),
+          fixture,
+        )
+        .environment
 
     assertEquals("1280", environment.getValue("widthDp").jsonPrimitive.content)
     assertEquals("800", environment.getValue("heightDp").jsonPrimitive.content)
