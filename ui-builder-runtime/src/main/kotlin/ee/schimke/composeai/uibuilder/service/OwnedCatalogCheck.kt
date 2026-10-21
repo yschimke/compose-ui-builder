@@ -51,7 +51,6 @@ internal object OwnedCatalogCheck {
           it.catalogSystemIds = setOf(catalogId)
           it.published = mapOf(catalogId to published)
           nativeRuntimeId?.let { runtime -> it.nativeRuntimeIds = mapOf(catalogId to runtime) }
-          it.catalogOwnership = ownership
         }
         .build()
     val catalog = executor.listCatalogs().single { it.benchmark.catalogSystemId == catalogId }

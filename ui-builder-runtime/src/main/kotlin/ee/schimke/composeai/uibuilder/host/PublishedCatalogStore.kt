@@ -1,7 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
 import ee.schimke.composeai.discovery.ComponentRecordFile
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
@@ -223,7 +222,6 @@ public class PublishedCatalogStore(
         .also {
           it.catalogSystemIds = setOf(systemId)
           it.published = mapOf(systemId to composed)
-          it.catalogOwnership = CatalogOwnership.of(setOf(systemId))
         }
         .build()
         .listCatalogs()

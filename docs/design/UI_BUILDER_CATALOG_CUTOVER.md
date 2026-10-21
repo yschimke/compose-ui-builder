@@ -3,8 +3,8 @@
 **Runtime cutover: published definitions are mandatory.** The runtime no longer synthesises an
 M3 fallback or guesses the platform of a publication. Every enabled catalog must be supplied through
 `Builder.published` and must declare `statusSemantics.platform`. Missing definitions are refused with
-the catalog id. `Builder.catalogOwnership` and the executor's ownership property remain deprecated
-binary compatibility shims; changing them cannot restore a fallback. Frozen
+the catalog id. The executor no longer takes an ownership setting: `Builder.catalogOwnership` and
+the executor's ownership property, deprecated no-ops since the cutover, have been removed. Frozen
 `LegacySynthesisedReferences` remain so designs made against the retired definitions still reopen,
 including pins stamped with a host's configured renderer runtime.
 
@@ -54,7 +54,8 @@ this repository still decides by catalog id:
 
 Where each reader takes the flag:
 
-- `CurrentM3UiBuilderCatalogExecutor.Builder.catalogOwnership` (`:ui-builder-runtime`).
+- `CurrentM3UiBuilderCatalogExecutor.Builder.catalogOwnership` (`:ui-builder-runtime`; removed
+  once every catalog became catalog-owned).
 - `UiBuilderNewDesignSeed.templateIds(id, ownership, published)` and
   `UiBuilderNewDesignSeed.document(…, ownership, published)` (`:ui-builder-export`). The old
   overloads are untouched, so the server's compiled calls keep their meaning.
@@ -70,7 +71,8 @@ The server half is one PR to compose-preview-server, all behind the same value a
 1. Parse `--ui-builder-catalog-ownership` / `SERVE_UI_BUILDER_CATALOG_OWNERSHIP`, default `none`. Refuse
    an id that is not also in `--ui-builder-published-catalogs`, for the same typo reason that flag
    refuses ids it does not serve.
-2. Hand it to the executor's `Builder.catalogOwnership`.
+2. Hand it to the executor's `Builder.catalogOwnership` (since removed: the executor is always
+   catalog-owned).
 3. Have `ServeCatalogStore` fetch the documents a published `templates` list names, beside
    `ui-builder.json`, and read them with `CatalogSeedTemplates.read`. Pass them, with the flag, to
    the new `UiBuilderNewDesignSeed` overloads in `ServeUiBuilderCreate` and `ServeWeb`, and validate
