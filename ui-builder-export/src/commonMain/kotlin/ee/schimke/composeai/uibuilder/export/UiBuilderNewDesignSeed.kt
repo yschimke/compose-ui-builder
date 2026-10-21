@@ -8,6 +8,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -108,7 +109,9 @@ object UiBuilderNewDesignSeed {
   /**
    * The Jetcaster benchmark fixture ([FIXTURE_TEMPLATE]) as design [designId], at revision zero and
    * pinned to the served [catalogPin]. No catalog publishes it, so a host asking for it by name
-   * sends the fixture shipped beside the Wasm bundle instead of a template set.
+   * sends the fixture shipped beside the Wasm bundle instead of a template set. Only the catalog
+   * the fixture was made against can seed it: re-pinning its components to another catalog would
+   * hide that they are not that catalog's.
    */
   fun fixtureDocument(
     designId: String,
@@ -116,10 +119,13 @@ object UiBuilderNewDesignSeed {
     fixture: JsonObject,
   ): UiBuilderDocument {
     require(designId.isNotBlank()) { "a new design needs an id" }
+    val document = UiBuilderReducer.replay(fixture).document
+    val madeFor = (document.catalogPin["systemId"] as? JsonPrimitive)?.content
+    require(madeFor == catalogPin.systemId) {
+      "the `$FIXTURE_TEMPLATE` fixture is a $madeFor design and cannot seed ${catalogPin.systemId}"
+    }
     val pin = seedJson.encodeToJsonElement(CatalogReferenceV1.serializer(), catalogPin).jsonObject
-    return UiBuilderReducer.replay(fixture)
-      .document
-      .copy(id = designId, revision = 0, catalogPin = pin)
+    return document.copy(id = designId, revision = 0, catalogPin = pin)
   }
 }
 
