@@ -3,7 +3,6 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.callableAliases
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
 import ee.schimke.composeai.uibuilder.service.CurrentM3UiBuilderCatalogExecutor
@@ -33,7 +32,6 @@ internal fun publishedTestCatalog(systemId: String): CapabilityCatalog {
       .also {
         it.catalogSystemIds = setOf(systemId)
         it.published = mapOf(systemId to result.catalog)
-        it.catalogOwnership = CatalogOwnership.of(setOf(systemId))
       }
       .build()
       .listCatalogs()

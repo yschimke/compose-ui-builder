@@ -34,11 +34,7 @@ class CatalogCutoverReadinessTest {
   private val ids = CatalogCutoverFixtures.catalogIds
 
   @Test
-  fun `runtime ownership is unconditional while legacy flag parsing stays compatible`() {
-    assertEquals(
-      CatalogOwnership.ALL,
-      CurrentM3UiBuilderCatalogExecutor.Builder().catalogOwnership,
-    )
+  fun `legacy ownership flag parsing stays compatible`() {
     assertEquals(CatalogOwnership.NONE, CatalogOwnership.parse(null))
     assertEquals(CatalogOwnership.NONE, CatalogOwnership.parse(""))
     assertEquals(CatalogOwnership.ALL, CatalogOwnership.parse("all"))
@@ -95,16 +91,13 @@ class CatalogCutoverReadinessTest {
         .jsonObject
         .getValue("designTokens")
     assertTrue(published.jsonObject.getValue("tokens").jsonArray.size >= 15)
-    val served =
-      CatalogCutoverFixtures.executor(listOf("wear-m3"), CatalogOwnership.ALL)
-        .listCatalogs()
-        .single()
+    val served = CatalogCutoverFixtures.executor(listOf("wear-m3")).listCatalogs().single()
     assertEquals(published, served.statusSemantics["designTokens"])
   }
 
   @Test
   fun `with the flag on, every catalog is served from its own files and no generator runs`() {
-    val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.ALL)
+    val executor = CatalogCutoverFixtures.executor(ids)
 
     assertEquals(ids.toSet(), executor.listCatalogs().map { it.benchmark.catalogSystemId }.toSet())
     assertEquals(ids.associateWith { "published" }, executor.catalogSources)
@@ -121,28 +114,23 @@ class CatalogCutoverReadinessTest {
   }
 
   @Test
-  fun `legacy ownership settings cannot bring back the Kotlin fallback`() {
-    val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.NONE)
+  fun `a catalog with no published definition is refused, never synthesised`() {
+    val executor = CatalogCutoverFixtures.executor(ids)
     assertEquals(ids.associateWith { "published" }, executor.catalogSources)
-    for (ownership in listOf(CatalogOwnership.NONE, CatalogOwnership.ALL)) {
-      for (id in listOf("m3-catalog", "wear-m3", "unknown-catalog")) {
-        val failure =
-          assertFailsWith<IllegalArgumentException> {
-            CurrentM3UiBuilderCatalogExecutor.Builder()
-              .also {
-                it.catalogSystemIds = setOf(id)
-                it.catalogOwnership = ownership
-              }
-              .build()
-          }
-        assertTrue("$id has no usable published file" in failure.message.orEmpty(), failure.message)
-      }
+    for (id in listOf("m3-catalog", "wear-m3", "unknown-catalog")) {
+      val failure =
+        assertFailsWith<IllegalArgumentException> {
+          CurrentM3UiBuilderCatalogExecutor.Builder()
+            .also { it.catalogSystemIds = setOf(id) }
+            .build()
+        }
+      assertTrue("$id has no usable published file" in failure.message.orEmpty(), failure.message)
     }
   }
 
   @Test
   fun `a design pinned to a synthesised catalog still opens once its owner serves it`() {
-    val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.ALL)
+    val executor = CatalogCutoverFixtures.executor(ids)
     for ((id, legacy) in LegacySynthesisedReferences.all) {
       assertNotNull(
         executor.resolve(legacy),
@@ -155,7 +143,7 @@ class CatalogCutoverReadinessTest {
   fun `a legacy pin stamped with a configured runtime still opens once its owner serves it`() {
     // A host that configured a runtime for the synthesised catalog stamped designs with that
     // runtime in place of `candidate`; the owned catalog must accept that pin as well.
-    val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.ALL)
+    val executor = CatalogCutoverFixtures.executor(ids)
     for ((id, legacy) in LegacySynthesisedReferences.all) {
       val runtime = CatalogCutoverFixtures.rendererRuntimeId(id) ?: continue
       val stamped =
@@ -176,7 +164,6 @@ class CatalogCutoverReadinessTest {
         CurrentM3UiBuilderCatalogExecutor.Builder()
           .also {
             it.catalogSystemIds = setOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
-            it.catalogOwnership = CatalogOwnership.ALL
           }
           .build()
       }
@@ -192,7 +179,7 @@ class CatalogCutoverReadinessTest {
         .also { it.statusSemantics = JsonObject(wear.statusSemantics - "platform") }
         .build()
     assertFailsWith<IllegalArgumentException> {
-      CatalogCutoverFixtures.executor(mapOf("wear-m3" to unstated), CatalogOwnership.ALL)
+      CatalogCutoverFixtures.executor(mapOf("wear-m3" to unstated))
     }
   }
 
@@ -216,10 +203,7 @@ class CatalogCutoverReadinessTest {
    */
   @Test
   fun `a published remote-compose component offers the remote-only modifiers`() {
-    val catalog =
-      CatalogCutoverFixtures.executor(listOf("remote-m3"), CatalogOwnership.ALL)
-        .listCatalogs()
-        .single()
+    val catalog = CatalogCutoverFixtures.executor(listOf("remote-m3")).listCatalogs().single()
     val byId = catalog.components.associateBy { it.componentId }
 
     val toggle = byId.getValue("remote-m3/remote-switch-button").modifierCapabilities
