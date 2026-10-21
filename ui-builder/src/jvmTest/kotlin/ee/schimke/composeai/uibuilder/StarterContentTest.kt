@@ -247,14 +247,12 @@ class StarterContentTest {
     val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
     val validator = CapabilityValidator(a2uiCatalog)
     val seed =
-      UiBuilderNewDesignSeed.document(
-        designId = "a2ui-inserts",
-        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+      publishedTestSeed(
+        systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
         templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        designId = "a2ui-inserts",
         catalogRevision = "test",
         nativeRuntimeId = "test",
-        fixture =
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
     a2uiCatalog.components.forEach { component ->
       val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
@@ -289,14 +287,12 @@ class StarterContentTest {
   fun `an A2UI slider's range, value and weight are editable numbers`() {
     val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
     val seed =
-      UiBuilderNewDesignSeed.document(
-        designId = "a2ui-slider",
-        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+      publishedTestSeed(
+        systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
         templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        designId = "a2ui-slider",
         catalogRevision = "test",
         nativeRuntimeId = "test",
-        fixture =
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
     val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
     val inserted =

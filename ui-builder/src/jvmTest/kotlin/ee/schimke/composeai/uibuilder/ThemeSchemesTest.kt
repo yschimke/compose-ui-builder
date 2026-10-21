@@ -19,7 +19,6 @@ import ee.schimke.composeai.uibuilder.editor.readThemeBuilderScheme
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
@@ -53,14 +52,12 @@ class ThemeSchemesTest {
   private val wearCatalog = SyntheticCatalogs.wear
   private val wear = UiBuilderEditorReducer(wearCatalog)
   private val wearScreen =
-    UiBuilderNewDesignSeed.document(
-        designId = "wear-scheme",
-        catalogSystemId = "wear-m3",
+    publishedTestSeed(
+        systemId = "wear-m3",
         templateId = "wear-screen",
+        designId = "wear-scheme",
         catalogRevision = "wear-screen-scaffold-v1",
         nativeRuntimeId = "candidate",
-        fixture =
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .copy(
         roots = listOf("screen"),

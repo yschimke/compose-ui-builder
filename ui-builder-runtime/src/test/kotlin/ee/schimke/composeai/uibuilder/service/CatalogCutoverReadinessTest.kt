@@ -2,9 +2,6 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
-import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
-import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComposeSourceExportCapabilityV1
 import kotlin.test.Test
@@ -12,7 +9,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -39,41 +35,6 @@ class CatalogCutoverReadinessTest {
     assertEquals(CatalogOwnership.NONE, CatalogOwnership.parse(""))
     assertEquals(CatalogOwnership.ALL, CatalogOwnership.parse("all"))
     assertEquals(CatalogOwnership.of(setOf("wear-m3")), CatalogOwnership.parse(" wear-m3 "))
-  }
-
-  @Test
-  fun `with the flag off, every catalog keeps its built-in seeds`() {
-    for (id in ids) {
-      val published = CatalogCutoverFixtures.templates(id)
-      assertEquals(
-        UiBuilderNewDesignSeed.templateIds(id),
-        UiBuilderNewDesignSeed.templateIds(id, CatalogOwnership.NONE, published),
-        "$id: the flag being off must not change what a new design can start as",
-      )
-      for (templateId in UiBuilderNewDesignSeed.templateIds(id)) {
-        assertEquals(
-          UiBuilderNewDesignSeed.document(
-            "seed",
-            id,
-            templateId,
-            "r",
-            "n",
-            CatalogCutoverProbe.fixture,
-          ),
-          UiBuilderNewDesignSeed.document(
-            "seed",
-            id,
-            templateId,
-            "r",
-            "n",
-            CatalogCutoverProbe.fixture,
-            CatalogOwnership.NONE,
-            published,
-          ),
-          "$id/$templateId",
-        )
-      }
-    }
   }
 
   @Test
@@ -244,47 +205,6 @@ class CatalogCutoverReadinessTest {
     }
 
     assertEquals(emptyList(), CatalogCutoverProbe.findings(published))
-  }
-
-  /**
-   * A2UI's published `a2ui-column` is the phase-3a freeze of the Kotlin `a2ui-column` builder, so a
-   * design created either side of the cutover starts as the same tree. The environment is the
-   * catalog's to choose and is not compared.
-   */
-  @Test
-  fun `a2ui-catalog's published a2ui-column is the built-in seed it replaces`() {
-    val id = "a2ui-catalog"
-    val builtIn = assertNotNull(frozenBuiltInTemplates(id)["a2ui-column"]).document
-    val published = assertNotNull(CatalogCutoverFixtures.templates(id)["a2ui-column"]).document
-    assertEquals(builtIn.title, published.title)
-    assertEquals(builtIn.roots, published.roots)
-    assertEquals(builtIn.nodes, published.nodes)
-    assertEquals(builtIn.stateVariables, published.stateVariables)
-  }
-
-  /**
-   * [id]'s built-in templates, written out as the documents its repository would publish: what the
-   * Kotlin builders seed, pinned to `candidate` the way every captured seed document is.
-   */
-  private fun frozenBuiltInTemplates(id: String): CatalogSeedTemplates {
-    val documents =
-      UiBuilderNewDesignSeed.templateIds(id).associateWith { templateId ->
-        val document =
-          UiBuilderNewDesignSeed.document(
-            templateId,
-            id,
-            templateId,
-            "candidate",
-            "candidate",
-            CatalogCutoverProbe.fixture,
-          )
-        Json.encodeToString(UiBuilderDocument.serializer(), document)
-      }
-    val read =
-      CatalogSeedTemplates.read(id, documents.keys.map { "ui-builder/designs/$it.json" }) { path ->
-        documents[path.substringAfterLast('/').removeSuffix(".json")]
-      }
-    return (read as CatalogSeedTemplates.Result.Read).templates
   }
 
   @Test

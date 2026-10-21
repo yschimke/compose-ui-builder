@@ -28,7 +28,6 @@ class OwnedCatalogCheckTest {
         catalogId = "wear-m3",
         published = unplatformed,
         templates = CatalogCutoverFixtures.templates("wear-m3"),
-        fixture = CatalogCutoverProbe.fixture,
       )
     assertTrue(findings.single().contains("declares no platform"), findings.toString())
   }

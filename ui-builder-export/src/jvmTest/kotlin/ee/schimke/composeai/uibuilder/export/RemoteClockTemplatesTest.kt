@@ -6,10 +6,8 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 
 /**
  * The clock templates are Remote content that animates on its own: loops draw their repeated marks,
@@ -101,39 +99,8 @@ class RemoteClockTemplatesTest {
   }
 
   @Test
-  fun `a clock seed keeps the state the New design form declared`() {
-    if (!UiBuilderBuildFeatures.remoteCompose) return
-    val declared = NewDesignState("alarmOn", NewDesignStateType.Flag, JsonPrimitive(false))
-    val root =
-      generateSequence(File(".").absoluteFile) { it.parentFile }
-        .first { File(it, "docs/design/fixtures/ui-builder").isDirectory }
-    val fixture =
-      Json.parseToJsonElement(
-          File(root, "docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
-            .readText()
-        )
-        .jsonObject
-    val seeded =
-      UiBuilderNewDesignSeed.document(
-        catalogSystemId = "remote-m3",
-        templateId = RemoteClockTemplates.Analog.templateId,
-        designId = "clock",
-        catalogRevision = "candidate",
-        nativeRuntimeId = "candidate",
-        fixture = fixture,
-        state = listOf(declared),
-      )
-    assertTrue("alarmOn" in seeded.stateVariables, seeded.stateVariables.toString())
-  }
-
-  @Test
-  fun `the remote-m3 catalog offers every clock where Remote root content exports`() {
+  fun `every clock is found by its template id`() {
     RemoteClockTemplates.entries.forEach {
-      assertEquals(
-        UiBuilderBuildFeatures.remoteCompose,
-        it.templateId in UiBuilderNewDesignSeed.templateIds("remote-m3"),
-        it.templateId,
-      )
       assertEquals(it, RemoteClockTemplates.forTemplate(it.templateId))
     }
   }

@@ -194,9 +194,9 @@ internal data class HostOpenMessage(
 
 /**
  * A new design ([hostSeedDocument]). [templates] is the catalog's published template set (the
- * `CatalogTemplateDocumentsV1` its `/templates` route serves), which [templateId] names one of; a
- * host that sends none gets the built-in seed for the catalog id instead. [fixture] is this
- * archive's `jetcaster-discover-operations-v1.json`, which only that built-in seed reads.
+ * `CatalogTemplateDocumentsV1` its `/templates` route serves), which [templateId] names one of.
+ * [fixture] is this archive's `jetcaster-discover-operations-v1.json`, which only the Jetcaster
+ * benchmark seed reads, since no catalog publishes it.
  */
 @Serializable
 internal data class HostDesignSeed(

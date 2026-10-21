@@ -16,13 +16,12 @@ class MobileScreenNewDesignTest {
     Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
 
   private fun seed(templateId: String) =
-    UiBuilderNewDesignSeed.document(
-      designId = "screen",
-      catalogSystemId = "m3-catalog",
+    publishedTestSeed(
+      systemId = "m3-catalog",
       templateId = templateId,
+      designId = "screen",
       catalogRevision = "candidate",
       nativeRuntimeId = "candidate",
-      fixture = fixture,
     )
 
   @Test

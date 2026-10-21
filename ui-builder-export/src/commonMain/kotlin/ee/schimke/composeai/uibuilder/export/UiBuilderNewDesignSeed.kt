@@ -8,12 +8,13 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * What a new design starts as — one answer shared by the browser bootstrap and the server's create
- * routes ([POST][.document], or a `PUT` of a new design), so templates cannot drift.
+ * What a new design starts as — one answer shared by the browser, embedding hosts and the server's
+ * create routes ([POST][.document], or a `PUT` of a new design), so templates cannot drift. Every
+ * seed is a document the catalog publishes (`CatalogSeedTemplates`), or the generic blank for a
+ * catalog that publishes none.
  */
 object UiBuilderNewDesignSeed {
 
@@ -24,10 +25,9 @@ object UiBuilderNewDesignSeed {
   const val DEFAULT_TEMPLATE: String = "blank"
 
   /**
-   * The Jetcaster benchmark fixture re-pinned to the served catalog — the fallback [document]
-   * answers for an unrecognised template. Not offered by [templateIds]: it does not export and uses
-   * `m3/snackbar-host`, which the published `m3-catalog` lacks. Tests and the benchmark seed it by
-   * name.
+   * The Jetcaster benchmark fixture ([fixtureDocument]). No catalog publishes it: it does not
+   * export and uses `m3/snackbar-host`, which the published `m3-catalog` lacks. Tests, the
+   * benchmark and a host's sample picker seed it by name.
    */
   const val FIXTURE_TEMPLATE: String = "jetcaster"
 
@@ -46,87 +46,11 @@ object UiBuilderNewDesignSeed {
    */
   const val A2UI_TEMPLATE: String = "a2ui-column"
 
-  /** The templates [document] can seed for a catalog; callers are validated against this. */
-  fun templateIds(catalogSystemId: String): Set<String> =
-    when (catalogSystemId) {
-      "remote-m3" ->
-        setOf("wear-widget-small", "wear-widget-large", AdaptiveWearWidget.TEMPLATE_ID) +
-          WearWidgetSample.entries.map(WearWidgetSample::templateId) +
-          RemoteClockTemplates.offered.map(RemoteClockTemplates::templateId)
-      "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
-      A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
-      LauncherWidgetTemplates.CATALOG_SYSTEM_ID -> LauncherWidgetTemplates.ids
-      "m3-catalog" -> setOf(BLANK_TEMPLATE, HELLO_TEMPLATE) + AdaptiveScreenTemplates.ids
-      else -> setOf(BLANK_TEMPLATE)
-    }
-
   /**
    * The template every catalog can be seeded with when it publishes none of its own: the generic
    * blank screen, built from the builder's own layout vocabulary rather than any catalog's.
    */
   const val BLANK_TEMPLATE: String = "blank"
-
-  /**
-   * [templateIds] under the catalog-owned cutover: an owned catalog offers exactly the templates it
-   * publishes, in order, or [BLANK_TEMPLATE] if none; others keep the built-in set.
-   */
-  fun templateIds(
-    catalogSystemId: String,
-    ownership: CatalogOwnership,
-    published: CatalogSeedTemplates?,
-  ): Set<String> =
-    if (!ownership.owns(catalogSystemId)) templateIds(catalogSystemId)
-    else
-      published?.ids?.takeIf { it.isNotEmpty() }?.toCollection(LinkedHashSet())
-        ?: setOf(BLANK_TEMPLATE)
-
-  /**
-   * [document] under the catalog-owned cutover: an owned catalog is seeded from the template
-   * documents it publishes ([published]), keeping their own environment and re-pinned to the served
-   * catalog. With none, it gets [BLANK_TEMPLATE]; an unpublished template is refused by name.
-   */
-  fun document(
-    designId: String,
-    catalogSystemId: String,
-    templateId: String,
-    catalogRevision: String,
-    nativeRuntimeId: String,
-    fixture: JsonObject,
-    ownership: CatalogOwnership,
-    published: CatalogSeedTemplates?,
-    state: List<NewDesignState> = emptyList(),
-  ): UiBuilderDocument {
-    if (!ownership.owns(catalogSystemId)) {
-      return document(
-        designId,
-        catalogSystemId,
-        templateId,
-        catalogRevision,
-        nativeRuntimeId,
-        fixture,
-        state,
-      )
-    }
-    require(designId.isNotBlank()) { "a new design needs an id" }
-    require(published == null || published.catalogSystemId == catalogSystemId) {
-      "templates published by ${published?.catalogSystemId} cannot seed $catalogSystemId"
-    }
-    val fixtureDocument = UiBuilderReducer.replay(fixture).document
-    val catalogPin = servedPin(fixtureDocument, catalogSystemId, catalogRevision, nativeRuntimeId)
-    published?.get(templateId)?.let {
-      return it.seed(designId, catalogPin).withDeclaredState(state)
-    }
-    require(templateId == BLANK_TEMPLATE && published?.templates.isNullOrEmpty()) {
-      "$catalogSystemId does not publish a `$templateId` template; it publishes " +
-        (published?.ids?.joinToString().takeUnless { it.isNullOrEmpty() } ?: "none")
-    }
-    return blankUiBuilderDocument(
-      designId = designId,
-      catalogPin = catalogPin,
-      environment = mobileScreenEnvironment(fixtureDocument.environment),
-      state = state,
-    )
-  }
 
   /** Create from a validated publication without depending on the benchmark operations fixture. */
   fun document(
@@ -181,123 +105,21 @@ object UiBuilderNewDesignSeed {
     )
   }
 
-  private fun servedPin(
-    fixtureDocument: UiBuilderDocument,
-    catalogSystemId: String,
-    catalogRevision: String,
-    nativeRuntimeId: String,
-  ): JsonObject =
-    JsonObject(
-      fixtureDocument.catalogPin.toMutableMap().also { pin ->
-        pin["systemId"] = JsonPrimitive(catalogSystemId)
-        pin["catalogRevision"] = JsonPrimitive(catalogRevision)
-        pin["nativeRuntimeId"] = JsonPrimitive(nativeRuntimeId)
-      }
-    )
-
   /**
-   * The document a design with this id, catalog and template begins life as, at revision zero.
-   *
-   * [fixture] is the Jetcaster operations fixture shipped beside the Wasm bundle; templates take
-   * their environment from it. The catalog pin is rewritten to the catalog actually served.
+   * The Jetcaster benchmark fixture ([FIXTURE_TEMPLATE]) as design [designId], at revision zero and
+   * pinned to the served [catalogPin]. No catalog publishes it, so a host asking for it by name
+   * sends the fixture shipped beside the Wasm bundle instead of a template set.
    */
-  fun document(
+  fun fixtureDocument(
     designId: String,
-    catalogSystemId: String,
-    templateId: String,
-    catalogRevision: String,
-    nativeRuntimeId: String,
+    catalogPin: CatalogReferenceV1,
     fixture: JsonObject,
-    state: List<NewDesignState> = emptyList(),
   ): UiBuilderDocument {
     require(designId.isNotBlank()) { "a new design needs an id" }
-    val fixtureDocument = UiBuilderReducer.replay(fixture).document
-    val catalogPin = servedPin(fixtureDocument, catalogSystemId, catalogRevision, nativeRuntimeId)
-    val environment = fixtureDocument.environment
-    val widgetSample = WearWidgetSample.forTemplate(templateId)
-    val clock =
-      RemoteClockTemplates.forTemplate(templateId)?.takeIf { it in RemoteClockTemplates.offered }
-    return when {
-      catalogSystemId == "remote-m3" && widgetSample != null ->
-        widgetSample.document(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = environment,
-        )
-      // The Wear frame, so the scaffold's diameter and the Screen inspector agree.
-      catalogSystemId == "wear-m3" && templateId == WEAR_LIST_TEMPLATE ->
-        wearScreenUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = wearScreenEnvironment(environment),
-        )
-      catalogSystemId == "wear-m3" ->
-        blankWearScreenUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = wearScreenEnvironment(environment),
-        )
-      // Whatever template was asked for: the A2UI catalog has one, and its palette holds nothing
-      // the Material 3 templates below are made of.
-      catalogSystemId == A2uiDocumentExporter.CATALOG_SYSTEM_ID ->
-        a2uiUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = mobileScreenEnvironment(environment),
-        )
-      // Whatever template was asked for, as with A2UI: a launcher widget never starts on the phone
-      // `blank` scaffold below, which its exporter refuses as a root.
-      catalogSystemId == LauncherWidgetTemplates.CATALOG_SYSTEM_ID ->
-        LauncherWidgetTemplates.document(
-            templateId =
-              templateId.takeIf { it in LauncherWidgetTemplates.ids }
-                ?: LauncherWidgetTemplates.HELLO_TEMPLATE,
-            designId = designId,
-            catalogPin = catalogPin,
-            environment = environment,
-          )
-          // The New design form's state, as the blank and catalog-owned seeds keep it.
-          .withDeclaredState(state)
-      // Remote content rather than a widget: its root is a box, so it opens on no host frame.
-      catalogSystemId == "remote-m3" && clock != null ->
-        clock
-          .document(designId = designId, catalogPin = catalogPin, environment = environment)
-          // The New design form's state, as the blank and launcher seeds keep it.
-          .withDeclaredState(state)
-      catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
-        AdaptiveWearWidget.newDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = environment,
-        )
-      catalogSystemId == "remote-m3" ->
-        wearWidgetUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = environment,
-          size =
-            if (templateId == "wear-widget-large") WearWidgetScaffoldSize.Large
-            else WearWidgetScaffoldSize.Small,
-        )
-      catalogSystemId == "m3-catalog" && templateId in AdaptiveScreenTemplates.ids ->
-        AdaptiveScreenTemplates.document(templateId, designId, catalogPin, environment)
-      templateId == HELLO_TEMPLATE ->
-        helloUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = mobileScreenEnvironment(environment),
-        )
-      templateId == "blank" ->
-        blankUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          // A phone frame (see [mobileScreenEnvironment]); [FIXTURE_TEMPLATE] keeps the fixture's
-          // own.
-          environment = mobileScreenEnvironment(environment),
-          state = state,
-        )
-      else -> fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin)
-    }
+    val pin = seedJson.encodeToJsonElement(CatalogReferenceV1.serializer(), catalogPin).jsonObject
+    return UiBuilderReducer.replay(fixture)
+      .document
+      .copy(id = designId, revision = 0, catalogPin = pin)
   }
 }
 

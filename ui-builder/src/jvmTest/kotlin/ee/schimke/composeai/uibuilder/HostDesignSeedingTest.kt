@@ -64,25 +64,33 @@ class HostDesignSeedingTest {
   }
 
   @Test
-  fun `a host that sends no templates keeps the built-in seed for the catalog id`() {
-    val wear = catalog
+  fun `without templates only the Jetcaster fixture seeds, and nothing per catalog id`() {
     val fixture = checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
     val seeded =
       hostSeedDocument(
-        wear,
+        catalog,
         "my-watch",
-        UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+        UiBuilderNewDesignSeed.FIXTURE_TEMPLATE,
         fixture.readText(),
         templates = "",
       )
 
     assertEquals("my-watch", seeded.id)
+    assertEquals(0, seeded.revision)
     assertEquals(JsonPrimitive("wear-m3"), seeded.catalogPin["systemId"])
+    assertEquals(JsonPrimitive(revision), seeded.catalogPin["catalogRevision"])
+    // A template the catalog publishes still needs the published set: no built-in seed answers.
     assertFailsWith<IllegalArgumentException> {
-      hostSeedDocument(wear, "my-watch", "card", fixture.readText(), templates = "")
+      hostSeedDocument(
+        catalog,
+        "my-watch",
+        UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+        fixture.readText(),
+        templates = "",
+      )
     }
     assertFailsWith<IllegalArgumentException> {
-      hostSeedDocument(wear, "my-watch", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE, "", "")
+      hostSeedDocument(catalog, "my-watch", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE, "", "")
     }
   }
 }

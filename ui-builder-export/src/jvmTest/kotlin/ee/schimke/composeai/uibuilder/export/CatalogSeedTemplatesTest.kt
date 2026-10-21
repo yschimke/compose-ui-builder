@@ -1,15 +1,12 @@
 package ee.schimke.composeai.uibuilder.export
 
-import java.io.File
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 
 class CatalogSeedTemplatesTest {
 
@@ -59,43 +56,24 @@ class CatalogSeedTemplatesTest {
     )
   }
 
-  /** The Jetcaster operations fixture every host seeds from. */
-  private val fixture: JsonObject by lazy {
-    val root =
-      generateSequence(File("").absoluteFile) { it.parentFile }
-        .first { File(it, "docs/design/fixtures/ui-builder").isDirectory }
-    Json.parseToJsonElement(
-        File(root, "docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
-          .readText()
-      )
-      .jsonObject
-  }
+  private fun pin(revision: String = "r", runtime: String = "n") =
+    CatalogReferenceV1("watch-kit", revision, "candidate", runtime)
 
   @Test
-  fun `an owned catalog is seeded from its own document, pinned to the served catalog`() {
+  fun `a catalog is seeded from its own document, pinned to the served catalog`() {
     val templates =
       (read(listOf("ui-builder/designs/screen.json")) as CatalogSeedTemplates.Result.Read).templates
-    val owned = CatalogOwnership.of(setOf("watch-kit"))
-    assertEquals(setOf("screen"), UiBuilderNewDesignSeed.templateIds("watch-kit", owned, templates))
+    assertEquals(listOf("screen"), templates.ids)
 
     val seeded =
-      UiBuilderNewDesignSeed.document(
-        "mine",
-        "watch-kit",
-        "screen",
-        "rev-7",
-        "watch-kit-p2-abc",
-        fixture,
-        owned,
-        templates,
-      )
+      UiBuilderNewDesignSeed.document("mine", "screen", pin("rev-7", "watch-kit-p2-abc"), templates)
     assertEquals("mine", seeded.id)
     assertEquals(0, seeded.revision)
     assertEquals(JsonPrimitive("rev-7"), seeded.catalogPin["catalogRevision"])
     assertEquals(JsonPrimitive("watch-kit-p2-abc"), seeded.catalogPin["nativeRuntimeId"])
     assertEquals(JsonPrimitive("watch-kit"), seeded.catalogPin["systemId"])
     assertEquals(listOf("root"), seeded.roots)
-    // The catalog's own seed device, not the fixture's handset.
+    // The catalog's own seed device.
     assertEquals(JsonPrimitive(192), seeded.environment["widthDp"])
   }
 
@@ -106,27 +84,19 @@ class CatalogSeedTemplatesTest {
     val seeded =
       UiBuilderNewDesignSeed.document(
         "mine",
-        "watch-kit",
         "screen",
-        "r",
-        "n",
-        fixture,
-        CatalogOwnership.ALL,
+        pin(),
         templates,
         state = listOf(NewDesignState("expanded", NewDesignStateType.Flag, JsonPrimitive(true))),
       )
     assertEquals(setOf("expanded"), seeded.stateVariables.keys)
 
-    // The rule the built-in blank seed applies: a name that becomes a Kotlin keyword is refused.
+    // The rule the blank seed applies: a name that becomes a Kotlin keyword is refused.
     assertFailsWith<IllegalArgumentException> {
       UiBuilderNewDesignSeed.document(
         "mine",
-        "watch-kit",
         "screen",
-        "r",
-        "n",
-        fixture,
-        CatalogOwnership.ALL,
+        pin(),
         templates,
         state = listOf(NewDesignState("when", NewDesignStateType.Flag, JsonPrimitive(true))),
       )
@@ -134,19 +104,15 @@ class CatalogSeedTemplatesTest {
   }
 
   @Test
-  fun `an owned catalog is never handed a template it does not publish`() {
+  fun `a catalog is never handed a template it does not publish`() {
     val templates =
       (read(listOf("ui-builder/designs/screen.json")) as CatalogSeedTemplates.Result.Read).templates
     val failure =
       assertFailsWith<IllegalArgumentException> {
         UiBuilderNewDesignSeed.document(
           "mine",
-          "watch-kit",
           UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
-          "r",
-          "n",
-          fixture,
-          CatalogOwnership.ALL,
+          pin(),
           templates,
         )
       }
@@ -154,20 +120,14 @@ class CatalogSeedTemplatesTest {
   }
 
   @Test
-  fun `a catalog that publishes nothing is offered the generic blank`() {
-    assertEquals(
-      setOf(UiBuilderNewDesignSeed.BLANK_TEMPLATE),
-      UiBuilderNewDesignSeed.templateIds("glasses-kit", CatalogOwnership.ALL, null),
-    )
-  }
-
-  @Test
-  fun `off the flag nothing a catalog publishes changes its seeds`() {
-    val templates =
-      (read(listOf("ui-builder/designs/screen.json")) as CatalogSeedTemplates.Result.Read).templates
-    assertEquals(
-      UiBuilderNewDesignSeed.templateIds("wear-m3"),
-      UiBuilderNewDesignSeed.templateIds("wear-m3", CatalogOwnership.NONE, templates),
-    )
+  fun `a catalog that publishes nothing is seeded with the generic blank`() {
+    val nothing = CatalogSeedTemplates("watch-kit", emptyList())
+    val blank =
+      UiBuilderNewDesignSeed.document("mine", UiBuilderNewDesignSeed.BLANK_TEMPLATE, pin(), nothing)
+    assertEquals("mine", blank.id)
+    assertTrue(blank.roots.isNotEmpty())
+    assertFailsWith<IllegalArgumentException> {
+      UiBuilderNewDesignSeed.document("mine", "screen", pin(), nothing)
+    }
   }
 }

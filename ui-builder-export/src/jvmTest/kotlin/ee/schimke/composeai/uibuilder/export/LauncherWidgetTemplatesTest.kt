@@ -38,14 +38,6 @@ class LauncherWidgetTemplatesTest {
     )
 
   @Test
-  fun `the catalog offers the hello template instead of the phone blank`() {
-    assertEquals(
-      setOf(LauncherWidgetTemplates.HELLO_TEMPLATE),
-      UiBuilderNewDesignSeed.templateIds("remote-widgets"),
-    )
-  }
-
-  @Test
   fun `it starts on the launcher widget root at a grid size`() {
     val document = hello()
     assertEquals(
@@ -92,24 +84,5 @@ class LauncherWidgetTemplatesTest {
           .readText()
       )
       .jsonObject
-  }
-
-  @Test
-  fun `state asked for in the New design form is declared on the hello seed`() {
-    val seeded =
-      UiBuilderNewDesignSeed.document(
-        designId = "mine",
-        catalogSystemId = LauncherWidgetTemplates.CATALOG_SYSTEM_ID,
-        templateId = LauncherWidgetTemplates.HELLO_TEMPLATE,
-        catalogRevision = "r",
-        nativeRuntimeId = "n",
-        fixture = fixture,
-        state = listOf(NewDesignState("greeting", NewDesignStateType.Text, JsonPrimitive("Hi"))),
-      )
-    assertEquals(setOf("greeting"), seeded.stateVariables.keys)
-    assertEquals(
-      LauncherWidgetCodeExporter.ROOT,
-      seeded.nodes.getValue(seeded.roots.single()).componentId,
-    )
   }
 }

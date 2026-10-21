@@ -61,9 +61,6 @@ class SeedTemplateCatalogReadinessTest {
   /** Where the generated Kotlin lands, for a reader and for the evidence in the plan. */
   private val sourceDirectory = File("build/seed-template-sources")
 
-  private val fixture =
-    Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
-
   /** The catalogs the builder serves, each with its captured published capability document. */
   private val catalogs: Map<String, CapabilityCatalog> =
     mapOf(
@@ -76,7 +73,7 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `every template of every catalog validates against that catalog`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+      publishedTestTemplates(systemId).ids.sorted().mapNotNull { templateId ->
         val document = seed(systemId, templateId)
         val validation = CapabilityValidator(catalog).validate(document)
         if (validation.structurallyValid) null
@@ -90,7 +87,7 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `every template generates source`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+      publishedTestTemplates(systemId).ids.sorted().mapNotNull { templateId ->
         when (val outcome = generate(catalog, seed(systemId, templateId))) {
           is Generated.Source -> {
             // Kept on disk: what a catalog repository's round-trip test would compile, and the
@@ -119,7 +116,7 @@ class SeedTemplateCatalogReadinessTest {
     val systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID
     val catalog = catalogs.getValue(systemId)
     assertEquals(UiBuilderCatalogPlatform.A2UI, catalog.platform)
-    UiBuilderNewDesignSeed.templateIds(systemId).sorted().forEach { templateId ->
+    publishedTestTemplates(systemId).ids.sorted().forEach { templateId ->
       val document = seed(systemId, templateId)
       val messages =
         assertIs<A2uiDocumentExporter.Result.Emitted>(
@@ -215,13 +212,11 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   private fun seed(systemId: String, templateId: String): UiBuilderDocument =
-    UiBuilderNewDesignSeed.document(
-      designId = "$systemId-$templateId",
-      catalogSystemId = systemId,
-      templateId = templateId,
+    publishedTestSeed(
+      systemId,
+      templateId,
       catalogRevision = "readiness",
       nativeRuntimeId = "readiness",
-      fixture = fixture,
     )
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()

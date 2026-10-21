@@ -36,7 +36,6 @@ internal object CatalogCutoverProbe {
         catalogId = id,
         published = catalog,
         templates = templates(id),
-        fixture = fixture,
         packComponents = CatalogCutoverFixtures.composed(id).records,
         exportRecord = CatalogCutoverFixtures.exportRecord(id),
         nativeRuntimeId = CatalogCutoverFixtures.rendererRuntimeId(id),
