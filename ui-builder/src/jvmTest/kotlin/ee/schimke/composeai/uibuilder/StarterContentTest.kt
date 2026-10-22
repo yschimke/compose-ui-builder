@@ -13,7 +13,6 @@ import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.VariableFontText
@@ -249,7 +248,7 @@ class StarterContentTest {
     val seed =
       publishedTestSeed(
         systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
-        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        templateId = "a2ui-column",
         designId = "a2ui-inserts",
         catalogRevision = "test",
         nativeRuntimeId = "test",
@@ -289,7 +288,7 @@ class StarterContentTest {
     val seed =
       publishedTestSeed(
         systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
-        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        templateId = "a2ui-column",
         designId = "a2ui-slider",
         catalogRevision = "test",
         nativeRuntimeId = "test",

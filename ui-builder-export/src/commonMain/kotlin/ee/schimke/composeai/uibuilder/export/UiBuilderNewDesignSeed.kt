@@ -20,32 +20,17 @@ import kotlinx.serialization.json.jsonObject
 object UiBuilderNewDesignSeed {
 
   /**
-   * The template a request that names none is asking for: [BLANK_TEMPLATE], which is also what an
-   * owned `m3-catalog` defaults to, so the default does not change at the cutover.
-   */
-  const val DEFAULT_TEMPLATE: String = "blank"
-
-  /**
    * The Jetcaster benchmark fixture ([fixtureDocument]). No catalog publishes it: it does not
    * export and uses `m3/snackbar-host`, which the published `m3-catalog` lacks. Tests, the
    * benchmark and a host's sample picker seed it by name.
    */
   const val FIXTURE_TEMPLATE: String = "jetcaster"
 
-  /** An empty `ScreenScaffold` over an empty `TransformingLazyColumn`. */
-  const val WEAR_SCREEN_TEMPLATE: String = "wear-screen"
-
-  /** The same shape with wear-m3-catalog's own rows in it, which is what a parity check needs. */
-  const val WEAR_LIST_TEMPLATE: String = "wear-list"
-
-  /** The blank screen with a headline and a line of text: the smallest design that draws. */
-  const val HELLO_TEMPLATE: String = "hello"
-
   /**
-   * An A2UI surface: one `Column` root holding a headline (A2UI draws a surface from a single
-   * component named `root`).
+   * The empty Wear screen template's id (a `ScreenScaffold` over an empty
+   * `TransformingLazyColumn`), which the desktop's New design menu marks as a blank starter.
    */
-  const val A2UI_TEMPLATE: String = "a2ui-column"
+  const val WEAR_SCREEN_TEMPLATE: String = "wear-screen"
 
   /**
    * The template every catalog can be seeded with when it publishes none of its own: the generic

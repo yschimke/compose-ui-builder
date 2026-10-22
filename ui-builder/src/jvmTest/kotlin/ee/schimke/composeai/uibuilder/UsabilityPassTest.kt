@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.editor.catalogFormFactorLabel
 import ee.schimke.composeai.uibuilder.editor.firstLineAfterImports
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.newDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

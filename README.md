@@ -32,6 +32,7 @@ The experimental opt-in contract for regenerating stateless Compose source from 
 | `:ui-builder-gradle-plugin` | JVM Gradle | `ee.schimke.composeai.uibuilder.gradle` | [explicit Kotlin source-set integration](ui-builder-gradle-plugin/README.md) for durable generation |
 | `:ui-builder-production-consumer` | JVM Compose | `example` | executable durable-generation consumer fixture |
 | `:ui-builder-export` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | design → screen-model projection |
+| `:ui-builder-export-fixtures` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | unpublished sample builders for tests and previews |
 | `:ui-builder-renderer` | `wasmJs` | `ee.schimke.composeai.uibuilder.renderer` | the sandboxed renderer-only runtime |
 | `:ui-builder-renderer-sdk` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.renderer.sdk` | catalog-facing renderer protocol, inspection model and sandbox host |
 | `:ui-builder-web` | — | — | packages the editor's Wasm output as an immutable archive |

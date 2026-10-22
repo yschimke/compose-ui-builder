@@ -30,8 +30,7 @@ class SiteTemplateDesignsTest {
   /** File name to (catalog, template, title). */
   private val designs =
     mapOf(
-      "wear-list" to
-        Triple("wear-m3", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE, "Wear list screen"),
+      "wear-list" to Triple("wear-m3", "wear-list", "Wear list screen"),
       "weather-widget" to
         Triple("remote-m3", WearWidgetSample.Weather.templateId, WearWidgetSample.Weather.label),
     )

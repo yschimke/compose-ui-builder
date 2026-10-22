@@ -5,9 +5,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The starting points the `remote-widgets` catalog offers in the New design chooser: the catalog's
- * own root at a grid size, with `remote-creation-compose` text and literal colours (no Remote
- * Material 3 theme), instead of the generic `blank` phone scaffold.
+ * Sample `remote-widgets` designs for tests: the catalog's own root at a grid size, with
+ * `remote-creation-compose` text and literal colours (no Remote Material 3 theme). They seeded the
+ * New design chooser until the catalog published its own templates.
  */
 object LauncherWidgetTemplates {
 
@@ -17,7 +17,7 @@ object LauncherWidgetTemplates {
   /** "Hello, World!" centred on the accent: the smallest widget that already shows something. */
   const val HELLO_TEMPLATE: String = "hello-widget"
 
-  /** Every template [document] can seed. */
+  /** Every template [document] builds. */
   val ids: Set<String> = setOf(HELLO_TEMPLATE)
 
   /**

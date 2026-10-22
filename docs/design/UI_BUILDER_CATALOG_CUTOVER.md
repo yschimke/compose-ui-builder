@@ -22,11 +22,13 @@ per-catalog-id seed path (`templateIds(id)`, the fixture-reading `document` over
 ownership overloads) is deleted. The one seed no catalog publishes, the Jetcaster benchmark, is
 `fixtureDocument`. Of the Kotlin document builders the deleted path called, the unused ones are
 gone (`helloUiBuilderDocument`, `blankWearScreenUiBuilderDocument`) and the single-test ones moved
-into their tests (`a2uiUiBuilderDocument`, `AdaptiveScreenTemplates`). The rest
+into their tests (`a2uiUiBuilderDocument`, `AdaptiveScreenTemplates`), and the rest
 (`wearScreenUiBuilderDocument`, `wearWidgetUiBuilderDocument`, `WearWidgetSample`,
-`RemoteClockTemplates`, `LauncherWidgetTemplates`) remain public sample builders: `@Preview`s, this
-repository's tests across modules and compose-preview-server's tests build documents with them, and
-no new design is seeded from them.
+`RemoteClockTemplates` with its `ClockCanvas` DSL, `LauncherWidgetTemplates`,
+`AdaptiveWearWidget.newDocument`) moved to the unpublished `:ui-builder-export-fixtures` module,
+which this repository's tests and `:ui-builder`'s `@Preview`s depend on. `:ui-builder-export` no
+longer ships any of them, nor the seed-only `wearScreenEnvironment` and template-id constants;
+compose-preview-server's tests that built documents with them carry their own copies.
 
 The sections below record the staged rollout and its historical default-off flag.
 
@@ -272,12 +274,12 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | ~~`WearM3Catalog.kt`~~ (generator deleted; Wear foundation menu retained) | 1,684 | wear-m3-catalog's `ui-builder.policy.json` + record | — a host serving `wear-m3` must publish it; legacy pins remain in `LegacySynthesisedReferences` |
 | ~~`RemoteM3Catalog.kt`~~ (generator deleted; shared Remote Compose foundation retained) | 802 | remote-m3-catalog's `remote-catalog/ui-builder.policy.json` | — a host serving `remote-m3` now has to publish it; the legacy pin remains in `LegacySynthesisedReferences` |
 | ~~`A2uiCatalog.kt`~~ (deleted, with its golden) | 897 | a2ui-catalog's `ui-builder.policy.json` | — a host serving `a2ui-catalog` now has to publish it; its legacy pin resolves through `LegacySynthesisedReferences` |
-| `UiBuilderTemplates.kt`'s Wear screen, Wear list and widget builders, `WearWidgetSample`, `AdaptiveWearWidget.newDocument` | ~800 | `ui-builder/designs/*.json` in wear-m3-catalog and remote-m3-catalog (round-trip tested there) | the matching catalog owned |
-| `AdaptiveScreenTemplates` | 491 | m3-catalog's `ui-builder/designs/*.json` | `m3-catalog` owned, after its `adaptive-navigation` ledger row |
+| ~~`UiBuilderTemplates.kt`'s Wear screen, Wear list and widget builders, `WearWidgetSample`, `AdaptiveWearWidget.newDocument`~~ (moved to `:ui-builder-export-fixtures`) | ~800 | `ui-builder/designs/*.json` in wear-m3-catalog and remote-m3-catalog (round-trip tested there) | the matching catalog owned |
+| ~~`AdaptiveScreenTemplates`~~ (moved into `:ui-builder`'s tests) | 491 | m3-catalog's `ui-builder/designs/*.json` | `m3-catalog` owned, after its `adaptive-navigation` ledger row |
 | `UiBuilderNewDesignSeed`'s `when`s, `newDesignCatalog`'s table, `NEW_DESIGN_CATALOG_ORDER`, `NewDesignTypes.kt`'s built-in card words and default row (the catalog's `newDesign.description` and `.primary` replace them) | ~250 | the catalog-owned readers above | all catalogs owned |
 | `synthesisers`, `LEGACY_*` fallbacks in `ProductionUiBuilderRuntime` | — | — | all catalogs owned; `LegacySynthesisedReferences` **stays** (it is the only record of those pins) |
 | `docs/design/fixtures/ui-builder/{wear-m3,remote-m3}-capabilities-v1.json` snapshots | — | catalog-owned published policies and records | Retained as historical parity baselines and MCP App offline assets; the live runtime reads published catalogs. The strict equivalence gate still compares owned policy against these baselines. |
-| `LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
+| ~~`LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches~~ (branches deleted; the builder moved to `:ui-builder-export-fixtures`) | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
 | `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
 | `m3-catalog-capabilities-v1.json` | — | m3-catalog's published `ui-builder.json` | the offline hosts no longer read it; remaining readers are the host-bridge web archive (with the wear/remote goldens above) and `DesktopExportHostTest` |

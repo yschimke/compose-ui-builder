@@ -49,13 +49,6 @@ enum class RemoteClockTemplates(
     }
 
   companion object {
-    /**
-     * The clocks a new design may start from: all where Remote root content exports
-     * (`-PuiBuilderRemoteCompose=true`), otherwise none.
-     */
-    val offered: List<RemoteClockTemplates>
-      get() = if (UiBuilderBuildFeatures.remoteCompose) entries else emptyList()
-
     fun forTemplate(templateId: String): RemoteClockTemplates? = entries.firstOrNull {
       it.templateId == templateId
     }
