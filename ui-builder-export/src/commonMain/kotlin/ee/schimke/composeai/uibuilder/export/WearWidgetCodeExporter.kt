@@ -10,8 +10,9 @@ import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
  * Not [CapabilityComposeCodeExporter]: a widget runs Remote Compose and is delivered as a
  * `WearWidgetDocument`, so `remote-m3` has no component record. The `remote-m3/widget-container-*`
  * scaffold stands in for the host's `WearWidgetContainer` and is not emitted: its background
- * becomes the `WearWidgetBrush` and its size picks the preview providers. Unwritable nodes are
- * refused by name, never approximated.
+ * becomes the `WearWidgetBrush`, its size picks the preview providers and its `hostFrame`
+ * ([WearWidgetHostFrame]) the document class. Unwritable nodes are refused by name, never
+ * approximated.
  */
 object WearWidgetCodeExporter {
 
@@ -111,6 +112,7 @@ object WearWidgetCodeExporter {
       val files: List<WidgetBundleFile>,
       val parameters: List<RemoteContentEmitter.ImageParameter>,
       val diagnostics: List<ExportDiagnosticV1>,
+      val hostFrame: WearWidgetHostFrame,
     ) : Outcome
 
     data class Refused(val reasons: List<String>) : Outcome
@@ -148,6 +150,14 @@ object WearWidgetCodeExporter {
 
     // Padding and corner radius are the host's, not the design's: only the predefined host shapes
     // are supported, so a legacy override on the container is ignored here as it is on the canvas.
+    // Whether the export bakes that frame or leaves it to the device is the container's choice.
+    val hostFrame =
+      WearWidgetHostFrame.of(root)
+        ?: return refuse(
+          "the container's `${WearWidgetHostFrame.PROPERTY}` is " +
+            "`${root.properties[WearWidgetHostFrame.PROPERTY]?.stringOrNull()}`, not one of " +
+            WearWidgetHostFrame.entries.joinToString { "`${it.id}`" }
+        )
 
     val resolved = sizes.map { AdaptiveWearWidget.resolve(document, it) }
     // The emitter needs the body's depth before writing (a theme wrapper indents it), but only
@@ -229,8 +239,12 @@ object WearWidgetCodeExporter {
       }
       val shape =
         WidgetSourceShape.Exported(previews.map { (size, it) -> it.paramsProviderFor(size) })
-      (emitters.flatMap { it.imports(shape) } +
-          listOfNotNull("androidx.glance.wear.core.ContainerInfo".takeIf { adaptive }))
+      (emitters
+          .flatMap { it.imports(shape) }
+          .map { import ->
+            if (import == WearWidgetHostFrame.Host.documentClass) hostFrame.documentClass
+            else import
+          } + listOfNotNull("androidx.glance.wear.core.ContainerInfo".takeIf { adaptive }))
         .distinct()
         .sorted()
         .forEach { appendLine("import $it") }
@@ -281,7 +295,7 @@ object WearWidgetCodeExporter {
         appendLine("$INDENT$INDENT$it")
       }
       background.locals.forEach { appendLine("$INDENT$INDENT$it") }
-      documentReturn(background).forEach(::appendLine)
+      documentReturn(background, hostFrame).forEach(::appendLine)
       val arguments =
         listOfNotNull(
           "large = params.containerType == ContainerInfo.CONTAINER_TYPE_LARGE".takeIf { adaptive },
@@ -339,7 +353,14 @@ object WearWidgetCodeExporter {
         },
       parameters = parameters,
       // An adaptive widget writes most nodes once per size, so the same notice arrives twice.
-      diagnostics = emitters.flatMap { it.diagnostics }.distinct(),
+      diagnostics =
+        emitters.flatMap { it.diagnostics }.distinct() +
+          listOfNotNull(
+            WearWidgetHostFrame.dependencyDiagnostic(rootId).takeIf {
+              hostFrame == WearWidgetHostFrame.Device
+            }
+          ),
+      hostFrame = hostFrame,
     )
   }
 
@@ -410,6 +431,19 @@ object WearWidgetCodeExporter {
         appendLine("- `${it.identifier}` — $default")
       }
     }
+    if (outcome.hostFrame == WearWidgetHostFrame.Device) {
+      appendLine()
+      appendLine("## What your module depends on")
+      appendLine()
+      appendLine("`${WearWidgetHostFrame.DEVICE_ARTIFACT}`, for `${outcome.hostFrame.simpleName}`:")
+      appendLine(
+        "the widget leaves its host frame (padding, corner radius) as named values, so the"
+      )
+      appendLine(
+        "device playing it writes in its own host's. Played as it is, it keeps the frame of"
+      )
+      appendLine("the host it was captured for.")
+    }
   }
 
   /** `albumArt: RemoteImageBitmap`, once per picture the body draws, or nothing at all. */
@@ -452,12 +486,16 @@ object WearWidgetCodeExporter {
   }
 
   /**
-   * `return WearWidgetDocument(background = <brush>) {`, on one line when it fits [MAX_LINE];
-   * otherwise the brush is hoisted into a local.
+   * `return WearWidgetDocument(background = <brush>) {` (or [hostFrame]'s document), on one line
+   * when it fits [MAX_LINE]; otherwise the brush is hoisted into a local.
    */
-  private fun documentReturn(background: RemoteContentEmitter.Background): List<String> {
+  private fun documentReturn(
+    background: RemoteContentEmitter.Background,
+    hostFrame: WearWidgetHostFrame,
+  ): List<String> {
     val expression = background.expression
-    val body = "$INDENT${INDENT}return WearWidgetDocument(background = "
+    val document = hostFrame.simpleName
+    val body = "$INDENT${INDENT}return $document(background = "
     val single = "$body$expression) {"
     if (single.length <= MAX_LINE) return listOf(single)
     // If the hoisted brush is still too long, break it between the chain's calls.
@@ -471,7 +509,7 @@ object WearWidgetCodeExporter {
         }
     return listOf("$INDENT${INDENT}val background =") +
       chain +
-      listOf("$INDENT${INDENT}return WearWidgetDocument(background = background) {")
+      listOf("$INDENT${INDENT}return $document(background = background) {")
   }
 
   private fun refuse(reason: String) = Outcome.Refused(listOf(reason))
