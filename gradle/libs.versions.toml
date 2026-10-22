@@ -271,7 +271,7 @@ mcp-kotlin-sdk = "0.15.0"
 # of assertions to `kotlin.test` is a separate change from moving them.
 junit = "4.13.2"
 truth = "1.4.5"
-okhttp = "5.5.0"
+okhttp = "5.5.1"
 okio = "3.18.2"
 classgraph = "4.8.199"
 jmdns = "3.6.4"
