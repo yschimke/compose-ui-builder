@@ -71,6 +71,25 @@ class WearWidgetHostFrameExportTest {
   }
 
   @Test
+  fun `a device-framed source warns what it depends on`() {
+    val device =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+        WearWidgetCodeExporter.export(design(WearWidgetScaffoldSize.Large, "device"), "widget")
+      )
+    val warning =
+      device.diagnostics.single { it.code == ExportDiagnosticCodes.WEAR_PREVIEW_RUNTIME_REQUIRED }
+    assertTrue(WearWidgetHostFrame.DEVICE_ARTIFACT in warning.message, warning.message)
+    val host =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+        WearWidgetCodeExporter.export(design(WearWidgetScaffoldSize.Large, null), "widget")
+      )
+    assertTrue(
+      host.diagnostics.none { it.code == ExportDiagnosticCodes.WEAR_PREVIEW_RUNTIME_REQUIRED },
+      host.diagnostics.toString(),
+    )
+  }
+
+  @Test
   fun `a device-framed bundle says what it depends on`() {
     val bundle =
       assertIs<WearWidgetCodeExporter.BundleResult.Emitted>(

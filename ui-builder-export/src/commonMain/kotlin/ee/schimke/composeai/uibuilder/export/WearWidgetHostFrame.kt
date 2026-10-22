@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder.export
 
+import ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1
+import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
+
 /**
  * How a Wear widget's host frame — the padding and corner radius `WearWidgetParams` hands the
  * widget per host shape — gets into its exported document: the widget container's `hostFrame`
@@ -32,6 +35,21 @@ enum class WearWidgetHostFrame(val id: String, val documentClass: String) {
 
     /** The artifact [Device]'s document ships in, which a widget using it depends on. */
     const val DEVICE_ARTIFACT: String = "ee.schimke.composeai:wear-preview-runtime"
+
+    /**
+     * The warning a [Device] widget's source carries, naming [DEVICE_ARTIFACT]: the source pane and
+     * a served source export have no README to say it.
+     */
+    fun dependencyDiagnostic(containerId: String): ExportDiagnosticV1 =
+      ExportDiagnosticV1(
+        severity = DiagnosticSeverityV1.WARNING,
+        code = ExportDiagnosticCodes.WEAR_PREVIEW_RUNTIME_REQUIRED,
+        message =
+          "the container `$containerId` sets `$PROPERTY` to `${Device.id}`, so the widget " +
+            "returns `${Device.simpleName}`, which ships in `$DEVICE_ARTIFACT`: the generated " +
+            "source compiles only where that dependency is declared",
+        nodeId = containerId,
+      )
 
     /** [container]'s choice: [Host] when unset, null for a value that is neither. */
     fun of(container: UiBuilderNode): WearWidgetHostFrame? {

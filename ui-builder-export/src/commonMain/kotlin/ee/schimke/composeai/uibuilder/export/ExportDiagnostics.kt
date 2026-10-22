@@ -24,6 +24,13 @@ object ExportDiagnosticCodes {
 
   /** A warning: a setting the design states that the generated call is not written with. */
   const val SETTING_NOT_WRITTEN: String = "SETTING_NOT_WRITTEN"
+
+  /**
+   * A warning: a widget whose container leaves its host frame to the device
+   * ([WearWidgetHostFrame.Device]) imports its document from [WearWidgetHostFrame.DEVICE_ARTIFACT],
+   * which the generated source compiles only beside.
+   */
+  const val WEAR_PREVIEW_RUNTIME_REQUIRED: String = "WEAR_PREVIEW_RUNTIME_REQUIRED"
 }
 
 /**

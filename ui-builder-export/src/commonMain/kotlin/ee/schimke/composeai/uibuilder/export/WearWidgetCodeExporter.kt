@@ -353,7 +353,13 @@ object WearWidgetCodeExporter {
         },
       parameters = parameters,
       // An adaptive widget writes most nodes once per size, so the same notice arrives twice.
-      diagnostics = emitters.flatMap { it.diagnostics }.distinct(),
+      diagnostics =
+        emitters.flatMap { it.diagnostics }.distinct() +
+          listOfNotNull(
+            WearWidgetHostFrame.dependencyDiagnostic(rootId).takeIf {
+              hostFrame == WearWidgetHostFrame.Device
+            }
+          ),
       hostFrame = hostFrame,
     )
   }
