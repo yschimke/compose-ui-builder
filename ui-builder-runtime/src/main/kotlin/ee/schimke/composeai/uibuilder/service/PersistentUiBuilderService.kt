@@ -2963,12 +2963,18 @@ public class PersistentUiBuilderService(
     val document = request.document
     fun invalid(message: String) =
       UiBuilderServiceResponse.Error(UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, message))
-    if (!UiBuilderBuildFeatures.remoteCompose)
+    // Stateless Compose source export is stable for saved designs and supplied designs alike.
+    // Keep experimental PNG/Remote JSON/RC document lowering behind its existing build gate.
+    if (request.format != ExportFormatV1.COMPOSE && !UiBuilderBuildFeatures.remoteCompose)
       return invalid("Remote Compose authoring is disabled in this build")
     if (
-      request.format != ExportFormatV1.PNG && request.format !in RemoteDocumentExportSupport.formats
+      request.format != ExportFormatV1.COMPOSE &&
+        request.format != ExportFormatV1.PNG &&
+        request.format !in RemoteDocumentExportSupport.formats
     ) {
-      return invalid("supplied documents support only PNG, Remote JSON and RC export")
+      return invalid(
+        "supplied documents support only Compose source, PNG, Remote JSON and RC export"
+      )
     }
     if (document.id.isBlank() || document.revision < 0)
       return invalid("invalid document id or revision")
