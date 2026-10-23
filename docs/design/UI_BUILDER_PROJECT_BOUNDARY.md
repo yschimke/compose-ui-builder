@@ -52,7 +52,8 @@ both were decisions nothing was checking.
 
 **The UI builder** — the design surface and everything that serves one design:
 
-`:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-host-jvm` · `:ui-builder-export` · `:ui-builder-generated-jetcaster` ·
+`:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-host-jvm` · `:ui-builder-export` · `:ui-builder-export-fixtures` ·
+`:ui-builder-generated-jetcaster` ·
 `:ui-builder-reference-jetcaster` · `:ui-builder-render-bundle` · `:ui-builder-renderer` ·
 `:ui-builder-renderer-sdk` · `:ui-builder-runtime` · `:ui-builder-web`
 

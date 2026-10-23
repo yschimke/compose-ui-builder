@@ -55,7 +55,7 @@ class WearNewDesignSeedTest {
 
   @Test
   fun `the wear list validates`() {
-    assertNull(executor.validate(seed(UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE), wear))
+    assertNull(executor.validate(seed("wear-list"), wear))
   }
 
   @Test
@@ -70,7 +70,7 @@ class WearNewDesignSeedTest {
     for (template in
       listOf(
         UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
-        UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+        "wear-list",
       )) {
       val document = seed(template).copy(id = "wear-$template")
       val response = runSuspend {

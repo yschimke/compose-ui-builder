@@ -111,7 +111,7 @@ class CatalogSeedTemplatesTest {
       assertFailsWith<IllegalArgumentException> {
         UiBuilderNewDesignSeed.document(
           "mine",
-          UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+          "wear-list",
           pin(),
           templates,
         )

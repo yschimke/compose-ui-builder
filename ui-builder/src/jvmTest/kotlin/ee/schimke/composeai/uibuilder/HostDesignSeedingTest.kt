@@ -100,7 +100,7 @@ class HostDesignSeedingTest {
       hostSeedDocument(
         catalog,
         "my-watch",
-        UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+        "wear-list",
         fixture.readText(),
         templates = "",
       )

@@ -12,6 +12,15 @@
 > That repository keeps a copy of this document for the links its catalog notes and its own contract
 > already point at.
 
+> **Status: done.** Every new design is now seeded from the templates its catalog publishes
+> (`UiBuilderNewDesignSeed.document(designId, templateId, catalogPin, published)`), or the generic
+> `blankUiBuilderDocument` for a catalog that publishes none; the Jetcaster benchmark is
+> `fixtureDocument`. The Kotlin builders below seed nothing and are no longer `:ui-builder-export`
+> API: the unused ones are deleted, the single-test ones live in their tests, and the rest are in
+> the unpublished `:ui-builder-export-fixtures` module, where this repository's tests and
+> `:ui-builder`'s `@Preview`s build sample documents from them. The rest of this document is the
+> plan as written.
+
 The builder ships eight starting points — a blank Material screen, a blank and a worked Wear screen,
 two Wear widget host frames and two worked widget samples — and every one of them is Kotlin in
 **this** repository, under `ui-builder-export/src/commonMain/…/UiBuilderTemplates.kt` and
@@ -62,8 +71,8 @@ written to, a carousel whose `items` is a `CarouselScope` DSL, grid spans belong
 around a node, and `selected` properties comparing a state variable. Those are values this
 vocabulary has no Kotlin for, not components the export has not been shown — the document validates
 against `m3-catalog` cleanly. It is also not offered in the New design chooser, and it is no
-longer the default: a URL naming no template gets `UiBuilderNewDesignSeed.DEFAULT_TEMPLATE`, which
-is `blank`. `jetcaster` is `UiBuilderNewDesignSeed.FIXTURE_TEMPLATE`, the fallback for a template
+longer the default: a URL naming no template gets `UiBuilderNewDesignSeed.BLANK_TEMPLATE`,
+`blank`. `jetcaster` is `UiBuilderNewDesignSeed.FIXTURE_TEMPLATE`, the fallback for a template
 id the seed does not recognise and the name tests and the benchmark seed it by, and it is
 this repository's own Jetcaster reference fixture (`ui-builder-reference-jetcaster`, the benchmark of
 [`UI_BUILDER_JETCASTER_BENCHMARK.md`](UI_BUILDER_JETCASTER_BENCHMARK.md)). So the move carries
@@ -100,7 +109,7 @@ The contract sketches `templates` as a list of paths:
 
 A path list cannot carry what the chooser prints. `Main.kt`'s `newDesignCatalog` holds, per template,
 an **id**, a **label** ("Activity list") and a line of **supporting text** ("Six title cards under a
-list header, row for row the reference's"), and `UiBuilderNewDesignSeed.DEFAULT_TEMPLATE` says which
+list header, row for row the reference's"), and `UiBuilderNewDesignSeed.BLANK_TEMPLATE` is the
 one a URL naming none gets. None of that is in the document, and deriving a label from a filename
 gives "Wear list" for a card that should read "Activity list". So each entry is an object:
 

@@ -198,6 +198,10 @@ include(":ui-builder-host-jvm")
 // The IntelliJ host lives in yschimke/compose-preview-ide and consumes a pinned source checkout.
 
 include(":ui-builder-export")
+
+// The sample documents tests and previews build from. Not published, and not a seam.
+include(":ui-builder-export-fixtures")
+
 include(":ui-builder-codegen-jvm")
 include(":ui-builder-gradle-plugin")
 include(":ui-builder-production-consumer")

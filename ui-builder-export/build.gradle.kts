@@ -197,7 +197,11 @@ kotlin {
       implementation(libs.flexpress.core)
       implementation(libs.flexpress.codegen)
     }
-    commonTest.dependencies { implementation(kotlin("test")) }
+    commonTest.dependencies {
+      implementation(kotlin("test"))
+      // The sample documents (`UI_BUILDER_SEED_TEMPLATES.md`): no longer this module's API.
+      implementation(project(":ui-builder-export-fixtures"))
+    }
     jvmTest.dependencies {
       implementation(libs.json.schema.validator)
       // Compile generated model files with a real handwritten consumer, without requiring a

@@ -111,9 +111,11 @@ See [`UI_BUILDER_CATALOG_RENDERER_RUNTIME.md`](UI_BUILDER_CATALOG_RENDERER_RUNTI
 
 ### 4. The templates are Kotlin documents in the export module
 
-`UiBuilderTemplates.kt` builds the Wear screen, the Wear widgets and the blank mobile screen as
+`UiBuilderTemplates.kt` built the Wear screen, the Wear widgets and the blank mobile screen as
 Kotlin: the rows, the spacing, the measured `fontSizeSp` pins, `wearScreenEnvironment`'s diameter
-and density, `mobileScreenEnvironment`'s `pixel_6` frame, and the export-device lists. A template is
+and density, `mobileScreenEnvironment`'s `pixel_6` frame, and the export-device lists. (Resolved:
+catalogs now publish their templates; only the blank screen and its frame remain in the export
+module, and the Wear builders are test fixtures in `:ui-builder-export-fixtures`.) A template is
 a *document*, which is data, and the contract's phase 3a freezes exactly these to
 `ui-builder/designs/*.json` with a `template` marker so the catalog that owns the design owns its
 seed.

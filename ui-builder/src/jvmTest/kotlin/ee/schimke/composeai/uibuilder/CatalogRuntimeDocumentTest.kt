@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
+import ee.schimke.composeai.uibuilder.export.newDocument
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import kotlin.test.Test
 import kotlin.test.assertEquals

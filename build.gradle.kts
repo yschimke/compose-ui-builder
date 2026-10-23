@@ -88,6 +88,7 @@ tasks.named("check") {
     ":ui-builder-host-jvm:check",
     ":ui-builder-artwork:check",
     ":ui-builder-export:check",
+    ":ui-builder-export-fixtures:check",
     ":ui-builder-codegen-jvm:check",
     ":ui-builder-gradle-plugin:check",
     ":ui-builder-production-consumer:check",
