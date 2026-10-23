@@ -82,7 +82,102 @@ data class UiBuilderVariantPane(
    * is laid out in its content box.
    */
   val wearHostFrame: WearWidgetHostSpec? = null,
+  /**
+   * An approximate watch this pane draws its widget container on (see [wearScreenPanes]):
+   * [widthDp]/[heightDp] are then the watch screen, and the container sits centred in it.
+   */
+  val watchScreen: WatchScreen? = null,
 )
+
+/** The outline of an approximate watch screen a [WatchScreen] pane is drawn on. */
+enum class WatchScreenShape(val label: String) {
+  Round("Round"),
+  Square("Square"),
+}
+
+/**
+ * A black watch screen of [shape] around a widget container [frameWidthDp]×[frameHeightDp] (the
+ * container's whole frame, padding included), centred in it and clipped to [frameCornerRadiusDp] so
+ * nothing square shows behind a rounded container.
+ */
+data class WatchScreen(
+  val shape: WatchScreenShape,
+  val frameWidthDp: Float,
+  val frameHeightDp: Float,
+  val frameCornerRadiusDp: Float,
+)
+
+/**
+ * The side of the approximate watch screen, in dp: wide enough that a 216×124 Large squircle
+ * container, rounded corners and all, clears a round screen's edge.
+ */
+const val WATCH_SCREEN_DP: Float = 240f
+
+/** A square watch's corner radius, as a fraction of its side. */
+const val SQUARE_WATCH_CORNER_FRACTION: Float = 0.2f
+
+/** The id prefix of every [wearScreenPanes] pane. */
+internal const val WEAR_SCREEN_PANE_ID_PREFIX = "preview-wear-screen-"
+
+/**
+ * The design inside approximate Wear watches — a round screen and a square one — each in the Small
+ * and the Large Wear widget container, as a widget host draws them (the squircle host's size,
+ * padding and radius). An opt-in way of looking ([UiBuilderEditorState.wearScreenPanes]), so a card
+ * or widget from a library can be judged on a wrist.
+ *
+ * A Wear widget brings its own container, so it is drawn as its host panes draw it: at each size an
+ * adaptive one resolves to, or at its own. Anything else is laid out in the container's content box
+ * as the catalog's Wear previews ([catalogPreviewPanes]) lay it out. A Wear screen design is
+ * already a watch, so it gets none.
+ */
+fun UiBuilderDocument.wearScreenPanes(): List<UiBuilderVariantPane> {
+  if (isWearScreen()) return emptyList()
+  val own = wearWidgetScaffoldSize()
+  val sizes =
+    when {
+      own == null || AdaptiveWearWidget.isAdaptive(this) ->
+        listOf(WearWidgetScaffoldSize.Small, WearWidgetScaffoldSize.Large)
+      else -> listOf(own)
+    }
+  val shape = WearWidgetHostShape.Squircle
+  return WatchScreenShape.entries.flatMap { screen ->
+    sizes.map { size ->
+      val spec = size.hostSpec(shape)
+      UiBuilderVariantPane(
+        id = "$WEAR_SCREEN_PANE_ID_PREFIX${screen.name.lowercase()}-${size.name.lowercase()}",
+        label = "${screen.label} · ${size.name}",
+        widthDp = WATCH_SCREEN_DP,
+        heightDp = WATCH_SCREEN_DP,
+        document =
+          when {
+            own == null ->
+              withEnvironmentOverrides(
+                mapOf(
+                  "widthDp" to JsonPrimitive(spec.contentWidthDp),
+                  "heightDp" to JsonPrimitive(spec.contentHeightDp),
+                )
+              )
+            AdaptiveWearWidget.isAdaptive(this) -> AdaptiveWearWidget.resolve(this, size)
+            else -> this
+          },
+        wearWidgetHostShape = shape,
+        // A widget draws its own container; anything else is given the host's.
+        wearHostFrame = if (own == null) spec else null,
+        watchScreen =
+          WatchScreen(
+            screen,
+            spec.frameWidthDp.toFloat(),
+            spec.frameHeightDp.toFloat(),
+            minOf(spec.cornerRadiusDp, spec.frameHeightDp / 2f),
+          ),
+      )
+    }
+  }
+}
+
+/** The frame a pane's design (or its widget container) is drawn at, inside any watch screen. */
+internal val UiBuilderVariantPane.drawnFrameDp: Pair<Float, Float>
+  get() = watchScreen?.let { it.frameWidthDp to it.frameHeightDp } ?: (widthDp to heightDp)
 
 /**
  * The preview panes a widget design uses instead of the device and axis strip (Wear host shapes or

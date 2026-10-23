@@ -100,6 +100,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.CommentsInspector
 import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
@@ -439,6 +440,7 @@ private fun InspectorBody(
           catalogFrameSizes = state.catalogFrameSizes,
           platform = state.platform,
           variantAxes = state.variantAxes,
+          wearScreenPanes = state.wearScreenPanes,
           variantsDrawn = variantsDrawn,
           onTextInputFocusChanged = onTextInputFocusChanged,
           dispatch = dispatch,
@@ -1716,6 +1718,8 @@ private fun ScreenEnvironmentInspector(
   platform: UiBuilderCatalogPlatform,
   /** The unstored axes the strip is drawing — see [UiBuilderEditorState.variantAxes]. */
   variantAxes: Set<EditorVariantAxis>,
+  /** Whether the approximate Wear watch panes are drawn — see [wearScreenPanes]. */
+  wearScreenPanes: Boolean,
   /**
    * Whether the surface drawing the variant strip is on screen. False on the host's renderer, where
    * the comparison chips go quiet but the device picker stays live (it still feeds the export).
@@ -1802,7 +1806,13 @@ private fun ScreenEnvironmentInspector(
       },
     )
   }
-  VariantAxisPicker(document, variantAxes, variantsDrawn) {
+  VariantAxisPicker(
+    document = document,
+    selected = variantAxes,
+    wearScreenPanes = wearScreenPanes,
+    drawn = variantsDrawn,
+    onToggleWearScreenPanes = { dispatch(UiBuilderEditorEvent.ToggleWearScreenPanes) },
+  ) {
     dispatch(UiBuilderEditorEvent.ToggleVariantAxis(it))
   }
   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2030,9 +2040,14 @@ private fun DevicePresetPicker(
 private fun VariantAxisPicker(
   document: UiBuilderDocument,
   selected: Set<EditorVariantAxis>,
+  /** The approximate Wear watch panes, offered after the axes wherever a design has some. */
+  wearScreenPanes: Boolean,
   drawn: Boolean,
+  onToggleWearScreenPanes: () -> Unit,
   onToggle: (EditorVariantAxis) -> Unit,
 ) {
+  // A Wear screen is already a watch; see [wearScreenPanes].
+  val offersWearScreens = !document.isWearScreen()
   LocalUiBuilderChrome.current.InspectorToggleRow(
     label = "Also compare",
     supporting =
@@ -2049,7 +2064,17 @@ private fun VariantAxisPicker(
           enabled = drawn,
           onClick = { onToggle(axis) },
         )
-      },
+      } +
+        listOfNotNull(
+          UiBuilderInspectorChoiceModel(
+              label = WEAR_SCREEN_PANES_LABEL,
+              contentDescription = "Compare $WEAR_SCREEN_PANES_LABEL",
+              selected = wearScreenPanes,
+              enabled = drawn,
+              onClick = onToggleWearScreenPanes,
+            )
+            .takeIf { offersWearScreens }
+        ),
   )
 }
 
@@ -2648,3 +2673,6 @@ internal data class SuggestionPanel(
   val onAccept: ((String) -> Unit)?,
   val onReject: ((String) -> Unit)?,
 )
+
+/** The "Also compare" chip that draws the design on approximate Wear watches. */
+internal const val WEAR_SCREEN_PANES_LABEL = "Wear panes"
