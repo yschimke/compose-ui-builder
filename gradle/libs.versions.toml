@@ -146,11 +146,11 @@ maven-publish = "0.37.0"
 # 2.54.0 adds the typed adapters' Long, Double, parsed-text, nullable, union (sealed), set and
 # enumValue codecs and payload-callback events (compose-ai-tools#5914, #5919), which the structured
 # editor, the export gate and the renderer SDK's `callback()` overloads read. Contracts 3.30.0.
-composeai-tools = "2.70.7"
+composeai-tools = "2.71.0"
 # The Gradle plugin on a pin of its own. compose-ai-tools publishes only the modules a release
 # changed, plus the BOM, so the plugin can lag the BOM: 2.62.0 published the BOM and left the
 # plugin at 2.61.2. One shared pin then asks for a plugin version that does not exist.
-composeai-tools-plugin = "2.70.7"
+composeai-tools-plugin = "2.71.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
