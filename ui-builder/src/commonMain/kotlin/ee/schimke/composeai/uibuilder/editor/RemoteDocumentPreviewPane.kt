@@ -182,25 +182,33 @@ private fun RemoteDocumentVariantPane(
       style = MaterialTheme.typography.labelSmall,
       maxLines = 1,
     )
-    Box(
-      Modifier.size((pane.widthDp * scale).dp, (pane.heightDp * scale).dp)
-        .clipToBounds()
-        .semantics { contentDescription = "Remote document preview · ${pane.label}" },
-      contentAlignment = Alignment.Center,
-    ) {
-      when (result) {
-        null -> PreviewMessage("Preparing preview…")
-        UiBuilderDocumentPreview.WaitingForSave -> PreviewMessage("Waiting for save…")
-        is UiBuilderDocumentPreview.Failed -> PreviewMessage(result.message)
-        is UiBuilderDocumentPreview.Ready ->
-          PlayedRemoteDocumentVariant(
-            pane = pane,
-            encoded = result.documentBase64,
-            scale = scale,
-            timeRunning = timeRunning,
-          )
+    // On a watch the played frame is the widget container, centred on the screen.
+    val (frameWidthDp, frameHeightDp) = pane.drawnFrameDp
+    val frame: @Composable () -> Unit = {
+      Box(
+        Modifier.size((frameWidthDp * scale).dp, (frameHeightDp * scale).dp)
+          .clipToBounds()
+          .semantics { contentDescription = "Remote document preview · ${pane.label}" },
+        contentAlignment = Alignment.Center,
+      ) {
+        when (result) {
+          null -> PreviewMessage("Preparing preview…")
+          UiBuilderDocumentPreview.WaitingForSave -> PreviewMessage("Waiting for save…")
+          is UiBuilderDocumentPreview.Failed -> PreviewMessage(result.message)
+          is UiBuilderDocumentPreview.Ready ->
+            PlayedRemoteDocumentVariant(
+              pane = pane,
+              encoded = result.documentBase64,
+              scale = scale,
+              timeRunning = timeRunning,
+            )
+        }
       }
     }
+    val screen = pane.watchScreen
+    if (screen != null) {
+      WatchScreenFrame(screen, pane.widthDp, pane.heightDp, scale, pane.label) { frame() }
+    } else frame()
   }
 }
 
@@ -230,9 +238,10 @@ private fun PlayedRemoteDocumentVariant(
       "dark" -> RcPlayerTheme.Dark
       else -> RcPlayerTheme.System
     }
+  val (frameWidthDp, frameHeightDp) = pane.drawnFrameDp
   Box(
     Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
-      .requiredSize((pane.widthDp * densityRatio).dp, (pane.heightDp * densityRatio).dp)
+      .requiredSize((frameWidthDp * densityRatio).dp, (frameHeightDp * densityRatio).dp)
       .clip(RoundedCornerShape(0.dp))
       .graphicsLayer {
         scaleX = scale / densityRatio

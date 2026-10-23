@@ -303,6 +303,12 @@ fun UiBuilderEditor(
   initialAddBeside: Boolean = false,
   initialVariantAxes: Set<EditorVariantAxis> = emptySet(),
   /**
+   * Whether the preview opens with the approximate Wear watch panes ([wearScreenPanes]) on. A host
+   * that remembers the choice (the browser does, per catalog) passes it back here and reads it from
+   * [UiBuilderEditorState.wearScreenPanes].
+   */
+  initialWearScreenPanes: Boolean = false,
+  /**
    * The canvas's opening scale, or null to frame the design. Hosts capturing canvas pixels pin 1f
    * to avoid resampling.
    */
@@ -609,6 +615,7 @@ fun UiBuilderEditor(
             inspectorMode = initialInspectorMode,
             addBeside = initialAddBeside,
             variantAxes = initialVariantAxes,
+            wearScreenPanes = initialWearScreenPanes,
             canvasView = initialCanvasView,
             codePaneVisible = initialCodePaneVisible,
             historyBarVisible = initialHistoryBarVisible,
@@ -1439,16 +1446,6 @@ fun UiBuilderEditor(
     remember(drawnDocument, catalog.previews) {
       drawnDocument.catalogPreviewPanes(catalog.previews)
     }
-  // A dedicated Preview view has no canvas beside it, so its first frame is the current design.
-  val previewPanes =
-    remember(drawnDocument, variantPanes, availablePanes, catalogPanes) {
-      when {
-        catalogPanes != null -> catalogPanes + variantPanes
-        EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null ->
-          variantPanes
-        else -> listOf(drawnDocument.currentFramePane()) + variantPanes
-      }
-    }
   // The read-only pane: the catalog's typed capability picks the canvas renderer or a browser
   // adapter; unknown adapters fall back to the canvas.
   val documentBackedPreview =
@@ -1457,14 +1454,50 @@ fun UiBuilderEditor(
         it.format == ExportFormatV1.RC &&
         onRequestDocumentPreview != null
     }
+  // The design on approximate Wear watches, when asked for: after everything else in the strip.
+  val wearScreenPanes =
+    remember(drawnDocument, state.wearScreenPanes) {
+      if (state.wearScreenPanes) drawnDocument.wearScreenPanes() else emptyList()
+    }
+  // A dedicated Preview view has no canvas beside it, so its first frame is the current design. A
+  // widget's preview is its host panes, so the watches join those rather than the device strip.
+  val previewPanes =
+    remember(
+      drawnDocument,
+      variantPanes,
+      availablePanes,
+      catalogPanes,
+      wearScreenPanes,
+      documentBackedPreview,
+    ) {
+      val widgetPanes =
+        if (wearScreenPanes.isEmpty()) null
+        else drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
+      when {
+        catalogPanes != null -> catalogPanes + variantPanes + wearScreenPanes
+        widgetPanes != null -> widgetPanes + wearScreenPanes
+        EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null ->
+          variantPanes + wearScreenPanes
+        else -> listOf(drawnDocument.currentFramePane()) + variantPanes + wearScreenPanes
+      }
+    }
+  // Panes the preview draws as given: a catalog's, or any list with the watches in it, which a
+  // widget's own host panes would otherwise replace.
+  val exactPreviewPanes = catalogPanes != null || wearScreenPanes.isNotEmpty()
   // Compact preview tabs, one frame each (see [MobileViewTabs]), the design's own frame first.
   // Widgets use their host shapes or grid sizes.
   val mobilePreviewPanes =
-    remember(drawnDocument, variantPanes, documentBackedPreview, catalog.previews) {
+    remember(
+      drawnDocument,
+      variantPanes,
+      documentBackedPreview,
+      catalog.previews,
+      wearScreenPanes,
+    ) {
       val resizable = documentBackedPreview == null
-      drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
+      (drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
         ?: drawnDocument.widgetPreviewPanes(resizable)
-        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)
+        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes
     }
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
   // letting time run in a preview is not an edit to the design.
@@ -1475,12 +1508,12 @@ fun UiBuilderEditor(
         document = drawnDocument,
         // A catalog's panes, fixed stills only: each is a render round trip.
         variants =
-          if (catalogPanes != null) previewPanes.filterNot { it.launcherGridResizable }
+          if (exactPreviewPanes) previewPanes.filterNot { it.launcherGridResizable }
           else previewPanes,
         authoritativeGeneration = authoritativeGeneration,
         request = requireNotNull(onRequestDocumentPreview),
         modifier = modifier,
-        exactPanes = catalogPanes != null,
+        exactPanes = exactPreviewPanes,
         timeRunning = previewTimeRunning,
         onTimeRunningChange = { previewTimeRunning = it },
       )
@@ -1490,7 +1523,7 @@ fun UiBuilderEditor(
         variants = previewPanes,
         modifier = modifier,
         deviceRenderer = canvasRenderer,
-        exactPanes = catalogPanes != null,
+        exactPanes = exactPreviewPanes,
         timeRunning = previewTimeRunning,
         onTimeRunningChange = { previewTimeRunning = it },
       )

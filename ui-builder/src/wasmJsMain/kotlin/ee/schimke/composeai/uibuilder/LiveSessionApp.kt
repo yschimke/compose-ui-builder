@@ -387,6 +387,10 @@ private fun LiveSessionApp(
     remember(config.catalogSystemId) {
       mutableStateOf(readPinnedComponents(config.catalogSystemId))
     }
+  // Whether the preview also draws designs on approximate Wear watches, per catalog in this
+  // browser.
+  var wearScreenPanes by
+    remember(config.catalogSystemId) { mutableStateOf(readWearScreenPanes(config.catalogSystemId)) }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
   val agentPreferencesState =
     remember(config.designId) { mutableStateOf(readAgentPreferences(config.designId)) }
@@ -883,6 +887,7 @@ private fun LiveSessionApp(
       activeCatalogSystemId = capability.benchmark.catalogSystemId
       enabledPacks = readEnabledPacks(activeCatalogSystemId)
       pinnedComponents = readPinnedComponents(activeCatalogSystemId)
+      wearScreenPanes = readWearScreenPanes(activeCatalogSystemId)
       catalog =
         CapabilityCatalogParser.parse(
           Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
@@ -1696,6 +1701,7 @@ private fun LiveSessionApp(
         initialCatalogQuery = catalogQuery,
         initialEnabledPacks = enabledPacks,
         initialPinnedComponents = pinnedComponents,
+        initialWearScreenPanes = wearScreenPanes,
         collaborators = collaborators + activeAgents.orEmpty(),
         componentDrift = componentDrift,
         componentLibrary = componentLibrary,
@@ -1865,6 +1871,10 @@ private fun LiveSessionApp(
           if (it.pinnedComponents != pinnedComponents) {
             pinnedComponents = it.pinnedComponents
             writePinnedComponents(activeCatalogSystemId, it.pinnedComponents)
+          }
+          if (it.wearScreenPanes != wearScreenPanes) {
+            wearScreenPanes = it.wearScreenPanes
+            writeWearScreenPanes(activeCatalogSystemId, it.wearScreenPanes)
           }
           // Persisted from here rather than from each control, so every route that changes the
           // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.

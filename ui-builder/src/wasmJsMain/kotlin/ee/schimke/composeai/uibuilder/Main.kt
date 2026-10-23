@@ -2770,6 +2770,20 @@ internal fun writeEnabledPacks(catalogSystemId: String, packs: Set<String>) {
 private fun enabledPacksKey(catalogSystemId: String): String = "ui-builder.packs.$catalogSystemId"
 
 /**
+ * Whether the preview draws designs on approximate Wear watches for [catalogSystemId], remembered
+ * like [readEnabledPacks]. Off unless this browser turned it on.
+ */
+internal fun readWearScreenPanes(catalogSystemId: String): Boolean =
+  readBrowserSetting(wearScreenPanesKey(catalogSystemId)) == "on"
+
+internal fun writeWearScreenPanes(catalogSystemId: String, on: Boolean) {
+  writeBrowserSetting(wearScreenPanesKey(catalogSystemId), if (on) "on" else "")
+}
+
+private fun wearScreenPanesKey(catalogSystemId: String): String =
+  "ui-builder.wear-panes.$catalogSystemId"
+
+/**
  * The reader's pins for a catalog, or null while they have never said. A marker separates "never
  * said" from "unpinned everything", so unstarring all defaults sticks across reloads.
  */

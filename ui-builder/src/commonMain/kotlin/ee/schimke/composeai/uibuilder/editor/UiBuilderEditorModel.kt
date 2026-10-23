@@ -619,6 +619,11 @@ data class UiBuilderEditorState(
    */
   val variantAxes: Set<EditorVariantAxis> = emptySet(),
   /**
+   * Whether the preview also draws the design on approximate Wear watches ([wearScreenPanes]). A
+   * way of looking like [variantAxes], off by default; a host may remember it per catalog.
+   */
+  val wearScreenPanes: Boolean = false,
+  /**
    * Whether the canvas draws the design at its whole extent or at its device frame. State rather
    * than view-local because it changes what selection does.
    */
