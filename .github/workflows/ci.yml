@@ -138,10 +138,10 @@ jobs:
         run: ./scripts/check-ui-builder-production-consumer.sh
       - name: Verify the publishing lane
         run: ./scripts/check-ui-builder-external-consumer.sh
-      # One of the two archives the server consumes; the other, `:ui-builder-web:webArchive`, is
-      # built and verified by `web-archive`. Naming it here is what fails the build if the
+      # Two of the release assets the server consumes; the third, `:ui-builder-web:webArchive`, is
+      # built and verified by `web-archive`. Naming them here is what fails the build if the
       # *packaging* regresses without a verification task noticing.
-      - run: ./gradlew :ui-builder-render-bundle:jar
+      - run: ./gradlew :ui-builder-render-bundle:jar :ui-builder-export-fonts:jar
       # Edit-to-canvas time over the Jetcaster fixture on the JVM desktop backend (#193), not the
       # Wasm canvas. Recorded, not gated: a shared runner is too noisy for an absolute line, so the
       # numbers are kept to compare across runs.

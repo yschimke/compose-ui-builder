@@ -27,13 +27,12 @@ val checkPublishSet =
     doFirst {
       val derived = paths.get()
       // The modules this release uploads to Central. Not the same as the seams
-      // `UI_BUILDER_PROJECT_BOUNDARY.md` names: `:ui-builder-web` is a seam delivered as a GitHub
-      // release asset, never a Central coordinate.
+      // `UI_BUILDER_PROJECT_BOUNDARY.md` names: `:ui-builder-web`, `:ui-builder-render-bundle` and
+      // `:ui-builder-export-fonts` are delivered as GitHub release assets, never on Central.
       val missing =
         listOf(
             ":ui-builder-runtime",
             ":ui-builder-export",
-            ":ui-builder-render-bundle",
             ":bom",
           )
           .filterNot(derived::contains)
@@ -44,12 +43,16 @@ val checkPublishSet =
           "listing modules by hand."
       }
 
-      // The inverse tripwire: `:ui-builder-web` packages a ~40 MB Wasm frontend that must never be
-      // put on Central.
-      check(":ui-builder-web" !in derived) {
-        "`:ui-builder-web` is in the Maven publish set. It ships as a GitHub release asset, not a " +
-          "Central coordinate - see the ivy repository in compose-preview-server's " +
-          "settings.gradle.kts. Remove the publishing plugin from it rather than relaxing this."
+      // The inverse tripwire: these package large payloads (a ~40 MB Wasm frontend, the ~13 MB
+      // render bundle, ~6 MB of fonts) that must never be put on Central, whose monthly upload
+      // quota they would spend on every release.
+      val releaseAssets =
+        listOf(":ui-builder-web", ":ui-builder-render-bundle", ":ui-builder-export-fonts")
+      val onCentral = releaseAssets.filter(derived::contains)
+      check(onCentral.isEmpty()) {
+        "${onCentral.joinToString(", ")} in the Maven publish set. These ship as GitHub release " +
+          "assets, not Central coordinates - see the ivy repository in compose-preview-server's " +
+          "settings.gradle.kts. Remove the publishing plugin rather than relaxing this."
       }
 
       // The set is derived twice and the two must agree: here from applied plugins after

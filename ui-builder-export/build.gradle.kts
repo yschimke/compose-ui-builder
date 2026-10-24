@@ -133,23 +133,6 @@ val generateFlexpressVersion =
     }
   }
 
-// The variable fonts `FlexpressVariableFontSources` generates from, staged into this module's JVM
-// resources because the canvas's copies are not readable where an export runs.
-// `FlexpressVariableFontSourcesTest` fails if one is missing.
-val stageFlexpressFonts =
-  tasks.register<Sync>("stageFlexpressFonts") {
-    from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
-      include(
-        "RobotoFlex.ttf",
-        "RobotoFlex-OFL.txt",
-        "google-sans-flex-variable.ttf",
-        "GoogleSansFlex-OFL.txt",
-      )
-      into("ee/schimke/composeai/uibuilder/export/fonts")
-    }
-    into(layout.buildDirectory.dir("generated/flexpressFonts"))
-  }
-
 ktfmt { googleStyle() }
 
 kotlin {
@@ -191,8 +174,8 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
     }
     // flexpress's code generator, for `FlexpressVariableFontSources`. Plain Kotlin on the JVM at
-    // Java 17, like this side; the wasm editor has no generator and says so.
-    jvmMain { resources.srcDir(stageFlexpressFonts) }
+    // Java 17, like this side; the wasm editor has no generator and says so. The fonts it reads are
+    // not in this jar: they ship as the `:ui-builder-export-fonts` release asset a host adds.
     jvmMain.dependencies {
       implementation(libs.flexpress.core)
       implementation(libs.flexpress.codegen)
@@ -203,6 +186,8 @@ kotlin {
       implementation(project(":ui-builder-export-fixtures"))
     }
     jvmTest.dependencies {
+      // The fonts `FlexpressVariableFontSources.fromClasspath()` reads, where a host has them.
+      runtimeOnly(project(":ui-builder-export-fonts"))
       implementation(libs.json.schema.validator)
       // Compile generated model files with a real handwritten consumer, without requiring a
       // globally installed kotlinc or leaking compiler libraries into the export publication.
