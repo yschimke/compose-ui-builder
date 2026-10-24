@@ -217,8 +217,12 @@ include(":ui-builder-renderer-sdk")
 include(":ui-builder-web")
 
 // The packaged render bundle as its own artifact: it is frontend build output, so it does not
-// belong inside the server-side `:ui-builder-runtime` jar.
+// belong inside the server-side `:ui-builder-runtime` jar. A release asset, not on Central.
 include(":ui-builder-render-bundle")
+
+// The variable fonts the export's code generator reads, as a release asset rather than ~4 MB of
+// every `compose-preview-ui-builder-export-jvm` upload.
+include(":ui-builder-export-fonts")
 
 include(":ui-builder-artwork")
 

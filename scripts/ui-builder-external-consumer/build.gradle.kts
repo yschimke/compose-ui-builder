@@ -82,9 +82,8 @@ tasks.register("verifyExtractionConsumer") {
       )
       check(jar.getEntry("ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json") != null)
       // The render bundle is deliberately NOT in this jar any more (#346). It is a frontend build
-      // output and now ships as `compose-preview-ui-builder-render-bundle`, resolved transitively
-      // through the runtime's `api` edge — asserted below on the classpath, which is the only
-      // property `PackagedUiBuilderRenderBundle.copyTo` actually needs.
+      // output and ships as the `compose-preview-ui-builder-render-bundle` GitHub release asset,
+      // which a rendering host adds to its own classpath beside the runtime.
       check(
         jar.getEntry(
           "ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.png"
@@ -94,18 +93,24 @@ tasks.register("verifyExtractionConsumer") {
       }
     }
 
-    // What a consumer resolving only `compose-preview-ui-builder-runtime` must still get: the
-    // bundle, from wherever. Reading it off the resolved classpath rather than out of a named
-    // artifact is the consumer's own view of it, and the one that would break if the transitive
-    // edge were ever weakened to `implementation`.
-    val bundleEntry = "ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.png"
-    val bundleCarriers =
+    // What a consumer resolving `compose-preview-ui-builder-runtime` from Maven must NOT get: the
+    // render bundle or the export's variable fonts. Both ship as GitHub release assets, because
+    // re-uploading ~20 MB of them on every release spent most of the org's monthly Central quota.
+    // Reading the resolved classpath catches either one coming back by any route - a resource, a
+    // dependency edge, or a POM naming a coordinate that is no longer uploaded.
+    val releaseAssetEntries =
+      listOf(
+        "ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.png",
+        "ee/schimke/composeai/uibuilder/export/fonts/google-sans-flex-variable.ttf",
+        "ee/schimke/composeai/uibuilder/export/fonts/RobotoFlex.ttf",
+      )
+    val carriers =
       runtimeClasspath.resolve().filter { artifact ->
         artifact.extension == "jar" &&
-          ZipFile(artifact).use { jar -> jar.getEntry(bundleEntry) != null }
+          ZipFile(artifact).use { jar -> releaseAssetEntries.any { jar.getEntry(it) != null } }
       }
-    check(bundleCarriers.size == 1) {
-      "expected exactly one artifact carrying $bundleEntry, found $bundleCarriers"
+    check(carriers.isEmpty()) {
+      "the Maven classpath carries release-asset payload ($releaseAssetEntries) in $carriers"
     }
 
     // Every constraint the BOM publishes must name something the same release staged.

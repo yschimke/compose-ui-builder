@@ -42,12 +42,12 @@ dependencies {
   // the executor's Builder names `CatalogOwnership`.
   api(project(":ui-builder-export"))
 
-  // The packaged render bundle `PackagedUiBuilderRenderBundle.copyTo` materializes, as a sibling
-  // artifact (see `:ui-builder-render-bundle`'s build file). `api` because `copyTo` reads it off
-  // the consumer's runtime classpath.
-  api(project(":ui-builder-render-bundle"))
-
+  // The packaged render bundle `PackagedUiBuilderRenderBundle.copyTo` materializes is NOT a
+  // dependency of the published runtime. It ships as a GitHub release asset (see
+  // `:ui-builder-render-bundle`'s build file), and a host that renders puts that jar on its own
+  // classpath; `copyTo` reads it from there. A POM edge would name a coordinate Central never got.
   testImplementation(kotlin("test"))
+  testRuntimeOnly(project(":ui-builder-render-bundle"))
 }
 
 // The catalog belongs to the runtime that controls its revision and persistence lifecycle.
@@ -141,13 +141,13 @@ abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
         "module ee.schimke.composeai:component-catalog-protocol-jvm",
       )
     /**
-     * The packaged render data and shared document semantics on this classpath.
+     * The shared document semantics on this classpath.
      *
-     * `:ui-builder-render-bundle` has no code: its embedded classes are opaque bytes a daemon
-     * unpacks later. `:ui-builder-export` holds Compose-free document rules shared with the
-     * browser. Naming exact coordinates keeps the exclusions on the transitive graph.
+     * `:ui-builder-export` holds Compose-free document rules shared with the browser. The render
+     * bundle is not here: it is a release asset the host adds. Naming exact coordinates keeps the
+     * exclusions on the transitive graph.
      */
-    val allowedProjects = setOf("project :ui-builder-render-bundle", "project :ui-builder-export")
+    val allowedProjects = setOf("project :ui-builder-export")
     val offenders =
       resolvedComponents.get().filter { component ->
         (component.startsWith("project ") && component !in allowedProjects) ||
