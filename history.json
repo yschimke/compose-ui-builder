@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "75b691c0049bf7e69a5567d893fc5609af9fbcf2",
+    "generatedFrom": "32cdb6a52efdc453ca2bba5f9ab56045386a26d1",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -4604,6 +4604,15 @@
             "path": "renders/ui-builder/UiBuilderUnexportablePalettePreview-2c6c35dc.png",
             "versions": [
                 {
+                    "blob": "ed303b2da986582d28fbe7fc84a706d6ae16eda2",
+                    "commit": "32cdb6a52efdc453ca2bba5f9ab56045386a26d1",
+                    "date": "2026-10-27T02:38:31Z",
+                    "sourceSha": "221b3e3a",
+                    "sinceCommit": "1316c7e0eee189ce6d6ad5361e219f09cc5f3784",
+                    "commits": 6,
+                    "occurrences": 6
+                },
+                {
                     "blob": "cd077e5cf0040d6f6df815260475cbde5efd38f0",
                     "commit": "75b691c0049bf7e69a5567d893fc5609af9fbcf2",
                     "date": "2026-10-27T02:34:19Z",
@@ -4647,15 +4656,6 @@
                     "sinceCommit": "9ce1b0f0aabfd0e7c17aee0c7d15f4732b4ea770",
                     "commits": 4,
                     "occurrences": 4
-                },
-                {
-                    "blob": "ed303b2da986582d28fbe7fc84a706d6ae16eda2",
-                    "commit": "f2c53e5bd1fc683067110d92eca42739bfa71d87",
-                    "date": "2026-10-23T14:49:49Z",
-                    "sourceSha": "fe486de0",
-                    "sinceCommit": "1316c7e0eee189ce6d6ad5361e219f09cc5f3784",
-                    "commits": 5,
-                    "occurrences": 5
                 },
                 {
                     "blob": "954717d760383c46513e70c6411f0f55e3970ac3",
@@ -4979,9 +4979,9 @@
                     "commits": 1
                 }
             ],
-            "observations": 269,
+            "observations": 270,
             "unstable": true,
-            "flapCount": 224
+            "flapCount": 225
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
             "path": "renders/ui-builder/UiBuilderVariantStripPreview-f5ba4732.png",
