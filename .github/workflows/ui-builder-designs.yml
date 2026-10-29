@@ -58,7 +58,7 @@ jobs:
       builder-repository: ${{ github.repository }}
       builder-ref: ${{ github.event.pull_request.head.sha || github.sha }}
       # Must name the same commit as the `uses:` above; Renovate bumps both as one update.
-      server-ref: c8fb292e7c58d27ec3809e8051cafac1745ff449 # main
+      server-ref: 6b4c7ef2b8d14345a58d289837e561eff054bbc1 # main
       fail-on-refusal: true
       catalog-id: m3-catalog
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
