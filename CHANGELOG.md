@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.126.0](https://github.com/yschimke/compose-ui-builder/compare/v3.125.0...v3.126.0) (2026-10-30)
+
+
+### Features
+
+* export supplied Compose source without saving a design ([#957](https://github.com/yschimke/compose-ui-builder/issues/957)) ([6aef73f](https://github.com/yschimke/compose-ui-builder/commit/6aef73f45a7f63a7222b49ffa1e3dcf6eeb1571e))
+
 ## [3.125.0](https://github.com/yschimke/compose-ui-builder/compare/v3.124.0...v3.125.0) (2026-10-30)
 
 
