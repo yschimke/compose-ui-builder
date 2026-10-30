@@ -262,7 +262,7 @@ composeai-contracts = "3.39.0"
 rc-players = "2.21.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.12.0"
-ktor = "3.6.0"
+ktor = "3.6.1"
 # The Model Context Protocol Kotlin SDK, behind `:mcp`. Same version compose-ai-tools' `:mcp` was
 # on when the module moved here (compose-ai-tools#5176) — a move is not the moment to also change
 # the protocol implementation.
