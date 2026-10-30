@@ -29,7 +29,6 @@ import ee.schimke.composeai.uibuilder.editor.canvasFrameDp
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import java.io.File
 import kotlin.test.Test
@@ -323,8 +322,7 @@ class UiBuilderHomeScreenTest {
                   CapabilityCatalogParser.parse(
                     resource("/${choice.systemId}-capabilities-v1.json")
                   ),
-                  Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json"))
-                    .jsonObject,
+                  publishedTestTemplates(choice.systemId),
                 )
           }
       setContent {
@@ -408,13 +406,12 @@ class UiBuilderHomeScreenTest {
       val samples = listOf("wear-m3" to "wear-list", "remote-m3" to "weather-widget")
       val images = samples.associate { (catalog, template) ->
         val document =
-          UiBuilderNewDesignSeed.document(
-            template,
-            catalog,
-            template,
-            "candidate",
-            "candidate",
-            fixture,
+          publishedTestSeed(
+            systemId = catalog,
+            templateId = template,
+            designId = template,
+            catalogRevision = "candidate",
+            nativeRuntimeId = "candidate",
           )
         val normalized =
           document.copy(

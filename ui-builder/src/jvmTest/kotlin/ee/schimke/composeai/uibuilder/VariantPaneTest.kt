@@ -29,6 +29,7 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.hostSpec
+import ee.schimke.composeai.uibuilder.export.newDocument
 import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -3,8 +3,12 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
+import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
+import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.callableAliases
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
 import ee.schimke.composeai.uibuilder.service.CurrentM3UiBuilderCatalogExecutor
 import ee.schimke.composeai.uibuilder.service.PublishedUiBuilderCatalog
@@ -12,6 +16,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Compose the captured delivery pair just as the server does. */
 internal fun publishedTestCatalog(systemId: String): CapabilityCatalog {
@@ -33,7 +40,6 @@ internal fun publishedTestCatalog(systemId: String): CapabilityCatalog {
       .also {
         it.catalogSystemIds = setOf(systemId)
         it.published = mapOf(systemId to result.catalog)
-        it.catalogOwnership = CatalogOwnership.of(setOf(systemId))
       }
       .build()
       .listCatalogs()
@@ -114,4 +120,57 @@ internal fun publishedTestExportRecord(
         }
     }
     .build()
+}
+
+/** [systemId]'s published seed templates, read from its captured delivery files in policy order. */
+internal fun publishedTestTemplates(systemId: String): CatalogSeedTemplates {
+  val directory =
+    Path.of(checkNotNull(System.getProperty("compose.uiBuilder.catalogDir"))).resolve(systemId)
+  val policy =
+    GZIPInputStream(Files.newInputStream(directory.resolve("ui-builder.json.gz"))).use {
+      Json.parseToJsonElement(it.readBytes().decodeToString()).jsonObject
+    }
+  val paths =
+    (policy["statusSemantics"]?.jsonObject?.get("templates") as? JsonArray)
+      ?.map { it.jsonPrimitive.content }
+      .orEmpty()
+  return when (
+    val read =
+      CatalogSeedTemplates.read(systemId, paths) { path ->
+        directory.resolve("designs/${path.substringAfterLast('/')}").takeIf(Files::exists)?.let {
+          Files.readString(it)
+        }
+      }
+  ) {
+    is CatalogSeedTemplates.Result.Read -> read.templates
+    is CatalogSeedTemplates.Result.Unusable -> error("$systemId: ${read.reason}")
+  }
+}
+
+/**
+ * Design [designId] from [systemId]'s published [templateId], seeded exactly as Create seeds it and
+ * pinned to [catalogRevision] and [nativeRuntimeId] (the served catalog's, by default).
+ */
+internal fun publishedTestSeed(
+  systemId: String,
+  templateId: String,
+  designId: String = "$systemId-$templateId",
+  catalogRevision: String? = null,
+  nativeRuntimeId: String? = null,
+  state: List<NewDesignState> = emptyList(),
+): UiBuilderDocument {
+  val served by lazy { publishedTestCatalog(systemId).benchmark }
+  return UiBuilderNewDesignSeed.document(
+    designId = designId,
+    templateId = templateId,
+    catalogPin =
+      CatalogReferenceV1(
+        systemId,
+        catalogRevision ?: served.catalogRevision,
+        "candidate",
+        nativeRuntimeId ?: served.nativeRuntimeId,
+      ),
+    published = publishedTestTemplates(systemId),
+    state = state,
+  )
 }

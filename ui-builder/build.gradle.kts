@@ -138,7 +138,10 @@ kotlin {
       // wasmJs alike. See `ThemeSchemes.kt`.
       implementation(libs.materialkolor)
     }
-    commonTest.dependencies { implementation(kotlin("test")) }
+    commonTest.dependencies {
+      implementation(kotlin("test"))
+      implementation(project(":ui-builder-export-fixtures"))
+    }
     getByName("jvmTest").dependencies {
       // The Compose UI-test harness, for asserting on what the editor draws rather than only
       // diffing PNGs. `compose.desktop.currentOs` supplies the Skiko the test scene renders on.
@@ -153,6 +156,8 @@ kotlin {
       }
     }
     getByName("jvmMain").dependencies {
+      // The sample documents the `@Preview`s under `preview/` draw; no editor code reads them.
+      implementation(project(":ui-builder-export-fixtures"))
       // Feasibility spike only: the saved-document bridge executes ComposeScene against SVGCanvas.
       // It remains NO-GO for production/Figma until a representative nested scene succeeds and the
       // adapter moves behind :render-host. currentOs supplies the matching local Skiko runtime.

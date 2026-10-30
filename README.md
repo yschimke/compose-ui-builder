@@ -32,10 +32,12 @@ The experimental opt-in contract for regenerating stateless Compose source from 
 | `:ui-builder-gradle-plugin` | JVM Gradle | `ee.schimke.composeai.uibuilder.gradle` | [explicit Kotlin source-set integration](ui-builder-gradle-plugin/README.md) for durable generation |
 | `:ui-builder-production-consumer` | JVM Compose | `example` | executable durable-generation consumer fixture |
 | `:ui-builder-export` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | design → screen-model projection |
+| `:ui-builder-export-fixtures` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | unpublished sample builders for tests and previews |
 | `:ui-builder-renderer` | `wasmJs` | `ee.schimke.composeai.uibuilder.renderer` | the sandboxed renderer-only runtime |
 | `:ui-builder-renderer-sdk` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.renderer.sdk` | catalog-facing renderer protocol, inspection model and sandbox host |
 | `:ui-builder-web` | — | — | packages the editor's Wasm output as an immutable archive |
 | `:ui-builder-render-bundle` | — | — | packages the editor's JVM previews as the polyglot render bundle |
+| `:ui-builder-export-fonts` | — | — | packages the variable fonts the export generates text outlines from |
 | `:ui-builder-artwork` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.artwork` | offline artwork bindings |
 | `:ui-builder-reference-jetcaster` | `wasmJs` | `ee.schimke.composeai.uibuilderreference.jetcaster` | reference-fidelity fixture |
 | `:ui-builder-generated-jetcaster` | — | `generated.uibuilder` | generated-fidelity fixture |
@@ -66,31 +68,40 @@ A release goes out in two halves, because the four seams are not the same kind o
 | `…:compose-preview-ui-builder-export` | the design → screen-model projection |
 | `…:compose-preview-ui-builder-codegen-jvm` | opt-in durable build generation |
 | `…:compose-preview-ui-builder-gradle-plugin` | Gradle integration; plugin ID `ee.schimke.compose-ui-builder` |
-| `…:compose-preview-ui-builder-render-bundle` | the packaged preview a design renders through |
 
-`-render-bundle` is on that list even though nobody names it directly: it is an `api` dependency of
-the runtime, so its coordinate appears in the runtime's POM, and a POM naming an artifact nobody
+Nothing on Central may name a coordinate that is not uploaded there: a POM naming an artifact nobody
 uploaded is what made `compose-preview-serve` unresolvable for six consecutive releases.
 
-**GitHub release assets — a Wasm ZIP and the Desktop app.**
+**GitHub release assets — a Wasm ZIP, two payload jars and the Desktop app.**
 `compose-preview-ui-builder-web-<version>.zip` is the Wasm editor, which a host unpacks; nothing
-compiles against it or resolves it transitively. The release also carries
+compiles against it or resolves it transitively.
+`compose-preview-ui-builder-render-bundle-<version>.jar` is the packaged preview a design renders
+through, and `compose-preview-ui-builder-export-fonts-<version>.jar` the variable fonts the export
+generates text outlines from. The runtime and export read both off the classpath, so a host that
+renders or exports just adds the jars beside them; neither is a dependency of anything on Central.
+They moved off Central in October 2026: at ~13 MB and ~6 MB, re-uploaded on nearly every release,
+they were most of the org's monthly Maven Central upload quota. The release also carries
 the native offline Compose Desktop application as a Linux `.deb`, a macOS `.dmg` and a Windows
 `.msi` (unsigned). The IntelliJ plugin now lives and releases independently in
 [compose-preview-ide](https://github.com/yschimke/compose-preview-ide).
 The web bundle stays off Central because a 40 MB frontend distribution published there is permanent
-and serves no one. compose-preview-server reaches it through a group-fenced ivy repository over
-this repository's releases, so it remains an ordinary versioned dependency:
+and serves no one. compose-preview-server reaches it, and the two jars, through a group-fenced ivy repository over
+this repository's releases, so they remain ordinary versioned dependencies:
 
 ```kotlin
 ivy("https://github.com/yschimke/compose-ui-builder/releases/download") {
   patternLayout { artifact("[revision]/[module]-[revision].[ext]") }
-  content { includeModule("ee.schimke.composeai", "compose-preview-ui-builder-web") }
+  content {
+    includeModule("ee.schimke.composeai", "compose-preview-ui-builder-web")
+    includeModule("ee.schimke.composeai", "compose-preview-ui-builder-render-bundle")
+    includeModule("ee.schimke.composeai", "compose-preview-ui-builder-export-fonts")
+  }
   metadataSources { artifact() }
 }
 ```
 
-`:ui-builder-web` therefore does **not** apply `composeai.maven-publishing`, and that absence is
+`:ui-builder-web`, `:ui-builder-render-bundle` and `:ui-builder-export-fonts` therefore do **not**
+apply `composeai.maven-publishing`, and that absence is
 load-bearing: the release set is derived from which modules apply it, so a module that does not
 publish cannot be constrained by a BOM that promises it.
 

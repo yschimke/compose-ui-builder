@@ -1,5 +1,89 @@
 # Changelog
 
+## [3.124.0](https://github.com/yschimke/compose-ui-builder/compare/v3.123.0...v3.124.0) (2026-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **export:** move the retired sample builders to unpublished fixtures ([#997](https://github.com/yschimke/compose-ui-builder/issues/997))
+* **export:** retire the seed builders no new design uses ([#996](https://github.com/yschimke/compose-ui-builder/issues/996))
+
+### Features
+
+* **export:** honour the Wear widget container's hostFrame flag ([#1006](https://github.com/yschimke/compose-ui-builder/issues/1006)) ([272d118](https://github.com/yschimke/compose-ui-builder/commit/272d1184fe74024f2ec051f685e355a4bb22c7bc))
+* opt-in Wear panes preview of a design on approximate watches ([#1016](https://github.com/yschimke/compose-ui-builder/issues/1016)) ([efe0124](https://github.com/yschimke/compose-ui-builder/commit/efe0124afe51fddeea8cfc63b6fb42ce5f9c073a))
+* ship the render bundle and export fonts as GitHub release assets ([#1027](https://github.com/yschimke/compose-ui-builder/issues/1027)) ([59c63f9](https://github.com/yschimke/compose-ui-builder/commit/59c63f912abce0f306029a7f6fee6afc2a9655ce))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.70.7 ([#993](https://github.com/yschimke/compose-ui-builder/issues/993)) ([e0c17d9](https://github.com/yschimke/compose-ui-builder/commit/e0c17d99b29ceb26f138976f6f3404328ab06806))
+* **deps:** update compose-ai-tools to v2.71.0 ([#1009](https://github.com/yschimke/compose-ui-builder/issues/1009)) ([898d1da](https://github.com/yschimke/compose-ui-builder/commit/898d1dabf061dfc4c5245e78972edf967c333d57))
+* **deps:** update compose-ai-tools to v2.72.0 ([#1021](https://github.com/yschimke/compose-ui-builder/issues/1021)) ([b3e251a](https://github.com/yschimke/compose-ui-builder/commit/b3e251a1cf4d6521c3407618465843768072725a))
+* **deps:** update compose-ai-tools to v2.73.0 ([#1026](https://github.com/yschimke/compose-ui-builder/issues/1026)) ([d57403e](https://github.com/yschimke/compose-ui-builder/commit/d57403e05e7fb6646fe789fbec059d7bba51c56f))
+* **deps:** update dependency com.squareup.okhttp3:okhttp to v5.5.1 ([#1001](https://github.com/yschimke/compose-ui-builder/issues/1001)) ([19494aa](https://github.com/yschimke/compose-ui-builder/commit/19494aab46a2f0c076237be307b4ff687e07d095))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.38.0 ([#1005](https://github.com/yschimke/compose-ui-builder/issues/1005)) ([2079514](https://github.com/yschimke/compose-ui-builder/commit/2079514042ca08400c7fd81840dbfbe6bd15614f))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.39.0 ([#1011](https://github.com/yschimke/compose-ui-builder/issues/1011)) ([a907981](https://github.com/yschimke/compose-ui-builder/commit/a9079812789bd99d25dc105bc62ed9156fed23e0))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.21.4 ([#998](https://github.com/yschimke/compose-ui-builder/issues/998)) ([baf898f](https://github.com/yschimke/compose-ui-builder/commit/baf898fb3e9d59396374d789cb0304a1420a739f))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.22.0 ([#1010](https://github.com/yschimke/compose-ui-builder/issues/1010)) ([91705a8](https://github.com/yschimke/compose-ui-builder/commit/91705a851e11f1c922ecf411c7e67864d9203c7d))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.24.0 ([#1012](https://github.com/yschimke/compose-ui-builder/issues/1012)) ([ef6cb31](https://github.com/yschimke/compose-ui-builder/commit/ef6cb31ca2ac6a7b327d550cf5a3fd5d63b1d587))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.24.1 ([#1023](https://github.com/yschimke/compose-ui-builder/issues/1023)) ([c2cdfc9](https://github.com/yschimke/compose-ui-builder/commit/c2cdfc98d7661e489e0cc060dcaae91cc3f23a91))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.17.2 ([#999](https://github.com/yschimke/compose-ui-builder/issues/999)) ([ea853e8](https://github.com/yschimke/compose-ui-builder/commit/ea853e82c38b6172dc374d9d78fc6c040b413881))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.17.3 ([#1003](https://github.com/yschimke/compose-ui-builder/issues/1003)) ([a33d14a](https://github.com/yschimke/compose-ui-builder/commit/a33d14acbb4a31e1d116979e0fa75d10116a2d40))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.17.4 ([#1007](https://github.com/yschimke/compose-ui-builder/issues/1007)) ([a2bebd1](https://github.com/yschimke/compose-ui-builder/commit/a2bebd13e0fc8d8676c643b29c0f7d013d2a10d0))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.17.5 ([#1024](https://github.com/yschimke/compose-ui-builder/issues/1024)) ([5a3ffa3](https://github.com/yschimke/compose-ui-builder/commit/5a3ffa307cefc60340a43cc97b137f6e4329214d))
+
+
+### Code Refactoring
+
+* **export:** move the retired sample builders to unpublished fixtures ([#997](https://github.com/yschimke/compose-ui-builder/issues/997)) ([5d6dd32](https://github.com/yschimke/compose-ui-builder/commit/5d6dd326c45d087ae589d775bf67b6cb65402c6d))
+* **export:** retire the seed builders no new design uses ([#996](https://github.com/yschimke/compose-ui-builder/issues/996)) ([ead667d](https://github.com/yschimke/compose-ui-builder/commit/ead667d76f41fab7766825d186d0ca353f298332))
+
+## [3.123.0](https://github.com/yschimke/compose-ui-builder/compare/v3.122.0...v3.123.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **export:** delete the per-catalog-id new-design seed path ([#991](https://github.com/yschimke/compose-ui-builder/issues/991))
+* **runtime:** remove the executor's deprecated catalogOwnership properties ([#980](https://github.com/yschimke/compose-ui-builder/issues/980))
+
+### Features
+
+* **ui-builder:** seed a host's new design from the catalog's published templates ([#988](https://github.com/yschimke/compose-ui-builder/issues/988)) ([e6c3b8e](https://github.com/yschimke/compose-ui-builder/commit/e6c3b8e2860ea2e3f97c9887b3b7abc74d36f258))
+
+
+### Bug Fixes
+
+* **deps:** update androidx-compose to v1.0.0-alpha22 ([#990](https://github.com/yschimke/compose-ui-builder/issues/990)) ([04d25d2](https://github.com/yschimke/compose-ui-builder/commit/04d25d2d70d17c9207f828234c765d9da923513d))
+* **deps:** update compose-ai-tools ([#973](https://github.com/yschimke/compose-ui-builder/issues/973)) ([e0b60ec](https://github.com/yschimke/compose-ui-builder/commit/e0b60ecb8ed61ee1aea7f3e3be8d323ff4e1e911))
+* **deps:** update compose-ai-tools to v2.68.6 ([#961](https://github.com/yschimke/compose-ui-builder/issues/961)) ([013bef1](https://github.com/yschimke/compose-ui-builder/commit/013bef14764835f9267e30e486320f7f9dde44a3))
+* **deps:** update compose-ai-tools to v2.70.5 ([#979](https://github.com/yschimke/compose-ui-builder/issues/979)) ([8fa87d2](https://github.com/yschimke/compose-ui-builder/commit/8fa87d2e73c12dc24d2ef02d970b413657116f69))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.37.0 ([#981](https://github.com/yschimke/compose-ui-builder/issues/981)) ([c1f21e7](https://github.com/yschimke/compose-ui-builder/commit/c1f21e72f6eb12f659b119c1de8d434e12907cc3))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.8 ([#964](https://github.com/yschimke/compose-ui-builder/issues/964)) ([9c07167](https://github.com/yschimke/compose-ui-builder/commit/9c07167d2571a885dcdb225b85ba769bd327b091))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.21.3 ([#982](https://github.com/yschimke/compose-ui-builder/issues/982)) ([ab9e875](https://github.com/yschimke/compose-ui-builder/commit/ab9e87594caf664920695e7442b2c7fb44b9d53f))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.16.1 ([#966](https://github.com/yschimke/compose-ui-builder/issues/966)) ([261aa7e](https://github.com/yschimke/compose-ui-builder/commit/261aa7e75eb4bc1499e5ff193cb621540bc47e8b))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.17.0 ([#984](https://github.com/yschimke/compose-ui-builder/issues/984)) ([db66c53](https://github.com/yschimke/compose-ui-builder/commit/db66c537aa437822e7b30e74fc19d22e7902644e))
+* **deps:** update dependency org.jetbrains.kotlinx:kotlinx-serialization-json to v1.12.0 ([#985](https://github.com/yschimke/compose-ui-builder/issues/985)) ([0803eb3](https://github.com/yschimke/compose-ui-builder/commit/0803eb37097607dfe9d76b72d793d2d4679f939f))
+
+
+### Code Refactoring
+
+* **export:** delete the per-catalog-id new-design seed path ([#991](https://github.com/yschimke/compose-ui-builder/issues/991)) ([d8faef0](https://github.com/yschimke/compose-ui-builder/commit/d8faef0fe6ec7e884d34472b8b4693c56a44f16b))
+* **runtime:** remove the executor's deprecated catalogOwnership properties ([#980](https://github.com/yschimke/compose-ui-builder/issues/980)) ([7be1aea](https://github.com/yschimke/compose-ui-builder/commit/7be1aea2f18c811334132e48a4269a0af50921a5))
+
+## [3.122.0](https://github.com/yschimke/compose-ui-builder/compare/v3.121.0...v3.122.0) (2026-10-18)
+
+
+### Features
+
+* **editor:** organize modifier context menus adaptively ([#954](https://github.com/yschimke/compose-ui-builder/issues/954)) ([6110322](https://github.com/yschimke/compose-ui-builder/commit/61103220eebac589bb5cdc00fc5404fa6439ad5a))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.18.7 ([#952](https://github.com/yschimke/compose-ui-builder/issues/952)) ([9433bed](https://github.com/yschimke/compose-ui-builder/commit/9433bed32b080d10ca1acb59ec0b2b9c12e08d59))
+* **editor:** preserve cold offline creation on root hosts ([#956](https://github.com/yschimke/compose-ui-builder/issues/956)) ([52f65dd](https://github.com/yschimke/compose-ui-builder/commit/52f65ddf17404ae20b95855c30231aa318972ea2))
+
 ## [3.121.0](https://github.com/yschimke/compose-ui-builder/compare/v3.120.0...v3.121.0) (2026-10-18)
 
 

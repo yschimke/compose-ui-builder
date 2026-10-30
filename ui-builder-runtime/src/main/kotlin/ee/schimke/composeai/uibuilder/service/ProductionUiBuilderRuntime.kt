@@ -4,7 +4,6 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import ee.schimke.composeai.uibuilder.export.CatalogListing
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -105,10 +104,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val published = configuration.published.filterKeys(catalogSystemIds::contains)
   private val nativeRuntimeIds = configuration.nativeRuntimeIds
 
-  /** Every served catalog must come from its published definition. */
-  @Deprecated("All catalogs are catalog-owned; this compatibility property always returns ALL")
-  public val catalogOwnership: CatalogOwnership = CatalogOwnership.ALL
-
   /**
    * Served catalogs left out of what people are offered (`CatalogListing`): each is marked
    * `statusSemantics.unlisted`, so the chooser and New design list skip it, while it still resolves
@@ -174,10 +169,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     public var packs: List<UiBuilderComponentPackSource> = emptyList()
     public var published: Map<String, CatalogCapabilityV1> = emptyMap()
     public var nativeRuntimeIds: Map<String, String> = emptyMap()
-
-    /** Retained for compiled hosts; every catalog now requires its published definition. */
-    @Deprecated("All catalogs are catalog-owned; setting this property has no effect")
-    public var catalogOwnership: CatalogOwnership = CatalogOwnership.ALL
 
     /**
      * See [CurrentM3UiBuilderCatalogExecutor.unlistedCatalogIds]. Empty by default; a host flag's

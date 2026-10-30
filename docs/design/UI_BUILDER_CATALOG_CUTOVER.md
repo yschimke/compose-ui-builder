@@ -3,8 +3,8 @@
 **Runtime cutover: published definitions are mandatory.** The runtime no longer synthesises an
 M3 fallback or guesses the platform of a publication. Every enabled catalog must be supplied through
 `Builder.published` and must declare `statusSemantics.platform`. Missing definitions are refused with
-the catalog id. `Builder.catalogOwnership` and the executor's ownership property remain deprecated
-binary compatibility shims; changing them cannot restore a fallback. Frozen
+the catalog id. The executor no longer takes an ownership setting: `Builder.catalogOwnership` and
+the executor's ownership property, deprecated no-ops since the cutover, have been removed. Frozen
 `LegacySynthesisedReferences` remain so designs made against the retired definitions still reopen,
 including pins stamped with a host's configured renderer runtime.
 
@@ -13,6 +13,22 @@ seams. Tests that validate the historical Jetcaster document now pass its benchm
 explicitly. This change does not delete the separate Kotlin seed factories, browser chooser
 branches, JVM canvas adapters, or captured publication tests described below. The remaining steps
 are tracked in [server #1530](https://github.com/yschimke/compose-preview-server/issues/1530).
+
+**Every new design is seeded from what its catalog publishes.** The server, the browser's local
+creation, `OfflineUiBuilderSession` and an embedding host (`HostBridgeApp`, whose `seed` carries the
+catalog's `CatalogTemplateDocumentsV1`) all seed through `UiBuilderNewDesignSeed.document(designId,
+templateId, catalogPin, published)`; a catalog that publishes nothing gets the generic blank. The
+per-catalog-id seed path (`templateIds(id)`, the fixture-reading `document` overload and the
+ownership overloads) is deleted. The one seed no catalog publishes, the Jetcaster benchmark, is
+`fixtureDocument`. Of the Kotlin document builders the deleted path called, the unused ones are
+gone (`helloUiBuilderDocument`, `blankWearScreenUiBuilderDocument`) and the single-test ones moved
+into their tests (`a2uiUiBuilderDocument`, `AdaptiveScreenTemplates`), and the rest
+(`wearScreenUiBuilderDocument`, `wearWidgetUiBuilderDocument`, `WearWidgetSample`,
+`RemoteClockTemplates` with its `ClockCanvas` DSL, `LauncherWidgetTemplates`,
+`AdaptiveWearWidget.newDocument`) moved to the unpublished `:ui-builder-export-fixtures` module,
+which this repository's tests and `:ui-builder`'s `@Preview`s depend on. `:ui-builder-export` no
+longer ships any of them, nor the seed-only `wearScreenEnvironment` and template-id constants;
+compose-preview-server's tests that built documents with them carry their own copies.
 
 The sections below record the staged rollout and its historical default-off flag.
 
@@ -54,10 +70,11 @@ this repository still decides by catalog id:
 
 Where each reader takes the flag:
 
-- `CurrentM3UiBuilderCatalogExecutor.Builder.catalogOwnership` (`:ui-builder-runtime`).
+- `CurrentM3UiBuilderCatalogExecutor.Builder.catalogOwnership` (`:ui-builder-runtime`; removed
+  once every catalog became catalog-owned).
 - `UiBuilderNewDesignSeed.templateIds(id, ownership, published)` and
-  `UiBuilderNewDesignSeed.document(…, ownership, published)` (`:ui-builder-export`). The old
-  overloads are untouched, so the server's compiled calls keep their meaning.
+  `UiBuilderNewDesignSeed.document(…, ownership, published)` (`:ui-builder-export`; removed with
+  the per-id seed path once every host seeded from published templates).
 - `CatalogExportRouting.route(catalog, ownership)` (`:ui-builder-export`).
 - The browser chooser reads the shell's `<meta name="ui-builder-catalog-ownership">` (or a
   `?catalogOwnership=` override; `Main.kt`'s `catalogOwnership()`); the host that serves the page
@@ -70,7 +87,8 @@ The server half is one PR to compose-preview-server, all behind the same value a
 1. Parse `--ui-builder-catalog-ownership` / `SERVE_UI_BUILDER_CATALOG_OWNERSHIP`, default `none`. Refuse
    an id that is not also in `--ui-builder-published-catalogs`, for the same typo reason that flag
    refuses ids it does not serve.
-2. Hand it to the executor's `Builder.catalogOwnership`.
+2. Hand it to the executor's `Builder.catalogOwnership` (since removed: the executor is always
+   catalog-owned).
 3. Have `ServeCatalogStore` fetch the documents a published `templates` list names, beside
    `ui-builder.json`, and read them with `CatalogSeedTemplates.read`. Pass them, with the flag, to
    the new `UiBuilderNewDesignSeed` overloads in `ServeUiBuilderCreate` and `ServeWeb`, and validate
@@ -256,12 +274,12 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | ~~`WearM3Catalog.kt`~~ (generator deleted; Wear foundation menu retained) | 1,684 | wear-m3-catalog's `ui-builder.policy.json` + record | — a host serving `wear-m3` must publish it; legacy pins remain in `LegacySynthesisedReferences` |
 | ~~`RemoteM3Catalog.kt`~~ (generator deleted; shared Remote Compose foundation retained) | 802 | remote-m3-catalog's `remote-catalog/ui-builder.policy.json` | — a host serving `remote-m3` now has to publish it; the legacy pin remains in `LegacySynthesisedReferences` |
 | ~~`A2uiCatalog.kt`~~ (deleted, with its golden) | 897 | a2ui-catalog's `ui-builder.policy.json` | — a host serving `a2ui-catalog` now has to publish it; its legacy pin resolves through `LegacySynthesisedReferences` |
-| `UiBuilderTemplates.kt`'s Wear screen, Wear list and widget builders, `WearWidgetSample`, `AdaptiveWearWidget.newDocument` | ~800 | `ui-builder/designs/*.json` in wear-m3-catalog and remote-m3-catalog (round-trip tested there) | the matching catalog owned |
-| `AdaptiveScreenTemplates` | 491 | m3-catalog's `ui-builder/designs/*.json` | `m3-catalog` owned, after its `adaptive-navigation` ledger row |
+| ~~`UiBuilderTemplates.kt`'s Wear screen, Wear list and widget builders, `WearWidgetSample`, `AdaptiveWearWidget.newDocument`~~ (moved to `:ui-builder-export-fixtures`) | ~800 | `ui-builder/designs/*.json` in wear-m3-catalog and remote-m3-catalog (round-trip tested there) | the matching catalog owned |
+| ~~`AdaptiveScreenTemplates`~~ (moved into `:ui-builder`'s tests) | 491 | m3-catalog's `ui-builder/designs/*.json` | `m3-catalog` owned, after its `adaptive-navigation` ledger row |
 | `UiBuilderNewDesignSeed`'s `when`s, `newDesignCatalog`'s table, `NEW_DESIGN_CATALOG_ORDER`, `NewDesignTypes.kt`'s built-in card words and default row (the catalog's `newDesign.description` and `.primary` replace them) | ~250 | the catalog-owned readers above | all catalogs owned |
 | `synthesisers`, `LEGACY_*` fallbacks in `ProductionUiBuilderRuntime` | — | — | all catalogs owned; `LegacySynthesisedReferences` **stays** (it is the only record of those pins) |
 | `docs/design/fixtures/ui-builder/{wear-m3,remote-m3}-capabilities-v1.json` snapshots | — | catalog-owned published policies and records | Retained as historical parity baselines and MCP App offline assets; the live runtime reads published catalogs. The strict equivalence gate still compares owned policy against these baselines. |
-| `LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
+| ~~`LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches~~ (branches deleted; the builder moved to `:ui-builder-export-fixtures`) | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
 | `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
 | `m3-catalog-capabilities-v1.json` | — | m3-catalog's published `ui-builder.json` | the offline hosts no longer read it; remaining readers are the host-bridge web archive (with the wear/remote goldens above) and `DesktopExportHostTest` |

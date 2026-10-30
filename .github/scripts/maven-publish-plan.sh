@@ -113,8 +113,8 @@ for p in paths:
                  for m in re.findall(r'project\("(:[^"]+)"\)', code_only(text))]
 deps = {a: [d for d in ds if d in modules] for a, ds in deps.items()}
 
-# A module's bytes come from more than its own directory. `:ui-builder-render-bundle` packs the
-# output of `:ui-builder`, and `:ui-builder-runtime` / `:ui-builder-export` read the capability and
+# A module's bytes come from more than its own directory. A module can pack an unpublished
+# project's output, and `:ui-builder-runtime` / `:ui-builder-export` read the capability and
 # record fixtures under `docs/`. Watching only `<module>/` would skip a release whose artifact
 # changed. So each module also watches (a) the directory of every project it names that is NOT itself
 # published (transitively, with that project's own project dependencies), and (b) every

@@ -2,7 +2,7 @@
 // consumer builds it with, so an API the emitter assumes (a constructor, an overload, an import)
 // is checked by kotlinc rather than by reading sources. See README.md.
 plugins {
-  id("com.android.library") version "9.4.1"
+  id("com.android.library") version "9.5.0"
   id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
 }
 

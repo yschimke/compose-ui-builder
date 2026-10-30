@@ -1653,6 +1653,42 @@ internal fun VariantPane(
     return
   }
   val host = pane.wearHostFrame
+  val (frameWidthDp, frameHeightDp) = pane.drawnFrameDp
+  // The variant's own, not the design's: a preset carries a density as well as a size, and a Pixel
+  // Fold drawn at the watch's 2.0 would be the right box around the wrong measurements.
+  val densityRatio = pane.document.renderDensity(hostDensity).density / hostDensity.density
+  val frame: @Composable () -> Unit = {
+    if (host != null) {
+      Box(
+        Modifier.size((frameWidthDp * scale).dp, (frameHeightDp * scale).dp)
+          .wearHostFrame(host, scale)
+      ) {
+        ConstrainedFramePane(
+          document = pane.document,
+          widthDp = host.contentWidthDp.toFloat(),
+          heightDp = host.contentHeightDp.toFloat(),
+          scale = scale,
+          densityRatio = densityRatio,
+          renderSessionId = pane.id,
+          wearWidgetHostShape = pane.wearWidgetHostShape,
+          deviceRenderer = deviceRenderer,
+          positionVersion = positionVersion,
+        )
+      }
+    } else {
+      ConstrainedFramePane(
+        document = pane.document,
+        widthDp = frameWidthDp,
+        heightDp = frameHeightDp,
+        scale = scale,
+        densityRatio = densityRatio,
+        renderSessionId = pane.id,
+        wearWidgetHostShape = pane.wearWidgetHostShape,
+        deviceRenderer = deviceRenderer,
+        positionVersion = positionVersion,
+      )
+    }
+  }
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Text(
       pane.label,
@@ -1662,38 +1698,40 @@ internal fun VariantPane(
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
     )
-    if (host != null) {
-      Box(
-        Modifier.size((pane.widthDp * scale).dp, (pane.heightDp * scale).dp)
-          .wearHostFrame(host, scale)
-      ) {
-        ConstrainedFramePane(
-          document = pane.document,
-          widthDp = host.contentWidthDp.toFloat(),
-          heightDp = host.contentHeightDp.toFloat(),
-          scale = scale,
-          densityRatio = pane.document.renderDensity(hostDensity).density / hostDensity.density,
-          renderSessionId = pane.id,
-          wearWidgetHostShape = pane.wearWidgetHostShape,
-          deviceRenderer = deviceRenderer,
-          positionVersion = positionVersion,
-        )
-      }
-      return@Column
+    val screen = pane.watchScreen
+    if (screen != null) {
+      WatchScreenFrame(screen, pane.widthDp, pane.heightDp, scale, pane.label) { frame() }
+    } else frame()
+  }
+}
+
+/**
+ * An approximate watch: a black [screen] [widthDp]×[heightDp] (scaled by [scale]) with [content],
+ * the widget container, centred on it.
+ */
+@Composable
+internal fun WatchScreenFrame(
+  screen: WatchScreen,
+  widthDp: Float,
+  heightDp: Float,
+  scale: Float,
+  label: String,
+  content: @Composable () -> Unit,
+) {
+  val shape =
+    when (screen.shape) {
+      WatchScreenShape.Round -> CircleShape
+      WatchScreenShape.Square ->
+        RoundedCornerShape((minOf(widthDp, heightDp) * SQUARE_WATCH_CORNER_FRACTION * scale).dp)
     }
-    ConstrainedFramePane(
-      document = pane.document,
-      widthDp = pane.widthDp,
-      heightDp = pane.heightDp,
-      scale = scale,
-      // The variant's own, not the design's: a preset carries a density as well as a size, and a
-      // Pixel Fold drawn at the watch's 2.0 would be the right box around the wrong measurements.
-      densityRatio = pane.document.renderDensity(hostDensity).density / hostDensity.density,
-      renderSessionId = pane.id,
-      wearWidgetHostShape = pane.wearWidgetHostShape,
-      deviceRenderer = deviceRenderer,
-      positionVersion = positionVersion,
-    )
+  Box(
+    Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)
+      .clip(shape)
+      .background(Color.Black)
+      .semantics { contentDescription = "Watch screen · $label" },
+    contentAlignment = Alignment.Center,
+  ) {
+    Box(Modifier.clip(RoundedCornerShape((screen.frameCornerRadiusDp * scale).dp))) { content() }
   }
 }
 

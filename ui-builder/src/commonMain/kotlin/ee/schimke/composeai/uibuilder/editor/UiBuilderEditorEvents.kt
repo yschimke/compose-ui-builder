@@ -148,6 +148,9 @@ sealed interface UiBuilderEditorEvent {
   /** Switches one unstored variant axis of the strip on or off. */
   data class ToggleVariantAxis(val axis: EditorVariantAxis) : UiBuilderEditorEvent
 
+  /** Switches the approximate Wear watch panes on or off; see [wearScreenPanes]. */
+  data object ToggleWearScreenPanes : UiBuilderEditorEvent
+
   data class MoveNode(
     val nodeId: String,
     val targetNodeId: String,

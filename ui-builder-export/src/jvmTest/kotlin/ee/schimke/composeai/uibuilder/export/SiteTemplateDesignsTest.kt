@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import java.io.File
 import kotlin.test.Test
@@ -29,21 +30,14 @@ class SiteTemplateDesignsTest {
   /** File name to (catalog, template, title). */
   private val designs =
     mapOf(
-      "wear-list" to
-        Triple("wear-m3", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE, "Wear list screen"),
+      "wear-list" to Triple("wear-m3", "wear-list", "Wear list screen"),
       "weather-widget" to
         Triple("remote-m3", WearWidgetSample.Weather.templateId, WearWidgetSample.Weather.label),
     )
 
   @Test
-  fun `the site's template designs are what the templates seed`() {
+  fun `the site's template designs are what the catalogs' published templates seed`() {
     val root = repositoryRoot()
-    val fixture =
-      Json.parseToJsonElement(
-          File(root, "docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
-            .readText()
-        )
-        .jsonObject
     val update = System.getenv("UPDATE_SITE_DESIGNS") != null
     val stale = mutableListOf<String>()
     for ((name, design) in designs) {
@@ -55,14 +49,31 @@ class SiteTemplateDesignsTest {
           .jsonObject
           .getValue("benchmark")
           .jsonObject
+      // The catalog's captured published document, as `/templates` serves it.
+      val captured =
+        File(root, "ui-builder-runtime/src/test/resources/catalog-cutover/$catalog/designs")
+      val published =
+        when (
+          val read =
+            CatalogSeedTemplates.read(catalog, listOf("ui-builder/designs/$template.json")) {
+              File(captured, it.substringAfterLast('/')).takeIf(File::isFile)?.readText()
+            }
+        ) {
+          is CatalogSeedTemplates.Result.Read -> read.templates
+          is CatalogSeedTemplates.Result.Unusable -> error(read.reason)
+        }
       val document =
         UiBuilderNewDesignSeed.document(
             designId = name,
-            catalogSystemId = catalog,
             templateId = template,
-            catalogRevision = pin.getValue("catalogRevision").jsonPrimitive.content,
-            nativeRuntimeId = pin.getValue("nativeRuntimeId").jsonPrimitive.content,
-            fixture = fixture,
+            catalogPin =
+              CatalogReferenceV1(
+                catalog,
+                pin.getValue("catalogRevision").jsonPrimitive.content,
+                "candidate",
+                pin.getValue("nativeRuntimeId").jsonPrimitive.content,
+              ),
+            published = published,
           )
           .copy(title = title)
       val text =

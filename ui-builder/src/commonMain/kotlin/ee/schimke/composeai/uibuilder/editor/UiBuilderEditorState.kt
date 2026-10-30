@@ -221,6 +221,7 @@ class UiBuilderEditorReducer(
       // the editor, so anything not carried is lost on the next keystroke.
       addBeside = state.addBeside,
       variantAxes = state.variantAxes,
+      wearScreenPanes = state.wearScreenPanes,
       canvasView = state.canvasView,
       // Tool state like the axes above, and only for the same design: a node id in another design
       // is a different node that happens to share a name.
@@ -371,6 +372,8 @@ class UiBuilderEditorReducer(
             if (event.axis in state.variantAxes) state.variantAxes - event.axis
             else state.variantAxes + event.axis
         )
+      UiBuilderEditorEvent.ToggleWearScreenPanes ->
+        state.copy(wearScreenPanes = !state.wearScreenPanes)
       is UiBuilderEditorEvent.MoveNode -> move(state, event)
       is UiBuilderEditorEvent.MoveNodeInto -> moveInto(state, event)
       is UiBuilderEditorEvent.CommitProperty ->

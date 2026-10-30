@@ -2,10 +2,12 @@ import java.io.File
 import java.util.Properties
 import java.util.zip.ZipFile
 
-plugins {
-  `java-library`
-  id("composeai.maven-publishing")
-}
+// Not `composeai.maven-publishing`, deliberately, like `:ui-builder-web`: this jar ships as a
+// GitHub release asset (`compose-preview-ui-builder-render-bundle-<v>.jar`), not a Central
+// coordinate. It is ~13 MB and changes on almost every release, which made it a third of the org's
+// monthly Maven Central upload quota on its own. Leaving the plugin off also keeps it out of the
+// derived BOM.
+plugins { `java-library` }
 
 /**
  * The packaged UI-builder render bundle, as an artifact of its own.
@@ -13,13 +15,28 @@ plugins {
  * Not a resource in `:ui-builder-runtime`: the bundle is a frontend build output (a polyglot PNG
  * whose ZIP carries `:ui-builder`'s compiled JVM previews), and embedding it would make the
  * published server jar depend on `:ui-builder`'s build and pin the frontend's JVM target. This
- * module sits on the frontend side, like `:ui-builder-web`, reached through a coordinate.
+ * module sits on the frontend side, like `:ui-builder-web`, and a host puts the release asset on
+ * its classpath beside the runtime (compose-preview-server resolves it through the same ivy
+ * repository as the web archive).
  *
  * A jar rather than a distribution archive because the consumer,
  * `PackagedUiBuilderRenderBundle.copyTo`, uses `getResourceAsStream`, which does not care which jar
  * answers. No source set, so there is no class-file floor; the target-JVM attribute is pinned to
  * the server floor below.
  */
+group = "ee.schimke.composeai"
+
+// The same derivation `:ui-builder-web` uses: `PLUGIN_VERSION` in CI, a patch-bumped SNAPSHOT off
+// `.release-please-manifest.json` locally. It names the release asset, which compose-preview-server
+// requests at the runtime's version, so the two have to agree.
+version =
+  providers.environmentVariable("PLUGIN_VERSION").orNull
+    ?: run {
+      val manifest = rootDir.resolve(".release-please-manifest.json").readText()
+      val current = Regex(""""\.":\s*"([^"]+)"""").find(manifest)!!.groupValues[1]
+      val (major, minor, patch) = current.split(".").map { it.toInt() }
+      "$major.$minor.${patch + 1}-SNAPSHOT"
+    }
 
 base { archivesName.set("compose-preview-" + project.name) }
 
@@ -89,7 +106,7 @@ tasks.processResources {
  */
 val verifyRenderBundlePackaged =
   tasks.register("verifyRenderBundlePackaged") {
-    description = "Fail the build if the published jar does not carry the render bundle."
+    description = "Fail the build if the release-asset jar does not carry the render bundle."
     group = "verification"
     val jarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
     // Locals for the same reason the copy above takes them: a `doLast` action is cached, and
@@ -177,11 +194,3 @@ val verifyRenderBundlePackaged =
   }
 
 tasks.named("check") { dependsOn(verifyRenderBundlePackaged) }
-
-composeAiMavenPublishing {
-  coordinates(
-    displayName = "Compose UI Builder — Render Bundle",
-    description =
-      "The packaged Compose preview the UI-builder runtime renders a saved design through.",
-  )
-}

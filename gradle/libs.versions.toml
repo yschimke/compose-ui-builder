@@ -146,11 +146,11 @@ maven-publish = "0.37.0"
 # 2.54.0 adds the typed adapters' Long, Double, parsed-text, nullable, union (sealed), set and
 # enumValue codecs and payload-callback events (compose-ai-tools#5914, #5919), which the structured
 # editor, the export gate and the renderer SDK's `callback()` overloads read. Contracts 3.30.0.
-composeai-tools = "2.68.2"
+composeai-tools = "2.75.0"
 # The Gradle plugin on a pin of its own. compose-ai-tools publishes only the modules a release
 # changed, plus the BOM, so the plugin can lag the BOM: 2.62.0 published the BOM and left the
 # plugin at 2.61.2. One shared pin then asks for a plugin version that does not exist.
-composeai-tools-plugin = "2.68.2"
+composeai-tools-plugin = "2.75.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -219,7 +219,7 @@ composeai-tools-plugin = "2.68.2"
 # BOMs (compose-preview-daemon#211).
 # 3.15.0 is what compose-ai-tools 2.38.0 was built against; the two lines move together.
 # 3.15.1 is built on rc-players 2.4.0 and contracts 3.24.0 (compose-preview-daemon#232, #234).
-composeai-preview-daemon = "3.18.7"
+composeai-preview-daemon = "3.27.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
@@ -253,25 +253,25 @@ composeai-preview-daemon = "3.18.7"
 # `UiBuilderCode.locals`/`scopes`, which the template-driven export reads; compose-ai-tools 2.47.0 is
 # built against it.
 # 3.36.0 shares the versioned published template-document envelope (contracts #191).
-composeai-contracts = "3.36.0"
+composeai-contracts = "3.39.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 # 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
 # of a `time.*` RemoteCanvas needs once time runs. 2.4.0 plays shared elements and a component's own
 # enter/exit across a StateLayout switch (rc-players#604, rc-players#606).
-rc-players = "2.15.0"
+rc-players = "2.21.0"
 kotlinx-coroutines = "1.11.0"
-kotlinx-serialization = "1.11.0"
-ktor = "3.6.0"
+kotlinx-serialization = "1.12.0"
+ktor = "3.6.1"
 # The Model Context Protocol Kotlin SDK, behind `:mcp`. Same version compose-ai-tools' `:mcp` was
 # on when the module moved here (compose-ai-tools#5176) — a move is not the moment to also change
 # the protocol implementation.
-mcp-kotlin-sdk = "0.15.0"
+mcp-kotlin-sdk = "0.16.0"
 # JUnit 4 + Truth, used only by `:mcp`'s tests, which came with the module. Converting ~1.5k lines
 # of assertions to `kotlin.test` is a separate change from moving them.
 junit = "4.13.2"
 truth = "1.4.5"
-okhttp = "5.5.0"
+okhttp = "5.5.1"
 okio = "3.18.2"
 classgraph = "4.8.199"
 jmdns = "3.6.4"

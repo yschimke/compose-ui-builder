@@ -26,7 +26,6 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
 import ee.schimke.composeai.uibuilder.editor.fileDesigns
 import ee.schimke.composeai.uibuilder.export.LovelaceConfigExporter
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlinx.serialization.json.Json
@@ -194,15 +193,17 @@ internal data class HostOpenMessage(
 )
 
 /**
- * A new design, from the same templates as the web host's New design form and the IntelliJ plugin's
- * scratch editors ([UiBuilderNewDesignSeed]). [fixture] is this archive's
- * `jetcaster-discover-operations-v1.json`, which every template reads its environment from.
+ * A new design ([hostSeedDocument]). [templates] is the catalog's published template set (the
+ * `CatalogTemplateDocumentsV1` its `/templates` route serves), which [templateId] names one of.
+ * [fixture] is this archive's `jetcaster-discover-operations-v1.json`, which only the Jetcaster
+ * benchmark seed reads, since no catalog publishes it.
  */
 @Serializable
 internal data class HostDesignSeed(
   val designId: String,
   val templateId: String,
-  val fixture: String,
+  val fixture: String = "",
+  val templates: String = "",
 )
 
 internal class HostOpenedDesign(
@@ -291,18 +292,7 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
       requireNotNull(fileContext).document
     } else {
       requireNotNull(seed) { "the design file is empty and the host sent no seed" }
-      val systemId = catalog.benchmark.catalogSystemId
-      require(seed.templateId in UiBuilderNewDesignSeed.templateIds(systemId)) {
-        "catalog '$systemId' has no template '${seed.templateId}'"
-      }
-      UiBuilderNewDesignSeed.document(
-        designId = seed.designId,
-        catalogSystemId = systemId,
-        templateId = seed.templateId,
-        catalogRevision = catalog.benchmark.catalogRevision,
-        nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-        fixture = Json.parseToJsonElement(seed.fixture).jsonObject,
-      )
+      hostSeedDocument(catalog, seed.designId, seed.templateId, seed.fixture, seed.templates)
     }
   // Never a design against another catalog's components — see [catalogPinMismatch].
   catalogPinMismatch(document, catalog)?.let { throw IllegalArgumentException(it) }

@@ -2,17 +2,14 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 
 /**
  * The Issues panel on a `wear-m3` design, judged by the generator that actually writes it
@@ -24,14 +21,12 @@ class WearEditorProblemsTest {
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val seed =
-    UiBuilderNewDesignSeed.document(
-      designId = "wear-problems",
-      catalogSystemId = "wear-m3",
+    publishedTestSeed(
+      systemId = "wear-m3",
       templateId = "wear-screen",
+      designId = "wear-problems",
       catalogRevision = "wear-screen-scaffold-v1",
       nativeRuntimeId = "candidate",
-      fixture =
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
     )
 
   /** The scaffold over a list over one button: the shape the New design chooser starts from. */

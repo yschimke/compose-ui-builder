@@ -1,7 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.ComponentRecordFile
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
 import ee.schimke.composeai.uibuilder.export.callableAliases
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -161,16 +160,11 @@ internal object CatalogCutoverFixtures {
     }
 
   /** An executor serving [ids] from their captured published files. */
-  fun executor(
-    ids: Collection<String>,
-    ownership: CatalogOwnership,
-  ): CurrentM3UiBuilderCatalogExecutor = executor(ids.associateWith(::catalog), ownership)
+  fun executor(ids: Collection<String>): CurrentM3UiBuilderCatalogExecutor =
+    executor(ids.associateWith(::catalog))
 
   /** An executor serving [published], as a deployment hands it composed catalogs. */
-  fun executor(
-    published: Map<String, CatalogCapabilityV1>,
-    ownership: CatalogOwnership,
-  ): CurrentM3UiBuilderCatalogExecutor =
+  fun executor(published: Map<String, CatalogCapabilityV1>): CurrentM3UiBuilderCatalogExecutor =
     CurrentM3UiBuilderCatalogExecutor.Builder()
       .also {
         it.catalogSystemIds = published.keys
@@ -179,7 +173,6 @@ internal object CatalogCutoverFixtures {
           published.keys
             .mapNotNull { id -> rendererRuntimeId(id)?.let { runtime -> id to runtime } }
             .toMap()
-        it.catalogOwnership = ownership
       }
       .build()
 }

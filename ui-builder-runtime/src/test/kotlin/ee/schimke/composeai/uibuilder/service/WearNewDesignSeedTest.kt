@@ -39,13 +39,12 @@ class WearNewDesignSeedTest {
       .jsonObject
 
   private fun seed(templateId: String) =
-    UiBuilderNewDesignSeed.document(
-        designId = "wear-seed",
-        catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+    publishedTestSeed(
+        systemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         templateId = templateId,
+        designId = "wear-seed",
         catalogRevision = wear.benchmark.catalogRevision,
         nativeRuntimeId = wear.benchmark.nativeRuntimeId,
-        fixture = fixture,
       )
       .toDesignDocumentV1()
 
@@ -56,7 +55,7 @@ class WearNewDesignSeedTest {
 
   @Test
   fun `the wear list validates`() {
-    assertNull(executor.validate(seed(UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE), wear))
+    assertNull(executor.validate(seed("wear-list"), wear))
   }
 
   @Test
@@ -71,7 +70,7 @@ class WearNewDesignSeedTest {
     for (template in
       listOf(
         UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
-        UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+        "wear-list",
       )) {
       val document = seed(template).copy(id = "wear-$template")
       val response = runSuspend {

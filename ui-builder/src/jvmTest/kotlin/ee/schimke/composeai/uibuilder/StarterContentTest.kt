@@ -13,7 +13,6 @@ import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.VariableFontText
@@ -247,14 +246,12 @@ class StarterContentTest {
     val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
     val validator = CapabilityValidator(a2uiCatalog)
     val seed =
-      UiBuilderNewDesignSeed.document(
+      publishedTestSeed(
+        systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+        templateId = "a2ui-column",
         designId = "a2ui-inserts",
-        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
-        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
         catalogRevision = "test",
         nativeRuntimeId = "test",
-        fixture =
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
     a2uiCatalog.components.forEach { component ->
       val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
@@ -289,14 +286,12 @@ class StarterContentTest {
   fun `an A2UI slider's range, value and weight are editable numbers`() {
     val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
     val seed =
-      UiBuilderNewDesignSeed.document(
+      publishedTestSeed(
+        systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+        templateId = "a2ui-column",
         designId = "a2ui-slider",
-        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
-        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
         catalogRevision = "test",
         nativeRuntimeId = "test",
-        fixture =
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
     val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
     val inserted =

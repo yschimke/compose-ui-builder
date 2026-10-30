@@ -1,5 +1,5 @@
 plugins {
-  id("com.android.library") version "9.4.1"
+  id("com.android.library") version "9.5.0"
   id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
 }
 
@@ -16,10 +16,10 @@ kotlin {
 }
 
 dependencies {
-  implementation("androidx.compose.remote:remote-creation-compose:1.0.0-alpha21")
-  testImplementation("androidx.compose.remote:remote-player-view:1.0.0-alpha21")
-  testImplementation("androidx.compose.remote:remote-core:1.0.0-alpha21")
-  testImplementation("androidx.compose.remote:remote-player-core:1.0.0-alpha21")
+  implementation("androidx.compose.remote:remote-creation-compose:1.0.0-alpha22")
+  testImplementation("androidx.compose.remote:remote-player-view:1.0.0-alpha22")
+  testImplementation("androidx.compose.remote:remote-core:1.0.0-alpha22")
+  testImplementation("androidx.compose.remote:remote-player-core:1.0.0-alpha22")
   testImplementation("androidx.test:core:1.7.0")
   testImplementation("org.robolectric:robolectric:4.17")
   testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")

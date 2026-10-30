@@ -7,17 +7,14 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.editor.exportDesignTokens
 import ee.schimke.composeai.uibuilder.editor.importDesignTokens
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 
 /**
  * Design tokens out as W3C DTCG and in from DTCG or a Material Theme Builder export: an export
@@ -29,14 +26,12 @@ class DesignTokenInterchangeTest {
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val screen =
-    UiBuilderNewDesignSeed.document(
-        designId = "wear-token-exchange",
-        catalogSystemId = "wear-m3",
+    publishedTestSeed(
+        systemId = "wear-m3",
         templateId = "wear-screen",
+        designId = "wear-token-exchange",
         catalogRevision = "wear-screen-scaffold-v1",
         nativeRuntimeId = "candidate",
-        fixture =
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .copy(
         roots = listOf("screen"),

@@ -4,7 +4,6 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorClipboard
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,8 +11,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 
 /**
  * A remote-m3 design takes nothing from another catalog, whether via a clipboard that outlived its
@@ -27,14 +24,12 @@ class CrossCatalogPasteTest {
   private val m3 = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(remote)
   private val widget =
-    UiBuilderNewDesignSeed.document(
-      designId = "widget",
-      catalogSystemId = "remote-m3",
+    publishedTestSeed(
+      systemId = "remote-m3",
       templateId = "wear-widget-small",
+      designId = "widget",
       catalogRevision = "test",
       nativeRuntimeId = "test",
-      fixture =
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
     )
 
   /** A Column (remote-m3 has one) holding a Button (it does not), as copied out of an m3 screen. */

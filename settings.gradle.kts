@@ -4,8 +4,17 @@ pluginManagement {
   includeBuild("build-logic")
 
   repositories {
+    // Google Maven first, scoped to its own groups, so AGP and androidx never reach the plugin
+    // portal or Central: under load those answer a miss with HTTP 429, which fails the build,
+    // instead of the 404 that would have moved on to Google.
+    google {
+      mavenContent {
+        includeGroupAndSubgroups("androidx")
+        includeGroupAndSubgroups("com.android")
+        includeGroupAndSubgroups("com.google")
+      }
+    }
     gradlePluginPortal()
-    google()
     mavenCentral()
   }
 }
@@ -189,6 +198,10 @@ include(":ui-builder-host-jvm")
 // The IntelliJ host lives in yschimke/compose-preview-ide and consumes a pinned source checkout.
 
 include(":ui-builder-export")
+
+// The sample documents tests and previews build from. Not published, and not a seam.
+include(":ui-builder-export-fixtures")
+
 include(":ui-builder-codegen-jvm")
 include(":ui-builder-gradle-plugin")
 include(":ui-builder-production-consumer")
@@ -204,8 +217,12 @@ include(":ui-builder-renderer-sdk")
 include(":ui-builder-web")
 
 // The packaged render bundle as its own artifact: it is frontend build output, so it does not
-// belong inside the server-side `:ui-builder-runtime` jar.
+// belong inside the server-side `:ui-builder-runtime` jar. A release asset, not on Central.
 include(":ui-builder-render-bundle")
+
+// The variable fonts the export's code generator reads, as a release asset rather than ~4 MB of
+// every `compose-preview-ui-builder-export-jvm` upload.
+include(":ui-builder-export-fonts")
 
 include(":ui-builder-artwork")
 

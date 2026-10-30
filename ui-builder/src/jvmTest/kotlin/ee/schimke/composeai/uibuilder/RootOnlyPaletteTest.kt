@@ -4,12 +4,9 @@ import ee.schimke.composeai.uibuilder.editor.EditorCatalogRow
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 
 /**
  * A root-only component (e.g. a Wear widget container, exported as the whole design) is listed only
@@ -21,14 +18,12 @@ class RootOnlyPaletteTest {
   private val catalog = SyntheticCatalogs.remote
   private val reducer = UiBuilderEditorReducer(catalog)
   private val widget =
-    UiBuilderNewDesignSeed.document(
-      designId = "widget",
-      catalogSystemId = "remote-m3",
+    publishedTestSeed(
+      systemId = "remote-m3",
       templateId = "wear-widget-small",
+      designId = "widget",
       catalogRevision = "test",
       nativeRuntimeId = "test",
-      fixture =
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
     )
 
   private fun listed(state: UiBuilderEditorState): Set<String> =

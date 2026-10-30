@@ -58,7 +58,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - uses: ./.github/actions/buildfetch-cache
@@ -91,7 +91,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - uses: ./.github/actions/buildfetch-cache
@@ -115,7 +115,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - uses: ./.github/actions/buildfetch-cache
@@ -138,10 +138,10 @@ jobs:
         run: ./scripts/check-ui-builder-production-consumer.sh
       - name: Verify the publishing lane
         run: ./scripts/check-ui-builder-external-consumer.sh
-      # One of the two archives the server consumes; the other, `:ui-builder-web:webArchive`, is
-      # built and verified by `web-archive`. Naming it here is what fails the build if the
+      # Two of the release assets the server consumes; the third, `:ui-builder-web:webArchive`, is
+      # built and verified by `web-archive`. Naming them here is what fails the build if the
       # *packaging* regresses without a verification task noticing.
-      - run: ./gradlew :ui-builder-render-bundle:jar
+      - run: ./gradlew :ui-builder-render-bundle:jar :ui-builder-export-fonts:jar
       # Edit-to-canvas time over the Jetcaster fixture on the JVM desktop backend (#193), not the
       # Wasm canvas. Recorded, not gated: a shared runner is too noisy for an absolute line, so the
       # numbers are kept to compare across runs.
@@ -170,7 +170,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - uses: ./.github/actions/buildfetch-cache
@@ -208,7 +208,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - uses: ./.github/actions/buildfetch-cache
@@ -272,7 +272,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - uses: ./.github/actions/buildfetch-cache
@@ -316,7 +316,7 @@ jobs:
           path: ui-builder-renderer/build/wasmRendererDist
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.0
+          node-version: 26.13.0
       - run: npm ci
         working-directory: scripts/ui-builder-web-smoke
       - run: npm test
@@ -399,7 +399,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.0
+          node-version: 26.13.0
       - run: npm test
         working-directory: scripts/ui-builder
       # The readiness gate's own tests. A check nobody invokes is indistinguishable from a check

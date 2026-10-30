@@ -41,21 +41,22 @@ concurrency:
 
 # What a release of this repository is:
 #
-#   - THREE JARS AND A BOM on Maven Central — `compose-preview-ui-builder-runtime`,
-#     `-export`, `-render-bundle` and `-bom`. These are what a consumer compiles or resolves
-#     against. `-render-bundle` is not optional even though nobody names it directly: it is an
-#     `api` dependency of the runtime, so its coordinate appears in the runtime's POM, and a POM
-#     naming an artifact nobody uploaded is what made compose-preview-serve unresolvable for six
-#     consecutive releases.
+#   - JARS AND A BOM on Maven Central — `compose-preview-ui-builder-runtime`, `-export` and
+#     `-bom`. These are what a consumer compiles against. Nothing on Central may name a coordinate
+#     that is not uploaded there: a POM naming an artifact nobody uploaded is what made
+#     compose-preview-serve unresolvable for six consecutive releases.
 #
-#   - GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor; the
+#   - GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor;
+#     `compose-preview-ui-builder-render-bundle-<v>.jar`, the packaged preview a design renders
+#     through, and `compose-preview-ui-builder-export-fonts-<v>.jar`, the variable fonts the export
+#     generates text outlines from (both read off the classpath, so a host just adds the jar); the
 #     native Desktop host as a Linux `.deb` (built here) and a macOS `.dmg` and Windows `.msi`
 #     (built by `desktop-packages.yml`); and the visual harness's three Wasm fixtures,
 #     `compose-preview-ui-builder-renderer-<v>.zip` and `-reference-jetcaster-` /
 #     `-generated-jetcaster-<v>.zip` (`harness-dists`). Nothing compiles against them. compose-preview-server
-#     resolves the web archive through a group-fenced ivy repository over this release, which keeps
-#     it a normal versioned dependency without putting a 40 MB frontend distribution on Central
-#     forever.
+#     resolves the web archive and the two jars through a group-fenced ivy repository over this
+#     release, which keeps them normal versioned dependencies without putting ~60 MB of frontend
+#     payload on Central on every release, where it counts against the org's monthly upload quota.
 #
 # The Maven set is DERIVED, never listed: `publishReleaseArtifacts` publishes every module applying
 # `composeai.maven-publishing` and fails first if that set has lost a seam or the BOM.
@@ -207,7 +208,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
 
@@ -227,6 +228,12 @@ jobs:
       # remaining risk rather than a formality.
       - name: Build the editor archive
         run: ./gradlew :ui-builder-web:webArchive
+
+      # The same rule for the two release-asset jars: built and checked before the irreversible
+      # Central upload, because the runtime and export that do go to Central are useless to a
+      # rendering host without them. `verifyRenderBundlePackaged` is the bundle's own content check.
+      - name: Build the render bundle and export fonts jars
+        run: ./gradlew :ui-builder-render-bundle:jar :ui-builder-render-bundle:verifyRenderBundlePackaged :ui-builder-export-fonts:jar
 
       # This is a native application package, not a Maven artifact: it embeds the JVM desktop host
       # for a Linux workstation and belongs alongside the Wasm archive on the GitHub Release. Its
@@ -315,6 +322,18 @@ jobs:
         run: |
           tag="$TAG"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
+          # Named `<module>-<v>.jar` by their `archivesName` and tag-derived version, exactly the
+          # coordinates compose-preview-server's ivy repository asks for.
+          jars=(
+            "ui-builder-render-bundle/build/libs/compose-preview-ui-builder-render-bundle-${PLUGIN_VERSION}.jar"
+            "ui-builder-export-fonts/build/libs/compose-preview-ui-builder-export-fonts-${PLUGIN_VERSION}.jar"
+          )
+          for jar in "${jars[@]}"; do
+            if [ ! -s "$jar" ]; then
+              echo "::error::missing release-asset jar $jar"
+              exit 1
+            fi
+          done
           # The digest an instance pins beside the version (compose-preview-server#1035), published
           # so an operator copies it rather than re-hashing a download. `sha256sum` format, with
           # the bare file name, so `sha256sum -c` works beside the zip.
@@ -341,9 +360,9 @@ jobs:
             fi
           done
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" "$archive.sha256" "$desktop_package" "${schemas[@]}" --clobber
+            gh release upload "$tag" "$archive" "$archive.sha256" "${jars[@]}" "$desktop_package" "${schemas[@]}" --clobber
           else
-            gh release create "$tag" "$archive" "$archive.sha256" "$desktop_package" "${schemas[@]}" --title "$tag" --generate-notes --draft
+            gh release create "$tag" "$archive" "$archive.sha256" "${jars[@]}" "$desktop_package" "${schemas[@]}" --title "$tag" --generate-notes --draft
           fi
 
   # The macOS and Windows installers, attached to the same draft release. Needed by
@@ -397,7 +416,7 @@ jobs:
           java-version: |
             21
             17
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - run: ./gradlew ":${{ matrix.module }}:${{ matrix.task }}"

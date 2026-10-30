@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -61,22 +62,20 @@ class SeedTemplateCatalogReadinessTest {
   /** Where the generated Kotlin lands, for a reader and for the evidence in the plan. */
   private val sourceDirectory = File("build/seed-template-sources")
 
-  private val fixture =
-    Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
-
   /** The catalogs the builder serves, each with its captured published capability document. */
   private val catalogs: Map<String, CapabilityCatalog> =
     mapOf(
       "m3-catalog" to publishedTestCatalog("m3-catalog"),
       "wear-m3" to publishedTestCatalog("wear-m3"),
       "remote-m3" to publishedTestCatalog("remote-m3"),
-      A2uiDocumentExporter.CATALOG_SYSTEM_ID to SyntheticCatalogs.a2ui,
+      A2uiDocumentExporter.CATALOG_SYSTEM_ID to
+        publishedTestCatalog(A2uiDocumentExporter.CATALOG_SYSTEM_ID),
     )
 
   @Test
   fun `every template of every catalog validates against that catalog`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+      publishedTestTemplates(systemId).ids.sorted().mapNotNull { templateId ->
         val document = seed(systemId, templateId)
         val validation = CapabilityValidator(catalog).validate(document)
         if (validation.structurallyValid) null
@@ -90,7 +89,7 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `every template generates source`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+      publishedTestTemplates(systemId).ids.sorted().mapNotNull { templateId ->
         when (val outcome = generate(catalog, seed(systemId, templateId))) {
           is Generated.Source -> {
             // Kept on disk: what a catalog repository's round-trip test would compile, and the
@@ -119,7 +118,7 @@ class SeedTemplateCatalogReadinessTest {
     val systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID
     val catalog = catalogs.getValue(systemId)
     assertEquals(UiBuilderCatalogPlatform.A2UI, catalog.platform)
-    UiBuilderNewDesignSeed.templateIds(systemId).sorted().forEach { templateId ->
+    publishedTestTemplates(systemId).ids.sorted().forEach { templateId ->
       val document = seed(systemId, templateId)
       val messages =
         assertIs<A2uiDocumentExporter.Result.Emitted>(
@@ -147,7 +146,12 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `jetcaster refuses for reasons no component record fixes`() {
     val catalog = catalogs.getValue("m3-catalog")
-    val document = seed("m3-catalog", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE)
+    val document =
+      UiBuilderNewDesignSeed.fixtureDocument(
+        "m3-catalog-jetcaster",
+        CatalogReferenceV1("m3-catalog", "readiness", "candidate", "readiness"),
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
+      )
 
     val reasons =
       assertIs<Generated.Refused>(
@@ -215,13 +219,11 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   private fun seed(systemId: String, templateId: String): UiBuilderDocument =
-    UiBuilderNewDesignSeed.document(
-      designId = "$systemId-$templateId",
-      catalogSystemId = systemId,
-      templateId = templateId,
+    publishedTestSeed(
+      systemId,
+      templateId,
       catalogRevision = "readiness",
       nativeRuntimeId = "readiness",
-      fixture = fixture,
     )
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
