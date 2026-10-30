@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.125.0](https://github.com/yschimke/compose-ui-builder/compare/v3.124.0...v3.125.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.74.0 ([#1032](https://github.com/yschimke/compose-ui-builder/issues/1032)) ([901e790](https://github.com/yschimke/compose-ui-builder/commit/901e79069aced3631ff9e44817308e7614b814a1))
+* **deps:** update compose-ai-tools to v2.74.1 ([#1037](https://github.com/yschimke/compose-ui-builder/issues/1037)) ([221b3e3](https://github.com/yschimke/compose-ui-builder/commit/221b3e3a857ebefade67be41503ab2ea6d33567d))
+* **deps:** update compose-ai-tools to v2.75.0 ([#1062](https://github.com/yschimke/compose-ui-builder/issues/1062)) ([20cba2a](https://github.com/yschimke/compose-ui-builder/commit/20cba2a285cbc8ef30982c757d0a95d8ee8459c4))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.25.1 ([#1033](https://github.com/yschimke/compose-ui-builder/issues/1033)) ([1c3198a](https://github.com/yschimke/compose-ui-builder/commit/1c3198af660faa68ae2a4b049f55e654328ae213))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.26.0 ([#1038](https://github.com/yschimke/compose-ui-builder/issues/1038)) ([ec4e314](https://github.com/yschimke/compose-ui-builder/commit/ec4e31472cf8df8b6a39ae5dda768f53835466bc))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.19.0 ([#1035](https://github.com/yschimke/compose-ui-builder/issues/1035)) ([3f67d75](https://github.com/yschimke/compose-ui-builder/commit/3f67d751e653038387a25ac89f2dc632e9abda20))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.20.1 ([#1042](https://github.com/yschimke/compose-ui-builder/issues/1042)) ([8d15426](https://github.com/yschimke/compose-ui-builder/commit/8d15426bfc1142fee5a72c45942081e8bc04fa4f))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.21.0 ([#1046](https://github.com/yschimke/compose-ui-builder/issues/1046)) ([5945205](https://github.com/yschimke/compose-ui-builder/commit/5945205c5ec5d5a8c459855fd005a52998b64956))
+* **deps:** update ktor to v3.6.1 ([#1056](https://github.com/yschimke/compose-ui-builder/issues/1056)) ([b338a53](https://github.com/yschimke/compose-ui-builder/commit/b338a53894e1c17490a50f331bada8a641358fc6))
+* **deps:** update mcp kotlin-sdk to 0.16.0, node 26, daemon 3.27.0 ([#1055](https://github.com/yschimke/compose-ui-builder/issues/1055)) ([97e474d](https://github.com/yschimke/compose-ui-builder/commit/97e474da3bb17a465f574f21c15317c2f6967337))
+
 ## [3.124.0](https://github.com/yschimke/compose-ui-builder/compare/v3.123.0...v3.124.0) (2026-10-24)
 
 
