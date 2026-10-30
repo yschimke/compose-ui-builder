@@ -82,6 +82,50 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `supplied Compose source retains identity and revision without creating or overwriting a design`() {
+    val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
+    val service = service(exportRequests = requests)
+    val source = document().copy(revision = 27)
+    assertIs<UiBuilderServiceResponse.Export>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ExportDocument(source, ExportFormatV1.COMPOSE),
+      )
+    )
+    assertEquals(source, requests.single().document)
+    assertEquals(27, requests.single().revision)
+    assertEquals(source.id, requests.single().designId)
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot(source.id, null))
+    )
+    // A stored design with the same ID is never read or replaced by supplied-source export.
+    create(service)
+    assertIs<UiBuilderServiceResponse.Export>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ExportDocument(source, ExportFormatV1.COMPOSE),
+      )
+    )
+    val stored =
+      assertIs<UiBuilderServiceResponse.Snapshot>(
+        execute(service, owner, UiBuilderServiceRequest.GetSnapshot(source.id, null))
+      )
+    assertEquals(0, stored.snapshot.state.document.revision)
+    val invalid =
+      source.copy(catalogPin = CatalogReferenceV1("missing", "candidate", "candidate", "candidate"))
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ExportDocument(invalid, ExportFormatV1.COMPOSE),
+      )
+    )
+    assertEquals(2, requests.size)
+  }
+
+  @Test
   fun `disabled supplied document requests never reach an exporter`() {
     if (UiBuilderBuildFeatures.remoteCompose) return
     val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
