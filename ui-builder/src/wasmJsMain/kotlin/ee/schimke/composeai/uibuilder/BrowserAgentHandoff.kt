@@ -8,7 +8,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderParticipantKind
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-internal const val AGENT_SETUP_URL = "https://yschimke.github.io/compose-ui-builder/#get-started"
+internal const val AGENT_SETUP_URL = "https://ui.coo.ee/start/#get-started"
 
 @Serializable
 internal data class BrowserAgentPreferences(
