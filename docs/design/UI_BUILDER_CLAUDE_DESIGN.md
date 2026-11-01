@@ -74,8 +74,8 @@ There are three hard constraints for Compose:
 | Code out | `export_compose` (Compose, Remote Compose, Wear), SVG, RC, BUNDLE | `:ui-builder-export` |
 | An agent handoff from a visual surface | The Connect agent panel, `window.__uiBuilderAgent`, and presence at `/api/ui-builder/v1/designs/<id>/agents` | [`UI_BUILDER_AGENT_HANDOFF.md`](UI_BUILDER_AGENT_HANDOFF.md) |
 | Inline UI in chat | MCP Apps: preview viewer, library (with the Designs tab), RC viewer, the editor at `ui://compose-ui-builder/editor` | compose-preview-server `mcp-app/` |
-| Plugins for Claude Code, Codex, Cursor, Gemini CLI and Antigravity | `compose-preview` (local MCP, `SessionStart`/`PostToolUse`/`Stop` hooks, `design-reviewer` agent) and `compose-catalogs` (hosted MCP), generated from one `src/plugins.json`; listed in the MCP Registry; Claude plugin directory submission pending | yschimke/compose-agent-plugins |
-| Skills that already target Claude Design | `compose-preview-design-board` (an HTML design board for import) and `compose-design-catalog` (a sticker sheet with `tokens.dtcg.json`) | yschimke/skills |
+| Plugins for Claude Code, Codex, Cursor, Gemini CLI and Antigravity | `compose-preview` (the `compose-preview` and `compose-ui-builder` skills, local and hosted MCP, `SessionStart`/`PostToolUse`/`Stop` hooks, `design-reviewer` agent) and `compose-catalogs` (hosted MCP only, for hosts with no shell or Java), generated from one `src/plugins.json`; listed in the MCP Registry; Claude plugin directory submission pending | yschimke/compose-agent-plugins |
+| Skills that targeted Claude Design | `compose-preview-design-board` (an HTML design board for import) and `compose-design-catalog` (a sticker sheet with `tokens.dtcg.json`), both since removed (they remain in git history) | yschimke/skills |
 
 ## The integrations, in the order worth doing them
 
@@ -83,7 +83,7 @@ There are three hard constraints for Compose:
 
 This is the highest value for the least risk, and nothing else on this list works well without it.
 
-Extend what `compose-design-catalog` already emits, not a new tool: today it writes
+Start from what the removed `compose-design-catalog` skill emitted (yschimke/skills' git history), not a new tool: it wrote
 `tokens.dtcg.json`, which a Claude Design system reads as empty (see the constraints above). Add
 the `project/` tree, which `/design-sync` or a plain Artifact publish then uploads:
 
@@ -151,9 +151,9 @@ HTML plus screenshots and route it through the importer above.
 
 Most of this exists. compose-agent-plugins already ships `compose-preview` and `compose-catalogs` for
 Claude Code and Codex from one `src/plugins.json`. Their hooks are a `SessionStart` summary, a
-`PostToolUse` edit reminder and a `Stop` gate, plus a `design-reviewer` agent. Since
-[compose-agent-plugins#117](https://github.com/yschimke/compose-agent-plugins/pull/117), the same
-marketplace also lists the skill bundles from yschimke/skills. What is left:
+`PostToolUse` edit reminder and a `Stop` gate, plus a `design-reviewer` agent. The
+`compose-preview` plugin also vendors the `compose-preview` and `compose-ui-builder` skills from
+yschimke/skills, so one install covers both. What is left:
 
 - **Finish the Claude plugin directory submission** (compose-agent-plugins #53 and #80).
 - **Use Artifacts for anything visual that Claude Code's terminal cannot show.** The terminal does

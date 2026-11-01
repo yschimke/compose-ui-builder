@@ -8,10 +8,20 @@ Publishing a preview catalog never enables authoring for it automatically.
 
 ## Agent setup
 
-For the hosted UI Builder, install `compose-catalogs` and the `compose-skills` workflow bundle
-using the [Compose Agent Plugins quick start](https://github.com/yschimke/compose-agent-plugins#quick-start).
-Hosted authoring needs no local Java or Gradle installation; the Java requirement below applies
-when you run the server yourself. For local project previews, the same guide covers `compose-preview`.
+Start at <https://ui.coo.ee/start>. A coding agent installs the same `compose-preview` plugin
+everyone uses; it includes the `compose-ui-builder` skill and the hosted MCP server. In Claude Code:
+
+```text
+/plugin marketplace add yschimke/compose-agent-plugins
+/plugin install compose-preview@compose-agent-plugins
+```
+
+Codex, Antigravity and other agents are on the start page. A host with no shell or no Java (Claude
+chat, Cowork, ChatGPT) installs the `compose-catalogs` plugin instead
+(`/plugin install compose-catalogs@compose-agent-plugins` after the marketplace add), or adds the
+hosted MCP URL `https://preview.coo.ee/mcp`. Install one or the other, never both. Hosted authoring
+needs no local Java or Gradle installation; the Java requirement below applies when you run the
+server yourself.
 If you installed the former `compose-ag-plugin` marketplace, follow the
 [migration steps](https://github.com/yschimke/compose-agent-plugins#moving-from-compose-ag-plugin).
 

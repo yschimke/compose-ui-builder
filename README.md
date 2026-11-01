@@ -12,8 +12,12 @@ statement of what may depend on what
 
 Start with [`docs/design/UI_BUILDER_PRODUCT_SPEC.md`](docs/design/UI_BUILDER_PRODUCT_SPEC.md) for
 what the product is, and [`docs/UI_BUILDER_GETTING_STARTED.md`](docs/UI_BUILDER_GETTING_STARTED.md)
-for running it. For agent integration, install `compose-catalogs` and `compose-skills` through
-the [Compose Agent Plugins quick start](https://github.com/yschimke/compose-agent-plugins#quick-start).
+for running it. To design with an agent, start at <https://ui.coo.ee/start>: a coding agent
+installs the one `compose-preview` plugin (Claude Code:
+`/plugin marketplace add yschimke/compose-agent-plugins` then
+`/plugin install compose-preview@compose-agent-plugins`), which includes the `compose-ui-builder`
+skill and the hosted server; a host with no shell or Java (Claude chat, Cowork, ChatGPT) uses the
+`compose-catalogs` plugin or the hosted MCP URL `https://preview.coo.ee/mcp` instead, never both.
 The desktop editor also supports [installed Claude Code, Codex and OpenCode harnesses](docs/design/UI_BUILDER_LOCAL_AGENTS.md)
 with local authentication and private design chat.
 
