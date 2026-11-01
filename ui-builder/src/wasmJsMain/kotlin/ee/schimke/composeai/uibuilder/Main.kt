@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
@@ -39,6 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
@@ -56,12 +58,14 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.wearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.local.CachedLocalText
 import ee.schimke.composeai.uibuilder.local.CachingLocalCatalogSource
 import ee.schimke.composeai.uibuilder.local.LocalCatalogSource
@@ -339,6 +343,14 @@ internal fun CatalogRuntimeCanvas(
   onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
 ) {
   val runtimeId = document.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull.orEmpty()
+  val clipRadiusDp =
+    if (LocalWearWidgetClipContent.current) {
+      val shape =
+        WearWidgetHostShape.fromId(
+          document.environment[WearWidgetHostShape.ENVIRONMENT_KEY]?.jsonPrimitive?.contentOrNull
+        )
+      document.wearWidgetScaffoldSize()?.hostSpec(shape)?.cornerRadiusDp ?: 0f
+    } else 0f
   val surfaceId = remember { nextCatalogRuntimeSurfaceId() }
   // The runtime gets only the document and can't fetch uploaded pictures from its sandbox, so the
   // editor's fetched ones travel inside it.
@@ -449,6 +461,7 @@ internal fun CatalogRuntimeCanvas(
       selectionEnabled = selectionEnabled,
       editorOverlayOpen = editorOverlayOpen,
       backdropColor = backdropColor,
+      clipRadiusDp = clipRadiusDp,
       interactive = surface.interactive,
       revealNodeId = surface.revealNodeId.orEmpty(),
       scrollNodeId = surface.scroll?.nodeId.orEmpty(),
@@ -461,7 +474,16 @@ internal fun CatalogRuntimeCanvas(
       // Catalog pixels live in the DOM layer immediately below Compose. Punch out only their exact
       // rectangle; editor-owned Compose overlays are later siblings and remain above the runtime.
       .drawWithContent {
-        if (runtimeError.isEmpty()) drawRect(Color.Transparent, blendMode = BlendMode.Clear)
+        if (runtimeError.isEmpty()) {
+          if (clipRadiusDp > 0f && surface.widthDp > 0f) {
+            val radius = clipRadiusDp * size.width / surface.widthDp
+            drawRoundRect(
+              Color.Transparent,
+              cornerRadius = CornerRadius(radius),
+              blendMode = BlendMode.Clear,
+            )
+          } else drawRect(Color.Transparent, blendMode = BlendMode.Clear)
+        }
         drawContent()
       }
       .onGloballyPositioned { nextCoordinates ->
@@ -655,6 +677,7 @@ private fun positionCatalogRuntimeSurface(
       host.style.top = top + 'px';
       host.style.width = Math.max(0, width) + 'px';
       host.style.height = Math.max(0, height) + 'px';
+      host.style.borderRadius = ((host.__uiBuilderClipRadiusRatio || 0) * Math.max(0, width)) + 'px';
       const insetTop = Math.max(0, visibleTop - top);
       const insetRight = Math.max(0, left + width - visibleRight);
       const insetBottom = Math.max(0, top + height - visibleBottom);
@@ -682,6 +705,7 @@ private fun updateCatalogRuntimeSurface(
   selectionEnabled: Boolean,
   editorOverlayOpen: Boolean,
   backdropColor: String,
+  clipRadiusDp: Float,
   interactive: Boolean,
   revealNodeId: String,
   scrollNodeId: String,
@@ -702,6 +726,10 @@ private fun updateCatalogRuntimeSurface(
       host.style.pointerEvents = raised ? 'auto' : 'none';
       host.style.zIndex = raised ? '20' : '0';
       host.style.background = backdropColor;
+      // The catalog runs in an iframe below the Compose canvas. Clip the DOM host too: a Compose
+      // clip alone cannot affect the iframe. CSS clamps large radii to the frame's dimensions.
+      host.__uiBuilderClipRadiusRatio = clipRadiusDp > 0 && widthDp > 0 ? clipRadiusDp / widthDp : 0;
+      host.style.borderRadius = (host.__uiBuilderClipRadiusRatio * host.clientWidth) + 'px';
       if (!runtimeId || !/^[A-Za-z0-9._-]+$/.test(runtimeId) ||
           runtimeId === 'latest' || runtimeId === 'current') {
         host.textContent = 'This design has no compatible pinned catalog runtime.';

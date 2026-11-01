@@ -216,6 +216,18 @@ internal fun MobileEditorToolbar(
                 )
               )
             }
+            add(
+              UiBuilderMenuEntry.Action(
+                label = "Clip widget content to host",
+                selected = state.wearWidgetClipContent,
+                reserveIconSpace = true,
+                compactLeadingIcon = true,
+                onClick = {
+                  expanded = false
+                  dispatch(UiBuilderEditorEvent.ToggleWearWidgetClipContent)
+                },
+              )
+            )
           }
           if (onNewDesign != null) {
             add(
@@ -625,7 +637,12 @@ internal fun EditorToolbar(
       // pane is open, the one view a single shape choice still steers.
       state.document.wearWidgetScaffoldSize()?.let { size ->
         if (EditorPane.Native in panes) {
-          WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
+          WidgetHostShapeMenu(
+            state.wearWidgetHostShape,
+            size,
+            state.wearWidgetClipContent,
+            dispatch,
+          )
         }
       }
       if (showPresence && !foldToMore) {
@@ -960,6 +977,7 @@ private fun FormFactorChip(label: String) {
 private fun WidgetHostShapeMenu(
   shape: WearWidgetHostShape,
   size: WearWidgetScaffoldSize,
+  clipContent: Boolean,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var open by remember { mutableStateOf(false) }
@@ -969,7 +987,7 @@ private fun WidgetHostShapeMenu(
       modifier = Modifier.semantics { contentDescription = "Host container (${shape.label})" },
     ) {
       Icon(Icons.Filled.Dashboard, contentDescription = null, modifier = Modifier.size(18.dp))
-      Text(shape.label, Modifier.padding(start = 6.dp))
+      Text(shape.label + if (clipContent) " · clipped" else "", Modifier.padding(start = 6.dp))
       Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
     }
     LocalUiBuilderChrome.current.PopupMenu(
@@ -994,7 +1012,17 @@ private fun WidgetHostShapeMenu(
               open = false
             },
           )
-        },
+        } +
+          UiBuilderMenuEntry.Action(
+            label = "Clip widget content to host",
+            selected = clipContent,
+            reserveIconSpace = true,
+            compactLeadingIcon = true,
+            onClick = {
+              dispatch(UiBuilderEditorEvent.ToggleWearWidgetClipContent)
+              open = false
+            },
+          ),
     )
   }
 }

@@ -80,6 +80,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNavigator
+import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
@@ -2074,8 +2075,24 @@ fun UiBuilderEditor(
   var nativePending by remember(document.id) { mutableStateOf(false) }
   // Re-render on each revision and host-shape change, so the native pane never shows a stale frame
   // beside the live canvas.
-  LaunchedEffect(nativeRequested, state.document.revision, state.wearWidgetHostShape) {
+  val clippedWidgetPreview =
+    state.wearWidgetClipContent && state.document.wearWidgetScaffoldSize() != null
+  LaunchedEffect(
+    nativeRequested,
+    state.document.revision,
+    state.wearWidgetHostShape,
+    clippedWidgetPreview,
+  ) {
     if (!nativeRequested) return@LaunchedEffect
+    if (clippedWidgetPreview) {
+      nativeRender =
+        UiBuilderNativeRender(
+          failure =
+            "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview."
+        )
+      nativePending = false
+      return@LaunchedEffect
+    }
     nativePending = true
     nativeRender =
       try {
@@ -2090,7 +2107,8 @@ fun UiBuilderEditor(
   // The live session behind the still, if this host can open it. Keyed on the coordinates so a
   // re-render
   // on the same session keeps the socket.
-  val nativeLive = nativeRender?.live?.takeIf { onOpenNativeStream != null }
+  val nativeLive =
+    nativeRender?.live?.takeIf { !clippedWidgetPreview && onOpenNativeStream != null }
   var nativeStream by remember(document.id) { mutableStateOf<UiBuilderNativeStream?>(null) }
   DisposableEffect(nativeLive, onOpenNativeStream) {
     val opened = nativeLive?.let { live -> onOpenNativeStream?.invoke(live) }
@@ -2106,9 +2124,15 @@ fun UiBuilderEditor(
   // Preview.
   val nativePane: @Composable (Modifier) -> Unit = { paneModifier ->
     NativeRenderPane(
-      render = nativeRender,
-      pending = nativePending,
-      stream = nativeStream,
+      render =
+        if (clippedWidgetPreview)
+          UiBuilderNativeRender(
+            failure =
+              "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview."
+          )
+        else nativeRender,
+      pending = !clippedWidgetPreview && nativePending,
+      stream = if (clippedWidgetPreview) null else nativeStream,
       backend = catalog.previewSurfaces.native.backend,
       selectedNodeId = state.selectedNodeId,
       onNodeSelected = { selectNodeForEditing(it) },
@@ -2480,6 +2504,7 @@ fun UiBuilderEditor(
     // Here for the same reason as the line above it: the canvas, the extent beside it and every
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
     LocalWearWidgetHostShape provides state.wearWidgetHostShape,
+    LocalWearWidgetClipContent provides state.wearWidgetClipContent,
   ) {
     // Composed but never shown: captures a component's pixels. Mounted here so a capture survives
     // inspector tab switches, and inside the provider so it uses the canvas's catalog ids.

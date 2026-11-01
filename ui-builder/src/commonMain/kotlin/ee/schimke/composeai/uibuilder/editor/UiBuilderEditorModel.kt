@@ -603,6 +603,8 @@ data class UiBuilderEditorState(
    * widget, owns the frame; it takes no revision and does not reach the export.
    */
   val wearWidgetHostShape: WearWidgetHostShape = WearWidgetHostShape.Default,
+  /** Preview a host that clips content to its rounded frame. */
+  val wearWidgetClipContent: Boolean = false,
   /**
    * The reference picture and how it is drawn. Not part of the design, but durable: the host loads
    * and persists it by watching this field.

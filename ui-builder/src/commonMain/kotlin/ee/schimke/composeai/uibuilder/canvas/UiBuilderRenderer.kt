@@ -306,6 +306,9 @@ internal val LocalUiBuilderNavigator = staticCompositionLocalOf<(String) -> Unit
  */
 internal val LocalWearWidgetHostShape = staticCompositionLocalOf { WearWidgetHostShape.Default }
 
+/** Whether the viewed host clips widget content to its rounded frame. */
+internal val LocalWearWidgetClipContent = staticCompositionLocalOf { false }
+
 /**
  * Remote Compose documents a host has fetched for embedded document nodes, keyed by `documentUrl`.
  * A lookup, not a fetch: the host loads bytes outside composition. `null` means not resolved yet,
@@ -2290,6 +2293,7 @@ internal fun WearWidgetContainerScaffold(
   val verticalPadding = spec.verticalPaddingDp
   val cornerRadius = spec.cornerRadiusDp
   val shape = RoundedCornerShape(cornerRadius.dp)
+  val clipContent = LocalWearWidgetClipContent.current
   // The default fill applies only when the chain is empty (as `WearWidgetBrush.isEmpty()`
   // upstream); a gradient- or image-only widget gets no extra fill.
   val declaredColor = node.string("background").isNotEmpty()
@@ -2305,8 +2309,8 @@ internal fun WearWidgetContainerScaffold(
           (spec.contentWidthDp + 2f * horizontalPadding).dp,
           (spec.contentHeightDp + 2f * verticalPadding).dp,
         )
-        // Drawn behind, not clipped, as `WearWidgetContainer` does, so overflow past the radius
-        // stays visible.
+        .then(if (clipContent) Modifier.clip(shape) else Modifier)
+        // Glance draws behind without clipping. The optional profile models a clipping app host.
         .drawBehind {
           drawRoundRect(
             color = base,
