@@ -274,7 +274,7 @@ truth = "1.4.5"
 okhttp = "5.5.1"
 okio = "3.18.2"
 classgraph = "4.8.199"
-jmdns = "3.6.4"
+jmdns = "3.6.5"
 json-schema-validator = "3.0.8"
 # The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
 # wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
