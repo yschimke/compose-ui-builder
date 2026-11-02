@@ -754,6 +754,16 @@ public class PersistentUiBuilderService(
     val operationId = "asset:${write.assetKey}:$digest"
     val current = design.document
     if (current.assets[write.assetKey] == binding) {
+      // A whole-document import may name this digest before the bytes reach this host, or an
+      // asset store may have lost them. An idempotent replay must still make the asset readable.
+      try {
+        store.write(digest, write.bytes)
+      } catch (failure: IOException) {
+        return serviceError(
+          ServiceErrorCodeV1.INTERNAL,
+          "asset bytes could not be stored: ${failure.message}",
+        )
+      }
       return LockedExecution(
         UiBuilderServiceResponse.OperationOutcome(
           AcceptedOutcomeV1(

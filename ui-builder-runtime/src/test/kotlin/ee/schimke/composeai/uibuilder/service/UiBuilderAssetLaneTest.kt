@@ -109,6 +109,24 @@ class UiBuilderAssetLaneTest {
   }
 
   @Test
+  fun `an idempotent upload restores missing bytes without changing the design revision`() {
+    val store = MemoryAssetStore()
+    val service = service(store)
+    create(service)
+    put(service, owner, "cover", PNG_HEADER)
+    store.remove(UiBuilderAssetDigests.of(PNG_HEADER))
+    assertIs<UiBuilderAssetReadResult.Failed>(read(service, owner, "cover"))
+
+    val replay = assertIs<AcceptedOutcomeV1>(put(service, owner, "cover", PNG_HEADER))
+    assertTrue(replay.idempotentReplay)
+    assertEquals(1, replay.committedRevision)
+    assertContentEquals(
+      PNG_HEADER,
+      assertIs<UiBuilderAssetReadResult.Found>(read(service, owner, "cover")).bytes,
+    )
+  }
+
+  @Test
   fun `bytes that are not a raster image, a malformed key and an oversized asset are refused`() {
     val service =
       service(MemoryAssetStore(), UiBuilderServiceLimits(maximumAssetBytes = PNG_HEADER.size))
@@ -382,6 +400,10 @@ class UiBuilderAssetLaneTest {
 
   private class MemoryAssetStore : UiBuilderAssetStore {
     private val blobs = linkedMapOf<String, ByteArray>()
+
+    fun remove(storageKey: String) {
+      blobs.remove(storageKey)
+    }
 
     override fun read(storageKey: String): ByteArray? = blobs[storageKey]?.copyOf()
 
