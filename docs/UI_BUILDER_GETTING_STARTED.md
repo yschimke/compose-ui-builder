@@ -717,8 +717,10 @@ paints it as the round rect and insets the content by the padding. Filling the c
 coloured surface instead draws a coloured rectangle inside a differently-coloured frame, which is
 not what any widget looks like.
 
-The radius is drawn behind the content rather than clipped, exactly as upstream does it, so content
-that overflows a corner is visible instead of silently cut off.
+By default the radius is drawn behind the content rather than clipped, as Glance does it. To preview
+an application that clips its widget to the host frame, choose **Clip widget content to host** in
+the container menu. This view setting affects the canvas and browser preview, without editing or
+exporting the design. Native rendering does not yet support this profile and says so in its pane.
 
 ### Gradients and images
 

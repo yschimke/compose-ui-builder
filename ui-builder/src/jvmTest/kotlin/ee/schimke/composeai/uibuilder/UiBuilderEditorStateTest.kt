@@ -51,6 +51,20 @@ class UiBuilderEditorStateTest {
       .document
 
   @Test
+  fun `clipping profile is a view setting that survives a document refresh`() {
+    val initial = reducer.initial(document, selectedNodeId = "discover-grid")
+    val clipped = reducer.reduce(initial, UiBuilderEditorEvent.ToggleWearWidgetClipContent)
+    assertTrue(clipped.wearWidgetClipContent)
+    assertEquals(document, clipped.document)
+    assertTrue(reducer.reconciled(clipped, document).wearWidgetClipContent)
+    assertFalse(
+      reducer
+        .reduce(clipped, UiBuilderEditorEvent.ToggleWearWidgetClipContent)
+        .wearWidgetClipContent
+    )
+  }
+
+  @Test
   fun `catalog search preserves scaffold container and composable kinds`() {
     val items = reducer.catalogItems("")
 

@@ -215,6 +215,7 @@ class UiBuilderEditorReducer(
       historyBarVisible = state.historyBarVisible,
       panes = state.panes,
       wearWidgetHostShape = state.wearWidgetHostShape,
+      wearWidgetClipContent = state.wearWidgetClipContent,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
       // Tool modes survive like selection and clipboard: every edit and collaborator delta rebuilds
@@ -348,6 +349,8 @@ class UiBuilderEditorReducer(
         if (event.panes.isEmpty()) state else state.copy(panes = event.panes)
       is UiBuilderEditorEvent.ShowWearWidgetHostShape ->
         state.copy(wearWidgetHostShape = event.shape)
+      UiBuilderEditorEvent.ToggleWearWidgetClipContent ->
+        state.copy(wearWidgetClipContent = !state.wearWidgetClipContent)
       is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))

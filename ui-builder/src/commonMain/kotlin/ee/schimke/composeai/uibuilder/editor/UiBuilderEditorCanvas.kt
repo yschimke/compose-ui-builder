@@ -112,6 +112,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderOverlayPassesInput
+import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
@@ -1532,6 +1533,7 @@ internal fun ConstrainedFramePane(
   val frameGeometry = LocalUiBuilderFrameGeometry.current
   val catalogPlatform = LocalUiBuilderCatalogPlatform.current
   val ambientWidgetHostShape = LocalWearWidgetHostShape.current
+  val clipWidgetContent = LocalWearWidgetClipContent.current
   val remoteDocuments = LocalRemoteComposeDocuments.current
   val assetBitmaps = LocalUiBuilderAssetBitmaps.current
   val assetBytes = LocalUiBuilderAssetBytes.current
@@ -1586,7 +1588,7 @@ internal fun ConstrainedFramePane(
       } else
         DeviceSceneHost(
           key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
-          contentKey = document to loadedFontNames,
+          contentKey = Triple(document, loadedFontNames, clipWidgetContent),
           // The Surface is `widthDp * densityRatio` dp wide, so the scene is that times the host
           // density in pixels.
           sizePx =
@@ -1604,6 +1606,7 @@ internal fun ConstrainedFramePane(
               LocalUiBuilderFrameGeometry provides frameGeometry,
               LocalUiBuilderCatalogPlatform provides catalogPlatform,
               LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
+              LocalWearWidgetClipContent provides clipWidgetContent,
               LocalRemoteComposeDocuments provides remoteDocuments,
               LocalUiBuilderAssetBitmaps provides assetBitmaps,
               LocalUiBuilderAssetBytes provides assetBytes,

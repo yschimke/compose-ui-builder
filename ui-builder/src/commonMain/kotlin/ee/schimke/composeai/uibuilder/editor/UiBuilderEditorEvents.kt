@@ -102,6 +102,8 @@ sealed interface UiBuilderEditorEvent {
    */
   data class ShowWearWidgetHostShape(val shape: WearWidgetHostShape) : UiBuilderEditorEvent
 
+  data object ToggleWearWidgetClipContent : UiBuilderEditorEvent
+
   /** Selects every row the layers filter matched. */
   data object SelectAllMatches : UiBuilderEditorEvent
 
