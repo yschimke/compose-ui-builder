@@ -286,7 +286,7 @@ json-schema-validator = "3.0.8"
 # floors at the top of this file before moving it again — the constraint that remains is that it
 # must not reach `java-server`'s lane, and `:server:checkServerJvmFloor` is what says so rather
 # than a comment.
-snipme-highlights = "1.1.0"
+snipme-highlights = "1.2.0"
 # Material You colour schemes from a seed colour, for the Theme panel's generator. Its Compose
 # dependencies are the same Material 3 alpha this build pins (`material3-compose`); keep the two in
 # step when either moves.
