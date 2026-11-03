@@ -1236,7 +1236,7 @@
     "functionName": "WearScreenCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearScreenCodePanePreview-81971946.png",
-    "sha256": "f9530b0889a300e163f85dad296f0525942749ee0cccd105bf00851f7582133b",
+    "sha256": "bc210b00fae46cb43665175488a74322ce213384430c691e0791ff5ac27ffeef",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearScreenSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearScreenSamplePreviewKt.WearScreenSamplePreview": {
@@ -1276,7 +1276,7 @@
     "functionName": "WearWidgetCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearWidgetCodePanePreview-59a2e9f9.png",
-    "sha256": "dc6c0f27574cc4b207c09df5aca0d12d73c9e7aec4a202c14ddd845e4877f2d1",
+    "sha256": "2fb84753e60e40e240fa6ad2b1da3d4f5f30a719f9a660ff17dd62169b2b360b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearWidgetSamplePreviewKt.WearWidgetHostShapesPreview": {
