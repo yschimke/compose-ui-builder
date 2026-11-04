@@ -112,7 +112,7 @@
       ],
       "depNameTemplate": "yschimke/compose-preview-server",
       "datasourceTemplate": "git-refs",
-      "packageNameTemplate": "https://github.com/{{depName}}"
+      "packageNameTemplate": "https://github.com/yschimke/compose-preview-server"
     }
   ]
 }

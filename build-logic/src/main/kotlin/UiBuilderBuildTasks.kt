@@ -115,6 +115,15 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
 
   /**
+   * [file] parsed as UTF-8. Not `JsonSlurper.parse(File)`: it leaves the charset to Groovy, which
+   * falls back to the JVM default when the file's first 4 KiB are ASCII. On a host whose default
+   * is not UTF-8 that turned the en dash deep in the design guidelines into U+FFFD, and the
+   * embedded rules no longer matched the docs file.
+   */
+  private fun parseUtf8(file: org.gradle.api.file.RegularFileProperty): Any =
+    groovy.json.JsonSlurper().parseText(file.get().asFile.readText(Charsets.UTF_8))
+
+  /**
    * [record] with [foundation]'s components appended, as compact JSON (the text ships and stays
    * resident in Wasm). Parsed, not spliced, so reformatting either file cannot break it.
    *
@@ -123,12 +132,12 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
    */
   private fun merged(): String {
     @Suppress("UNCHECKED_CAST")
-    val base = groovy.json.JsonSlurper().parse(record.get().asFile) as MutableMap<String, Any?>
+    val base = parseUtf8(record) as MutableMap<String, Any?>
     if (!foundation.isPresent) {
       return groovy.json.JsonOutput.toJson(base)
     }
     @Suppress("UNCHECKED_CAST")
-    val extra = groovy.json.JsonSlurper().parse(foundation.get().asFile) as Map<String, Any?>
+    val extra = parseUtf8(foundation) as Map<String, Any?>
     @Suppress("UNCHECKED_CAST") val components = base["components"] as List<Map<String, Any?>>
     val taken = components.mapNotNull { it["canonicalId"] as? String }.toSet()
     @Suppress("UNCHECKED_CAST")
