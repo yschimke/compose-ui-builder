@@ -1,6 +1,6 @@
 {
   "schema": "compose-ui-builder-production/v1",
-  "catalogDigest": "df448956605b680b670765fb35fa0b0298b208308da17f37d251fc7c3c611777",
+  "catalogDigest": "b26fde035636f9ef742b56cdb209652ae4f25e6c5db8b36d6af52f2934b88e49",
   "imports": [
     "src/main/ui/models/LibraryModels.uid"
   ],

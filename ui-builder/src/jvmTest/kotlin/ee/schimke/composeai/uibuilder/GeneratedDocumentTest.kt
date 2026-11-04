@@ -104,6 +104,33 @@ class GeneratedDocumentTest {
     }
   }
 
+  /**
+   * #75: the M3 components the palette offers that the screen export still cannot write, pinned so
+   * a newly offered component without a record fails here, and a newly recorded one is taken off
+   * the list. `m3/variable-font-text` exports through flexpress rather than a record.
+   */
+  @Test
+  fun `the offered M3 components without a component record are exactly the known gaps`() {
+    val unrecorded =
+      catalog.components
+        .map { it.componentId }
+        .filter { it.startsWith("m3/") && it != VariableFontText.M3_ID }
+        .filterNot { it in recordedComponentIds }
+        .toSortedSet()
+
+    assertEquals(
+      sortedSetOf(
+        // `rememberDatePickerState(initialSelectedDateMillis = …)` needs the ISO date converted,
+        // which the shared projection cannot express yet.
+        "m3/date-picker",
+        // Material publishes `SnackbarHost(hostState)`, driven by a `SnackbarHostState` the
+        // screen would have to own and show into; no record describes that shape.
+        "m3/snackbar-host",
+      ),
+      unrecorded,
+    )
+  }
+
   /** The generator is deterministic: one seed produces one document. */
   @Test
   fun `a seed reproduces its document exactly`() {

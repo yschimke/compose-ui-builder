@@ -103,6 +103,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -162,6 +163,8 @@ import ee.schimke.composeai.uibuilder.ProvideThemeTextStyle
 import ee.schimke.composeai.uibuilder.ThemeTypefacesHost
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
+import ee.schimke.composeai.uibuilder.editor.CanvasHitBox
+import ee.schimke.composeai.uibuilder.editor.CanvasHitTest
 import ee.schimke.composeai.uibuilder.editor.THEME_BACKGROUND
 import ee.schimke.composeai.uibuilder.editor.THEME_CONTENT
 import ee.schimke.composeai.uibuilder.editor.THEME_CORNER_RADIUS
@@ -443,6 +446,8 @@ fun UiBuilderSurface(
 ) {
   // Wear's face, before anything below can read the Wear type scale: the port resolves it once.
   ensureBundledWearDeviceFonts()
+  val hitParents = remember(document) { CanvasHitTest.parents(document) }
+  val currentSelectedNodeId = rememberUpdatedState(selectedNodeId)
   val overlayBounds =
     remember(document.id, document.revision, renderSessionId) {
       mutableStateMapOf<UiBuilderInstancePath, Rect>()
@@ -615,6 +620,19 @@ fun UiBuilderSurface(
               RenderNode(document = document, entry = entry, host = this, modifier = rootModifier)
             }
             if (editorOverlay) {
+              // Hit-test every box each drawing of a node reported, so clicking any copy selects
+              // the node; a tap on the selection drills in (see [CanvasHitTest]).
+              val overlayHit = { position: Offset ->
+                CanvasHitTest.tap(
+                  overlayBounds.map { (path, rect) ->
+                    CanvasHitBox(path.nodeId, rect.left, rect.top, rect.right, rect.bottom)
+                  },
+                  position.x,
+                  position.y,
+                  currentSelectedNodeId.value,
+                  hitParents,
+                )
+              }
               // Every box the selected node drew, since a node can draw more than once.
               val selected =
                 overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
@@ -624,24 +642,14 @@ fun UiBuilderSurface(
                 Modifier.matchParentSize()
                   .then(
                     if (!overlayTakesInput) {
-                      // Hit-test every box each drawing of a node reported, so clicking any copy
-                      // selects the node.
                       Modifier.passThroughClick { position ->
-                        overlayBounds
-                          .filterValues { it.contains(position) }
-                          .minByOrNull { (_, rect) -> rect.width * rect.height }
-                          ?.key
-                          ?.let { onNodeSelected?.invoke(it.nodeId) }
+                        overlayHit(position)?.let { onNodeSelected?.invoke(it) }
                       }
                     } else
                       Modifier.pointerInput(overlayBounds.toMap(), onNodeSelected) {
                         detectTapGestures { position ->
-                          overlayBounds
-                            .filterValues { it.contains(position) }
-                            .minByOrNull { (_, rect) -> rect.width * rect.height }
-                            ?.key
-                            // Selects the node (what the inspector edits), not the tapped copy.
-                            ?.let { onNodeSelected?.invoke(it.nodeId) }
+                          // Selects the node (what the inspector edits), not the tapped copy.
+                          overlayHit(position)?.let { onNodeSelected?.invoke(it) }
                         }
                       }
                   )

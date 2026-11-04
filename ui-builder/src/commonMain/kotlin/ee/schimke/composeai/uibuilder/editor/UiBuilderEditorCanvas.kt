@@ -397,6 +397,10 @@ internal fun PinnedDesignCanvas(
     }
     // The frame's own rectangle in the window, kept because the inspection answers in that space
     // and a press on the canvas arrives in the frame's.
+    // Each node's parent, and the selection as a long-lived tap handler reads it, for
+    // [CanvasHitTest]: a tap on the selection drills one level in.
+    val hitParents = remember(document) { CanvasHitTest.parents(document) }
+    val currentSelection = rememberUpdatedState(selectedNodeId)
     var frameBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
     // The frame's unclipped top-left in root space. `frameBounds` is clipped to the viewport;
     // frame-local conversions need the unclipped `positionInRoot`, which is current after a scroll.
@@ -416,18 +420,13 @@ internal fun PinnedDesignCanvas(
       if (!showSelectionOverlay) return
       // Smallest reported node box containing the point: the deepest node under the pointer.
       val hit =
-        inspection
-          ?.nodes
-          .orEmpty()
-          .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-          .filter { (_, bounds) ->
-            rootPoint.x >= bounds.x &&
-              rootPoint.x <= bounds.x + bounds.width &&
-              rootPoint.y >= bounds.y &&
-              rootPoint.y <= bounds.y + bounds.height
-          }
-          .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-          ?.first
+        CanvasHitTest.press(
+          inspection.hitBoxes(),
+          rootPoint.x,
+          rootPoint.y,
+          selectedNodeId,
+          hitParents,
+        )
       // Before the first inspection arrives, fall back to the selection so right-click is not dead.
       val menuNode = hit ?: selectedNodeId ?: return
       if (menuNode != selectedNodeId) onNodeSelected(menuNode)
@@ -499,18 +498,8 @@ internal fun PinnedDesignCanvas(
     val nodeUnderPress = rememberUpdatedState { position: Offset ->
       if (!showSelectionOverlay) return@rememberUpdatedState null
       val point = workspaceBounds.topLeft + position
-      inspection
-        ?.nodes
-        .orEmpty()
-        .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-        .filter { (_, bounds) ->
-          point.x >= bounds.x &&
-            point.x <= bounds.right &&
-            point.y >= bounds.y &&
-            point.y <= bounds.bottom
-        }
-        .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-        ?.first
+      // The innermost node: a double click edits what is under it (a label's text in place).
+      CanvasHitTest.stack(inspection.hitBoxes(), point.x, point.y, hitParents)?.first()
     }
     val doubleClicked = rememberUpdatedState(onNodeDoubleClicked)
     Box(
@@ -670,18 +659,13 @@ internal fun PinnedDesignCanvas(
                       ) {
                         return@canvasNodeDrag selectedNodeId
                       }
-                      inspection
-                        ?.nodes
-                        .orEmpty()
-                        .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                        .filter { (_, bounds) ->
-                          point.x >= bounds.x &&
-                            point.x <= bounds.right &&
-                            point.y >= bounds.y &&
-                            point.y <= bounds.bottom
-                        }
-                        .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                        ?.first
+                      CanvasHitTest.press(
+                        inspection.hitBoxes(),
+                        point.x,
+                        point.y,
+                        selectedNodeId,
+                        hitParents,
+                      )
                     },
                     onStarted = onNodeDragStarted,
                     onDragged = onNodeDragged,
@@ -696,18 +680,13 @@ internal fun PinnedDesignCanvas(
                               frameOrigin.x + position.x * drawScale,
                               frameOrigin.y + position.y * drawScale,
                             )
-                          inspection
-                            ?.nodes
-                            .orEmpty()
-                            .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                            .filter { (_, bounds) ->
-                              point.x >= bounds.x &&
-                                point.x <= bounds.right &&
-                                point.y >= bounds.y &&
-                                point.y <= bounds.bottom
-                            }
-                            .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                            ?.first
+                          CanvasHitTest.tap(
+                              inspection.hitBoxes(),
+                              point.x,
+                              point.y,
+                              currentSelection.value,
+                              hitParents,
+                            )
                             ?.let(onNodeSelected)
                         }
                       }

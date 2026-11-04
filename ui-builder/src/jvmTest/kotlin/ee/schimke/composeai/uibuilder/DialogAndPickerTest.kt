@@ -8,12 +8,14 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.EditorPropertyControl
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -143,6 +145,22 @@ class DialogAndPickerTest {
     assertTrue("TimePicker(" !in time, time)
   }
 
+  /**
+   * #75: the screen's own export (the component-record projection the editor's code pane and the
+   * served export use) writes the time picker from its record, both modes, rather than refusing it.
+   */
+  @Test
+  fun `the screen export writes a time picker from its component record`() {
+    val dial = screenCodeOf("m3/time-picker")
+    val input = screenCodeOf("m3/time-picker", "mode" to "input")
+
+    assertTrue("TimePicker(" in dial, dial)
+    assertTrue("rememberTimePickerState(" in dial, dial)
+    assertTrue("initialHour = $DEFAULT_PICKED_HOUR" in dial, dial)
+    assertTrue("TimeInput(" in input, input)
+    assertTrue("TimePicker(" !in input, input)
+  }
+
   @Test
   fun `an ISO date becomes the epoch millisecond the calendar opens on`() {
     // Epoch itself, a leap day, and a date after one — the three cases a civil-date conversion gets
@@ -165,6 +183,26 @@ class DialogAndPickerTest {
     // Export the whole design, not the node re-rooted: a root that is also someone's child is
     // correctly refused.
     return CapabilityComposeCodeExporter.export(edited.document, catalog).requireSource()
+  }
+
+  /** [componentId] inserted into a blank screen, whose every other node the record covers. */
+  private fun screenCodeOf(componentId: String, vararg properties: Pair<String, String>): String {
+    val blank = blankUiBuilderDocument("picker", document.catalogPin, document.environment)
+    val box = blank.nodes.values.first { it.componentId == "layout/box" }.id
+    val initial = reducer.initial(blank, selectedNodeId = box)
+    val target = requireNotNull(reducer.dropTarget(initial, componentId)) { componentId }
+    val inserted =
+      reducer.reduce(initial, UiBuilderEditorEvent.InsertComponent(componentId, target))
+    val nodeId = assertNotNull(inserted.selectedNodeId)
+    val edited =
+      properties.fold(inserted) { state, (name, value) ->
+        reducer.reduce(state, UiBuilderEditorEvent.CommitProperty(nodeId, name, value))
+      }
+    return assertIs<EditorGeneratedCode.Source>(
+        reducer.generatedCode(edited.document),
+        reducer.generatedCode(edited.document).toString(),
+      )
+      .kotlin
   }
 
   private fun Pair<UiBuilderEditorState, String>.text(nodeId: String): String =

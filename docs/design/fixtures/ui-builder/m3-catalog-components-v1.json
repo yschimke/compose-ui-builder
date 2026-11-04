@@ -2400,6 +2400,94 @@
         ]
       },
       "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TimePickerKt.TimePicker",
+      "componentIds": [
+        "m3/time-picker"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TimePickerKt",
+        "callable": "androidx.compose.material3.TimePicker",
+        "name": "TimePicker",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "state",
+          "type": "TimePickerState",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.material3.TimePickerState",
+          "noArgFactory": "androidx.compose.material3.rememberTimePickerState"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "colors",
+          "type": "TimePickerColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.TimePickerColors"
+        },
+        {
+          "name": "layoutType",
+          "type": "TimePickerLayoutType",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.TimePickerLayoutType"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "TimePicker(state = rememberTimePickerState())",
+        "imports": [
+          "androidx.compose.material3.TimePicker",
+          "androidx.compose.material3.rememberTimePickerState"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TimePickerKt.TimeInput",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TimePickerKt",
+        "callable": "androidx.compose.material3.TimeInput",
+        "name": "TimeInput",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "state",
+          "type": "TimePickerState",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.material3.TimePickerState",
+          "noArgFactory": "androidx.compose.material3.rememberTimePickerState"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "colors",
+          "type": "TimePickerColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.TimePickerColors"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "TimeInput(state = rememberTimePickerState())",
+        "imports": [
+          "androidx.compose.material3.TimeInput",
+          "androidx.compose.material3.rememberTimePickerState"
+        ]
+      },
+      "signatureKnown": true
     }
   ]
 }
