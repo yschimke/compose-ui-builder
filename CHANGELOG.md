@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.126.0](https://github.com/yschimke/compose-ui-builder/compare/v3.125.0...v3.126.0) (2026-11-04)
+
+
+### Features
+
+* export supplied Compose source without saving a design ([#957](https://github.com/yschimke/compose-ui-builder/issues/957)) ([6aef73f](https://github.com/yschimke/compose-ui-builder/commit/6aef73f45a7f63a7222b49ffa1e3dcf6eeb1571e))
+* preview clipped Wear widget hosts ([#1072](https://github.com/yschimke/compose-ui-builder/issues/1072)) ([0f9dd35](https://github.com/yschimke/compose-ui-builder/commit/0f9dd35f928bf227a53d34f1a09a86a0a7d5d7ea))
+* **ui-builder:** name a design when creating it and rename it in the editor ([#1089](https://github.com/yschimke/compose-ui-builder/issues/1089)) ([ac881bb](https://github.com/yschimke/compose-ui-builder/commit/ac881bbb6ab3b92217a5636ec67edc4fe5f66798))
+* **ui-builder:** observable Wear onClickAction, container-first canvas taps, time picker export ([#1086](https://github.com/yschimke/compose-ui-builder/issues/1086)) ([c55302f](https://github.com/yschimke/compose-ui-builder/commit/c55302fba21165da39ed536c33d9ec0b32dcb590))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools ([#1076](https://github.com/yschimke/compose-ui-builder/issues/1076)) ([6105dc1](https://github.com/yschimke/compose-ui-builder/commit/6105dc10c739429172887b476b9ee605df2b00ea))
+* **deps:** update compose-ai-tools ([#1082](https://github.com/yschimke/compose-ui-builder/issues/1082)) ([f05ea05](https://github.com/yschimke/compose-ui-builder/commit/f05ea05bc706ff23e98a0e74e8caa9c4f63ace68))
+* **deps:** update dependency com.networknt:json-schema-validator to v3.0.9 ([#1085](https://github.com/yschimke/compose-ui-builder/issues/1085)) ([c2f8815](https://github.com/yschimke/compose-ui-builder/commit/c2f8815218d4a0c44d70b03378a4395a19ba728b))
+* **deps:** update dependency dev.snipme:highlights to v1.2.0 ([#1084](https://github.com/yschimke/compose-ui-builder/issues/1084)) ([8d94316](https://github.com/yschimke/compose-ui-builder/commit/8d94316ab60dc7e820acf67a36f22b8931e898a5))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.39.1 ([#1069](https://github.com/yschimke/compose-ui-builder/issues/1069)) ([57924f0](https://github.com/yschimke/compose-ui-builder/commit/57924f0a7fc42f1c9350ba5b432269e5e00763b4))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.27.2 ([#1071](https://github.com/yschimke/compose-ui-builder/issues/1071)) ([0c0bca5](https://github.com/yschimke/compose-ui-builder/commit/0c0bca51ad041e642c1df382636477c63a106f67))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.22.0 ([#1077](https://github.com/yschimke/compose-ui-builder/issues/1077)) ([b09ac60](https://github.com/yschimke/compose-ui-builder/commit/b09ac6059307e468beb014fc82431846ed83938f))
+* **deps:** update dependency org.jmdns:jmdns to v3.6.5 ([#1066](https://github.com/yschimke/compose-ui-builder/issues/1066)) ([32826c2](https://github.com/yschimke/compose-ui-builder/commit/32826c214238d1d45d15cab2b6f0fb0da0aab7b6))
+* restore missing bytes on repeated asset upload ([#1080](https://github.com/yschimke/compose-ui-builder/issues/1080)) ([abc4b0c](https://github.com/yschimke/compose-ui-builder/commit/abc4b0c84279daefe88130b0cb234ab44f15c599))
+
 ## [3.125.0](https://github.com/yschimke/compose-ui-builder/compare/v3.124.0...v3.125.0) (2026-10-30)
 
 
