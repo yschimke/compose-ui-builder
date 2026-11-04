@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import ee.schimke.composeai.uibuilder.export.ClickActions
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -50,7 +51,10 @@ fun CanvasRenderNode.prepare(
     dispatchCanvasEvent(node, event, state, onState, onNavigate, expressionScope, clock)
   }
   val activate = { dispatch("click") }
-  if (node.eventBindings["click"] != null) {
+  // A click is the bound `eventBindings.click` plus a component's `onClickAction`; see
+  // ClickActions.
+  val clicks = ClickActions.handles(node)
+  if (clicks) {
     onSemanticAction(
       node.id,
       UiBuilderSemanticActionEntry(enabled = enabled, activate = activate),
@@ -74,7 +78,7 @@ fun CanvasRenderNode.prepare(
         onLongClick = if (longClick) ({ dispatch("longClick") }) else null,
         onDoubleClick = if (doubleClick) ({ dispatch("doubleClick") }) else null,
       )
-  } else if (node.eventBindings["click"] != null && !handlesClick) {
+  } else if (clicks && !handlesClick) {
     measured = measured.clickable(enabled = enabled, onClick = activate)
   }
   if (enabled && TOUCH_EVENTS.any { node.eventBindings[it] != null }) {
@@ -118,7 +122,9 @@ fun dispatchCanvasEvent(
   scope: UiExpressions.Scope? = null,
   clock: UiExpressions.Clock = UiExpressions.Clock.DEFAULT,
 ) {
-  val actions = node.eventBindings[event] as? JsonArray ?: return
+  val actions =
+    if (event == "click") ClickActions.of(node)
+    else node.eventBindings[event] as? JsonArray ?: return
   val working = state.toMutableMap()
   actions.forEach { element ->
     val action = element as? JsonObject ?: return@forEach

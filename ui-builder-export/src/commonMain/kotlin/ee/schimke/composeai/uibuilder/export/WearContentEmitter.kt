@@ -243,7 +243,10 @@ internal class WearContentEmitter(
         if (variant == "outlined" || variant == "plain") {
           val symbol = if (variant == "outlined") "OutlinedCard" else "Card"
           usesPlainCard += symbol
-          return listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+          return listOf(
+            "${pad}$symbol(",
+            "${pad}${INDENT}onClick = ${clickLambda(node, nodeId)},",
+          ) +
             cardColors(node, nodeId, pad + INDENT, symbol) +
             surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
             listOf("${pad}) {") +
@@ -262,7 +265,10 @@ internal class WearContentEmitter(
             )
           }
           usesPlainCard += "AppCard"
-          return listOf("${pad}AppCard(", "${pad}${INDENT}onClick = {},") +
+          return listOf(
+            "${pad}AppCard(",
+            "${pad}${INDENT}onClick = ${clickLambda(node, nodeId)},",
+          ) +
             listOf("${pad}${INDENT}appName = {") +
             emit(lines[0], depth + 2) +
             listOf("${pad}${INDENT}},", "${pad}${INDENT}title = {") +
@@ -275,7 +281,7 @@ internal class WearContentEmitter(
         usesCard = true
         val (title, body) =
           if (lines != null) listOf(lines.first()) to lines.drop(1) else content to emptyList()
-        listOf("${pad}TitleCard(", "${pad}${INDENT}onClick = {},") +
+        listOf("${pad}TitleCard(", "${pad}${INDENT}onClick = ${clickLambda(node, nodeId)},") +
           listOf("${pad}${INDENT}title = {") +
           title.flatMap { emit(it, depth + 2) } +
           listOf("${pad}${INDENT}},") +
@@ -302,7 +308,10 @@ internal class WearContentEmitter(
         val slots = buttonSlots(content)
         if (slots == null) {
           // Nothing the slots can say: the content overload, which is still Wear's `Button`.
-          return listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+          return listOf(
+            "${pad}$symbol(",
+            "${pad}${INDENT}onClick = ${clickLambda(node, nodeId)},",
+          ) +
             enabled +
             colors +
             surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
@@ -312,7 +321,7 @@ internal class WearContentEmitter(
         }
         // The slot overload (`icon`, `label`, `secondaryLabel`), as both upstream samples use; each
         // slot carries its own typography, colour and spacing.
-        listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+        listOf("${pad}$symbol(", "${pad}${INDENT}onClick = ${clickLambda(node, nodeId)},") +
           enabled +
           colors +
           (slots.icon?.let {
@@ -1633,6 +1642,88 @@ internal class WearContentEmitter(
     return name
   }
 
+  /**
+   * A button's or card's `onClick`: its click actions (`eventBindings.click`, then `onClickAction`;
+   * see [ClickActions]) as a lambda, `{}` when there are none. The document state an action writes
+   * is hoisted once, as [documentFlag] does. An action this lane cannot write is refused by name
+   * rather than dropped, so a design never exports a click that silently does nothing.
+   */
+  private fun clickLambda(node: UiBuilderNode, nodeId: String): String {
+    val statements =
+      ClickActions.of(node).mapIndexedNotNull { index, element ->
+        val where = "node `$nodeId` click action ${index + 1}"
+        val action = element as? JsonObject
+        if (action == null) {
+          refusals += "$where is not an action object"
+          return@mapIndexedNotNull null
+        }
+        clickStatement(action, where)
+      }
+    return if (statements.isEmpty()) "{}" else "{ ${statements.joinToString("; ")} }"
+  }
+
+  private fun clickStatement(action: JsonObject, where: String): String? {
+    val type = (action["type"] as? JsonPrimitive)?.contentOrNull
+    fun refuse(reason: String): String? {
+      refusals += "$where ($type) $reason"
+      return null
+    }
+    if (type == "navigatePage") return refuse("navigates pages, and a Wear screen is one page")
+    if (type !in WEAR_CLICK_ACTIONS) return refuse("has no Wear Compose lowering")
+    val variable =
+      (action["variable"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+        ?: return refuse("names no state variable")
+    val (name, valueType) =
+      documentVariable(variable)
+        ?: return refuse(
+          "writes `$variable`, which is not a declared non-null bool, int or string state variable"
+        )
+    return when (type) {
+      "toggle" -> if (valueType == "bool") "$name = !$name" else refuse("needs a bool variable")
+      "increment" -> {
+        val amount = (action["amount"] as? JsonPrimitive) ?: JsonPrimitive(1)
+        val step = amount.takeUnless { it.isString }?.contentOrNull?.toLongOrNull()
+        if (valueType != "int" || step == null) refuse("needs an int variable and a whole amount")
+        else "$name += $step"
+      }
+      else -> {
+        val literal =
+          (action["value"] as? JsonPrimitive)?.let { stateLiteral(it, valueType) }
+            ?: return refuse("assigns a value `$variable` ($valueType) cannot hold")
+        "$name = $literal"
+      }
+    }
+  }
+
+  /**
+   * The hoisted name and value type of document state variable [variable], declared once at the
+   * top, or null when it is not a non-null `bool`, `int` or `string` with a matching initial value.
+   */
+  private fun documentVariable(variable: String): Pair<String, String>? {
+    val declaration = document.stateVariables[variable] as? JsonObject ?: return null
+    if ((declaration["nullable"] as? JsonPrimitive)?.booleanOrNull == true) return null
+    val valueType = (declaration["valueType"] as? JsonPrimitive)?.contentOrNull ?: return null
+    val initial = declaration["initialValue"] as? JsonPrimitive ?: return null
+    val literal = stateLiteral(initial, valueType) ?: return null
+    val name = exportedStateIdentifier(variable)
+    if (name !in documentState) {
+      stateNames += name
+      documentState += name
+      usesRememberState = true
+      rememberedState += "var $name by remember { mutableStateOf($literal) }"
+    }
+    return name to valueType
+  }
+
+  /** [value] as a Kotlin literal of state type [valueType], or null when it is not one. */
+  private fun stateLiteral(value: JsonPrimitive, valueType: String): String? =
+    when (valueType) {
+      "bool" -> value.takeUnless { it.isString }?.booleanOrNull?.toString()
+      "int" -> value.takeUnless { it.isString }?.contentOrNull?.toLongOrNull()?.toString()
+      "string" -> value.takeIf { it.isString }?.content?.quoted()
+      else -> null
+    }
+
   private fun rememberedBoolean(nodeId: String, role: String, initial: Boolean): String {
     val name = uniqueStateName(nodeId, role)
     usesRememberState = true
@@ -2059,3 +2150,6 @@ internal fun UiBuilderDocument.screenIdentifier(): String {
   val identifier = if (joined.first().isDigit()) "Screen$joined" else joined
   return if (identifier.endsWith("Screen")) identifier else "${identifier}Screen"
 }
+
+/** The click actions a Wear button or card writes into its `onClick`; see `clickLambda`. */
+private val WEAR_CLICK_ACTIONS = setOf("toggle", "set", "select", "increment")
