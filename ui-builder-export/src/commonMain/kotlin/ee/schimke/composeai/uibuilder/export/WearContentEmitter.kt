@@ -1681,8 +1681,12 @@ internal class WearContentEmitter(
     return when (type) {
       "toggle" -> if (valueType == "bool") "$name = !$name" else refuse("needs a bool variable")
       "increment" -> {
-        val amount = (action["amount"] as? JsonPrimitive) ?: JsonPrimitive(1)
-        val step = amount.takeUnless { it.isString }?.contentOrNull?.toLongOrNull()
+        // Default to one only when `amount` is absent: a formula (`{"type":"expr"}`) or any other
+        // non-literal is refused, because the canvas evaluates it and a fixed step would diverge.
+        val amount = action["amount"]
+        val step =
+          if (amount == null) 1L
+          else (amount as? JsonPrimitive)?.takeUnless { it.isString }?.contentOrNull?.toLongOrNull()
         if (valueType != "int" || step == null) refuse("needs an int variable and a whole amount")
         else "$name += $step"
       }

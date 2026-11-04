@@ -107,6 +107,46 @@ class WearClickActionExportTest {
     assertTrue("`undeclared`" in refused.reasons.single(), refused.reasons.toString())
   }
 
+  @Test
+  fun `an increment by a formula is refused, not exported as a step of one`() {
+    fun counter(amount: JsonElement?) =
+      screenWith(
+        mapOf("count" to number(0)),
+        button("add")
+          .copy(
+            eventBindings =
+              JsonObject(
+                mapOf(
+                  "click" to
+                    JsonArray(
+                      listOf(
+                        JsonObject(
+                          buildMap {
+                            put("type", JsonPrimitive("increment"))
+                            put("variable", JsonPrimitive("count"))
+                            if (amount != null) put("amount", amount)
+                          }
+                        )
+                      )
+                    )
+                )
+              )
+          ),
+        text("add-label", "Add"),
+      )
+
+    val formula =
+      JsonObject(mapOf("type" to JsonPrimitive("expr"), "source" to JsonPrimitive("count * 2")))
+    val refused =
+      assertIs<WearScreenCodeExporter.Result.Refused>(
+        WearScreenCodeExporter.export(counter(formula))
+      )
+    assertTrue("node `add` click action 1" in refused.reasons.single(), refused.reasons.toString())
+
+    assertTrue("onClick = { count += 3 }," in export(counter(JsonPrimitive(3))))
+    assertTrue("onClick = { count += 1 }," in export(counter(null)))
+  }
+
   private fun export(document: UiBuilderDocument): String =
     assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document)).source
 
