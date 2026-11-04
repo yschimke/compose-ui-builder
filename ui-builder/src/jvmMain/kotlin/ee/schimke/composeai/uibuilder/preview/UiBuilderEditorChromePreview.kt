@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.preview.SettledPreview
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
@@ -147,7 +148,12 @@ fun UiBuilderComponentVariantsPreview() {
  * The palette narrowed to the components the Compose export cannot write, to diff the "no Kotlin"
  * marker on each row shape (including a variant row). "picker" matches only the two pickers, which
  * are unlikely to become exportable.
+ *
+ * Settled, as [CatalogDialogAndPickersPreview] is: the palette rows draw the live Material 3 date
+ * and time pickers, which animate their initial content, so a first-frame capture changed from run
+ * to run and the diff bot flagged it on unrelated pull requests.
  */
+@SettledPreview
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
 fun UiBuilderUnexportablePalettePreview() {
