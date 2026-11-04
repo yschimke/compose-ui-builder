@@ -57,6 +57,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorLibraryComponent
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.NewDesignCallback
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentPreferences
@@ -79,7 +80,6 @@ import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesi
 import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
-import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -1190,52 +1190,59 @@ private fun LiveSessionApp(
    * the New design form (its `303` puts the permalink in history). A local design is seeded in-page
    * from the cached published templates, written to this browser, and the URL rewritten.
    */
-  val createPublicDesign: ((String, String, String, List<NewDesignState>) -> Unit)? =
+  val createPublicDesign: NewDesignCallback? =
     if (localSession == null && config.canWrite && config.designVisibilitySupported) {
-      { catalog, design, template, state ->
+      { catalog, design, template, state, title ->
         navigateToNewDesign(
           catalog,
           design,
           template,
           encodeNewDesignStates(state),
           publicRead = true,
+          title = title,
         )
       }
     } else null
-  val createDesign: (String, String, String, List<NewDesignState>) -> Unit =
-    { catalogSystemId, designId, templateId, state ->
-      if (localSession == null && config.canWrite) {
-        navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
-      } else {
-        // In this browser: a local session, or a server that would refuse this caller's create.
-        val intoBrowser = localSession == null
-        scope.launch {
-          val failure =
-            createLocalDesign(
-              session = localSession ?: BrowserLocalSession(config.copy(localStorage = true)),
-              catalogs = catalogCapabilities,
+  val createDesign: NewDesignCallback = { catalogSystemId, designId, templateId, state, title ->
+    if (localSession == null && config.canWrite) {
+      navigateToNewDesign(
+        catalogSystemId,
+        designId,
+        templateId,
+        encodeNewDesignStates(state),
+        title = title,
+      )
+    } else {
+      // In this browser: a local session, or a server that would refuse this caller's create.
+      val intoBrowser = localSession == null
+      scope.launch {
+        val failure =
+          createLocalDesign(
+            session = localSession ?: BrowserLocalSession(config.copy(localStorage = true)),
+            catalogs = catalogCapabilities,
+            catalogSystemId = catalogSystemId,
+            designId = designId,
+            templateId = templateId,
+            state = state,
+            title = title,
+          )
+        if (failure != null) {
+          sessionStatus = "Local error · $failure"
+        } else {
+          if (intoBrowser) enterLocalDesignUrl(designId)
+          else canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
+          onOpenDesign(
+            config.copy(
               catalogSystemId = catalogSystemId,
               designId = designId,
-              templateId = templateId,
-              state = state,
+              startWithNewDesign = false,
+              localStorage = true,
             )
-          if (failure != null) {
-            sessionStatus = "Local error · $failure"
-          } else {
-            if (intoBrowser) enterLocalDesignUrl(designId)
-            else canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
-            onOpenDesign(
-              config.copy(
-                catalogSystemId = catalogSystemId,
-                designId = designId,
-                startWithNewDesign = false,
-                localStorage = true,
-              )
-            )
-          }
+          )
         }
       }
     }
+  }
 
   // Taking the design into this browser, and bringing it home again, each offered only where it
   // applies. Rules (fork point, base chain, refusals):
@@ -1712,6 +1719,21 @@ private fun LiveSessionApp(
         newDesignCatalogs = newDesignCatalogs,
         onCreateDesign = createDesign,
         onCreatePublicDesign = createPublicDesign,
+        // Retitling keeps the id, so nothing navigates: the host's copies take the new title so a
+        // later reconcile keeps it, as the editor's own state already has.
+        onRenameDesign =
+          if (localSession != null || (config.canWrite && designVisibility?.canWrite != false)) {
+            { title ->
+              val refusal =
+                localSession?.service?.rename(config.designId, title)
+                  ?: if (localSession == null) renameServerDesign(config.designId, title) else null
+              if (refusal == null) {
+                authoritativeDocument = authoritativeDocument?.copy(title = title)
+                document = document?.copy(title = title)
+              }
+              refusal
+            }
+          } else null,
         onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
         // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
         // source as the caller, so this lends nothing a reader could not already open.

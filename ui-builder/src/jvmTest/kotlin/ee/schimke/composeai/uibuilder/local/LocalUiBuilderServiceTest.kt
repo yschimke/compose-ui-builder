@@ -24,6 +24,7 @@ import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonPrimitive
@@ -156,6 +157,41 @@ class LocalUiBuilderServiceTest {
     // Not just in memory: a page that reloads reads this and replays it.
     assertTrue(store.read(LocalDesignFixtures.DESIGN_ID)!!.log.isNotEmpty())
   }
+
+  @Test
+  fun `a rename keeps the id, survives edits and a reload, and refuses what the server refuses`() =
+    runBlocking {
+      seed()
+      val id = LocalDesignFixtures.DESIGN_ID
+
+      assertNull(service.rename(id, "  Order summary  "))
+      assertEquals("Order summary", store.read(id)!!.seed.title)
+      assertEquals("Order summary", store.list().single { it.designId == id }.title)
+
+      // An edit after the rename neither reverts nor drops it.
+      client.execute(
+        ApplyOperationRequestV1(
+          EditorSubmission.Batch(LocalDesignFixtures.insert("text-1", baseRevision = 0).command)
+            .toProtocolSubmission(
+              actorId = "tester",
+              clientId = "test-client",
+              authoritativeRevision = 0,
+            )
+        )
+      )
+      val reloaded =
+        LocalUiBuilderService(store = store, catalogs = { listOf(catalog) }, clock = { 1 })
+      val snapshot =
+        assertIs<SnapshotResponseV1>(reloaded.execute(OpenDesignRequestV1(id))).snapshot
+      assertEquals("Order summary", snapshot.state.document.title)
+      assertEquals(id, snapshot.state.document.id)
+      assertTrue("text-1" in snapshot.state.document.nodes)
+
+      assertEquals("design title is blank", service.rename(id, "   "))
+      assertTrue(service.rename(id, "x".repeat(201))!!.contains("exceeds 200"))
+      assertTrue(service.rename("nothing-here", "Mine")!!.contains("no design called"))
+      assertEquals("Order summary", store.read(id)!!.seed.title)
+    }
 
   @Test
   fun `the catalog list is what the editor gets, and its absence is named`() = runBlocking {

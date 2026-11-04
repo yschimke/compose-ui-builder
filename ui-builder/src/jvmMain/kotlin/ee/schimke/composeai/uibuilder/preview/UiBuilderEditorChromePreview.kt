@@ -375,8 +375,8 @@ fun UiBuilderNewDesignPreview() {
             )
         },
     initialCatalogSystemId = "m3-catalog",
-    onCreatePublic = { _, _, _, _ -> },
-    onCreate = { _, _, _, _ -> },
+    onCreatePublic = { _, _, _, _, _ -> },
+    onCreate = { _, _, _, _, _ -> },
   )
 }
 

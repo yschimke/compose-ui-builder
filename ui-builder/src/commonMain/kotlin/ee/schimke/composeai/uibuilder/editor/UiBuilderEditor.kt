@@ -92,7 +92,6 @@ import ee.schimke.composeai.uibuilder.capability.scrollers
 import ee.schimke.composeai.uibuilder.componentDriftProblems
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.designUrlPath
-import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -482,15 +481,15 @@ fun UiBuilderEditor(
    */
   onCopyDesignLink: (suspend (DesignUrlSelectors) -> String)? = null,
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
-  onCreatePublicDesign: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
-  onCreateDesign:
-    ((
-      catalogSystemId: String,
-      designId: String,
-      templateId: String,
-      state: List<NewDesignState>,
-    ) -> Unit)? =
-    null,
+  onCreatePublicDesign: NewDesignCallback? = null,
+  onCreateDesign: NewDesignCallback? = null,
+  /**
+   * Retitles this design without changing its id, or null where the host cannot (a reader, a host
+   * with no rename route). Answers null once the title is stored, else why not; the editor then
+   * shows the new title. Host-side because a title is metadata outside the operation log: it takes
+   * no revision and no undo record, the same `RenameDesign` request the server's MCP tool makes.
+   */
+  onRenameDesign: (suspend (String) -> String?)? = null,
   onHelp: (() -> Unit)? = null,
   /**
    * A selection made outside the editor (e.g. a host's layer tree). Each new
@@ -781,6 +780,8 @@ fun UiBuilderEditor(
     }
   var inspectorOpen by remember(document.id) { mutableStateOf(initialInspectorOpen) }
   var showNewDesign by remember(document.id) { mutableStateOf(false) }
+  var showRename by remember(document.id) { mutableStateOf(false) }
+  val openRename: (() -> Unit)? = onRenameDesign?.let { { showRename = true } }
   var showAgentPrompt by remember(document.id) { mutableStateOf(false) }
   var showPacks by remember(document.id) { mutableStateOf(false) }
   // Offered only where there is something to switch: a settings entry over an empty list is a
@@ -2687,6 +2688,7 @@ fun UiBuilderEditor(
                     { showNewDesign = true }
                   } else null,
                 onBrowseDesigns = onBrowseDesigns,
+                onRenameDesign = openRename,
                 onForkDesign = onForkDesign,
                 onReconnect = onReconnect,
                 onHelp = onHelp,
@@ -2714,6 +2716,7 @@ fun UiBuilderEditor(
                     { showNewDesign = true }
                   } else null,
                 onBrowseDesigns = onBrowseDesigns,
+                onRenameDesign = openRename,
                 onForkDesign = onForkDesign,
                 onReconnect = onReconnect,
                 onHelp = onHelp,
@@ -3183,6 +3186,24 @@ fun UiBuilderEditor(
             enabledPacks = state.enabledPacks,
             onToggle = { dispatch(UiBuilderEditorEvent.TogglePack(it)) },
             onDismiss = { showPacks = false },
+          )
+        }
+        if (showRename && onRenameDesign != null) {
+          RenameDesignDialog(
+            designId = state.document.id,
+            currentTitle = state.document.title,
+            onRename = onRenameDesign,
+            onRenamed = { title ->
+              // Outside the operation log, so no event: the title is set on the state as it
+              // stands, and the host updates its own copy so a later reconcile keeps it.
+              state =
+                state.copy(
+                  collaboration =
+                    state.collaboration.copy(document = state.document.copy(title = title))
+                )
+              say("Renamed to $title")
+            },
+            onDismiss = { showRename = false },
           )
         }
         if (showNewDesign && onCreateDesign != null) {

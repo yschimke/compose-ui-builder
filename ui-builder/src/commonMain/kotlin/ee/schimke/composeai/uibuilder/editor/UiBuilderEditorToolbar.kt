@@ -123,6 +123,8 @@ internal fun MobileEditorToolbar(
   canRedo: Boolean,
   onNewDesign: (() -> Unit)?,
   onBrowseDesigns: (() -> Unit)? = null,
+  /** Opens the rename dialog, or null where this design cannot be renamed here. */
+  onRenameDesign: (() -> Unit)? = null,
   onForkDesign: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
@@ -234,6 +236,14 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("New design") {
                 expanded = false
                 onNewDesign()
+              }
+            )
+          }
+          if (onRenameDesign != null) {
+            add(
+              UiBuilderMenuEntry.Action("Rename design…") {
+                expanded = false
+                onRenameDesign()
               }
             )
           }
@@ -550,6 +560,8 @@ internal fun EditorToolbar(
    * Leaves for the host's index of every design this account may open; null where there is none.
    */
   onBrowseDesigns: (() -> Unit)? = null,
+  /** Opens the rename dialog, or null where this design cannot be renamed here. */
+  onRenameDesign: (() -> Unit)? = null,
   onForkDesign: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
@@ -599,7 +611,13 @@ internal fun EditorToolbar(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-      DocumentIdentity(state)
+      DocumentIdentity(
+        state,
+        // The title is the obvious place to change it, as in any design tool.
+        modifier =
+          if (onRenameDesign == null) Modifier
+          else Modifier.clickable(onClickLabel = "Rename design", onClick = onRenameDesign),
+      )
       Spacer(Modifier.width(10.dp))
       ToolbarIconAction("Undo", "$COMMAND_MODIFIER+Z", UiBuilderChromeIcon.Undo, canUndo) {
         dispatch(UiBuilderEditorEvent.Undo)
@@ -706,6 +724,14 @@ internal fun EditorToolbar(
                 }
               )
             }
+          }
+          if (onRenameDesign != null) {
+            add(
+              UiBuilderMenuEntry.Action("Rename design…", icon = UiBuilderMenuIcon.QuickEdit) {
+                overflowOpen = false
+                onRenameDesign()
+              }
+            )
           }
           if (onBrowseDesigns != null) {
             add(
