@@ -23,6 +23,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -235,6 +236,8 @@ internal fun RuntimeContainerPopOut(
 ) {
   val designDensity = document.renderDensity(LocalDensity.current).density
   val detached = remember(document, container) { document.detachedAt(container) }
+  val hitParents = remember(document) { CanvasHitTest.parents(document) }
+  val currentSelection = rememberUpdatedState(selectedNodeId)
   val (widthDp, heightDp) = if (container.horizontal) extentDp to crossDp else crossDp to extentDp
   val drawScale = scale / densityRatio
   var inspection by
@@ -275,18 +278,13 @@ internal fun RuntimeContainerPopOut(
           .pointerInput(inspection, onNodeSelected) {
             detectTapGestures { position ->
               val point = origin + position * drawScale
-              inspection
-                ?.nodes
-                .orEmpty()
-                .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                .filter { (_, bounds) ->
-                  point.x >= bounds.x &&
-                    point.x <= bounds.right &&
-                    point.y >= bounds.y &&
-                    point.y <= bounds.bottom
-                }
-                .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                ?.first
+              CanvasHitTest.tap(
+                  inspection.hitBoxes(),
+                  point.x,
+                  point.y,
+                  currentSelection.value,
+                  hitParents,
+                )
                 ?.let(onNodeSelected)
             }
           }
