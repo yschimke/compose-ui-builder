@@ -346,7 +346,7 @@ class AgentToolbarTest {
               exportHost = exportHost,
               newDesignCatalogs =
                 listOf(UiBuilderNewDesignCatalog("m3", "Material 3", emptyList())),
-              onCreateDesign = { _, _, _, _ -> },
+              onCreateDesign = { _, _, _, _, _ -> },
               onBrowseDesigns = {},
               onForkDesign = { toolbar.forked++ },
               visibilityLabel = "Private · invited collaborators only",

@@ -152,6 +152,22 @@ class LocalUiBuilderService(
     }
   }
 
+  /**
+   * Retitles a design this browser holds, keeping its id: the local counterpart of the server's
+   * `RenameDesign`, with the same refusals. Null once stored, else why not.
+   */
+  suspend fun rename(designId: String, title: String): String? {
+    val trimmed = title.trim()
+    if (trimmed.isEmpty()) return "design title is blank"
+    if (trimmed.length > MAXIMUM_LOCAL_TITLE_LENGTH) {
+      return "design title exceeds $MAXIMUM_LOCAL_TITLE_LENGTH characters"
+    }
+    val session = openSession(designId) ?: return "this browser holds no design called $designId"
+    val persistence = session.rename(trimmed)
+    lastPersistence = persistence
+    return (persistence as? LocalPersistence.Refused)?.reason
+  }
+
   private suspend fun snapshot(designId: String): UiBuilderResponseV1 {
     val session =
       openSession(designId)
@@ -337,3 +353,6 @@ private fun DesignSubmissionV1.operationId(): String =
     is UndoCommandV1 -> operationId
     is RedoCommandV1 -> operationId
   }
+
+/** The longest title the hosted service accepts, held to the same limit here. */
+internal const val MAXIMUM_LOCAL_TITLE_LENGTH = 200

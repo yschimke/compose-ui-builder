@@ -348,12 +348,21 @@ Whoever cannot open the design gets a `404`, and so does an id that names nothin
 
 Creating is a `POST`. The New design dialog opens on a form factor — Mobile, Wear, RemoteCompose
 — with a generated id already filled in (a `cheeky-raccoon`, reshuffled or overwritten as you
-like) and its state variables folded away until asked for. It submits an ordinary form to
-`/ui-builder/designs` with the catalog, id, template and any state variables, and the server answers
+like) and its state variables folded away until asked for. The **Title** beside it is what the home
+screen, the toolbar and exports call the design; left empty it is the id in words (`cheeky-raccoon`
+becomes "Cheeky raccoon"). It submits an ordinary form to
+`/ui-builder/designs` with the catalog, id, title, template and any state variables, and the server answers
 `303 See Other` with the design's permalink — which the browser follows, so the URL you end up on,
 bookmark and share is the plain one above, and reloading it re-opens rather than re-creates. A
 design id that already exists is not an error and is not overwritten: you land on the design that
 is already there.
+
+The id is permanent; the title is not. Click the title in the toolbar (or **More → Rename design…**)
+to change it. The URL, links, history, access and id stay exactly as they were. A rename is metadata
+outside the operation log, so it takes no revision and no undo record: on a server it is
+`PUT /api/ui-builder/v1/designs/<id>/title` with `{"title": "…"}` (the same `RenameDesign` request
+`ui_builder_rename_design` makes), and in this browser it rewrites the stored design's title. Other
+open editors see the new title when they next load the design.
 
 ### Finding your designs
 

@@ -27,6 +27,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.UiBuilderReleaseNote
 import ee.schimke.composeai.uibuilder.editor.canvasFrameDp
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
+import ee.schimke.composeai.uibuilder.editor.newDesignDefaultTitle
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
@@ -81,7 +82,7 @@ class UiBuilderHomeScreenTest {
         onOpenDesign = {},
         onCopyDesign = {},
         onBrowseDesigns = {},
-        onCreate = { _, _, _, _ -> },
+        onCreate = { _, _, _, _, _ -> },
       )
     }
 
@@ -100,6 +101,43 @@ class UiBuilderHomeScreenTest {
   /**
    * A preview passes a fixed name so its render is stable; the app passes none and generates one.
    */
+  /**
+   * The title is a second, separate field (yschimke/compose-ui-builder#67): what a person types is
+   * the design's name everywhere it is shown, and an empty one becomes the id in words rather than
+   * the template's generic "Untitled …", so two blank designs can be told apart.
+   */
+  @Test
+  fun `the form creates with the typed title, or the id in words when it is left empty`() =
+    runComposeUiTest {
+      val created = mutableListOf<Pair<String, String>>()
+      setContent {
+        UiBuilderNewDesignScreen(
+          catalogs = catalogs,
+          initialCatalogSystemId = "m3-catalog",
+          initialDesignId = "sunny-otter",
+          onCreate = { _, designId, _, _, title -> created += designId to title },
+        )
+      }
+      onNodeWithContentDescription("Design title").performScrollTo().assertIsDisplayed()
+      onNodeWithText("Sunny otter").assertExists()
+      onNodeWithText("Create").performScrollTo().performClick()
+
+      onNodeWithContentDescription("Design title").performTextReplacement("  Checkout flow ")
+      onNodeWithText("Create").performScrollTo().performClick()
+
+      assertEquals(
+        listOf("sunny-otter" to "Sunny otter", "sunny-otter" to "Checkout flow"),
+        created,
+      )
+    }
+
+  @Test
+  fun `a default title reads the id as words`() {
+    assertEquals("Sunny otter", newDesignDefaultTitle("sunny-otter"))
+    assertEquals("Checkout v2 final", newDesignDefaultTitle("checkout_v2.final"))
+    assertEquals("Untitled design", newDesignDefaultTitle(""))
+  }
+
   @Test
   fun `a given design name is pre-filled, and the app's default is a generated one`() =
     runComposeUiTest {
@@ -111,7 +149,7 @@ class UiBuilderHomeScreenTest {
             catalogs = catalogs,
             initialCatalogSystemId = "m3-catalog",
             initialDesignId = initial,
-            onCreate = { _, designId, _, _ -> createdId = designId },
+            onCreate = { _, designId, _, _, _ -> createdId = designId },
           )
         }
       }
@@ -139,7 +177,7 @@ class UiBuilderHomeScreenTest {
         onOpenDesign = { opened = it },
         onCopyDesign = { copied = it },
         onBrowseDesigns = {},
-        onCreate = { _, _, _, _ -> },
+        onCreate = { _, _, _, _, _ -> },
       )
     }
 
@@ -160,7 +198,7 @@ class UiBuilderHomeScreenTest {
         initialCatalogSystemId = "m3-catalog",
         designs = designs,
         onMoveDesign = { designId, folder -> moved = designId to folder },
-        onCreate = { _, _, _, _ -> },
+        onCreate = { _, _, _, _, _ -> },
       )
     }
 
@@ -185,7 +223,7 @@ class UiBuilderHomeScreenTest {
         initialCatalogSystemId = "m3-catalog",
         designs = filed,
         onOpenDesign = {},
-        onCreate = { _, _, _, _ -> },
+        onCreate = { _, _, _, _, _ -> },
       )
     }
 
@@ -210,7 +248,7 @@ class UiBuilderHomeScreenTest {
         initialCatalogSystemId = "m3-catalog",
         designs = designs,
         onOpenDesign = {},
-        onCreate = { _, _, _, _ -> },
+        onCreate = { _, _, _, _, _ -> },
       )
     }
 
@@ -227,7 +265,7 @@ class UiBuilderHomeScreenTest {
       UiBuilderNewDesignScreen(
         catalogs = catalogs,
         initialCatalogSystemId = "m3-catalog",
-        onCreate = { catalog, designId, template, _ ->
+        onCreate = { catalog, designId, template, _, _ ->
           created = listOf(catalog, designId, template)
         },
       )
@@ -261,7 +299,7 @@ class UiBuilderHomeScreenTest {
             ),
           initialCatalogSystemId = "m3-catalog",
           releaseNotes = listOf(UiBuilderReleaseNote("9.9.0", "2026-09-25", listOf("a new thing"))),
-          onCreate = { catalog, _, template, _ -> submitted += "$catalog/$template" },
+          onCreate = { catalog, _, template, _, _ -> submitted += "$catalog/$template" },
         )
       }
       onNodeWithText("What's new").performScrollTo().assertIsDisplayed()
@@ -330,7 +368,7 @@ class UiBuilderHomeScreenTest {
           catalogs = types,
           initialDesignId = "sunny-otter",
           initialCatalogSystemId = "m3-catalog",
-          onCreate = { catalog, _, template, _ -> created = catalog to template },
+          onCreate = { catalog, _, template, _, _ -> created = catalog to template },
         )
       }
       fun capture(name: String) {
@@ -389,7 +427,7 @@ class UiBuilderHomeScreenTest {
       UiBuilderNewDesignScreen(
         catalogs = catalogs,
         initialCatalogSystemId = "m3-catalog",
-        onCreate = { _, _, _, _ -> },
+        onCreate = { _, _, _, _, _ -> },
       )
     }
 
@@ -554,7 +592,7 @@ class UiBuilderHomeScreenTest {
             initialDesignId = "sunny-otter",
             initialCatalogSystemId = "ha-cards",
             releaseNotes = emptyList(),
-            onCreate = { catalog, _, template, _ -> created = catalog to template },
+            onCreate = { catalog, _, template, _, _ -> created = catalog to template },
           )
         }
       }
@@ -592,7 +630,7 @@ class UiBuilderHomeScreenTest {
             initialCatalogSystemId = "ha-cards",
             releaseNotes = emptyList(),
             signInToCreate = EditorNoticeAction("Sign in with GitHub") { signedIn = true },
-            onCreate = { _, _, _, _ -> error("a signed-out visitor cannot create") },
+            onCreate = { _, _, _, _, _ -> error("a signed-out visitor cannot create") },
           )
         }
       }
@@ -624,7 +662,7 @@ class UiBuilderHomeScreenTest {
             initialDesignId = "sunny-otter",
             initialCatalogSystemId = "ha-cards",
             releaseNotes = emptyList(),
-            onCreate = { _, _, _, _ -> },
+            onCreate = { _, _, _, _, _ -> },
           )
         }
       }

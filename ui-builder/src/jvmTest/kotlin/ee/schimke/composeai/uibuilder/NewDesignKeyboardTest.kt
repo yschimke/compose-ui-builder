@@ -28,7 +28,7 @@ class NewDesignKeyboardTest {
         UiBuilderNewDesignScreen(
           catalogs = listOf(catalog),
           initialCatalogSystemId = catalog.systemId,
-          onCreate = { _, designId, _, _ -> createdId = designId },
+          onCreate = { _, designId, _, _, _ -> createdId = designId },
         )
       }
 
@@ -46,7 +46,7 @@ class NewDesignKeyboardTest {
         UiBuilderNewDesignScreen(
           catalogs = listOf(catalog),
           initialCatalogSystemId = catalog.systemId,
-          onCreate = { _, _, _, declared -> state = declared },
+          onCreate = { _, _, _, declared, _ -> state = declared },
         )
       }
 
@@ -70,8 +70,8 @@ class NewDesignKeyboardTest {
         UiBuilderNewDesignScreen(
           catalogs = listOf(catalog),
           initialCatalogSystemId = catalog.systemId,
-          onCreate = { _, _, _, _ -> creations += "private" },
-          onCreatePublic = { _, _, _, _ -> creations += "public" },
+          onCreate = { _, _, _, _, _ -> creations += "private" },
+          onCreatePublic = { _, _, _, _, _ -> creations += "public" },
         )
       }
       onNodeWithContentDescription("Design ID").performImeAction()
@@ -103,7 +103,7 @@ class NewDesignKeyboardTest {
           initialCatalogSystemId = "remote-m3",
           initialDesignId = "short-dialog",
           onDismiss = {},
-          onCreate = { _, _, template, state ->
+          onCreate = { _, _, template, state, _ ->
             createdTemplate = template
             createdState = state
           },

@@ -131,6 +131,28 @@ private constructor(
   }
 
   /**
+   * Changes the design's display title, keeping its id. Outside the log, like the server's
+   * `RenameDesign`: the seed carries the title (no command touches it, so replay keeps it) and the
+   * open state shows it at once, so undo neither reverts nor records it. Callers check the title.
+   *
+   * All or nothing: when the write is refused (a full browser, or another tab owning the design
+   * now) the title is put back, so neither a snapshot nor the next stored edit carries a rename
+   * that was reported as failed.
+   */
+  fun rename(title: String): LocalPersistence {
+    val previousState = state
+    val previousRecord = record
+    state = state.copy(document = state.document.copy(title = title))
+    record = record.copy(seed = record.seed.copy(title = title), updatedAtEpochMillis = clock())
+    val persistence = persist()
+    if (persistence is LocalPersistence.Refused) {
+      state = previousState
+      record = previousRecord
+    }
+    return persistence
+  }
+
+  /**
    * Writes the design, compacting first if the log exceeds its budget, and again if the browser
    * refuses the write (the budget only guesses the quota); dropping undo history beats losing the
    * edit.

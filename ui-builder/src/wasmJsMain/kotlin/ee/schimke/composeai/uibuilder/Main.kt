@@ -2167,7 +2167,7 @@ internal fun navigateToUiBuilderPage(catalogSystemId: String, designId: String) 
  * identity query rides on the action URL.
  */
 @JsFun(
-  """(catalogSystemId, designId, templateId, state, publicRead, carried) => {
+  """(catalogSystemId, designId, templateId, state, publicRead, title, carried) => {
     const current = new URL(globalThis.location.href);
     const action = new URL(
       '/ui-builder/designs',
@@ -2191,6 +2191,7 @@ internal fun navigateToUiBuilderPage(catalogSystemId: String, designId: String) 
     field('catalog', catalogSystemId);
     field('template', templateId);
     field('visibility', publicRead ? 'public' : 'private');
+    if (title) field('title', title);
     if (state && state !== '[]') field('state', state);
     globalThis.document.body.appendChild(form);
     form.submit();
@@ -2202,6 +2203,7 @@ private external fun navigateToNewDesignWith(
   templateId: String,
   state: String,
   publicRead: Boolean,
+  title: String,
   carried: String,
 )
 
@@ -2212,6 +2214,8 @@ internal fun navigateToNewDesign(
   templateId: String,
   state: String,
   publicRead: Boolean = false,
+  /** The display title; empty leaves the server's default (the template's own). */
+  title: String = "",
 ) =
   navigateToNewDesignWith(
     catalogSystemId = catalogSystemId,
@@ -2219,6 +2223,7 @@ internal fun navigateToNewDesign(
     templateId = templateId,
     state = state,
     publicRead = publicRead,
+    title = title,
     carried = DESIGN_URL_IDENTITY_KEYS.joinToString(","),
   )
 
@@ -2893,6 +2898,8 @@ internal suspend fun createLocalDesign(
   designId: String,
   templateId: String,
   state: List<NewDesignState>,
+  /** The display title; blank keeps the template's own. */
+  title: String = "",
 ): String? {
   val catalog =
     catalogs.firstOrNull { it.benchmark.catalogSystemId == catalogSystemId }
@@ -2904,18 +2911,21 @@ internal suspend fun createLocalDesign(
           fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/templates")
         }
       UiBuilderNewDesignSeed.document(
-        designId = designId,
-        templateId = templateId,
-        catalogPin =
-          CatalogReferenceV1(
-            catalogSystemId,
-            catalog.benchmark.catalogRevision,
-            "candidate",
-            catalog.benchmark.nativeRuntimeId,
-          ),
-        published = published,
-        state = state,
-      )
+          designId = designId,
+          templateId = templateId,
+          catalogPin =
+            CatalogReferenceV1(
+              catalogSystemId,
+              catalog.benchmark.catalogRevision,
+              "candidate",
+              catalog.benchmark.nativeRuntimeId,
+            ),
+          published = published,
+          state = state,
+        )
+        .let { seeded ->
+          title.trim().takeIf { it.isNotEmpty() }?.let { seeded.copy(title = it) } ?: seeded
+        }
     } catch (failure: Exception) {
       return failure.message ?: "the design could not be seeded"
     }
@@ -3046,3 +3056,27 @@ internal suspend fun awaitBrowserPaintOpportunity(): Unit =
 }"""
 )
 private external fun afterBrowserPaint(ready: () -> Unit)
+
+/**
+ * Retitles a server design through `PUT /api/ui-builder/v1/designs/{designId}/title`, the HTTP face
+ * of the server's `RenameDesign` (as `ui_builder_rename_design` is for agents). The id never
+ * changes. Null once stored, else the server's sentence for why not.
+ */
+internal suspend fun renameServerDesign(designId: String, title: String): String? {
+  val encoded =
+    try {
+      awaitCommentString(
+        commentFetch(
+          "PUT",
+          sameOriginRequestUrl("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/title"),
+          kotlinx.serialization.json
+            .buildJsonObject { put("title", kotlinx.serialization.json.JsonPrimitive(title)) }
+            .toString(),
+          true,
+        )
+      )
+    } catch (failure: Exception) {
+      return failure.message ?: "the server could not be reached"
+    }
+  return ee.schimke.composeai.uibuilder.editor.renameRefusal(encoded)
+}

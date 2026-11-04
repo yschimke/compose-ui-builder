@@ -108,9 +108,10 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
     await templatesUnavailable;
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     // The home chooser is drawn on the Compose canvas, with no DOM text locators. At this fixed
-    // viewport the Create control is at this point (recorded in the online screenshot).
+    // viewport the Create control is at this point (recorded in the offline chooser screenshot);
+    // it sits below the Title and Design ID fields, so a field added above it moves it.
     if (shots) await page.screenshot({path: join(shots, 'published-offline-chooser.png')});
-    await page.mouse.click(245, 594);
+    await page.mouse.click(245, 715);
     // The stored seed proves which template was used, even if this synthetic catalog has no
     // native renderer. The document must be new and pinned to the remembered capability.
     const created = await pollBrowserValue(page, () => new Promise((resolve, reject) => {
@@ -130,6 +131,10 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
     }));
     const record = created;
     assert.notEqual(record.seed.id, template.id);
+    // The title field was left empty, so the design is named after its new id rather than
+    // inheriting the template's own title (compose-ui-builder#67).
+    const idInWords = record.seed.id.split(/[-_.]+/).filter(Boolean).join(' ');
+    assert.equal(record.seed.title, idInWords.charAt(0).toUpperCase() + idInWords.slice(1));
     assert.equal(record.seed.revision, 0);
     assert.deepEqual(record.seed.catalogPin, {
       systemId: system,

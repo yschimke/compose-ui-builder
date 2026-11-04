@@ -127,6 +127,21 @@ private class NewDesignFormState(
   // Pre-filled, so a design can be created in one click; a person who wants their own name
   // overwrites it, and one who wants another roll asks for it.
   var designId by mutableStateOf(initialDesignId ?: NewDesignNames.random())
+  /**
+   * The title people read on the home screen and the toolbar. Separate from [designId], which is
+   * the permanent, path-safe part of the URL; the title can be changed later (**Rename design**).
+   * Left empty, it follows the id ([defaultTitle]).
+   */
+  var title by mutableStateOf("")
+
+  /** What an empty [title] becomes: the id in words, so two blank designs are told apart. */
+  val defaultTitle: String
+    get() = newDesignDefaultTitle(designId)
+
+  /** The title the design is created with. */
+  val effectiveTitle: String
+    get() = title.trim().ifEmpty { defaultTitle }
+
   var declared by mutableStateOf(listOf<NewDesignState>())
   // Folded away until asked for: most new designs declare no state at all, and the three
   // controls it takes to add one made the dialog read as a form with a required last section.
@@ -339,6 +354,17 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
         }
       }
     }
+    Text("Title", style = MaterialTheme.typography.labelLarge)
+    OutlinedTextField(
+      value = form.title,
+      onValueChange = { form.title = it.take(MAX_DESIGN_TITLE_LENGTH) },
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Design title" },
+      placeholder = { Text(form.defaultTitle) },
+      supportingText = { Text("Shown on the home screen and toolbar. You can rename it later.") },
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+      keyboardActions = KeyboardActions(onDone = { if (form.designIdValid) onSubmit() }),
+    )
     Text("Design ID", style = MaterialTheme.typography.labelLarge)
     OutlinedTextField(
       value = form.designId,
@@ -484,6 +510,35 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
   }
 }
 
+/**
+ * Creates a design from the New design form: the catalog, the path-safe id, the starting point, the
+ * declared state and the display title (never blank; see [newDesignDefaultTitle]).
+ */
+typealias NewDesignCallback =
+  (
+    catalogSystemId: String,
+    designId: String,
+    templateId: String,
+    state: List<NewDesignState>,
+    title: String,
+  ) -> Unit
+
+/** The longest title the design services accept. */
+internal const val MAX_DESIGN_TITLE_LENGTH = 200
+
+/**
+ * The title a design gets when its author leaves the field empty: its id in words (`sunny-otter` is
+ * "Sunny otter"), so every new design is distinguishable on the home screen without a second name
+ * to invent.
+ */
+internal fun newDesignDefaultTitle(designId: String): String =
+  designId
+    .split('-', '_', '.')
+    .filter(String::isNotBlank)
+    .joinToString(" ")
+    .replaceFirstChar { it.uppercaseChar() }
+    .ifBlank { "Untitled design" }
+
 /** Rejects typos in the form instead of silently turning them into `false` or `0`. */
 internal fun newDesignInitialValueValid(type: NewDesignStateType, raw: String): Boolean =
   raw.isBlank() ||
@@ -500,14 +555,8 @@ internal fun NewDesignDialog(
   onDismiss: (() -> Unit)?,
   /** The pre-filled name; null rolls a random one, which is what a person should see. */
   initialDesignId: String? = null,
-  onCreatePublic: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
-  onCreate:
-    (
-      catalogSystemId: String,
-      designId: String,
-      templateId: String,
-      state: List<NewDesignState>,
-    ) -> Unit,
+  onCreatePublic: NewDesignCallback? = null,
+  onCreate: NewDesignCallback,
 ) {
   val form =
     rememberNewDesignFormState(
@@ -522,6 +571,7 @@ internal fun NewDesignDialog(
       form.designId,
       form.selectedTemplate.id,
       form.declared,
+      form.effectiveTitle,
     )
   }
   TrackEditorOverlay(true)
@@ -815,14 +865,8 @@ fun UiBuilderNewDesignScreen(
   releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
   /** The pre-filled design name; null rolls a random one, while previews pass a fixed name. */
   initialDesignId: String? = null,
-  onCreatePublic: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
-  onCreate:
-    (
-      catalogSystemId: String,
-      designId: String,
-      templateId: String,
-      state: List<NewDesignState>,
-    ) -> Unit,
+  onCreatePublic: NewDesignCallback? = null,
+  onCreate: NewDesignCallback,
 ) {
   require(catalogs.isNotEmpty()) { "new design screen requires at least one catalog" }
   val form =
@@ -935,13 +979,7 @@ fun UiBuilderNewDesignScreen(
 private fun NewDesignHomePanel(
   modifier: Modifier,
   form: NewDesignFormState,
-  onCreate:
-    (
-      catalogSystemId: String,
-      designId: String,
-      templateId: String,
-      state: List<NewDesignState>,
-    ) -> Unit,
+  onCreate: NewDesignCallback,
 ) {
   val submit = {
     onCreate(
@@ -949,6 +987,7 @@ private fun NewDesignHomePanel(
       form.designId,
       form.selectedTemplate.id,
       form.declared,
+      form.effectiveTitle,
     )
   }
   Surface(

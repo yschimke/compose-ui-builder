@@ -127,8 +127,10 @@ public sealed interface UiBuilderServiceRequest {
    * Change a design's title only. Outside the operation log: the title is metadata no node or
    * export reads, so it takes no revision, delta or undo record. Anyone who may write may rename.
    *
-   * Has no `ui-builder-protocol` request shape yet; see
-   * [UiBuilderProtocolMapper.toProtocolRequest].
+   * Has no `ui-builder-protocol` request shape; see [UiBuilderProtocolMapper.toProtocolRequest].
+   * Hosts expose it on their own surfaces: compose-preview-server as `PUT
+   * /api/ui-builder/v1/designs/{designId}/title` (the editor's Rename) and
+   * `ui_builder_rename_design`.
    */
   public data class RenameDesign(val designId: String, val title: String) : UiBuilderServiceRequest
 

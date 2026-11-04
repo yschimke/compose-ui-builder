@@ -148,6 +148,35 @@ class LocalDesignSessionTest {
   }
 
   @Test
+  fun `a rename the browser refuses is rolled back, so a later edit cannot store it`() {
+    val original = LocalDesignFixtures.document().title
+    val full = InMemoryLocalDesignStorage(quotaBytes = 1)
+    val refusedStore = LocalDesignStore(full)
+    val session = LocalDesignSession.open(record = seeded(), store = refusedStore, clock = { 0 })
+
+    assertIs<LocalPersistence.Refused>(session.rename("Never stored"))
+    assertEquals(original, session.document.title)
+    assertEquals(original, session.protocolDocument.title)
+
+    // Another tab owns it now: refused the same way, and rolled back the same way.
+    val stored = open(seeded())
+    stored.markChangedElsewhere()
+    assertIs<LocalPersistence.Refused>(stored.rename("Also never stored"))
+    assertEquals(original, stored.document.title)
+  }
+
+  @Test
+  fun `a stored rename survives a later edit and a reload`() {
+    val session = open(seeded())
+    assertEquals(LocalPersistence.Stored, session.rename("Renamed"))
+    session.submit(LocalDesignFixtures.insert("first", baseRevision = 0))
+
+    val reloaded = open(assertNotNull(store.read(LocalDesignFixtures.DESIGN_ID)))
+    assertEquals("Renamed", reloaded.document.title)
+    assertTrue("first" in reloaded.document.nodes)
+  }
+
+  @Test
   fun `a log that no longer replays opens at the last revision that did`() {
     val session = open(seeded())
     session.submit(LocalDesignFixtures.insert("first", baseRevision = 0))
