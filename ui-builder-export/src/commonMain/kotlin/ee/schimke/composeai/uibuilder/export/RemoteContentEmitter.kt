@@ -3738,18 +3738,44 @@ internal class RemoteContentEmitter(
           FontSettings.parseFeatures(node.properties[FontSettings.FEATURE_PROPERTY]?.stringOrNull())
         )
         .ifEmpty { null }
+    // Spacing rides on the style too: `RemoteText` has no argument for either. Zero is the
+    // neutral letter spacing and an unset line height, so neither is written. Either spelling, as
+    // with the size: `m3/text` says `letterSpacingSp`, remote-m3 the parameter's own name.
+    val letterSpacing =
+      (node.properties["letterSpacingSp"] ?: node.properties["letterSpacing"])
+        ?.numberOrNull()
+        ?.takeIf { it.isFinite() && it != 0f }
+        ?.signedSpLiteral()
+    val lineHeight =
+      (node.properties["lineHeightSp"] ?: node.properties["lineHeight"])
+        ?.numberOrNull()
+        ?.takeIf { it.isFinite() && it > 0f }
+        ?.spLiteral()
+    val merged =
+      listOfNotNull(
+        letterSpacing?.let { "letterSpacing = $it" },
+        lineHeight?.let { "lineHeight = $it" },
+        features?.let { "fontFeatureSettings = \"${it.escaped()}\"" },
+      )
     if (role != null) usesTheme = true
     val base =
       if (role != null) "RemoteMaterialTheme.typography.$role"
-      else if (features != null) {
+      else if (merged.isNotEmpty()) {
         usesLocalTextStyle = true
         "LocalRemoteTextStyle.current"
       } else null
     base?.let {
       arguments +=
-        if (features == null) "style = $it"
-        else "style = $it.merge(fontFeatureSettings = \"${features.escaped()}\")"
+        if (merged.isEmpty()) "style = $it" else "style = $it.merge(${merged.joinToString(", ")})"
     }
+    node.properties["fontFamily"]
+      ?.stringOrNull()
+      ?.trim()
+      ?.takeIf { it.isNotEmpty() }
+      ?.let {
+        usesRemoteFontFamily = true
+        arguments += "fontFamily = ${remoteFontFamily(it)}"
+      }
     FontSettings.parseVariations(node.properties[FontSettings.VARIATION_PROPERTY]?.stringOrNull())
       .takeIf { it.isNotEmpty() }
       ?.let { axes ->
@@ -4902,6 +4928,28 @@ internal class RemoteContentEmitter(
     if (this % 1f == 0f) "${toInt()}.rsp".also { usesSp = true }
     else "${this}f.sp.asRemoteTextUnit()".also { usesFractionalSp = true }
 
+  /**
+   * [spLiteral] for a value that may be negative. `RemoteTextUnit` has no unary minus, so a
+   * negative size is negated as a `TextUnit` before it is converted.
+   */
+  private fun Float.signedSpLiteral(): String =
+    if (this >= 0f) spLiteral()
+    else "(${this}f).sp.asRemoteTextUnit()".also { usesFractionalSp = true }
+
+  /**
+   * A text's family as Remote Compose names one: the generic families by their own members, any
+   * other name as `RemoteFontFamily.Named`, which the player resolves (`google:…` included).
+   */
+  private fun remoteFontFamily(name: String): String =
+    when (name) {
+      "default" -> "RemoteFontFamily.Default"
+      "sans-serif" -> "RemoteFontFamily.SansSerif"
+      "serif" -> "RemoteFontFamily.Serif"
+      "monospace" -> "RemoteFontFamily.Monospace"
+      "cursive" -> "RemoteFontFamily.Cursive"
+      else -> "RemoteFontFamily.Named(${name.quoted()})"
+    }
+
   private companion object {
     const val INDENT = "    "
 
@@ -4971,8 +5019,6 @@ private val UNWRITTEN_TEXT_SETTINGS: Map<String, String?> =
     "fontWeight" to "normal",
     "fontStyle" to "normal",
     "textDecoration" to "none",
-    "lineHeightSp" to null,
-    "letterSpacingSp" to null,
     "minLines" to "1",
     "softWrap" to "true",
   )
