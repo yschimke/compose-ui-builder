@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           # The same two JDKs as `ci.yml`: 17 is JAVA_HOME and runs Gradle, 21 is the
@@ -67,7 +67,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
-      - uses: yschimke/compose-ai-tools/.github/actions/apply@77ccef39d186a933b1d3e7ce6f6fa6ded849e096 # v2.84.0
+      - uses: yschimke/compose-ai-tools/.github/actions/apply@1b80c03710bf2494e1e0d9693278615c92bfe6a6 # v2.85.0
         with:
           only: compose
           # A ceiling for a hung build, not a budget: a cold runner compiles the whole editor
