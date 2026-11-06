@@ -36,7 +36,7 @@ val embedReleaseNotes =
 
 val ktfmtCli = configurations.create("ktfmtCli")
 
-dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
+dependencies { ktfmtCli(libs.ktfmt.cli) }
 
 // The frontend JVM lane's floor, from the catalog. Tasks that run this module's classes must launch
 // on it: `jvmToolchain` doesn't cover `JavaExec`.
