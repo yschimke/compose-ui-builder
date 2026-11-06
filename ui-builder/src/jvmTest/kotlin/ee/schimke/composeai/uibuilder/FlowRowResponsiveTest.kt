@@ -27,7 +27,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class FlowRowResponsiveTest {
   private val catalog by lazy {
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   }
 
@@ -64,7 +64,7 @@ class FlowRowResponsiveTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       // The frame the export records as provenance; an empty one is refused outright.
       environment =
@@ -75,7 +75,7 @@ class FlowRowResponsiveTest {
             "density" to JsonPrimitive(1.0),
             "theme" to JsonPrimitive("dark"),
             "fontScale" to JsonPrimitive(1.0),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("bar"),
@@ -87,7 +87,7 @@ class FlowRowResponsiveTest {
               componentId = componentId,
               properties = JsonObject(properties),
               slots = mapOf("children" to labels.indices.map { "chip-$it" }),
-            )
+            ),
         ) +
           labels.withIndex().associate { (index, label) ->
             "chip-$index" to

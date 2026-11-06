@@ -80,7 +80,7 @@ class ProductionUidRoundTripTest {
     val session = McpAppDesignSession(bridge, file)
     runImmediate { session.open() }
     host.externalWrite(
-      fixture.replace("example.ui.components.EpisodeCard", "example.ui.components.Renamed")
+      fixture.replace("example.ui.components.EpisodeCard", "example.ui.components.Renamed"),
     )
     runImmediate { session.resourceUpdated(file.resourceUri) }
     assertEquals(2, session.state.generation)

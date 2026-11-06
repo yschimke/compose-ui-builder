@@ -131,7 +131,7 @@ internal fun HostBridgeApp() {
                   runCatching { design.switchTo(id, ++generation) }
                     .onSuccess { opened = it }
                     .onFailure { postHostError("Not switched: ${it.message}") }
-                }
+                },
               ),
             onStateChanged = { state ->
               publishEditorState(state)
@@ -275,7 +275,7 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
   val document =
     if (message.lovelaceConfig.isNotBlank()) {
       require(
-        catalog.platform == ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform.LOVELACE
+        catalog.platform == ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform.LOVELACE,
       )
       LovelaceConfigExporter.import(
         Json.parseToJsonElement(message.lovelaceConfig).jsonObject,
@@ -326,7 +326,7 @@ private const val UI_BUILDER_GUIDE_URL =
   """() => {
   const host = globalThis.composeUiBuilderHost;
   return !!host && typeof host.postMessage === 'function';
-}"""
+}""",
 )
 internal external fun hostBridgeEnabled(): Boolean
 
@@ -352,7 +352,7 @@ private external fun hostBridgeRoleName(): String
       onInvoke(data.id);
     }
   });
-}"""
+}""",
 )
 private external fun listenForHostMessages(
   onOpen: (String) -> Unit,
@@ -368,7 +368,7 @@ private external fun listenForHostMessages(
   if (host && typeof host.postMessage === 'function') {
     host.postMessage({ type: 'compose-ui-builder/chrome', actions: JSON.parse(actionsJson) });
   }
-}"""
+}""",
 )
 private external fun postHostChrome(actionsJson: String)
 
@@ -382,7 +382,7 @@ private val hostChromeJson = Json { encodeDefaults = true }
     return;
   }
   host.postMessage(message);
-}"""
+}""",
 )
 private external fun postToHost(message: JsAny)
 
@@ -394,7 +394,7 @@ private external fun hostMessage(type: String, key: String, value: String): JsAn
 private fun postHostReady() = postToHost(readyMessage())
 
 @JsFun(
-  "(type, key, value, requestId) => ({ type, [key]: value, ...(requestId ? {requestId} : {}) })"
+  "(type, key, value, requestId) => ({ type, [key]: value, ...(requestId ? {requestId} : {}) })",
 )
 private external fun hostSessionMessage(
   type: String,
@@ -418,7 +418,7 @@ private fun postHostChanged(documentJson: String, requestId: String = "") {
             "config",
             exported.source,
             requestId,
-          )
+          ),
         )
       is LovelaceConfigExporter.Result.Refused -> postHostError(exported.reasons.joinToString("; "))
     }

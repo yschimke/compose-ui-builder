@@ -42,7 +42,7 @@ class DesktopDesignFilesTest {
           }
           val saved =
             ee.schimke.composeai.uibuilder.export.production.ProductionUidFiles.decode(
-              Files.readString(path)
+              Files.readString(path),
             )
           assertEquals(original.copy(design = saved.design), saved)
           assertEquals(height, DesignFiles.read(path).screenEnvironmentSettings().heightDp)
@@ -118,7 +118,7 @@ class DesktopDesignFilesTest {
         assertIs<EditorSubmission.Batch>(
           reducer.acceptedSubmission(initial, edited),
           edited.lastOutcome.toString(),
-        )
+        ),
       )
 
       withTimeout(10.seconds) {
@@ -133,7 +133,7 @@ class DesktopDesignFilesTest {
 
   /** Opens [path], waits for it, and submits one edit that grows the screen by 2dp. */
   private suspend fun editHeight(
-    session: ee.schimke.composeai.uibuilder.host.UiBuilderSession
+    session: ee.schimke.composeai.uibuilder.host.UiBuilderSession,
   ): Int {
     val document =
       withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
@@ -153,7 +153,7 @@ class DesktopDesignFilesTest {
       assertIs<EditorSubmission.Batch>(
         reducer.acceptedSubmission(initial, edited),
         edited.lastOutcome.toString(),
-      )
+      ),
     )
     return settings.heightDp + 2
   }

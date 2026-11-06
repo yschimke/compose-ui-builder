@@ -107,12 +107,12 @@ class UiBuilderProtocolHttpClient(
       } catch (failure: Exception) {
         throw UiBuilderProtocolException(
           "invalid UI-builder HTTP response for $requestId (status ${raw.statusCode}): " +
-            (failure.message ?: failure::class.simpleName)
+            (failure.message ?: failure::class.simpleName),
         )
       }
     if (response.requestId != requestId) {
       throw UiBuilderProtocolException(
-        "UI-builder response ${response.requestId} does not correlate to request $requestId"
+        "UI-builder response ${response.requestId} does not correlate to request $requestId",
       )
     }
     val payload = response.response
@@ -213,12 +213,12 @@ class UiBuilderProtocolUpdateClient(
         protocolJson.decodeFromString(DesignUpdateEnvelopeV1.serializer(), encoded)
       } catch (failure: Exception) {
         throw UiBuilderProtocolException(
-          "invalid UI-builder update: ${failure.message ?: failure::class.simpleName}"
+          "invalid UI-builder update: ${failure.message ?: failure::class.simpleName}",
         )
       }
     if (envelope.designId != designId) {
       throw UiBuilderProtocolException(
-        "update for ${envelope.designId} received on design $designId subscription"
+        "update for ${envelope.designId} received on design $designId subscription",
       )
     }
     when (val update = envelope.update) {
@@ -232,14 +232,14 @@ class UiBuilderProtocolUpdateClient(
   private fun receiveSnapshot(update: SnapshotDesignUpdateV1) {
     if (update.snapshot.designId != designId) {
       throw UiBuilderProtocolException(
-        "snapshot for ${update.snapshot.designId} received on design $designId subscription"
+        "snapshot for ${update.snapshot.designId} received on design $designId subscription",
       )
     }
     val sequence = update.snapshot.state.lastSequence
     val current = afterSequence
     if (current != null && sequence < current) {
       throw UiBuilderProtocolException(
-        "snapshot sequence $sequence would rewind design $designId cursor $current"
+        "snapshot sequence $sequence would rewind design $designId cursor $current",
       )
     }
     if (!snapshotPending && current != null && sequence <= current) return
@@ -252,7 +252,7 @@ class UiBuilderProtocolUpdateClient(
     val delta = update.delta
     if (delta.designId != designId) {
       throw UiBuilderProtocolException(
-        "delta for ${delta.designId} received on design $designId subscription"
+        "delta for ${delta.designId} received on design $designId subscription",
       )
     }
     if (snapshotPending) return
@@ -265,7 +265,7 @@ class UiBuilderProtocolUpdateClient(
           afterSequence = current,
           receivedAfterSequence = delta.afterSequence,
           retainedFromSequence = delta.retainedFromSequence,
-        )
+        ),
       )
       return
     }
@@ -280,7 +280,7 @@ class UiBuilderProtocolUpdateClient(
           afterSequence = current,
           receivedAfterSequence = delta.afterSequence,
           retainedFromSequence = delta.retainedFromSequence,
-        )
+        ),
       )
       return
     }

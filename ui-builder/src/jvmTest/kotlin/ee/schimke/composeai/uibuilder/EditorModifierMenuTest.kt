@@ -23,7 +23,7 @@ class EditorModifierMenuTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -234,7 +234,7 @@ class EditorModifierMenuTest {
     assertFalse(
       cleared.document.nodes.getValue("main-background").modifiers.any {
         it.jsonObject["type"]?.jsonPrimitive?.content == "fillMaxSize"
-      }
+      },
     )
     assertFalse(reducer.modifierToggles(cleared).single { it.type == "fillMaxSize" }.applied)
   }
@@ -321,7 +321,7 @@ class EditorModifierMenuTest {
       padded.document.copy(
         nodes =
           padded.document.nodes +
-            (node.id to node.copy(modifiers = JsonArray(node.modifiers + padding)))
+            (node.id to node.copy(modifiers = JsonArray(node.modifiers + padding))),
       )
     val initial = reducer.initial(repeated, selectedNodeId = node.id)
     val index = repeated.nodes.getValue(node.id).modifiers.lastIndex

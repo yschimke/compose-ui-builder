@@ -437,7 +437,7 @@ object CollaborationReducer {
         environment =
           JsonObject(
             if (change.before == null) environment - change.field
-            else environment + (change.field to change.before)
+            else environment + (change.field to change.before),
           )
       }
       changed = changed.copy(document = prepared.document.copy(environment = environment))
@@ -751,7 +751,8 @@ object CollaborationReducer {
         val after = change.after
         environment =
           JsonObject(
-            if (after == null) environment - change.field else environment + (change.field to after)
+            if (after == null) environment - change.field
+            else environment + (change.field to after),
           )
       }
       changed = changed.copy(document = prepared.document.copy(environment = environment))
@@ -938,6 +939,6 @@ fun canonicalDocument(document: UiBuilderDocument): String {
   // not authored content: stamping or moving it must not create a different content revision.
   val json = kotlinx.serialization.json.Json { encodeDefaults = true }
   return canonicalJson(
-    json.encodeToJsonElement(UiBuilderDocument.serializer(), document.copy(home = null))
+    json.encodeToJsonElement(UiBuilderDocument.serializer(), document.copy(home = null)),
   )
 }

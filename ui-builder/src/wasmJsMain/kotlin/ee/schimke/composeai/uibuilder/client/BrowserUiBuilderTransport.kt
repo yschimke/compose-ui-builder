@@ -21,7 +21,7 @@ class BrowserUiBuilderHttpTransport : UiBuilderHttpTransport {
           endpoint = request.endpoint,
           contentType = request.contentType,
           body = request.body,
-        )
+        ),
       )
     val response = protocolJson.decodeFromString(BrowserHttpResponse.serializer(), encoded)
     return UiBuilderHttpResponse(response.statusCode, response.body)
@@ -45,7 +45,7 @@ enum class BrowserUiBuilderSocketState {
 }
 
 class BrowserUiBuilderWebSocketTransport(
-  private val onStateChanged: (BrowserUiBuilderSocketState) -> Unit = {}
+  private val onStateChanged: (BrowserUiBuilderSocketState) -> Unit = {},
 ) : UiBuilderWebSocketTransport {
   private var generation: Int = 0
 
@@ -96,7 +96,7 @@ private suspend fun awaitBrowserPromise(promise: Promise<JsString>): String =
       }
       .catch {
         continuation.resumeWithException(
-          UiBuilderProtocolException(browserUiBuilderTransportFailureMessage())
+          UiBuilderProtocolException(browserUiBuilderTransportFailureMessage()),
         )
         null
       }
@@ -123,7 +123,7 @@ private fun fetchUiBuilder(
         return JSON.stringify({ statusCode: response.status, body: responseBody });
       });
       });
-    })()"""
+    })()""",
   )
 
 private fun fetchRuntimeManifest(url: String): Promise<JsString> =
@@ -137,7 +137,7 @@ private fun fetchRuntimeManifest(url: String): Promise<JsString> =
       return response.text().then(function (responseBody) {
         return JSON.stringify({ statusCode: response.status, body: responseBody });
       });
-    })"""
+    })""",
   )
 
 internal fun browserUiBuilderTransportFailureMessage(): String =
@@ -164,7 +164,7 @@ internal fun browserUiBuilderWebSocketUrl(
       if (hasAfterSequence) url.searchParams.set('afterSequence', afterSequence);
       else url.searchParams.delete('afterSequence');
       return url.toString();
-    })()"""
+    })()""",
   )
 
 private fun openUiBuilderWebSocket(
@@ -181,7 +181,7 @@ private fun openUiBuilderWebSocket(
       socket.onerror = function () { onDisconnected(); };
       socket.onmessage = function (event) { onTextMessage(String(event.data)); };
       return socket;
-    })()"""
+    })()""",
   )
 
 private fun closeUiBuilderWebSocket(socket: JsAny): Unit = js("socket.close()")

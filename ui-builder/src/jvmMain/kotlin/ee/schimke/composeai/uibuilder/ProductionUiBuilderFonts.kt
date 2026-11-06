@@ -80,9 +80,9 @@ internal class ProductionFontFamilies(
                   FontStyle.Normal,
                   FontVariation.Settings(FontVariation.weight(it.weight)),
                 )
-              }
+              },
             )
-          }
+          },
         )
       }
       .orElse(null)

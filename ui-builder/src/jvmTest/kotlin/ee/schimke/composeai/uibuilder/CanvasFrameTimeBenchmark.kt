@@ -51,7 +51,7 @@ class CanvasFrameTimeBenchmark {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -108,7 +108,7 @@ class CanvasFrameTimeBenchmark {
         add("drag" to UiBuilderEditorEvent.CommitProperty(text.id, "text", "Frame $step"))
       }
       add(
-        "insert" to UiBuilderEditorEvent.InsertComponent(componentId = "m3/text", target = target)
+        "insert" to UiBuilderEditorEvent.InsertComponent(componentId = "m3/text", target = target),
       )
       add("undo" to UiBuilderEditorEvent.Undo)
     }

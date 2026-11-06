@@ -53,7 +53,7 @@ class VariantPaneTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -68,7 +68,7 @@ class VariantPaneTest {
       .reduce(
         reducer.initial(document, selectedNodeId = null),
         UiBuilderEditorEvent.UpdateEnvironment(
-          document.screenEnvironmentSettings().copy(exportDevices = ids.toList())
+          document.screenEnvironmentSettings().copy(exportDevices = ids.toList()),
         ),
       )
       .document
@@ -99,7 +99,7 @@ class VariantPaneTest {
                   "widget",
                   WearWidgetScaffoldSize.Large.componentId,
                   slots = emptyMap(),
-                )
+                ),
             ),
         )
 
@@ -359,7 +359,7 @@ class VariantPaneTest {
             "heightDp" to JsonPrimitive(192),
             "density" to JsonPrimitive(2.0),
             "theme" to JsonPrimitive("dark"),
-          )
+          ),
         )
       val base = wearScreenUiBuilderDocument("grid", JsonObject(emptyMap()), environment)
       val wear =
@@ -375,9 +375,9 @@ class VariantPaneTest {
                         "id:wearos_xl_round",
                         "id:wearos_xxl_round",
                       )
-                      .map(::JsonPrimitive)
-                  ))
-            )
+                      .map(::JsonPrimitive),
+                  )),
+            ),
         )
       setContent {
         MaterialTheme {

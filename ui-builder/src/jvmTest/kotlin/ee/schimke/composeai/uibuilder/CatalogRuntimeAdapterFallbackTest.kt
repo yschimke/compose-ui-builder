@@ -66,6 +66,6 @@ class CatalogRuntimeAdapterFallbackTest {
          "properties":{"text":{"type":"string","value":"Hello palette"}},
          "modifiers":[],"slots":{},"eventBindings":{}}}}
       """
-        .trimIndent()
+        .trimIndent(),
     )
 }

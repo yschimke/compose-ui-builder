@@ -51,7 +51,7 @@ object ThemeSchemes {
         isDark = dark,
         style = style,
         contrastLevel = contrast,
-      )
+      ),
     )
   }
 

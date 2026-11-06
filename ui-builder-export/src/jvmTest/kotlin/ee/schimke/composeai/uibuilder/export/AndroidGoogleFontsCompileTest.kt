@@ -43,7 +43,7 @@ class AndroidGoogleFontsCompileTest {
       appendLine()
       appendLine("class Typography(val displayLarge: Style, val bodyLarge: Style) {")
       appendLine(
-        "  fun copy(displayLarge: Style = this.displayLarge, bodyLarge: Style = this.bodyLarge) ="
+        "  fun copy(displayLarge: Style = this.displayLarge, bodyLarge: Style = this.bodyLarge) =",
       )
       appendLine("    Typography(displayLarge, bodyLarge)")
       appendLine("}")
@@ -62,10 +62,10 @@ class AndroidGoogleFontsCompileTest {
       appendLine("fun providers(): List<Any?> {")
       appendLine("  val typography = theme().typography")
       appendLine(
-        "  return listOf(typography.displayLarge, typography.bodyLarge).flatMap { style ->"
+        "  return listOf(typography.displayLarge, typography.bodyLarge).flatMap { style ->",
       )
       appendLine(
-        "    (style.fontFamily as StubFontFamily).fonts.map { (it as GoogleFontStub).provider }"
+        "    (style.fontFamily as StubFontFamily).fonts.map { (it as GoogleFontStub).provider }",
       )
       appendLine("  }")
       appendLine("}")

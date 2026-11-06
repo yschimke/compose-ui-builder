@@ -27,7 +27,7 @@ class BundledDrawCatalogTest {
 
   private val bundled: CatalogCapabilityV1 =
     json.decodeFromString(
-      File("../docs/design/fixtures/ui-builder/remote-m3-capabilities-v1.json").readText()
+      File("../docs/design/fixtures/ui-builder/remote-m3-capabilities-v1.json").readText(),
     )
 
   @Test

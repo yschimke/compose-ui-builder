@@ -26,7 +26,7 @@ class RemoteBoxContentAlignmentTest {
             buildMap {
               put("text", typed("string", "→"))
               alignment?.let { put("alignment", typed("enum", it)) }
-            }
+            },
           ),
       )
     }
@@ -36,7 +36,7 @@ class RemoteBoxContentAlignmentTest {
         componentId = "layout/box",
         properties =
           JsonObject(
-            contentAlignment?.let { mapOf("contentAlignment" to typed("enum", it)) } ?: emptyMap()
+            contentAlignment?.let { mapOf("contentAlignment" to typed("enum", it)) } ?: emptyMap(),
           ),
         slots = mapOf("children" to children.map { it.id }),
       )

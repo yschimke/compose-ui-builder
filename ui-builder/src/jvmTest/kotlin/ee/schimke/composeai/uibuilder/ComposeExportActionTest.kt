@@ -27,7 +27,7 @@ class ComposeExportActionTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val fixture =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -62,9 +62,9 @@ class ComposeExportActionTest {
                   "valueType" to JsonPrimitive("bool"),
                   "initialValue" to JsonPrimitive(false),
                   "persistence" to JsonPrimitive("preview"),
-                )
-              )
-          )
+                ),
+              ),
+          ),
         ),
     )
   }
@@ -80,9 +80,9 @@ class ComposeExportActionTest {
       exportOf(
         listOf(
           JsonObject(
-            mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded"))
-          )
-        )
+            mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded")),
+          ),
+        ),
       )
 
     assertTrue(
@@ -105,9 +105,9 @@ class ComposeExportActionTest {
               "type" to JsonPrimitive("set"),
               "variable" to JsonPrimitive("expanded"),
               "value" to JsonPrimitive(true),
-            )
-          )
-        )
+            ),
+          ),
+        ),
       )
 
     // Unquoted: the exporter declares `expanded` from its boolean initial value, so a quoted
@@ -125,9 +125,9 @@ class ComposeExportActionTest {
             mapOf(
               "type" to JsonPrimitive("navigatePage"),
               "pageKey" to JsonPrimitive("checkout-confirmation"),
-            )
-          )
-        )
+            ),
+          ),
+        ),
       )
 
     assertTrue(source.contains("onNavigatePage: (String) -> Unit = {}"), source)
@@ -148,9 +148,9 @@ class ComposeExportActionTest {
                 "type" to JsonPrimitive("set"),
                 "variable" to JsonPrimitive("expanded"),
                 "value" to bad,
-              )
-            )
-          )
+              ),
+            ),
+          ),
         )
 
       val handler = source.lineSequence().first { "onClick" in it }
@@ -171,9 +171,9 @@ class ComposeExportActionTest {
               "type" to JsonPrimitive("set"),
               "variable" to JsonPrimitive("expanded"),
               "value" to JsonPrimitive("true"),
-            )
-          )
-        )
+            ),
+          ),
+        ),
       )
 
     assertTrue(source.lineSequence().first { "onClick" in it }.contains("TODO("), source)
@@ -187,16 +187,16 @@ class ComposeExportActionTest {
       exportOf(
         listOf(
           JsonObject(
-            mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded"))
+            mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded")),
           ),
           JsonObject(
             mapOf(
               "type" to JsonPrimitive("set"),
               "variable" to JsonPrimitive("expanded"),
               "value" to JsonPrimitive(false),
-            )
+            ),
           ),
-        )
+        ),
       )
 
     assertTrue(source.contains("expanded = !expanded; expanded = false"), source)
@@ -208,9 +208,9 @@ class ComposeExportActionTest {
       documentWith(
           listOf(
             JsonObject(
-              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("caption"))
-            )
-          )
+              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("caption")),
+            ),
+          ),
         )
         .let { base ->
           base.copy(
@@ -223,10 +223,10 @@ class ComposeExportActionTest {
                         "type" to JsonPrimitive("text"),
                         "initialValue" to JsonPrimitive("hello"),
                         "persistence" to JsonPrimitive("preview"),
-                      )
-                    )
-                )
-              )
+                      ),
+                    ),
+                ),
+              ),
           )
         }
     val source = assertNotNull(CapabilityComposeCodeExporter.export(document, catalog).source)
@@ -254,7 +254,7 @@ class ComposeExportActionTest {
             "valueType" to JsonPrimitive("string"),
             "initialValue" to JsonPrimitive("true"),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         listOf(
           JsonObject(
@@ -262,8 +262,8 @@ class ComposeExportActionTest {
               "type" to JsonPrimitive("set"),
               "variable" to JsonPrimitive("caption"),
               "value" to JsonPrimitive("hello"),
-            )
-          )
+            ),
+          ),
         ),
       )
     val source = assertNotNull(CapabilityComposeCodeExporter.export(document, catalog).source)
@@ -287,7 +287,7 @@ class ComposeExportActionTest {
             "nullable" to JsonPrimitive(true),
             "initialValue" to JsonNull,
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         listOf(
           JsonObject(
@@ -295,8 +295,8 @@ class ComposeExportActionTest {
               "type" to JsonPrimitive("selectOrClear"),
               "variable" to JsonPrimitive("selectedTrack"),
               "value" to JsonPrimitive("droidCon"),
-            )
-          )
+            ),
+          ),
         ),
       )
     val source = assertNotNull(CapabilityComposeCodeExporter.export(document, catalog).source)
@@ -320,7 +320,7 @@ class ComposeExportActionTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(0),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         listOf(
           JsonObject(
@@ -328,8 +328,8 @@ class ComposeExportActionTest {
               "type" to JsonPrimitive("selectOrClear"),
               "variable" to JsonPrimitive("selectedDay"),
               "value" to JsonPrimitive(1),
-            )
-          )
+            ),
+          ),
         ),
       )
     val source = assertNotNull(CapabilityComposeCodeExporter.export(document, catalog).source)
@@ -347,12 +347,12 @@ class ComposeExportActionTest {
         documentWith(
           listOf(
             JsonObject(
-              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded"))
+              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded")),
             ),
             JsonObject(
-              mapOf("type" to JsonPrimitive("navigate"), "variable" to JsonPrimitive("expanded"))
+              mapOf("type" to JsonPrimitive("navigate"), "variable" to JsonPrimitive("expanded")),
             ),
-          )
+          ),
         ),
         catalog,
       )
@@ -380,10 +380,10 @@ class ComposeExportActionTest {
             "nullable" to JsonPrimitive(true),
             "initialValue" to JsonNull,
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         listOf(
-          JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("flag")))
+          JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("flag"))),
         ),
       )
     val source = assertNotNull(CapabilityComposeCodeExporter.export(document, catalog).source)
@@ -401,9 +401,9 @@ class ComposeExportActionTest {
         documentWith(
           listOf(
             JsonObject(
-              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded"))
-            )
-          ) + JsonPrimitive("not an action")
+              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded")),
+            ),
+          ) + JsonPrimitive("not an action"),
         ),
         catalog,
       )
@@ -430,7 +430,7 @@ class ComposeExportActionTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(0),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         listOf(
           JsonObject(
@@ -438,8 +438,8 @@ class ComposeExportActionTest {
               "type" to JsonPrimitive("set"),
               "variable" to JsonPrimitive("selectedDay"),
               "value" to JsonPrimitive(1),
-            )
-          )
+            ),
+          ),
         ),
       )
     val source = assertNotNull(CapabilityComposeCodeExporter.export(document, catalog).source)
@@ -461,7 +461,7 @@ class ComposeExportActionTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(1),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         emptyList(),
       )
@@ -491,7 +491,7 @@ class ComposeExportActionTest {
                 "nullable" to JsonPrimitive(false),
                 "initialValue" to initial,
                 "persistence" to JsonPrimitive("preview"),
-              )
+              ),
             ),
             emptyList(),
           )
@@ -518,7 +518,7 @@ class ComposeExportActionTest {
             "nullable" to JsonObject(emptyMap()),
             "initialValue" to JsonPrimitive("a"),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
         emptyList(),
       )
@@ -535,16 +535,16 @@ class ComposeExportActionTest {
         documentWith(
           listOf(
             JsonObject(
-              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded"))
+              mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive("expanded")),
             ),
             JsonObject(
               mapOf(
                 "type" to JsonPrimitive("set"),
                 "variable" to JsonPrimitive("doesNotExist"),
                 "value" to JsonPrimitive(true),
-              )
+              ),
             ),
-          )
+          ),
         ),
         catalog,
       )
@@ -571,10 +571,10 @@ class ComposeExportActionTest {
                     "valueType" to JsonPrimitive("bool"),
                     "initialValue" to JsonPrimitive(false),
                     "persistence" to JsonPrimitive("preview"),
-                  )
-                )
-            )
-          )
+                  ),
+                ),
+            ),
+          ),
       )
     val state = reducer.initial(withState, selectedNodeId = "main-episode-footer")
 

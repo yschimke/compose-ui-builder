@@ -82,7 +82,7 @@ class LauncherAdaptiveLayoutTest {
       )
     val source =
       assertIs<LauncherWidgetCodeExporter.Result.Emitted>(
-          LauncherWidgetCodeExporter.export(document, "adaptive", records)
+          LauncherWidgetCodeExporter.export(document, "adaptive", records),
         )
         .source
     assertContains(source, "import ee.schimke.remotewidgets.AdaptiveLayout")

@@ -25,9 +25,10 @@ class ColumnArrangementTest {
   private val reference =
     UiBuilderReducer.replay(
         kotlinx.serialization.json.Json.parseToJsonElement(
-            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+              .readText(),
           )
-          .let { it as JsonObject }
+          .let { it as JsonObject },
       )
       .document
 
@@ -72,7 +73,7 @@ class ColumnArrangementTest {
   fun `the exporter emits the same arrangement the renderer resolves`() {
     val catalog =
       ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
 
     val source =
@@ -97,7 +98,7 @@ class ColumnArrangementTest {
   fun `the exporter leaves an untouched column exactly as it was`() {
     val catalog =
       ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
 
     val source =
@@ -141,9 +142,9 @@ class ColumnArrangementTest {
                   properties.associate { (name, value) ->
                     name to
                       JsonObject(
-                        mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive(value))
+                        mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive(value)),
                       )
-                  }
+                  },
                 ),
               modifiers =
                 JsonArray(listOf(JsonObject(mapOf("type" to JsonPrimitive("fillMaxSize"))))),
@@ -164,19 +165,19 @@ class ColumnArrangementTest {
           JsonObject(
             mapOf(
               "text" to
-                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(id)))
-            )
+                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(id))),
+            ),
           )
         else
           JsonObject(
             mapOf(
               "color" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF"))
+                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF")),
                 ),
               "diameterDp" to
                 JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(8))),
-            )
+            ),
           ),
       modifiers = JsonArray(emptyList()),
       slots = emptyMap(),

@@ -63,9 +63,9 @@ object UiBuilderNewDesignSeed {
       mobileScreenEnvironment(
         seedJson
           .parseToJsonElement(
-            """{"theme":"light","locale":"en-US","fontScale":1.0,"layoutDirection":"ltr"}"""
+            """{"theme":"light","locale":"en-US","fontScale":1.0,"layoutDirection":"ltr"}""",
           )
-          .jsonObject
+          .jsonObject,
       ),
       state,
     )
@@ -87,7 +87,7 @@ object UiBuilderNewDesignSeed {
       "state variable names must stay distinct once exported as Kotlin identifiers"
     }
     return copy(
-      stateVariables = JsonObject(stateVariables + state.associate { it.name to it.declaration() })
+      stateVariables = JsonObject(stateVariables + state.associate { it.name to it.declaration() }),
     )
   }
 

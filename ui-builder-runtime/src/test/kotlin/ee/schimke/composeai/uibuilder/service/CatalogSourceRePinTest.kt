@@ -135,7 +135,7 @@ class CatalogSourceRePinTest {
     private val reason: String,
   ) : UiBuilderDesignStore by delegate {
     override fun commitAll(
-      changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>
+      changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>,
     ): Unit = throw IOException(reason)
   }
 
@@ -178,7 +178,7 @@ class CatalogSourceRePinTest {
     designId: String,
   ): DesignDocumentV1 =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId))
+        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId)),
       )
       .snapshot
       .state
@@ -199,7 +199,7 @@ class CatalogSourceRePinTest {
 
   private fun create(service: PersistentUiBuilderService, designId: String) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document(designId)))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document(designId))),
     )
   }
 
@@ -222,9 +222,9 @@ class CatalogSourceRePinTest {
               "browser",
               baseRevision,
               mutations.toList(),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertIs<AcceptedOutcomeV1>(outcome.outcome)
   }
@@ -269,7 +269,7 @@ class CatalogSourceRePinTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }
@@ -299,7 +299,7 @@ class CatalogSourceRePinTest {
                   .build(),
               )
               .also { it.properties = emptyList() }
-              .build()
+              .build(),
           ),
         )
         .also {

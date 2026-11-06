@@ -35,7 +35,7 @@ class EditorSubtreeCodeTest {
 
   private val jetcaster =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -47,8 +47,8 @@ class EditorSubtreeCodeTest {
         JsonObject(
           mapOf(
             "text" to
-              JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value)))
-          )
+              JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value))),
+          ),
         ),
     )
 
@@ -81,7 +81,7 @@ class EditorSubtreeCodeTest {
               ),
             "episode-title" to text("episode-title", "Episode 140"),
             "episode-summary" to text("episode-summary", "A summary"),
-          )
+          ),
     )
   }
 
@@ -235,7 +235,7 @@ class EditorSubtreeCodeTest {
             System.getProperty("uiBuilderProjectDir"),
             "../site/designs/google-gmail-tablet.uid",
           )
-          .readText()
+          .readText(),
       )
     val weighted = gmail.nodes.getValue("msg-figma-body")
     assertTrue("weight" in weighted.modifiers.toString(), "${weighted.modifiers}")

@@ -239,7 +239,7 @@ internal fun ResizeHandles(
           // Keyed on the handle's position, since a moved canvas would leave a stale origin.
           .onSecondaryClick(Triple(handle, targetTopLeft, origin)) { position ->
             currentOnSecondaryClick.value(
-              origin + Offset(targetTopLeft.x + position.x, targetTopLeft.y + position.y)
+              origin + Offset(targetTopLeft.x + position.x, targetTopLeft.y + position.y),
             )
           }
           .semantics {
@@ -255,7 +255,7 @@ internal fun ResizeHandles(
               onDoubleTap = {
                 val (width, height) = resizeToggle(handle, current.value.first)
                 currentOnResize.value(width, height)
-              }
+              },
             )
           }
           .pointerInput(handle) {

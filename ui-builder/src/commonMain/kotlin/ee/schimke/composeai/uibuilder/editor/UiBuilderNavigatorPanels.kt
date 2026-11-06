@@ -545,7 +545,7 @@ private fun LayersPanel(
           onClick = {
             onEditorInteraction()
             dispatch(UiBuilderEditorEvent.SelectAllMatches)
-          }
+          },
         ) {
           Text("Select all $matches")
         }
@@ -590,7 +590,7 @@ private fun LayersPanel(
                     LayerSelectionGesture.Toggle -> UiBuilderEditorEvent.ToggleNode(row.nodeId)
                     LayerSelectionGesture.Range ->
                       UiBuilderEditorEvent.ExtendSelectionTo(row.nodeId)
-                  }
+                  },
                 )
                 if (showProperties) onOpenProperties()
               },
@@ -614,7 +614,7 @@ private fun LayersPanel(
                   onEditorInteraction()
                   // Sent even when it will be refused, so the reducer reports why.
                   dispatch(
-                    UiBuilderEditorEvent.MoveNodeInto(row.nodeId, drop.target, drop.afterNodeId)
+                    UiBuilderEditorEvent.MoveNodeInto(row.nodeId, drop.target, drop.afterNodeId),
                   )
                 }
               },
@@ -887,7 +887,7 @@ private fun CatalogComponentTile(
           onAdd = onAdd,
           onTogglePinned = onTogglePinned,
           onToggleVariants = onToggleVariants,
-        )
+        ),
     ) {
       CatalogThumbnail(
         document = thumbnail,
@@ -935,7 +935,7 @@ private fun LibraryComponentTile(component: EditorLibraryComponent, onAdd: () ->
         onAdd = onAdd,
         onTogglePinned = {},
         onToggleVariants = {},
-      )
+      ),
   ) {
     CatalogThumbnail(
       document = null,
@@ -977,7 +977,7 @@ private fun LocalComponentTile(
         onAdd = { target?.let(onAdd) },
         onTogglePinned = {},
         onToggleVariants = {},
-      )
+      ),
   ) {
     CatalogThumbnail(
       document = thumbnail,
@@ -1021,7 +1021,7 @@ private fun CatalogVariantTile(
           addContentDescription =
             if (refusal == null) "Add $qualified" else "Add $qualified — $refusal",
           onAdd = onAdd,
-        )
+        ),
     ) {
       CatalogThumbnail(
         document = thumbnail,
@@ -1060,7 +1060,7 @@ private fun CatalogDragTile(
           onDrop(position)
         },
       )
-      .graphicsLayer { alpha = if (carried) 0.35f else 1f }
+      .graphicsLayer { alpha = if (carried) 0.35f else 1f },
   ) {
     content()
   }
@@ -1123,8 +1123,8 @@ internal fun CatalogThumbnail(
         .copy(
           environment =
             JsonObject(
-              document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light"))
-            )
+              document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light")),
+            ),
         )
         .let { if (frame == PreviewFrameSize.Default) it else it.inPreviewFrame(frame) }
     }
@@ -1184,7 +1184,7 @@ internal fun CatalogThumbnail(
         clipRect(keep.left, keep.top, keep.right, keep.bottom) {
           this@drawWithContent.drawContent()
         }
-      }
+      },
     ) {
       Box(
         // Pinned top-start before sizing: an oversize `requiredSize` is centred by default, which
@@ -1203,7 +1203,7 @@ internal fun CatalogThumbnail(
           .then(if (watchFace) Modifier.clip(CircleShape).background(Color.Black) else Modifier)
           // A picture of a component is not the component: clear its semantics so screen readers
           // and role queries ignore it. The row's own name is set on the overlay below.
-          .clearAndSetSemantics {}
+          .clearAndSetSemantics {},
       ) {
         val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
           // Asked of the first snapshot, laid out whole under the fallback transform.
@@ -1244,7 +1244,7 @@ internal fun CatalogThumbnail(
             drewNothing -> CatalogThumbnailOutcome.DrewNothing
             roomy -> CatalogThumbnailOutcome.Miniature
             else -> CatalogThumbnailOutcome.Drawn
-          }
+          },
         )
       }
     }
@@ -1260,7 +1260,7 @@ internal fun CatalogThumbnail(
     Box(
       Modifier.matchParentSize()
         .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
-        .semantics { contentDescription = "Drag $label" }
+        .semantics { contentDescription = "Drag $label" },
     )
   }
 }
@@ -1699,7 +1699,7 @@ private fun SlotRow(
         if (accent != null) Modifier.background(accent.copy(alpha = 0.22f))
         else if (isCatalogTarget)
           Modifier.background(LocalUiBuilderEditorPalette.current.dropTarget)
-        else Modifier
+        else Modifier,
       )
       .padding(start = (8 + row.indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
@@ -1891,7 +1891,7 @@ private fun LayerRow(
           Modifier.padding(end = 3.dp)
             .size(8.dp)
             .background(collaborator.colorArgbHex.toPresenceColor(), RoundedCornerShape(4.dp))
-            .clearAndSetSemantics {}
+            .clearAndSetSemantics {},
         )
       }
       // The type when the row is named after its content, the id otherwise. A content-named row

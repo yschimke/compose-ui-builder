@@ -84,7 +84,7 @@ class CanvasExpressions(
         JsonObject(
           node.properties.mapValues { (_, value) ->
             if (UiExpressions.isComputed(value)) literal(value) ?: value else value
-          }
+          },
         ),
       modifiers =
         JsonArray(
@@ -98,8 +98,8 @@ class CanvasExpressions(
                     JsonObject(
                       args.mapValues { (_, value) ->
                         if (isDynamic(value)) literal(value) ?: value else value
-                      }
-                    ))
+                      },
+                    )),
               )
             }
             if (fields.values.none(UiExpressions::isComputed)) return@map modifier
@@ -109,9 +109,9 @@ class CanvasExpressions(
               fields.mapValues { (_, value) ->
                 if (UiExpressions.isComputed(value)) literal(value)?.get("value") ?: value
                 else value
-              }
+              },
             )
-          }
+          },
         ),
     )
   }
@@ -139,7 +139,7 @@ class CanvasExpressions(
         clock =
           liveClock
             ?: UiExpressions.Clock.of(
-              (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
+              (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull,
             ),
         device = UiExpressions.Device.of(document.environment),
       )
@@ -190,12 +190,12 @@ private fun UiBuilderNode.withPreviewState(state: Map<String, String?>): UiBuild
                   mapOf(
                     "type" to JsonPrimitive("bool"),
                     "value" to JsonPrimitive(canvasStateEquals(state[variable], binding["value"])),
-                  )
+                  ),
               )
             else -> encoded
           }
-        }
-      )
+        },
+      ),
   )
 
 private fun JsonObject.bindingKey(): String? {

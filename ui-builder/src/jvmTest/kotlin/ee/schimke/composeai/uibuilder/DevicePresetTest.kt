@@ -33,7 +33,7 @@ class DevicePresetTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -116,7 +116,7 @@ class DevicePresetTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().withDevicePreset(phone)
+          initial.document.screenEnvironmentSettings().withDevicePreset(phone),
         ),
       )
 
@@ -124,7 +124,7 @@ class DevicePresetTest {
       reducer.reduce(
         onPhone,
         UiBuilderEditorEvent.UpdateEnvironment(
-          onPhone.document.screenEnvironmentSettings().withDevicePreset(tablet)
+          onPhone.document.screenEnvironmentSettings().withDevicePreset(tablet),
         ),
       )
     assertEquals(1280, onTablet.environmentInt("widthDp"))
@@ -191,7 +191,7 @@ class DevicePresetTest {
     // Same dp as the tablet but a hand-typed density is not that tablet.
     assertNull(base.withDevicePreset(tablet).copy(density = 3.0).matchingDevicePreset(presets))
     assertNull(
-      base.copy(widthDp = 512, heightDp = 512, density = 1.0).matchingDevicePreset(presets)
+      base.copy(widthDp = 512, heightDp = 512, density = 1.0).matchingDevicePreset(presets),
     )
   }
 

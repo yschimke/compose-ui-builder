@@ -36,7 +36,7 @@ class WearScreenCodeExporterTest {
   fun `the screen generates a real ScreenScaffold over a TransformingLazyColumn`() {
     val source =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment)),
         )
         .source
 
@@ -64,7 +64,7 @@ class WearScreenCodeExporterTest {
   fun `a declared timeText is the previews' AppScaffold, not the screen's`() {
     val emitted =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-        WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+        WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment)),
       )
     val source = emitted.source
     val appScaffold =
@@ -89,7 +89,7 @@ class WearScreenCodeExporterTest {
         WearScreenCodeExporter.export(
           wearScreenUiBuilderDocument("activity", pin, environment),
           tagNodes = true,
-        )
+        ),
       )
 
     // The name the lane imports is the design's in both modes; there it is the wrapper.
@@ -108,7 +108,7 @@ class WearScreenCodeExporterTest {
   fun `the generated preview fans out across the round devices`() {
     val source =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment)),
         )
         .source
 
@@ -132,12 +132,12 @@ class WearScreenCodeExporterTest {
             document,
             packageName = "generated.uibuilder",
             tagNodes = true,
-          )
+          ),
         )
         .source
     val artifact =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(document, packageName = "generated.uibuilder")
+          WearScreenCodeExporter.export(document, packageName = "generated.uibuilder"),
         )
         .source
 
@@ -179,7 +179,7 @@ class WearScreenCodeExporterTest {
         nodes =
           base.nodes +
             ("wear-list" to list.copy(slots = mapOf("items" to listOf("chip")))) +
-            ("chip" to UiBuilderNode(id = "chip", componentId = "m3/filter-chip"))
+            ("chip" to UiBuilderNode(id = "chip", componentId = "m3/filter-chip")),
       )
 
     val refused =
@@ -202,7 +202,7 @@ class WearScreenCodeExporterTest {
           componentId = "wear-m3/list-header",
           properties =
             JsonObject(mapOf("text" to text("From the Round world,\nHello, \$5 \"Android\"!"))),
-        )
+        ),
       )
 
     val source =
@@ -236,7 +236,7 @@ class WearScreenCodeExporterTest {
             ("wear-list" to
               list.copy(slots = mapOf("items" to listOf("volume-level", "volume_level")))) +
             ("volume-level" to slider("volume-level")) +
-            ("volume_level" to slider("volume_level"))
+            ("volume_level" to slider("volume_level")),
       )
 
     val source =
@@ -273,8 +273,10 @@ class WearScreenCodeExporterTest {
           modifiers =
             kotlinx.serialization.json.JsonArray(
               listOf(
-                JsonObject(mapOf("type" to JsonPrimitive("padding"), "startDp" to JsonPrimitive(8)))
-              )
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("padding"), "startDp" to JsonPrimitive(8)),
+                ),
+              ),
             ),
           slots = mapOf("children" to listOf("title", "detail")),
         ),
@@ -295,7 +297,7 @@ class WearScreenCodeExporterTest {
   fun `the editor's code pane generates the screen, not a compose refusal`() {
     val catalog =
       ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
     val reducer = UiBuilderEditorReducer(catalog)
 
@@ -319,12 +321,12 @@ class WearScreenCodeExporterTest {
           id = "day",
           componentId = "confetti-wear/section-header",
           properties = JsonObject(mapOf("text" to text("Thursday"))),
-        )
+        ),
       )
 
     val source =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(document, packComponents = confettiWear())
+          WearScreenCodeExporter.export(document, packComponents = confettiWear()),
         )
         .source
 
@@ -366,7 +368,7 @@ class WearScreenCodeExporterTest {
 
     val source =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(document, packComponents = confettiWear())
+          WearScreenCodeExporter.export(document, packComponents = confettiWear()),
         )
         .source
 
@@ -398,12 +400,12 @@ class WearScreenCodeExporterTest {
           id = "day",
           componentId = "confetti-wear/section-header",
           properties = JsonObject(mapOf("text" to text("Thursday"))),
-        )
+        ),
       )
 
     val source =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(document, tagNodes = true, packComponents = confettiWear())
+          WearScreenCodeExporter.export(document, tagNodes = true, packComponents = confettiWear()),
         )
         .source
 
@@ -422,7 +424,7 @@ class WearScreenCodeExporterTest {
 
     val refused =
       assertIs<WearScreenCodeExporter.Result.Refused>(
-        WearScreenCodeExporter.export(document, packComponents = confettiWear())
+        WearScreenCodeExporter.export(document, packComponents = confettiWear()),
       )
 
     val reason = refused.reasons.single()
@@ -451,7 +453,7 @@ class WearScreenCodeExporterTest {
       nodes =
         base.nodes +
           ("wear-list" to list.copy(slots = mapOf("items" to listOf(items.first().id)))) +
-          items.associateBy { it.id }
+          items.associateBy { it.id },
     )
   }
 
@@ -530,7 +532,7 @@ class WearScreenCodeExporterTest {
             listOf(
               TargetParameter.Builder(name = "name", type = "String")
                 .also { b -> b.typeFqn = "kotlin.String" }
-                .build()
+                .build(),
             ),
           // A record whose call site was proven by a producer that spelled no placeholder for
           // `name` — the shape a hand-edited or older record can have.
@@ -593,8 +595,8 @@ class WearScreenCodeExporterTest {
                   properties =
                     JsonObject(
                       base.nodes.getValue("wear-screen").properties +
-                        ("scrollIndicator" to property("boolean", JsonPrimitive(false)))
-                    )
+                        ("scrollIndicator" to property("boolean", JsonPrimitive(false))),
+                    ),
                 )) +
             ("row-0" to
               base.nodes
@@ -603,8 +605,8 @@ class WearScreenCodeExporterTest {
                   properties =
                     JsonObject(
                       base.nodes.getValue("row-0").properties +
-                        ("stableKey" to property("string", JsonPrimitive("session-1")))
-                    )
+                        ("stableKey" to property("string", JsonPrimitive("session-1"))),
+                    ),
                 )) +
             ("list-header" to
               base.nodes
@@ -614,9 +616,9 @@ class WearScreenCodeExporterTest {
                     JsonObject(
                       base.nodes.getValue("list-header").properties +
                         ("maxLines" to property("number", JsonPrimitive(1))) +
-                        ("overflow" to property("string", JsonPrimitive("ellipsis")))
-                    )
-                ))
+                        ("overflow" to property("string", JsonPrimitive("ellipsis"))),
+                    ),
+                )),
       )
 
     val source =
@@ -637,7 +639,7 @@ class WearScreenCodeExporterTest {
   fun `an undeclared property leaves the generated screen at its default`() {
     val source =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment)),
         )
         .source
 
@@ -664,9 +666,9 @@ class WearScreenCodeExporterTest {
                   properties =
                     JsonObject(
                       base.nodes.getValue("edge-button").properties +
-                        ("enabled" to property("boolean", JsonPrimitive(false)))
-                    )
-                ))
+                        ("enabled" to property("boolean", JsonPrimitive(false))),
+                    ),
+                )),
       )
     val disabledButton =
       base.copy(
@@ -693,8 +695,8 @@ class WearScreenCodeExporterTest {
                   slots =
                     base.nodes.getValue("wear-list").slots +
                       ("items" to
-                        (base.nodes.getValue("wear-list").slots.getValue("items") + "row-action"))
-                ))
+                        (base.nodes.getValue("wear-list").slots.getValue("items") + "row-action")),
+                )),
       )
 
     val edgeSource =

@@ -145,7 +145,7 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceRequest.MoveDesignHome,
       is UiBuilderServiceRequest.ReplaceDesignDocument ->
         throw IllegalArgumentException(
-          "${request::class.simpleName} has no ui-builder-protocol v1 request shape"
+          "${request::class.simpleName} has no ui-builder-protocol v1 request shape",
         )
     }
 
@@ -177,7 +177,7 @@ public object UiBuilderProtocolMapper {
           ServiceErrorV1(
             ServiceErrorCodeV1.INTERNAL,
             "${response::class.simpleName} has no ui-builder-protocol v1 response shape",
-          )
+          ),
         )
       is UiBuilderServiceResponse.Error -> ErrorResponseV1(response.error.toProtocol())
     }
@@ -228,12 +228,12 @@ public object UiBuilderProtocolMapper {
       UiBuilderServiceError(
         code = ServiceErrorCodeV1.UNAUTHORIZED,
         message = "request actor does not match the authenticated actor",
-      )
+      ),
     )
 }
 
 private fun DesignSubmissionV1.toServiceSubmission(
-  actor: AuthenticatedUiBuilderActor
+  actor: AuthenticatedUiBuilderActor,
 ): UiBuilderSubmission? =
   when (this) {
     is DesignCommandV1 ->
@@ -270,7 +270,7 @@ private fun DesignSubmissionV1.toServiceSubmission(
   }
 
 private fun UiBuilderSubmission.toProtocolSubmission(
-  actor: AuthenticatedUiBuilderActor
+  actor: AuthenticatedUiBuilderActor,
 ): DesignSubmissionV1 =
   when (this) {
     is UiBuilderSubmission.Batch ->

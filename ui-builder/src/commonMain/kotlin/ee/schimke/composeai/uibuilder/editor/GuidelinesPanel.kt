@@ -158,11 +158,11 @@ internal fun GuidelinesSection(
         } else {
           controller.hidePrompt()
         }
-      }
+      },
     ) {
       Text(
         if (prompt is DesignGuidelineController.PromptView.Hidden) "Show the prompt"
-        else "Hide the prompt"
+        else "Hide the prompt",
       )
     }
     PromptView(prompt)

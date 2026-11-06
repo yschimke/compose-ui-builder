@@ -130,7 +130,7 @@ class RemoteDrawingControlExportTest {
     val refused =
       refusals(
         document()
-          .withProperties("window", "exclude" to """{"type":"state","variable":"alarmOn"}""")
+          .withProperties("window", "exclude" to """{"type":"state","variable":"alarmOn"}"""),
       )
 
     assertTrue(refused.any { "window.exclude" in it }, refused.toString())
@@ -149,16 +149,16 @@ class RemoteDrawingControlExportTest {
                     ("i" to
                       Json.parseToJsonElement(
                         """{"type":"value","valueType":"float","initialValue":2,
-                          "nullable":false,"persistence":"session"}"""
-                      ))
-                )
+                          "nullable":false,"persistence":"session"}""",
+                      )),
+                ),
             )
           }
           .withProperties(
             "mark",
             "endYDp" to
               """{"type":"expr","op":"add","args":[{"type":"state","variable":"i"},{"type":"int","value":10}]}""",
-          )
+          ),
       )
 
     assertContains(source, "loop(0.rf, 12.rf, 1.rf) { i_ ->\n")
@@ -182,10 +182,10 @@ class RemoteDrawingControlExportTest {
                         dial.nodes.getValue("dot").properties +
                           ("radiusDp" to
                             Json.parseToJsonElement(
-                              """{"type":"expr","op":"mul","args":[{"type":"binding","value":"i"},{"type":"int","value":2}]}"""
-                            ))
-                      )
-                  ))
+                              """{"type":"expr","op":"mul","args":[{"type":"binding","value":"i"},{"type":"int","value":2}]}""",
+                            )),
+                      ),
+                  )),
         )
       }
 
@@ -200,16 +200,16 @@ class RemoteDrawingControlExportTest {
     assertTrue(UiDrawing.loopIndices(dial, "dot").isEmpty())
     val formula = UiExpressions.parseFormula("@i * 30", dial.stateVariables.keys)
     assertIs<UiExpressions.Checked.Ok>(
-      UiExpressions.check(formula, UiDrawing.expressionScope(dial, "tick"))
+      UiExpressions.check(formula, UiDrawing.expressionScope(dial, "tick")),
     )
     assertIs<UiExpressions.Checked.Issue>(
-      UiExpressions.check(formula, UiDrawing.expressionScope(dial, "dot"))
+      UiExpressions.check(formula, UiDrawing.expressionScope(dial, "dot")),
     )
     assertTrue(
       JsonPrimitive("i") ==
         (formula as JsonObject)["args"]
           ?.let { (it as kotlinx.serialization.json.JsonArray)[0] as JsonObject }
-          ?.get("value")
+          ?.get("value"),
     )
   }
 

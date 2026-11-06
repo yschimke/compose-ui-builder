@@ -32,7 +32,7 @@ fun CalendarItemsPreview() {
   MaterialTheme {
     Column {
       CalendarEventItem(
-        CalendarEvent(MaterialTheme.colorScheme.primary, "Design review", "10–11 AM")
+        CalendarEvent(MaterialTheme.colorScheme.primary, "Design review", "10–11 AM"),
       )
       CalendarEventItem(CalendarEvent(MaterialTheme.colorScheme.tertiary, "Lunch", "12–1 PM"))
     }
@@ -44,7 +44,7 @@ fun CalendarItemsPreview() {
 fun PhotosItemPreview() {
   MaterialTheme {
     PhotoTileLeftToRightFavorite(
-      Photo(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, "Favorite")
+      Photo(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, "Favorite"),
     )
   }
 }
@@ -72,7 +72,7 @@ fun PlayItemPreview() {
         "Sketchbook",
         "4.8",
         "Rating",
-      )
+      ),
     )
   }
 }

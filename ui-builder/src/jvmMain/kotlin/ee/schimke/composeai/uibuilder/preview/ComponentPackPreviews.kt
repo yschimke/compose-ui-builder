@@ -52,7 +52,7 @@ fun ComponentPacksPanelPreview() {
 fun PackPlaceholderPreview() {
   CompositionLocalProvider(
     LocalUiBuilderNativeOnly provides
-      previewPacks.packs.flatMapTo(mutableSetOf()) { it.componentIds }
+      previewPacks.packs.flatMapTo(mutableSetOf()) { it.componentIds },
   ) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       UiBuilderSurface(document = packPlaceholderDocument, editorOverlay = false)
@@ -85,7 +85,7 @@ private val previewPacks =
         nativeCatalog = "jetnews",
         componentIds = listOf("jetnews/post-card-top", "jetnews/post-list-divider"),
       ),
-    )
+    ),
   )
 
 private val packPlaceholderDocument: UiBuilderDocument by lazy {
@@ -135,8 +135,8 @@ private val packPlaceholderDocument: UiBuilderDocument by lazy {
                     put("topDp", 16)
                     put("endDp", 16)
                     put("bottomDp", 16)
-                  }
-                )
+                  },
+                ),
               ),
             slots = mapOf("children" to listOf("heading", "session", "speaker")),
           ),
@@ -153,7 +153,7 @@ private val packPlaceholderDocument: UiBuilderDocument by lazy {
                       put("type", "typographyToken")
                       put("value", "titleLarge")
                     },
-                )
+                ),
               ),
           ),
         "session" to
@@ -165,7 +165,7 @@ private val packPlaceholderDocument: UiBuilderDocument by lazy {
                 mapOf(
                   "title" to text("Compose everywhere"),
                   "label" to text("Compose everywhere"),
-                )
+                ),
               ),
             slots = mapOf("content" to listOf("speaker-name")),
           ),

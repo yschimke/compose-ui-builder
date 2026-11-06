@@ -43,7 +43,7 @@ class CatalogPublishedPolicyTest {
   private val catalog = CapabilityCatalogParser.parse(base)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -81,8 +81,8 @@ class CatalogPublishedPolicyTest {
             propertyEditor(
               "steps",
               """{"control":"number","minimum":0,"maximum":10,"step":1,"integer":true}""",
-            )
-          )
+            ),
+          ),
       )
     val editor = published.editorOf("m3/slider", "steps")
     assertEquals(PropertyEditorControl.NUMBER, editor.control)
@@ -113,7 +113,7 @@ class CatalogPublishedPolicyTest {
     val misspelt =
       publishing(
         "layout/lazy-column" to
-          policy(propertyEditor("contentPadding", """{"objectKind":"pading"}"""))
+          policy(propertyEditor("contentPadding", """{"objectKind":"pading"}""")),
       )
     assertEquals(builtIn, misspelt.editorOf("layout/lazy-column", "contentPadding"))
   }
@@ -133,10 +133,10 @@ class CatalogPublishedPolicyTest {
                      {"componentId": "m3/text",
                       "properties": {"text": {"type": "number", "value": 3}}}
                    ]}}
-                  """
-                )
-            )
-          )
+                  """,
+                ),
+            ),
+          ),
       )
 
     val (root, label) = inserted(published)
@@ -161,10 +161,10 @@ class CatalogPublishedPolicyTest {
                     {"componentId": "m3/text",
                      "properties": {"text": {"type": "string", "value": "Go"}}}
                   ]}}
-                  """
-                )
-            )
-          )
+                  """,
+                ),
+            ),
+          ),
       )
 
     assertEquals("Button", insertedLabel(catalog))
@@ -181,7 +181,7 @@ class CatalogPublishedPolicyTest {
       )) {
       val published =
         publishing(
-          "m3/button" to JsonObject(mapOf("insertContent" to Json.parseToJsonElement(bad)))
+          "m3/button" to JsonObject(mapOf("insertContent" to Json.parseToJsonElement(bad))),
         )
       assertEquals("Button", insertedLabel(published), bad)
     }
@@ -196,7 +196,7 @@ class CatalogPublishedPolicyTest {
     assertTrue(
       roled.componentsById.getValue(leaf.componentId).properties.any {
         it.name == FontSettings.VARIATION_PROPERTY
-      }
+      },
     )
   }
 
@@ -227,7 +227,7 @@ class CatalogPublishedPolicyTest {
 
   private fun CapabilityCatalog.editorOf(componentId: String, property: String) =
     assertNotNull(
-      componentsById.getValue(componentId).properties.single { it.name == property }.editor
+      componentsById.getValue(componentId).properties.single { it.name == property }.editor,
     )
 
   private fun insertedLabel(catalog: CapabilityCatalog): String =
@@ -259,8 +259,8 @@ class CatalogPublishedPolicyTest {
       JsonObject(
         base +
           ("statusSemantics" to
-            JsonObject(semantics + ("components" to JsonObject(policies.toMap()))))
-      )
+            JsonObject(semantics + ("components" to JsonObject(policies.toMap())))),
+      ),
     )
   }
 

@@ -18,7 +18,7 @@ class DesktopExportHostTest {
   // refuses it — a gap to close before that golden is deleted (UI_BUILDER_CATALOG_CUTOVER.md).
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val document =
     OfflineCatalog.M3.seed(

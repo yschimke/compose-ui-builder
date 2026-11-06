@@ -24,9 +24,9 @@ class CanvasNodeResolutionTest {
                     "type" to JsonPrimitive("stateEquals"),
                     "variable" to JsonPrimitive("selection"),
                     "value" to JsonPrimitive("body"),
-                  )
+                  ),
                 ),
-            )
+            ),
           ),
       )
 
@@ -62,13 +62,13 @@ class CanvasNodeResolutionTest {
                           wrapper("binding", "base"),
                           wrapper("color", "#FF000000"),
                           JsonObject(
-                            mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(0))
+                            mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(0)),
                           ),
-                        )
+                        ),
                       ),
-                  )
-                )
-            )
+                  ),
+                ),
+            ),
           ),
       )
 

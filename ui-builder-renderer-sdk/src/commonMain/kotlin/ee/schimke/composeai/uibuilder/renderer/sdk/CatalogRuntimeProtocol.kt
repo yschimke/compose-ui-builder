@@ -128,7 +128,7 @@ class CatalogRuntimeProtocolEndpoint(
             put("code", "PROTOCOL_MISMATCH")
             put("message", "runtime identity or protocol does not match this renderer")
           },
-        )
+        ),
       )
     }
     val lockedOrigin = parentOrigin
@@ -141,7 +141,7 @@ class CatalogRuntimeProtocolEndpoint(
             put("code", "DUPLICATE_REQUEST")
             put("message", "requestId has already been accepted")
           },
-        )
+        ),
       )
     }
     return when (message.type) {
@@ -162,11 +162,11 @@ class CatalogRuntimeProtocolEndpoint(
                       CATALOG_RUNTIME_CAPABILITY_INSPECTION_UPDATES,
                     ) + capabilities)
                     .sorted()
-                    .map { JsonPrimitive(it) }
+                    .map { JsonPrimitive(it) },
                 ),
               )
             },
-          )
+          ),
         )
       }
       "renderDocument" -> {
@@ -226,7 +226,7 @@ class CatalogRuntimeProtocolEndpoint(
                 put("code", "RUNTIME_PIN_MISMATCH")
                 put("message", "document is not pinned to this exact native runtime")
               },
-            )
+            ),
           )
         }
         activeDocument = null
@@ -244,7 +244,7 @@ class CatalogRuntimeProtocolEndpoint(
               put("code", "UNSUPPORTED_MESSAGE")
               put("message", "unsupported renderer request type")
             },
-          )
+          ),
         )
     }
   }
@@ -435,7 +435,7 @@ class CatalogRuntimeHostSession(
         requestId = requestId,
         type = type,
         payload = payload,
-      )
+      ),
     )
   }
 
@@ -613,7 +613,7 @@ private fun CatalogRuntimeMessage.error(code: String, description: String) =
         put("code", code)
         put("message", description)
       },
-    )
+    ),
   )
 
 private const val MAX_NODE_ID_LENGTH = 512

@@ -21,7 +21,7 @@ class FormulaActionEditorTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
       .let {
@@ -31,10 +31,10 @@ class FormulaActionEditorTest {
               it.stateVariables +
                 Json.parseToJsonElement(
                     """{"count":{"type":"value","valueType":"int","nullable":false,
-                      "initialValue":0,"persistence":"preview"}}"""
+                      "initialValue":0,"persistence":"preview"}}""",
                   )
-                  .jsonObject
-            )
+                  .jsonObject,
+            ),
         )
       }
   private val nodeId = "chip-comedy"
@@ -70,7 +70,7 @@ class FormulaActionEditorTest {
   @Test
   fun `a formula that does not parse or type is refused, and a plain value is still a literal`() {
     assertIs<CommandOutcome.Rejected>(
-      append(EditorStateAction.Set("count", "= count +")).lastOutcome
+      append(EditorStateAction.Set("count", "= count +")).lastOutcome,
     )
     val wrongKind = append(EditorStateAction.Set("count", "= count / 2.5"))
     val outcome = assertIs<CommandOutcome.Rejected>(wrongKind.lastOutcome)

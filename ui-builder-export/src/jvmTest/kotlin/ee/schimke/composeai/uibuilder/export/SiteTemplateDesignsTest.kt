@@ -44,7 +44,7 @@ class SiteTemplateDesignsTest {
       val (catalog, template, title) = design
       val pin =
         Json.parseToJsonElement(
-            File(root, "docs/design/fixtures/ui-builder/$catalog-capabilities-v1.json").readText()
+            File(root, "docs/design/fixtures/ui-builder/$catalog-capabilities-v1.json").readText(),
           )
           .jsonObject
           .getValue("benchmark")

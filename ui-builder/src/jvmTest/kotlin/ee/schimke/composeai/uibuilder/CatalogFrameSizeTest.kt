@@ -39,9 +39,9 @@ class CatalogFrameSizeTest {
               }
             }
           }
-          """
+          """,
         )
-        .jsonObject
+        .jsonObject,
     )
 
   private val watch =

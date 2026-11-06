@@ -28,7 +28,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class TabSelectionExportTest {
   private val reference by lazy {
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")) as JsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")) as JsonObject,
       )
       .document
   }
@@ -128,9 +128,9 @@ class TabSelectionExportTest {
                           "type" to JsonPrimitive("stateEquals"),
                           "variable" to JsonPrimitive("selectedTab"),
                           "value" to JsonPrimitive(index),
-                        )
-                      )
-                  )
+                        ),
+                      ),
+                  ),
                 ),
               eventBindings =
                 JsonObject(
@@ -143,11 +143,11 @@ class TabSelectionExportTest {
                               "type" to JsonPrimitive("set"),
                               "variable" to JsonPrimitive("selectedTab"),
                               "value" to JsonPrimitive(index),
-                            )
-                          )
-                        )
-                      )
-                  )
+                            ),
+                          ),
+                        ),
+                      ),
+                  ),
                 ),
               slots = mapOf("text" to listOf("$id-label")),
             ),
@@ -178,9 +178,9 @@ class TabSelectionExportTest {
                 mapOf(
                   "valueType" to JsonPrimitive(indexType),
                   "initialValue" to indexInitial,
-                )
-              )
-          )
+                ),
+              ),
+          ),
         ),
       roots = listOf("root"),
       nodes = nodes,

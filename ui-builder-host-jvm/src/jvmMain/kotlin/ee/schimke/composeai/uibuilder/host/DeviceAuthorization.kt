@@ -98,14 +98,14 @@ internal suspend fun authorizeDevice(
       else ->
         error(
           "server declined UI Builder authentication" +
-            answer["message"]?.jsonPrimitive?.contentOrNull?.let { ": $it" }.orEmpty()
+            answer["message"]?.jsonPrimitive?.contentOrNull?.let { ": $it" }.orEmpty(),
         )
     }
     retryAfterSeconds = answer["retryAfterSeconds"]?.jsonPrimitive?.longOrNull ?: retryAfterSeconds
   }
   error(
     "UI Builder authentication timed out" +
-      if (presented) "" else "; approve this device at $approvalUrl"
+      if (presented) "" else "; approve this device at $approvalUrl",
   )
 }
 

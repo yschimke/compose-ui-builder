@@ -109,7 +109,7 @@ class UiBuilderStateWriteTest {
       uiBuilderStateWrite(
         action("""{"type":"increment","variable":"name"}"""),
         mapOf("name" to "Ada"),
-      )
+      ),
     )
   }
 
@@ -118,7 +118,7 @@ class UiBuilderStateWriteTest {
     // The protocol declares actions this renderer does not implement, and other clients author
     // them. Losing one interaction beats losing the whole screen, including the parts that work.
     assertNull(
-      uiBuilderStateWrite(action("""{"type":"navigatePage","pageKey":"next"}"""), emptyMap())
+      uiBuilderStateWrite(action("""{"type":"navigatePage","pageKey":"next"}"""), emptyMap()),
     )
     assertNull(uiBuilderStateWrite(action("""{"type":"select"}"""), emptyMap()))
   }
@@ -131,15 +131,15 @@ class UiBuilderStateWriteTest {
           uiBuilderStateWrite(
             action("""{"type":"$kind","variable":"page","value":$value}"""),
             mapOf("page" to "10"),
-          )
+          ),
         )
       }
     }
     assertNull(
-      uiBuilderStateWrite(action("""{"type":{},"variable":"page","value":20}"""), emptyMap())
+      uiBuilderStateWrite(action("""{"type":{},"variable":"page","value":20}"""), emptyMap()),
     )
     assertNull(
-      uiBuilderStateWrite(action("""{"type":"set","variable":{},"value":20}"""), emptyMap())
+      uiBuilderStateWrite(action("""{"type":"set","variable":{},"value":20}"""), emptyMap()),
     )
   }
 

@@ -78,7 +78,7 @@ class FontSettingsExportTest {
       )
     val emitted =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(
-        InlineRemoteContentExporter.export(design, "remote")
+        InlineRemoteContentExporter.export(design, "remote"),
       )
     val source = emitted.source
     assertTrue(

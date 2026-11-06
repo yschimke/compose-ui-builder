@@ -73,7 +73,7 @@ class WearEditorProblemsTest {
             ("screen" to
               screen.nodes
                 .getValue("screen")
-                .copy(slots = mapOf("content" to listOf("list", "cell-1"))))
+                .copy(slots = mapOf("content" to listOf("list", "cell-1")))),
       )
     val refused = assertIs<EditorGeneratedCode.Refused>(reducer.generatedCode(unlisted))
 
@@ -94,7 +94,9 @@ class WearEditorProblemsTest {
     val drifted =
       screen.copy(
         catalogPin =
-          JsonObject(screen.catalogPin + ("nativeRuntimeId" to JsonPrimitive("some-other-runtime")))
+          JsonObject(
+            screen.catalogPin + ("nativeRuntimeId" to JsonPrimitive("some-other-runtime")),
+          ),
       )
 
     assertTrue(
@@ -143,9 +145,9 @@ class WearEditorProblemsTest {
               mapOf(
                 "text" to
                   JsonObject(
-                    mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Start"))
-                  )
-              )
+                    mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Start")),
+                  ),
+              ),
             ),
         ),
     )

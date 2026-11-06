@@ -27,7 +27,7 @@ class ConfettiFixtureValidatesTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val confetti =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/confetti-schedule-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/confetti-schedule-operations-v1.json")).jsonObject,
       )
       .document
 

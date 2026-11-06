@@ -13,13 +13,13 @@ object GenerateJetcasterSvgFixture {
     val loader = GenerateJetcasterSvgFixture::class.java
     val operations =
       Json.parseToJsonElement(
-          checkNotNull(loader.getResource("/jetcaster-discover-operations-v1.json")).readText()
+          checkNotNull(loader.getResource("/jetcaster-discover-operations-v1.json")).readText(),
         )
         .jsonObject
     val document = UiBuilderReducer.replay(operations).document
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(loader.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(loader.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
     val result =
       executeSavedDocumentSvgExport(

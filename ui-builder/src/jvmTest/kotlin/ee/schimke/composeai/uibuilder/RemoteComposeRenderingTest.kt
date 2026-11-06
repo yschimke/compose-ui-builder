@@ -84,8 +84,8 @@ class RemoteComposeRenderingTest {
         properties =
           JsonObject(
             mapOf(
-              "documentBase64" to property(Base64.Default.encode(RcDocumentCodec.encode(nested)))
-            )
+              "documentBase64" to property(Base64.Default.encode(RcDocumentCodec.encode(nested))),
+            ),
           ),
         modifiers = JsonArray(listOf(buildJsonObject { put("type", "fillMaxSize") })),
         slots = mapOf("hero.card" to listOf("slot-fill")),
@@ -99,7 +99,7 @@ class RemoteComposeRenderingTest {
             mapOf(
               "startColor" to property("#FFFF0000"),
               "endColor" to property("#FFFF0000"),
-            )
+            ),
           ),
         modifiers = JsonArray(listOf(buildJsonObject { put("type", "fillMaxSize") })),
       )

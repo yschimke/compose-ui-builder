@@ -50,12 +50,12 @@ class StateSelectionTest {
       stateSelectionIssue(
         node.copy(slots = mapOf("children" to listOf("case0", "case1", "other", "extra"))),
         declarations(),
-      )
+      ),
     )
     assertNotNull(stateSelectionIssue(node, JsonObject(emptyMap())))
     assertNotNull(stateSelectionIssue(node.copy(componentId = "layout/row"), declarations()))
     assertNotNull(
-      stateSelectionIssue(node(selection(JsonPrimitive(10), fallback = "case0")), declarations())
+      stateSelectionIssue(node(selection(JsonPrimitive(10), fallback = "case0")), declarations()),
     )
   }
 
@@ -63,19 +63,19 @@ class StateSelectionTest {
   fun `case types and float canonical values are checked before rendering`() {
     assertNotNull(stateSelectionIssue(node(selection(JsonPrimitive("10"))), declarations()))
     assertNotNull(
-      stateSelectionIssue(node(selection(JsonPrimitive(10), JsonPrimitive(10))), declarations())
+      stateSelectionIssue(node(selection(JsonPrimitive(10), JsonPrimitive(10))), declarations()),
     )
     assertNotNull(
       stateSelectionIssue(
         node(selection(JsonPrimitive(16777216.0), JsonPrimitive(16777217.0))),
         declarations("float"),
-      )
+      ),
     )
     assertNotNull(
       stateSelectionIssue(
         node(selection(JsonPrimitive(-0.0), JsonPrimitive(0.0))),
         declarations("float"),
-      )
+      ),
     )
     assertNotNull(stateSelectionIssue(node(selection(JsonPrimitive(1e100))), declarations("float")))
     val decimal = selection(JsonPrimitive(16777217.0))
@@ -104,8 +104,8 @@ class StateSelectionTest {
                   buildJsonObject {
                     put("type", "int")
                     put("value", "ten")
-                  })
-            ))
+                  }),
+            )),
       )
     }
     assertNull(wrongSelector.stateSelection())

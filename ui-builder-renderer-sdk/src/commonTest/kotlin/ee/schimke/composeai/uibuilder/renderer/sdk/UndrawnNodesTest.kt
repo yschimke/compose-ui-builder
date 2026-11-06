@@ -91,7 +91,7 @@ class UndrawnNodesTest {
         payload =
           JsonObject(
             first.payload +
-              (UNDRAWN_PAYLOAD_KEY to kotlinx.serialization.json.JsonArray(emptyList()))
+              (UNDRAWN_PAYLOAD_KEY to kotlinx.serialization.json.JsonArray(emptyList())),
           ),
       )
     assertNotNull(host.accept("null", true, endpoint.encode(update)))
@@ -163,7 +163,7 @@ class UndrawnNodesTest {
             )
           },
         ),
-      )
+      ),
     )
 
   private fun document() =

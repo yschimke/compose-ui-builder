@@ -73,7 +73,7 @@ fun componentDriftProblems(findings: List<ComponentDriftFinding>): List<EditorPr
  * (project, symbol id and digest); a re-import or removal drops it until the host's next fetch.
  */
 fun List<ComponentDriftFinding>.stillDescribing(
-  document: UiBuilderDocument
+  document: UiBuilderDocument,
 ): List<ComponentDriftFinding> = filter { finding ->
   document.components.importedSourceOf(finding.componentKey) ==
     ImportedSource(finding.system, finding.componentId, finding.importedDigest)

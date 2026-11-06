@@ -454,12 +454,12 @@ private const val MAX_SCREEN_DP = 3840
  * floor.
  */
 fun UiBuilderDocument.screenEnvironmentValidationError(
-  settings: ScreenEnvironmentSettings
+  settings: ScreenEnvironmentSettings,
 ): String? =
   // A widget is smaller than any screen: a Wear host container is 76dp tall and a launcher
   // widget's smallest grid cell 57dp wide, so neither takes the screen minimum.
   settings.validationError(
-    minimumDp = if (wearWidgetScaffoldSize() == null && !isLauncherWidget()) MIN_SCREEN_DP else 1
+    minimumDp = if (wearWidgetScaffoldSize() == null && !isLauncherWidget()) MIN_SCREEN_DP else 1,
   )
 
 fun ScreenEnvironmentSettings.validationError(minimumDp: Int = MIN_SCREEN_DP): String? =

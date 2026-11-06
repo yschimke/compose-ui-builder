@@ -86,7 +86,7 @@ class TypedCatalogPublicationTest {
           published,
           portableRecord,
           ExportCapabilitiesV1.Builder().build(),
-        )
+        ),
       )
     val toggle = result.catalog.components.single()
     assertEquals("acme/toggle", toggle.componentId)

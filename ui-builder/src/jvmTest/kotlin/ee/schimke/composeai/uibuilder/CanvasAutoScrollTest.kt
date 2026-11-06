@@ -327,7 +327,7 @@ class CanvasAutoScrollTest {
             ]
           }
           """
-              .trimIndent()
+              .trimIndent(),
           )
           .jsonObject
       }

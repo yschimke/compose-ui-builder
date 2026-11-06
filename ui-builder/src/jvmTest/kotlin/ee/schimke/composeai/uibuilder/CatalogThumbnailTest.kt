@@ -112,9 +112,9 @@ class CatalogThumbnailTest {
     val document =
       UiBuilderReducer.replay(
           kotlinx.serialization.json.Json.parseToJsonElement(
-              resource("/jetcaster-discover-operations-v1.json")
+              resource("/jetcaster-discover-operations-v1.json"),
             )
-            .let { kotlinx.serialization.json.JsonObject(it.jsonObjectOrEmpty()) }
+            .let { kotlinx.serialization.json.JsonObject(it.jsonObjectOrEmpty()) },
         )
         .document
     val before = reducer.initial(document, selectedNodeId = "discover-grid")

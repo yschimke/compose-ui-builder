@@ -214,7 +214,7 @@ private suspend fun awaitString(promise: Promise<JsString>): String =
       .catch { error ->
         if (continuation.isActive) {
           continuation.resume(
-            JsonObject(mapOf("error" to JsonPrimitive(error.toString()))).toString()
+            JsonObject(mapOf("error" to JsonPrimitive(error.toString()))).toString(),
           )
         }
         null
@@ -251,7 +251,7 @@ private suspend fun awaitString(promise: Promise<JsString>): String =
         }
       };
     } catch (e) {}
-  }"""
+  }""",
 )
 private external fun installLocalStorageHooks(
   onFailure: (String) -> Unit,
@@ -344,7 +344,7 @@ private external fun installLocalStorageHooks(
       };
       tx.onabort = () => fail(tx.error ? tx.error.name + ': ' + tx.error.message : 'the migration was aborted');
     };
-  })"""
+  })""",
 )
 private external fun openLocalDatabase(prefix: String): Promise<JsString>
 
@@ -362,7 +362,7 @@ private external fun openLocalDatabase(prefix: String): Promise<JsString>
     } catch (e) {
       report(e);
     }
-  }"""
+  }""",
 )
 private external fun writeLocalDatabase(key: String, value: String)
 
@@ -374,7 +374,7 @@ private external fun writeLocalDatabase(key: String, value: String)
       tx.objectStore('entries').delete(key);
       tx.oncomplete = () => { try { state.channel && state.channel.postMessage({ type: 'remove', key, tab: state.tab }); } catch (e) {} };
     } catch (e) {}
-  }"""
+  }""",
 )
 private external fun removeLocalDatabase(key: String)
 
@@ -383,7 +383,7 @@ private external fun removeLocalDatabase(key: String)
   """(key) => {
     const state = globalThis.__uiBuilderLocalStore || {};
     try { state.channel && state.channel.postMessage({ type: 'write', key, tab: state.tab }); } catch (e) {}
-  }"""
+  }""",
 )
 private external fun announceLocalChange(key: String)
 
@@ -394,7 +394,7 @@ private external fun announceLocalChange(key: String)
       if (!storage || typeof storage.persist !== 'function') return;
       storage.persisted().then((already) => already || storage.persist()).catch(() => {});
     } catch (e) {}
-  }"""
+  }""",
 )
 private external fun requestPersistentStorage()
 
@@ -412,7 +412,7 @@ private external fun requestPersistentStorage()
     } catch (e) {
       return Promise.resolve('');
     }
-  }"""
+  }""",
 )
 private external fun storageEstimate(): Promise<JsString>
 
@@ -424,7 +424,7 @@ private external fun storageEstimate(): Promise<JsString>
     } catch (e) {
       return missing;
     }
-  }"""
+  }""",
 )
 private external fun readLocalStorage(key: String, missing: String): String
 
@@ -437,7 +437,7 @@ private external fun readLocalStorage(key: String, missing: String): String
     } catch (e) {
       return 'this browser refused to store ' + key + ': ' + (e && e.name ? e.name : 'unknown error');
     }
-  }"""
+  }""",
 )
 private external fun writeLocalStorage(key: String, value: String): String
 
@@ -446,7 +446,7 @@ private external fun writeLocalStorage(key: String, value: String): String
     try {
       globalThis.localStorage.removeItem(key);
     } catch (e) {}
-  }"""
+  }""",
 )
 private external fun removeLocalStorage(key: String)
 
@@ -463,6 +463,6 @@ private external fun removeLocalStorage(key: String)
     } catch (e) {
       return '';
     }
-  }"""
+  }""",
 )
 private external fun localStorageKeys(prefix: String): String

@@ -38,7 +38,7 @@ class CapabilityValidatorTest {
       coverage.plannedOrUnsupported.any {
         it.componentId == "layout/supporting-pane-scaffold" &&
           it.adapterStatus == WasmAdapterStatus.UNSUPPORTED
-      }
+      },
     )
   }
 
@@ -83,8 +83,8 @@ class CapabilityValidatorTest {
         .copy(
           properties =
             JsonObject(
-              validText().properties + ("madeUp" to property("string", JsonPrimitive("x")))
-            )
+              validText().properties + ("madeUp" to property("string", JsonPrimitive("x"))),
+            ),
         )
 
     assertIssue(validator.validate(isolated(node)), CapabilityIssueCode.UNKNOWN_PROPERTY)

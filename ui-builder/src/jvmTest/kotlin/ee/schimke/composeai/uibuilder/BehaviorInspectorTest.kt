@@ -27,7 +27,7 @@ import org.jetbrains.skia.Image
 class BehaviorInspectorTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -69,22 +69,22 @@ class BehaviorInspectorTest {
                     "m3/text",
                     properties =
                       Json.parseToJsonElement(
-                          """{"text":{"type":"string","value":"Toggle"},"style":{"type":"typographyToken","value":"labelLarge"}}"""
+                          """{"text":{"type":"string","value":"Toggle"},"style":{"type":"typographyToken","value":"labelLarge"}}""",
                         )
                         .jsonObject,
                   )) +
                 ("screen-content" to
                   initial.nodes
                     .getValue("screen-content")
-                    .copy(slots = mapOf("children" to listOf(buttonId))))
-          )
+                    .copy(slots = mapOf("children" to listOf(buttonId)))),
+          ),
         )
       setContent {
         MaterialTheme {
           Surface {
             CompositionLocalProvider(
               LocalUiBuilderPageDestinations provides
-                listOf(UiBuilderPageDestination("confirmation", "Confirmation"))
+                listOf(UiBuilderPageDestination("confirmation", "Confirmation")),
             ) {
               Row(
                 Modifier.fillMaxSize().padding(24.dp),
@@ -117,9 +117,10 @@ class BehaviorInspectorTest {
         File(folder, name)
           .writeBytes(
             requireNotNull(
-                Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
+                Image.makeFromBitmap(screenshot.asSkiaBitmap())
+                  .encodeToData(EncodedImageFormat.PNG),
               )
-              .bytes
+              .bytes,
           )
       }
       onNodeWithText("State · 0").performClick()

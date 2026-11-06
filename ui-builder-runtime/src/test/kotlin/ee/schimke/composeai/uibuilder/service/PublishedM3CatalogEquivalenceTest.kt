@@ -97,7 +97,7 @@ class PublishedM3CatalogEquivalenceTest {
     val reviewed =
       setOf(
         "  m3/search-input-field.properties[value].jsonType: frozen=[\"object\",\"string\"] " +
-          "composed=\"object\""
+          "composed=\"object\"",
       )
     val unreviewed = differences - reviewed
     assertTrue(
@@ -169,7 +169,7 @@ class PublishedM3CatalogEquivalenceTest {
           "iconGrade",
           "iconOpticalSize",
           "iconAutoMirror",
-        )
+        ),
     )
 
   /**
@@ -451,7 +451,7 @@ class PublishedM3CatalogEquivalenceTest {
       JsonObject(
         composed.statusSemantics +
           ("assetRegistry" to
-            JsonObject(mapOf("keys" to JsonArray(listOf(JsonPrimitive("catalog.own"))))))
+            JsonObject(mapOf("keys" to JsonArray(listOf(JsonPrimitive("catalog.own")))))),
       )
     val served =
       fixtureCatalogExecutor(
@@ -459,7 +459,7 @@ class PublishedM3CatalogEquivalenceTest {
           published =
             mapOf(
               "m3-catalog" to
-                composed.newBuilder().also { it.statusSemantics = ownRegistry }.build()
+                composed.newBuilder().also { it.statusSemantics = ownRegistry }.build(),
             ),
         )
         .listCatalogs()

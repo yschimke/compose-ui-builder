@@ -6,7 +6,7 @@ import { test } from 'node:test';
 // Execute the JS bridge that ships, including the hidden-tab fallback.
 async function bridge(file, name, globals) {
   const source = await readFile(new URL(`../../ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/${file}`, import.meta.url), 'utf8');
-  const blocks = [...source.matchAll(/@JsFun\(\s*"""((?:(?!""")[\s\S])*)"""\s*\)\s*private external fun (\w+)/g)];
+  const blocks = [...source.matchAll(/@JsFun\(\s*"""((?:(?!""")[\s\S])*)"""\s*,?\s*\)\s*private external fun (\w+)/g)];
   const body = blocks.find(([, , candidate]) => candidate === name)?.[1];
   assert.ok(body, `missing bridge ${name}`);
   return runInContext(`(${body})`, createContext(globals));

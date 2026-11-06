@@ -73,7 +73,7 @@ class LocalDesignBrowserCopiesTest {
           newDesignId = "brave-kettle",
           server = "https://preview.coo.ee",
           nowEpochMillis = 42,
-        )
+        ),
       )
 
     // A fresh store over the same storage is what a reload is.
@@ -111,7 +111,7 @@ class LocalDesignBrowserCopiesTest {
           title = "A",
           updatedAtEpochMillis = 1,
           storedBytes = bytes,
-        )
+        ),
       )
 
     assertNull(localStorageNotice(summaries(1_000), budgetChars = 10_000))
@@ -130,7 +130,7 @@ class LocalDesignBrowserCopiesTest {
           title = "A",
           updatedAtEpochMillis = 1,
           storedBytes = 9_000_000,
-        )
+        ),
       )
     val roomy =
       BrowserStorageEstimate(
@@ -157,7 +157,7 @@ class LocalDesignBrowserCopiesTest {
           title = "A",
           updatedAtEpochMillis = 1,
           storedBytes = 9_000,
-        )
+        ),
       )
     val estimate =
       BrowserStorageEstimate(
@@ -227,7 +227,7 @@ class LocalDesignBrowserCopiesTest {
         override fun resumeWith(result: Result<T>) {
           completed = result
         }
-      }
+      },
     )
     return completed?.getOrThrow() ?: error("suspended unexpectedly")
   }

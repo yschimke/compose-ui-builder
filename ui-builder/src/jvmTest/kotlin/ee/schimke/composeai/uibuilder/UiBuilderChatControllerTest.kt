@@ -60,7 +60,7 @@ class UiBuilderChatControllerTest {
         DesignCommentThread(
           "thread",
           comments = ids.map { DesignComment(it, "reviewer", body = "Review $it") },
-        )
+        ),
       ),
     )
 
@@ -189,9 +189,9 @@ class UiBuilderChatControllerTest {
                   "agent:x",
                   kind = DesignCommentAuthorKind.Agent,
                   body = "Reply",
-                )
+                ),
               ),
-          )
+          ),
         ),
       )
     chat.comments(agentBoard, true)
@@ -253,7 +253,7 @@ class UiBuilderChatControllerTest {
           DesignCommentThread(
             "thread",
             comments = comments + DesignComment("mine2", "viewer", body = "Another reply"),
-          )
+          ),
         ),
       ),
       true,
@@ -311,9 +311,9 @@ class UiBuilderChatControllerTest {
                       "text" to JsonPrimitive("Hello"),
                       "documentBase64" to JsonPrimitive("private-binary-data"),
                       "documentUrl" to JsonPrimitive("https://host/?token=private-token"),
-                    )
+                    ),
                   ),
-              )
+              ),
           ),
         assets = JsonObject(mapOf("secret" to JsonPrimitive("private-asset"))),
       )

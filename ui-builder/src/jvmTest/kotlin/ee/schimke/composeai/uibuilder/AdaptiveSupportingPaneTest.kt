@@ -47,7 +47,7 @@ class AdaptiveSupportingPaneTest {
             "widthDp" to JsonPrimitive(411),
             "heightDp" to JsonPrimitive(914),
             "density" to JsonPrimitive(1.0),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("scaffold"),
@@ -65,7 +65,7 @@ class AdaptiveSupportingPaneTest {
                         mapOf(
                           "type" to JsonPrimitive("enum"),
                           "value" to JsonPrimitive(layoutMode),
-                        )
+                        ),
                       ),
                     "mainPaneVisible" to bool(mainPaneVisible),
                     "supportingPaneVisible" to bool(supportingPaneVisible),
@@ -77,7 +77,7 @@ class AdaptiveSupportingPaneTest {
                         },
                         paneSpacingDp?.let { "paneSpacingDp" to float(it) },
                       )
-                      .toMap()
+                      .toMap(),
                 ),
               slots = mapOf("mainPane" to listOf("main"), "supportingPane" to listOf("support")),
             ),
@@ -100,8 +100,8 @@ class AdaptiveSupportingPaneTest {
         JsonObject(
           mapOf(
             "text" to
-              JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value)))
-          )
+              JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value))),
+          ),
         ),
     )
 
@@ -196,7 +196,7 @@ class AdaptiveSupportingPaneTest {
       setContent {
         MaterialTheme {
           UiBuilderSurface(
-            document(mainPaneWidthDp = mainWidthDp, supportingPaneWidthDp = supportingWidthDp)
+            document(mainPaneWidthDp = mainWidthDp, supportingPaneWidthDp = supportingWidthDp),
           )
         }
       }

@@ -32,7 +32,7 @@ class ReferenceAlignToReferenceTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val textId = "podcast-card-android-title"
@@ -78,7 +78,7 @@ class ReferenceAlignToReferenceTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.AttachReference(
-          ReferenceImage("mock", "mock@2x.png", "image/png", "AAAA", 720, 1600)
+          ReferenceImage("mock", "mock@2x.png", "image/png", "AAAA", 720, 1600),
         ),
       )
     val aligned =

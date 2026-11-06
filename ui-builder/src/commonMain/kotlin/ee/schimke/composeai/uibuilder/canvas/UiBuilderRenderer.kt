@@ -535,7 +535,7 @@ fun UiBuilderSurface(
     if (wearCatalog) {
       arrayOf<ProvidedValue<*>>(
         LocalWearDeviceConfiguration provides
-          document.wearDeviceConfiguration(LocalUiBuilderFrameGeometry.current)
+          document.wearDeviceConfiguration(LocalUiBuilderFrameGeometry.current),
       )
     } else {
       // Nothing in the design reads it, and a mobile design is not drawn on a watch: leaving the
@@ -584,8 +584,8 @@ fun UiBuilderSurface(
               // A detached container has no root surface of its own under it to paint the design's
               // ground, so its rows would sit on whatever the host happens to be.
               .then(
-                if (detachedFrom != null) Modifier.background(colorScheme.background) else Modifier
-              )
+                if (detachedFrom != null) Modifier.background(colorScheme.background) else Modifier,
+              ),
           ) {
             CanvasDocumentHost(
               document = document,
@@ -651,8 +651,8 @@ fun UiBuilderSurface(
                           // Selects the node (what the inspector edits), not the tapped copy.
                           overlayHit(position)?.let { onNodeSelected?.invoke(it) }
                         }
-                      }
-                  )
+                      },
+                  ),
               ) {
                 selected.forEach { rect ->
                   drawRect(
@@ -1680,7 +1680,7 @@ private fun RenderNode(
           val fill = node.cardContentFill()
           Box(
             Modifier.then(if (fill.width) Modifier.fillMaxWidth() else Modifier)
-              .then(if (fill.height) Modifier.fillMaxHeight() else Modifier)
+              .then(if (fill.height) Modifier.fillMaxHeight() else Modifier),
           ) {
             slot("content").forEach { id ->
               val item = document.nodes.getValue(id)
@@ -1888,7 +1888,7 @@ private fun RenderNode(
                   Modifier.background(Color.Black.copy(alpha = 0.46f), CircleShape)
                 } else {
                   Modifier
-                }
+                },
               ),
           enabled = enabled,
         ) {
@@ -1981,9 +1981,9 @@ private fun RenderNode(
                 listOf(inner, outer),
                 center = if (node.string("center") == "topStart") Offset.Zero else center,
                 radius = size.maxDimension * 0.82f,
-              )
+              ),
             )
-          }
+          },
         )
       }
       "shape/colour-dot" ->
@@ -1991,7 +1991,7 @@ private fun RenderNode(
           measured
             .size(node.float("diameterDp", 8f).dp)
             .clip(CircleShape)
-            .background(Color(parseArgb(node.string("color"))))
+            .background(Color(parseArgb(node.string("color")))),
         )
       // A pack's component: declared by the catalog and drawn here as its name and place, since the
       // browser cannot link the classes that draw it. The caption names its source catalog.
@@ -2057,7 +2057,7 @@ private fun UiBuilderDocument.wearScreenWidthDp(frame: UiBuilderFrameGeometry): 
  * document's diameter, round, with deterministic defaults (24-hour clock, left wrist).
  */
 internal fun UiBuilderDocument.wearDeviceConfiguration(
-  frame: UiBuilderFrameGeometry = UiBuilderFrameGeometry.None
+  frame: UiBuilderFrameGeometry = UiBuilderFrameGeometry.None,
 ): WearDeviceConfiguration {
   val diameter = wearScreenWidthDp(frame)
   return WearDeviceConfiguration(
@@ -2123,7 +2123,7 @@ private fun WearScreenScaffold(
         // At least one screenful, so an empty scaffold is a watch face rather than a sliver.
         .heightIn(min = width)
         .clip(RoundedCornerShape(percent = 50))
-        .background(background)
+        .background(background),
     // Nothing drawn over the design (it must stay pixel-comparable), and no scroll indicator (the
     // extent has no viewport).
   ) {
@@ -2141,14 +2141,14 @@ private fun WearScreenScaffold(
         Column(
           Modifier.fillMaxWidth()
             .heightIn(min = width)
-            .padding(padding.withBottom(if (hasEdgeButton) 0.dp else null))
+            .padding(padding.withBottom(if (hasEdgeButton) 0.dp else null)),
         ) {
           content(Modifier.fillMaxWidth())
           if (hasEdgeButton) {
             Spacer(Modifier.weight(1f))
             edgeButton(
               Modifier.align(Alignment.CenterHorizontally)
-                .padding(top = ScreenScaffoldDefaults.EdgeButtonSpacing)
+                .padding(top = ScreenScaffoldDefaults.EdgeButtonSpacing),
             )
           }
         }
@@ -2324,7 +2324,7 @@ internal fun WearWidgetContainerScaffold(
             color = base,
             cornerRadius = CornerRadius(cornerRadius.dp.toPx(), cornerRadius.dp.toPx()),
           )
-        }
+        },
   ) {
     // Each brush element over the whole frame in chain order, clipped to the round rect (gradients
     // and bitmaps have no radius of their own).
@@ -2770,7 +2770,7 @@ private fun shapeFor(
       else ->
         value.toFloatOrNull()?.dp
           ?: error("unsupported shape '$value'${nodeId?.let { " on $it" }.orEmpty()}")
-    }
+    },
   )
 
 private fun UiBuilderNode.themeColor(name: String): Color? =
@@ -2864,14 +2864,16 @@ private fun BuilderIcon(node: UiBuilderNode, modifier: Modifier) {
   Canvas(sized.then(accessible)) {
     val scaleX = size.width / vector.viewportWidth
     val scaleY = size.height / vector.viewportHeight
-    withTransform({
-      if (vector.autoMirror && layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) {
-        translate(size.width, 0f)
-        scale(-scaleX, scaleY)
-      } else {
-        scale(scaleX, scaleY)
-      }
-    }) {
+    withTransform(
+      {
+        if (vector.autoMirror && layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) {
+          translate(size.width, 0f)
+          scale(-scaleX, scaleY)
+        } else {
+          scale(scaleX, scaleY)
+        }
+      },
+    ) {
       paths.forEach { item -> drawPath(item.path, tint.copy(alpha = tint.alpha * item.fillAlpha)) }
     }
   }
@@ -2888,7 +2890,7 @@ private fun ImageVector.requireSimpleStructuredPaths(): List<StructuredIconPath>
       root.scaleY == 1f &&
       root.translationX == 0f &&
       root.translationY == 0f &&
-      root.clipPathData.isEmpty()
+      root.clipPathData.isEmpty(),
   ) {
     "catalog icon $name has unsupported root transforms for structured SVG export"
   }
@@ -2901,7 +2903,7 @@ private fun ImageVector.requireSimpleStructuredPaths(): List<StructuredIconPath>
         node.stroke == null &&
         node.trimPathStart == 0f &&
         node.trimPathEnd == 1f &&
-        node.trimPathOffset == 0f
+        node.trimPathOffset == 0f,
     ) {
       "catalog icon $name has unsupported paint or trim for structured SVG export"
     }
@@ -3118,7 +3120,7 @@ private fun BuilderCard(
         shape = shape,
         colors =
           CardDefaults.elevatedCardColors(
-            containerColor(MaterialTheme.colorScheme.surfaceContainerLow)
+            containerColor(MaterialTheme.colorScheme.surfaceContainerLow),
           ),
         elevation =
           elevationDp?.let { CardDefaults.elevatedCardElevation(defaultElevation = it.dp) }

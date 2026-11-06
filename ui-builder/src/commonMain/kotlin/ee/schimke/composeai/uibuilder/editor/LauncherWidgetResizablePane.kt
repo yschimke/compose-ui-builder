@@ -111,7 +111,7 @@ internal fun LauncherWidgetResizablePane(
             ((cellHeight * rows.value - margin) * scale).dp,
           )
           .clip(RoundedCornerShape((LAUNCHER_CORNER_DP * scale).dp))
-          .background(MaterialTheme.colorScheme.surfaceVariant)
+          .background(MaterialTheme.colorScheme.surfaceVariant),
       ) {
         // Unbounded, so the design keeps its own size inside a frame that is between two counts.
         Box(Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)) {
@@ -167,7 +167,7 @@ internal fun LauncherWidgetResizablePane(
                 scope.launch { rows.snapTo((dragStart.rows + rowsMoved).coerceIn(1f, maxRows)) }
               },
             )
-          }
+          },
       )
     }
   }

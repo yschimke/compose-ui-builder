@@ -149,7 +149,7 @@ object ScreenExportGate {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
       // from "this design is unexpressible", and only the first is fixed by configuration.
       return Outcome.Refused(
-        listOf("no component record is configured for this catalog, so nothing can be exported")
+        listOf("no component record is configured for this catalog, so nothing can be exported"),
       )
     }
     val resolvable = record.callableAliases()
@@ -260,7 +260,7 @@ object ScreenExportGate {
   ): Outcome {
     if (record == null) {
       return Outcome.Refused(
-        listOf("no component record is configured for this catalog, so nothing can be exported")
+        listOf("no component record is configured for this catalog, so nothing can be exported"),
       )
     }
     return when (

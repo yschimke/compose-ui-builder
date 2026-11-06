@@ -32,7 +32,7 @@ class UndrawnCatalogComponentTest {
   /** The packaged catalog with one more component on it, the way a published catalog adds them. */
   private val catalog =
     CapabilityCatalogParser.parse(
-      withExtraComponent(resource("/m3-catalog-capabilities-v1.json"), UNDRAWN, "Badge")
+      withExtraComponent(resource("/m3-catalog-capabilities-v1.json"), UNDRAWN, "Badge"),
     )
 
   @Test
@@ -70,7 +70,7 @@ class UndrawnCatalogComponentTest {
             "heightDp" to JsonPrimitive(1400),
             "density" to JsonPrimitive(2.0),
             "theme" to JsonPrimitive("light"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("subject"),

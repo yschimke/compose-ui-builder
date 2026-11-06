@@ -35,6 +35,6 @@ internal const val GSTATIC_FALLBACK_BASE: String = "https://fonts.gstatic.com/s/
     };
     routed.uiBuilderNativeFetch = native;
     globalThis.fetch = routed;
-  }"""
+  }""",
 )
 private external fun installFallbackFontRoute(from: String, to: String)

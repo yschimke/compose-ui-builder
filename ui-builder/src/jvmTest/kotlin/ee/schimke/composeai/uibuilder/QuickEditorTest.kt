@@ -58,7 +58,7 @@ class QuickEditorTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -284,7 +284,7 @@ class QuickEditorTest {
       val label = onAllNodesWithText("Podcast details").onFirst().getBoundsInRoot()
       window().performMouseInput {
         doubleClick(
-          Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx())
+          Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx()),
         )
       }
       waitForIdle()
@@ -310,7 +310,7 @@ class QuickEditorTest {
       val label = onAllNodesWithText("Podcast details").onFirst().getBoundsInRoot()
       window().performMouseInput {
         doubleClick(
-          Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx())
+          Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx()),
         )
       }
       waitForIdle()

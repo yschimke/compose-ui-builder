@@ -36,7 +36,7 @@ package ee.schimke.composeai.uibuilder
       throw new Error('UI-builder requests must be same-origin: ' + url);
     }
     return resolved.toString();
-  }"""
+  }""",
 )
 internal external fun sameOriginRequestUrl(url: String): String
 
@@ -75,7 +75,7 @@ internal fun designReferenceUrl(url: String, kind: DesignReferenceKind): String 
     } catch (e) {
       return null;
     }
-  }"""
+  }""",
 )
 private external fun resolveOnPage(url: String): String?
 

@@ -44,7 +44,7 @@ class SlotAcceptanceTest {
             CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
             CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
             CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
-          )
+          ),
       )
       .listCatalogs()
 
@@ -177,7 +177,7 @@ class SlotAcceptanceTest {
         nodes =
           (document.nodes - "body") +
             ("scaffold" to
-              document.nodes.getValue("scaffold").copy(slots = mapOf("content" to listOf("grid"))))
+              document.nodes.getValue("scaffold").copy(slots = mapOf("content" to listOf("grid")))),
       )
     assertNull(executor.validate(gridInContent, catalog))
   }
@@ -191,7 +191,7 @@ class SlotAcceptanceTest {
     val executor =
       PublishedCatalogFixtures.executor(
         catalogSystemIds =
-          linkedSetOf(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
+          linkedSetOf(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID),
       )
     val catalog = executor.listCatalogs().single()
     val base = productionDocument()
@@ -253,7 +253,7 @@ class SlotAcceptanceTest {
               id = "text",
               componentId = "m3/text",
               properties = mapOf("text" to StringValueV1("Hello")),
-            )
+            ),
         ),
     )
 
@@ -285,17 +285,17 @@ class SlotAcceptanceTest {
                   "checked by it and by CatalogGrammarTest in :ui-builder, so the server's and " +
                   "the editor's copies of the slot rule cannot drift. Regenerate with " +
                   "./gradlew :ui-builder-runtime:test --tests '*SlotAcceptanceTest*' " +
-                  "-PuiBuilderSlotAcceptanceUpdate=true --rerun, then read the diff."
+                  "-PuiBuilderSlotAcceptanceUpdate=true --rerun, then read the diff.",
               ),
             "catalogs" to
               JsonObject(
                 table.toSortedMap().mapValues { (_, slots) ->
                   JsonObject(
-                    slots.mapValues { (_, accepted) -> JsonArray(accepted.map(::JsonPrimitive)) }
+                    slots.mapValues { (_, accepted) -> JsonArray(accepted.map(::JsonPrimitive)) },
                   )
-                }
+                },
               ),
-          )
+          ),
         )
       return json.encodeToString(JsonObject.serializer(), document) + "\n"
     }

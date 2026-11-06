@@ -433,7 +433,7 @@ private fun LiveNativeFrame(
                     // Same half-pixel CSS-to-device conversion as the Wasm device scene, so RSB
                     // speed matches Preview.
                     scrollDeltaY = change.scrollDelta.y * 0.5f,
-                  )
+                  ),
                 )
                 change.consume()
               }
@@ -586,7 +586,7 @@ private fun NativeRenderFrame(
             .minByOrNull { it.value.area }
             ?.let { onNodeSelected(it.key) }
         }
-      }
+      },
     ) {
       Image(
         bitmap = image,

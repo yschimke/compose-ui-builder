@@ -82,7 +82,7 @@ internal class InProcessCatalogRuntime(
       val surfaceRoot = root?.takeIf { it.isAttached } ?: return
       val native =
         measured.copy(
-          nodes = measured.nodes.map { it.copy(bounds = local[it.nodeId]?.toPixelBounds()) }
+          nodes = measured.nodes.map { it.copy(bounds = local[it.nodeId]?.toPixelBounds()) },
         )
       // Mapped into the editor through the surface's current placement, as the web bridge maps a
       // runtime's snapshot whenever the surface moves.
@@ -92,7 +92,7 @@ internal class InProcessCatalogRuntime(
           nodes =
             native.nodes.map { node ->
               node.copy(
-                bounds = node.bounds?.let { it.copy(x = it.x + origin.x, y = it.y + origin.y) }
+                bounds = node.bounds?.let { it.copy(x = it.x + origin.x, y = it.y + origin.y) },
               )
             },
           slots = measured.slots,
@@ -114,7 +114,7 @@ internal class InProcessCatalogRuntime(
           .onGloballyPositioned {
             root = it
             publish()
-          }
+          },
       ) {
         CanvasDocumentHost(
           document = document,

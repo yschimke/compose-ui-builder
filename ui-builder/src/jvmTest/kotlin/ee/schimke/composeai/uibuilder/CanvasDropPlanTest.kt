@@ -301,7 +301,7 @@ class CanvasDropPlanTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

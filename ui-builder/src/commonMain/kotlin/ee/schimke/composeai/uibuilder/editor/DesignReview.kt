@@ -7,7 +7,7 @@ package ee.schimke.composeai.uibuilder.editor
  */
 data class DesignReview(
   /** Oldest first, as the host keeps them. */
-  val decisions: List<DesignReviewDecision> = emptyList()
+  val decisions: List<DesignReviewDecision> = emptyList(),
 ) {
   /** The newest verdict on [revision], or null when nobody has given one. */
   fun latestFor(revision: Long): DesignReviewDecision? = decisions.lastOrNull {

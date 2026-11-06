@@ -72,7 +72,7 @@ class DesktopTypefacesCompileTest {
             "slots": {}, "modifiers": []}
         }
       }
-      """
+      """,
     )
 
   private fun source(typefaces: TypefaceTarget? = null): String =
@@ -148,7 +148,7 @@ class DesktopTypefacesCompileTest {
   fun `the desktop form reports every family it could only look up`() {
     val projected =
       assertIs<ScreenDocumentProjection.Outcome.Projected>(
-        ScreenDocumentProjection.project(document, typefaces = TypefaceTarget.DESKTOP)
+        ScreenDocumentProjection.project(document, typefaces = TypefaceTarget.DESKTOP),
       )
     assertEquals(listOf("Lobster", "Exo 2"), projected.systemFontFamilies)
     val note = SystemFontLookups.note("Lobster")
@@ -167,7 +167,7 @@ class DesktopTypefacesCompileTest {
     assertFalse("ExperimentalTextApi" in android, android)
     val projected =
       assertIs<ScreenDocumentProjection.Outcome.Projected>(
-        ScreenDocumentProjection.project(document)
+        ScreenDocumentProjection.project(document),
       )
     assertEquals(emptyList(), projected.systemFontFamilies)
   }

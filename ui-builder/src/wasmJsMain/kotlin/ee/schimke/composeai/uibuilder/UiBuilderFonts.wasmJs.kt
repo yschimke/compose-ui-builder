@@ -43,6 +43,6 @@ internal fun googleFontUrl(family: String, weight: Int): String =
   """() => {
     const module = document.querySelector('script[type="module"][src$="uiBuilder.mjs"]');
     return module ? new URL('fonts/', module.src).href : 'fonts/';
-  }"""
+  }""",
 )
 private external fun bundleFontsBaseUrl(): String

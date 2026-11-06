@@ -59,7 +59,7 @@ internal object LegacyUiBuilderState {
         val expectedPins = catalogPins(envelope.payload.service)
         if (envelope.payload.catalogPins != expectedPins) {
           throw UiBuilderPersistenceException(
-            "UI-builder persistence catalog pin manifest mismatch"
+            "UI-builder persistence catalog pin manifest mismatch",
           )
         }
         Loaded(envelope.payload.service, Format.V2)
@@ -199,7 +199,7 @@ internal class LegacyStateStorageDesignStore(private val storage: UiBuilderState
     val migrationStorage =
       storage as? RecoverableUiBuilderMigrationStorage
         ?: throw UiBuilderPersistenceException(
-          "persistence migration requires recoverable migration storage"
+          "persistence migration requires recoverable migration storage",
         )
     // Not gated on every design being servable: this rewrites the envelope, not documents, and an
     // unservable design must not block an operator's recovery path. What matters is the bytes: the

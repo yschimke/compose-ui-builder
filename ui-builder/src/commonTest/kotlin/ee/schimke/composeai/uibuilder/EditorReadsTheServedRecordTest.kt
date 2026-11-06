@@ -75,7 +75,7 @@ class EditorReadsTheServedRecordTest {
           }
         ]
       }
-      """
+      """,
     )
 
   /**
@@ -116,7 +116,7 @@ class EditorReadsTheServedRecordTest {
             }
           ]
         }
-        """
+        """,
     )
 
   private val design =
@@ -132,7 +132,7 @@ class EditorReadsTheServedRecordTest {
             "catalogRevision" to JsonPrimitive("test"),
             "capabilityDigest" to JsonPrimitive("test"),
             "nativeRuntimeId" to JsonPrimitive("test"),
-          )
+          ),
         ),
       environment =
         JsonObject(
@@ -144,7 +144,7 @@ class EditorReadsTheServedRecordTest {
             "locale" to JsonPrimitive("en-US"),
             "fontScale" to JsonPrimitive(1.0),
             "layoutDirection" to JsonPrimitive("ltr"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("subject"),

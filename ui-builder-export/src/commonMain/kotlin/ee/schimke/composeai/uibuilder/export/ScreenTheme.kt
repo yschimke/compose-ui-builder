@@ -174,7 +174,7 @@ private constructor(
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
     }
 

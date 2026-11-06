@@ -30,7 +30,7 @@ import kotlinx.serialization.json.jsonPrimitive
 class LocalComponentsLibraryUpdateTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -192,8 +192,8 @@ class LocalComponentsLibraryUpdateTest {
               state = ComponentDriftState.DRIFTED,
               importedDigest = "sha256:one",
               currentDigest = "sha256:two",
-            )
-          )
+            ),
+          ),
         ),
       )
 
@@ -220,7 +220,7 @@ class LocalComponentsLibraryUpdateTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -230,7 +230,7 @@ class LocalComponentsLibraryUpdateTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),
@@ -242,7 +242,7 @@ class LocalComponentsLibraryUpdateTest {
               id = "inbox",
               componentId = "layout/column",
               slots = mapOf("children" to emptyList()),
-            )
+            ),
         ),
     )
 }

@@ -40,7 +40,7 @@ internal data class FilledRequiredProperty(
  * is a different, blocking defect, and a design-defined component is not the catalog's to judge.
  */
 internal fun DesignDocumentV1.withRequiredPlaceholders(
-  catalog: CatalogCapabilityV1
+  catalog: CatalogCapabilityV1,
 ): Pair<DesignDocumentV1, List<FilledRequiredProperty>> {
   val declared = catalog.components.associateBy { it.componentId }
   val filled = mutableListOf<FilledRequiredProperty>()

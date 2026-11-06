@@ -22,7 +22,7 @@ class RemoteDrawingExportTest {
 
   private fun exported(): String =
     assertIs<WearWidgetCodeExporter.Result.Emitted>(
-        WearWidgetCodeExporter.export(document, packageName = "proof.draw")
+        WearWidgetCodeExporter.export(document, packageName = "proof.draw"),
       )
       .source
       .also { source ->
@@ -79,7 +79,7 @@ class RemoteDrawingExportTest {
   fun `text sizes are sp and transparent is a literal`() {
     fun text(id: String, properties: String) =
       Json.decodeFromString<UiBuilderNode>(
-        """{"id":"$id","componentId":"draw/text","properties":$properties}"""
+        """{"id":"$id","componentId":"draw/text","properties":$properties}""",
       )
     val canvas = document.nodes.getValue("canvas")
     val labelled =
@@ -109,8 +109,8 @@ class RemoteDrawingExportTest {
             ("canvas" to
               canvas.copy(
                 slots =
-                  mapOf("ops" to canvas.slots.getValue("ops") + listOf("whole", "half", "live"))
-              ))
+                  mapOf("ops" to canvas.slots.getValue("ops") + listOf("whole", "half", "live")),
+              )),
       )
 
     val source =
@@ -128,7 +128,7 @@ class RemoteDrawingExportTest {
     val canvas = document.nodes.getValue("canvas")
     val viewport =
       Json.parseToJsonElement(
-        properties.joinToString(",", "{", "}") { (name, value) -> "\"$name\":$value" }
+        properties.joinToString(",", "{", "}") { (name, value) -> "\"$name\":$value" },
       ) as JsonObject
     return document.copy(nodes = document.nodes + ("canvas" to canvas.copy(properties = viewport)))
   }
@@ -143,7 +143,7 @@ class RemoteDrawingExportTest {
               "viewportHeight" to """{"type":"float","value":100}""",
             ),
             packageName = "proof.draw",
-          )
+          ),
         )
         .source
         .also {
@@ -175,8 +175,8 @@ class RemoteDrawingExportTest {
               "viewportWidth" to """{"type":"float","value":200}""",
               "viewportHeight" to """{"type":"float","value":100}""",
               "viewportMode" to """{"type":"enum","value":"$mode"}""",
-            )
-          )
+            ),
+          ),
         )
         .source
 
@@ -204,7 +204,7 @@ class RemoteDrawingExportTest {
       )) {
       val refused =
         assertIs<WearWidgetCodeExporter.Result.Refused>(
-          WearWidgetCodeExporter.export(withViewport(*properties))
+          WearWidgetCodeExporter.export(withViewport(*properties)),
         )
       assertTrue(
         refused.reasons.any { "nodes.canvas.viewportWidth" in it },
@@ -221,7 +221,7 @@ class RemoteDrawingExportTest {
       val label =
         Json.decodeFromString<UiBuilderNode>(
           """{"id":"label","componentId":"draw/text","properties":{
-            "text":{"type":"string","value":"42"}$alignment}}"""
+            "text":{"type":"string","value":"42"}$alignment}}""",
         )
       val canvas = document.nodes.getValue("canvas")
       val source =
@@ -231,9 +231,9 @@ class RemoteDrawingExportTest {
                 nodes =
                   document.nodes +
                     ("label" to label) +
-                    ("canvas" to canvas.copy(slots = mapOf("ops" to listOf("label"))))
-              )
-            )
+                    ("canvas" to canvas.copy(slots = mapOf("ops" to listOf("label")))),
+              ),
+            ),
           )
           .source
       return Regex("""panY = (-?\d+)\.rf""").find(source)!!.groupValues[1]
@@ -251,7 +251,7 @@ class RemoteDrawingExportTest {
     val properties =
       sweep.properties + extra.associate { (name, value) -> name to Json.parseToJsonElement(value) }
     return document.copy(
-      nodes = document.nodes + ("sweep" to sweep.copy(properties = JsonObject(properties)))
+      nodes = document.nodes + ("sweep" to sweep.copy(properties = JsonObject(properties))),
     )
   }
 
@@ -270,8 +270,8 @@ class RemoteDrawingExportTest {
               modifiers =
                 canvasModifiers?.let {
                   Json.parseToJsonElement(it) as kotlinx.serialization.json.JsonArray
-                } ?: canvas.modifiers
-            ))
+                } ?: canvas.modifiers,
+            )),
     )
   }
 
@@ -279,7 +279,7 @@ class RemoteDrawingExportTest {
   fun `the canvas's size reads its stated dp, or its measured size over the density`() {
     fun emitted(document: UiBuilderDocument, file: String) =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(document, packageName = "proof.draw")
+          WearWidgetCodeExporter.export(document, packageName = "proof.draw"),
         )
         .source
         .also { File("build/draw-proof").apply { mkdirs() }.resolve(file).writeText(it) }
@@ -308,13 +308,13 @@ class RemoteDrawingExportTest {
                   JsonObject(
                     hand.properties +
                       ("scale" to Json.parseToJsonElement("""{"type":"float","value":2}""")) +
-                      ("scaleY" to Json.parseToJsonElement("""{"type":"float","value":0.5}"""))
-                  )
-              ))
+                      ("scaleY" to Json.parseToJsonElement("""{"type":"float","value":0.5}""")),
+                  ),
+              )),
       )
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(scaled, packageName = "proof.draw")
+          WearWidgetCodeExporter.export(scaled, packageName = "proof.draw"),
         )
         .source
 
@@ -336,7 +336,7 @@ class RemoteDrawingExportTest {
               "gradientColors" to """{"type":"string","value":"#FF0000, primary , #800000FF"}""",
             ),
             packageName = "proof.draw",
-          )
+          ),
         )
         .source
         .also {
@@ -346,10 +346,11 @@ class RemoteDrawingExportTest {
     assertContains(source, "strokeJoin = StrokeJoin.Round")
     assertContains(source, "blendMode = BlendMode.Multiply")
     assertTrue(
-      "androidx.compose.ui.graphics.StrokeJoin" in source.lines().map { it.removePrefix("import ") }
+      "androidx.compose.ui.graphics.StrokeJoin" in
+        source.lines().map { it.removePrefix("import ") },
     )
     assertTrue(
-      "androidx.compose.ui.graphics.BlendMode" in source.lines().map { it.removePrefix("import ") }
+      "androidx.compose.ui.graphics.BlendMode" in source.lines().map { it.removePrefix("import ") },
     )
     // Three stops, in order: a hex literal, the theme role read above the canvas, a hex with alpha.
     val read = Regex("""val (\w+) = RemoteMaterialTheme\.colorScheme\.primary""").find(source)
@@ -388,7 +389,7 @@ class RemoteDrawingExportTest {
         nodes =
           document.nodes +
             ("host" to
-              document.nodes.getValue("host").copy(slots = mapOf("content" to listOf("track"))))
+              document.nodes.getValue("host").copy(slots = mapOf("content" to listOf("track")))),
       )
 
     val refused =

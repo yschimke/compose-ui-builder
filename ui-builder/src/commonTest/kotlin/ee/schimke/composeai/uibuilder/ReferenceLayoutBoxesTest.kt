@@ -12,7 +12,7 @@ class ReferenceLayoutBoxesTest {
       extractSvgLayoutBoxes(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200">
              <rect data-name="Card" x="10" y="20" width="50" height="40"/>
-           </svg>"""
+           </svg>""",
       )
     assertEquals(1, boxes.size)
     val card = boxes.single()
@@ -29,7 +29,7 @@ class ReferenceLayoutBoxesTest {
       extractSvgLayoutBoxes(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
              <g transform="translate(10, 20)"><rect id="inner" width="10" height="10"/></g>
-           </svg>"""
+           </svg>""",
       )
     assertEquals(0.1f, boxes.single().left, TOLERANCE)
     assertEquals(0.2f, boxes.single().top, TOLERANCE)
@@ -42,7 +42,7 @@ class ReferenceLayoutBoxesTest {
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
              <g transform="rotate(30)"><rect width="10" height="10"/></g>
              <rect data-name="Upright" x="1" y="1" width="10" height="10"/>
-           </svg>"""
+           </svg>""",
       )
     assertEquals(listOf("Upright"), boxes.map { it.name })
   }
@@ -61,7 +61,7 @@ class ReferenceLayoutBoxesTest {
              <rect data-name="Hairline" width="1000" height="1"/>
              <rect data-name="Offscreen" x="2000" y="0" width="100" height="100"/>
              <rect data-name="Real" x="10" y="10" width="100" height="100"/>
-           </svg>"""
+           </svg>""",
       )
     assertEquals(listOf("Real"), boxes.map { it.name })
   }
@@ -75,7 +75,7 @@ class ReferenceLayoutBoxesTest {
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
              <image x="0" y="0" width="50" height="50" href="data:image/png;base64,AAAA"/>
              <rect data-name="Row" x="0" y="60" width="100" height="20"/>
-           </svg>"""
+           </svg>""",
       )
     assertEquals(listOf(null, "Row"), boxes.map { it.name })
   }

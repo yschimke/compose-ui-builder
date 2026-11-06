@@ -29,7 +29,7 @@ internal val unadvertisedComponentPreviewDocument: UiBuilderDocument by lazy {
   val reducer =
     UiBuilderEditorReducer(editorChromePreviewCatalog, actorId = "preview", clientId = "preview")
   PREVIEWED_COMPONENT_IDS.foldIndexed(
-      reducer.initial(unadvertisedPreviewBase, selectedNodeId = unadvertisedPreviewCellId(0))
+      reducer.initial(unadvertisedPreviewBase, selectedNodeId = unadvertisedPreviewCellId(0)),
     ) { index, state, componentId ->
       val selected =
         reducer.reduce(state, UiBuilderEditorEvent.SelectNode(unadvertisedPreviewCellId(index)))
@@ -52,7 +52,7 @@ private val unadvertisedPreviewBase: UiBuilderDocument by lazy {
           "catalogRevision" to JsonPrimitive("candidate"),
           "capabilityDigest" to JsonPrimitive("candidate"),
           "nativeRuntimeId" to JsonPrimitive("candidate"),
-        )
+        ),
       ),
     environment =
       JsonObject(
@@ -70,7 +70,7 @@ private val unadvertisedPreviewBase: UiBuilderDocument by lazy {
           "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
           "animations" to JsonPrimitive("settled"),
           "networkAccess" to JsonPrimitive(false),
-        )
+        ),
       ),
     stateVariables = JsonObject(emptyMap()),
     roots = listOf(UNADVERTISED_PREVIEW_ROOT_ID),
@@ -94,9 +94,9 @@ private val unadvertisedPreviewBase: UiBuilderDocument by lazy {
                 mapOf(
                   "verticalSpacingDp" to
                     JsonObject(
-                      mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(12))
-                    )
-                )
+                      mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(12)),
+                    ),
+                ),
               ),
             modifiers = JsonArray(emptyList()),
             slots =

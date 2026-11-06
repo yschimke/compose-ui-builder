@@ -98,7 +98,7 @@ class NewDesignKeyboardTest {
                   (1..5).map {
                     UiBuilderNewDesignTemplate("starter-$it", "Starter $it", "Widget template $it")
                   },
-              )
+              ),
             ),
           initialCatalogSystemId = "remote-m3",
           initialDesignId = "short-dialog",

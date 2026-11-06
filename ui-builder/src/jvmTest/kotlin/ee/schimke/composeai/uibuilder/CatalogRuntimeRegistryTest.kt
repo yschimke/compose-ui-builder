@@ -104,6 +104,6 @@ class CatalogRuntimeRegistryTest {
         "catalogRevision" to JsonPrimitive(runtime.catalogRevision),
         "capabilityDigest" to JsonPrimitive(runtime.capabilityDigest),
         "nativeRuntimeId" to JsonPrimitive(runtime.runtimeId),
-      )
+      ),
     )
 }

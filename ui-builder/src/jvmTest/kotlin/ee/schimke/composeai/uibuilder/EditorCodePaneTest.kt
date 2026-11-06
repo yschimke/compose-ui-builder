@@ -34,7 +34,7 @@ class EditorCodePaneTest {
 
   private val jetcaster =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -55,7 +55,7 @@ class EditorCodePaneTest {
     val remoteCatalog =
       catalog.copy(
         statusSemantics =
-          JsonObject(catalog.statusSemantics + ("platform" to JsonPrimitive("remote-compose")))
+          JsonObject(catalog.statusSemantics + ("platform" to JsonPrimitive("remote-compose"))),
       )
     val document = Json {
       ignoreUnknownKeys = true
@@ -66,11 +66,11 @@ class EditorCodePaneTest {
             System.getProperty("uiBuilderProjectDir"),
             "../docs/design/evidence/ui-builder-live-document-preview/sample.uid",
           )
-          .readText()
+          .readText(),
       )
     val code =
       assertIs<EditorGeneratedCode.Source>(
-        UiBuilderEditorReducer(remoteCatalog).generatedCode(document)
+        UiBuilderEditorReducer(remoteCatalog).generatedCode(document),
       )
     assertTrue("RemoteStateLayout" in code.kotlin, code.kotlin)
     assertTrue(".clickable(valueChange(page, 20.ri))" in code.kotlin, code.kotlin)
@@ -86,7 +86,7 @@ class EditorCodePaneTest {
     val remoteCatalog =
       catalog.copy(
         statusSemantics =
-          JsonObject(catalog.statusSemantics + ("platform" to JsonPrimitive("remote-compose")))
+          JsonObject(catalog.statusSemantics + ("platform" to JsonPrimitive("remote-compose"))),
       )
     val document = Json {
       ignoreUnknownKeys = true
@@ -97,16 +97,16 @@ class EditorCodePaneTest {
             System.getProperty("uiBuilderProjectDir"),
             "../experiments/remote-state-selection/bound-actions.uid",
           )
-          .readText()
+          .readText(),
       )
     val code =
       assertIs<EditorGeneratedCode.Source>(
-          UiBuilderEditorReducer(remoteCatalog).generatedCode(document)
+          UiBuilderEditorReducer(remoteCatalog).generatedCode(document),
         )
         .kotlin
     val expected =
       assertIs<RecordFreeExport.Generated.Emitted>(
-          RecordFreeExport.generate(document, UiBuilderCatalogPlatform.REMOTE_COMPOSE)
+          RecordFreeExport.generate(document, UiBuilderCatalogPlatform.REMOTE_COMPOSE),
         )
         .source
     assertEquals(expected, code)
@@ -156,12 +156,12 @@ class EditorCodePaneTest {
                               mapOf(
                                 "type" to JsonPrimitive("string"),
                                 "value" to JsonPrimitive("Discover"),
-                              )
-                            )
-                        )
+                              ),
+                            ),
+                        ),
                       ),
                   ),
-              )
+              ),
         )
       }
 
@@ -194,7 +194,7 @@ class EditorCodePaneTest {
               "count",
               ee.schimke.composeai.uibuilder.export.NewDesignStateType.Number,
               JsonPrimitive(3),
-            )
+            ),
           ),
       )
     val initial = reducer.initial(counter, "screen-content")

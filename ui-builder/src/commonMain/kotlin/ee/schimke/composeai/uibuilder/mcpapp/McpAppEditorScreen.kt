@@ -94,7 +94,7 @@ fun McpAppEditorScreen(
               onSelect =
                 if (state.writable) {
                   { id -> scope.launch { session.selectDesign(id) } }
-                } else null
+                } else null,
             ),
           devicePresets = devicePresets,
           onStateChanged = onEditorState,
@@ -209,7 +209,7 @@ private fun saveStatus(state: McpAppDesignState): String = buildList {
       state.saving -> "Saving…"
       state.dirty -> "Unsaved changes"
       else -> "Saved"
-    }
+    },
   )
   if (!state.live) add("not following external edits")
 }

@@ -18,7 +18,7 @@ class RemoteRootSourceExportTest {
 
   private fun document() =
     json.decodeFromString<DesignDocumentV1>(
-      File("../docs/design/evidence/ui-builder-live-document-preview/sample.uid").readText()
+      File("../docs/design/evidence/ui-builder-live-document-preview/sample.uid").readText(),
     )
 
   @Test
@@ -30,7 +30,7 @@ class RemoteRootSourceExportTest {
           doc,
           UiBuilderCatalogPlatform.REMOTE_COMPOSE,
           "generated.uibuilder",
-        )
+        ),
       )
     assertTrue("RemoteStateLayout" in result.source, result.source)
     assertTrue("valueChange" in result.source, result.source)
@@ -50,7 +50,7 @@ class RemoteRootSourceExportTest {
     val doc =
       document().copy(catalogPin = document().catalogPin.copy(systemId = "other-remote-catalog"))
     assertIs<RecordFreeExport.Generated.Emitted>(
-      RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.REMOTE_COMPOSE)
+      RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.REMOTE_COMPOSE),
     )
     assertNull(RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.MOBILE))
     assertNull(RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.WEAR))
@@ -65,11 +65,11 @@ class RemoteRootSourceExportTest {
           nodes =
             doc.nodes +
               ("First" to
-                doc.nodes.getValue("First").copy(slots = mapOf("children" to listOf(child))))
+                doc.nodes.getValue("First").copy(slots = mapOf("children" to listOf(child)))),
         )
       val result =
         assertIs<RecordFreeExport.Generated.Refused>(
-          RecordFreeExport.generate(broken, UiBuilderCatalogPlatform.REMOTE_COMPOSE)
+          RecordFreeExport.generate(broken, UiBuilderCatalogPlatform.REMOTE_COMPOSE),
         )
       assertTrue(result.reasons.any { child in it }, result.toString())
     }
@@ -88,7 +88,7 @@ class RemoteRootSourceExportTest {
           RecordFreeExport.generate(
             doc.copy(nodes = doc.nodes + ("First" to node)),
             UiBuilderCatalogPlatform.REMOTE_COMPOSE,
-          )
+          ),
         )
       assertTrue(result.reasons.any { "nodes.First" in it }, result.toString())
     }
@@ -99,7 +99,7 @@ class RemoteRootSourceExportTest {
     val doc = document().toUiBuilderDocument().copy(roots = listOf("First", "Second"))
     val source =
       assertIs<RecordFreeExport.Generated.Emitted>(
-          RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.REMOTE_COMPOSE)
+          RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.REMOTE_COMPOSE),
         )
         .source
     assertEquals(2, Regex("RemoteBox\\(").findAll(source).count())

@@ -33,7 +33,7 @@ class ControlColourVocabularyTest {
           "nodes": {"control": {"id": "control", "componentId": "$componentId",
             "properties": {$properties}}}
         }
-        """
+        """,
       )
     val projected = ScreenDocumentProjection.project(document)
     assertIs<ScreenDocumentProjection.Outcome.Projected>(projected, projected.toString())
@@ -51,7 +51,7 @@ class ControlColourVocabularyTest {
             "m3/icon-button",
             """"contentColor": {"type": "colorToken", "value": "onSurfaceVariant"}""",
           )
-          .arguments["colors"]
+          .arguments["colors"],
       )
     assertEquals(
       "androidx.compose.material3.IconButtonDefaults.iconButtonColors",
@@ -86,7 +86,7 @@ class ControlColourVocabularyTest {
             """"selectedColor": {"type": "colorToken", "value": "error"},
                "unselectedColor": {"type": "colorToken", "value": "error"}""",
           )
-          .arguments["colors"]
+          .arguments["colors"],
       )
     assertEquals("androidx.compose.material3.RadioButtonDefaults.colors", colors.callableFqn)
     assertEquals(setOf("selectedColor", "unselectedColor"), colors.named.keys)
@@ -97,7 +97,7 @@ class ControlColourVocabularyTest {
     val colors =
       construct(
         root("m3/list-item", """"containerColor": {"type": "color", "value": "#00000000"}""")
-          .arguments["colors"]
+          .arguments["colors"],
       )
     assertEquals("androidx.compose.material3.ListItemDefaults.colors", colors.callableFqn)
   }
@@ -122,13 +122,14 @@ class ControlColourVocabularyTest {
   fun `a toggle button's shapes name the kit size, round or square`() {
     val round =
       construct(
-        root("m3/toggle-button", """"shapes": {"type": "enum", "value": "m"}""").arguments["shapes"]
+        root("m3/toggle-button", """"shapes": {"type": "enum", "value": "m"}""")
+          .arguments["shapes"],
       )
     assertEquals("androidx.compose.material3.ToggleButtonDefaults.shapesFor", round.callableFqn)
     val square =
       construct(
         root("m3/tonal-toggle-button", """"shapes": {"type": "enum", "value": "xlSquare"}""")
-          .arguments["shapes"]
+          .arguments["shapes"],
       )
     assertEquals("androidx.compose.material3.ToggleButtonDefaults.shapes", square.callableFqn)
     assertEquals(
@@ -146,7 +147,7 @@ class ControlColourVocabularyTest {
     val colors =
       construct(
         root("m3/top-app-bar", """"containerColor": {"type": "color", "value": "#00000000"}""")
-          .arguments["colors"]
+          .arguments["colors"],
       )
     assertEquals("androidx.compose.material3.TopAppBarDefaults.topAppBarColors", colors.callableFqn)
   }

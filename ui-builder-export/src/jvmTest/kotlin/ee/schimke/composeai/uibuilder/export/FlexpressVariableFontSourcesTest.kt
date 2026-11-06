@@ -75,7 +75,7 @@ class FlexpressVariableFontSourcesTest {
         checkNotNull(
           FlexpressVariableFontSources::class
             .java
-            .getResourceAsStream(FlexpressVariableFontSources.CLASSPATH_FONTS + font.file)
+            .getResourceAsStream(FlexpressVariableFontSources.CLASSPATH_FONTS + font.file),
         ) {
           "${font.file} is not staged"
         }
@@ -132,7 +132,7 @@ class FlexpressVariableFontSourcesTest {
   fun `text the font has no glyphs for is refused, naming the characters`() {
     val refused =
       assertIs<VariableFontSource.Refused>(
-        sources.generate(request("Flex 日本"), PACKAGE, VariableFontExportMode.STANDALONE)
+        sources.generate(request("Flex 日本"), PACKAGE, VariableFontExportMode.STANDALONE),
       )
     assertEquals("Roboto Flex has no glyph for 日 本 in \"Flex 日本\"", refused.reason)
   }
@@ -142,7 +142,7 @@ class FlexpressVariableFontSourcesTest {
     val none = FlexpressVariableFontSources { null }
     val unread =
       assertIs<VariableFontSource.Refused>(
-        none.generate(request(), PACKAGE, VariableFontExportMode.LIBRARY)
+        none.generate(request(), PACKAGE, VariableFontExportMode.LIBRARY),
       )
     assertEquals("Roboto Flex (RobotoFlex.ttf) could not be read: no such file", unread.reason)
     val axis =
@@ -151,7 +151,7 @@ class FlexpressVariableFontSourcesTest {
           request(animated = listOf("ROND")),
           PACKAGE,
           VariableFontExportMode.LIBRARY,
-        )
+        ),
       )
     assertEquals("Roboto Flex has no rond axis a design can set", axis.reason)
   }

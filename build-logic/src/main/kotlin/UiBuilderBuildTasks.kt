@@ -28,8 +28,8 @@ abstract class FormatLikeKtfmtPlugin : org.gradle.api.DefaultTask() {
     val urls = ktfmtClasspath.files.map { it.toURI().toURL() }.toTypedArray()
     URLClassLoader(urls, ClassLoader.getPlatformClassLoader()).use { loader ->
       val strategyClass =
-        loader.loadClass("com.facebook.ktfmt.format.TrailingCommaManagementStrategy")
-      val optionsClass = loader.loadClass("com.facebook.ktfmt.format.FormattingOptions")
+        loader.loadClass("org.jetbrains.kotlinx.ktfmt.format.TrailingCommaManagementStrategy")
+      val optionsClass = loader.loadClass("org.jetbrains.kotlinx.ktfmt.format.FormattingOptions")
       val int = Int::class.javaPrimitiveType
       val boolean = Boolean::class.javaPrimitiveType
       val options =
@@ -48,12 +48,17 @@ abstract class FormatLikeKtfmtPlugin : org.gradle.api.DefaultTask() {
             // KtfmtExtension.DEFAULT_DEBUGGING_PRINT_OPTS.
             false,
           )
+      val kotlinCodeClass = loader.loadClass("org.jetbrains.kotlinx.ktfmt.format.KotlinCode")
+      val kotlinCodeOfFile =
+        loader
+          .loadClass("org.jetbrains.kotlinx.ktfmt.format.KotlinCodeKt")
+          .getMethod("KotlinCode", java.io.File::class.java)
       val format =
         loader
-          .loadClass("com.facebook.ktfmt.format.Formatter")
-          .getMethod("format", optionsClass, String::class.java)
+          .loadClass("org.jetbrains.kotlinx.ktfmt.format.Formatter")
+          .getMethod("format", optionsClass, kotlinCodeClass)
       val file = source.get().asFile
-      file.writeText(format.invoke(null, options, file.readText()) as String)
+      file.writeText(format.invoke(null, options, kotlinCodeOfFile.invoke(null, file)) as String)
     }
   }
 }

@@ -53,18 +53,18 @@ class DevicePaneTypefaceTest {
                   put("type", "string")
                   put("value", JsonPrimitive("Lobster Two"))
                 }
-              }
+              },
         )
       base.copy(nodes = base.nodes + (root to scaffold.copy(properties = themed)))
     }
 
   private val lobster =
     FontFamily(
-      Font("test:lobster", File(fontsDir, "LobsterTwo-Regular.ttf").readBytes(), FontWeight.Normal)
+      Font("test:lobster", File(fontsDir, "LobsterTwo-Regular.ttf").readBytes(), FontWeight.Normal),
     )
 
   private fun drawPane(
-    families: Map<String, FontFamily>
+    families: Map<String, FontFamily>,
   ): List<androidx.compose.ui.graphics.Color> {
     var drawn = emptyList<androidx.compose.ui.graphics.Color>()
     runDesktopComposeUiTest(width = 300, height = 300) {

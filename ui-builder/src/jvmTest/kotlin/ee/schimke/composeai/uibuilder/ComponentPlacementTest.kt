@@ -52,7 +52,9 @@ class ComponentPlacementTest {
           nodes =
             base.nodes +
               ("cell-body" to
-                base.nodes.getValue("cell-body").copy(slots = mapOf("content" to listOf("cell-0"))))
+                base.nodes
+                  .getValue("cell-body")
+                  .copy(slots = mapOf("content" to listOf("cell-0")))),
         )
       }
 
@@ -60,7 +62,7 @@ class ComponentPlacementTest {
 
     // The outermost placement still draws its own cell; the recursion below it stops.
     assertTrue(
-      image.toComposeImageBitmap().toPixelMap()[cellCentreX(0), CELL_CENTRE_Y] == shades[0]
+      image.toComposeImageBitmap().toPixelMap()[cellCentreX(0), CELL_CENTRE_Y] == shades[0],
     )
   }
 
@@ -119,11 +121,11 @@ class ComponentPlacementTest {
                               mapOf(
                                 "type" to JsonPrimitive("binding"),
                                 "value" to JsonPrimitive("elevation"),
-                              )
-                            ))
-                      )
+                              ),
+                            )),
+                      ),
                   )
-                })
+                }),
         )
       }
 
@@ -149,9 +151,9 @@ class ComponentPlacementTest {
                 base.nodes.getValue("cell-0").let { placement ->
                   placement.copy(
                     component =
-                      JsonObject(mapOf("componentKey" to JsonPrimitive("contribution-cell")))
+                      JsonObject(mapOf("componentKey" to JsonPrimitive("contribution-cell"))),
                   )
-                })
+                }),
         )
       }
 
@@ -178,7 +180,7 @@ class ComponentPlacementTest {
     // guard, generated source has none.
     assertTrue(
       "COMPONENT_CYCLE" in
-        codes(withBody { body -> body.copy(slots = mapOf("content" to listOf("cell-0"))) })
+        codes(withBody { body -> body.copy(slots = mapOf("content" to listOf("cell-0"))) }),
     )
     // A body is a function of its arguments: a state read names a variable declared inside the
     // screen function, which the component function cannot see.
@@ -195,17 +197,17 @@ class ComponentPlacementTest {
                         mapOf(
                           "type" to JsonPrimitive("state"),
                           "variable" to JsonPrimitive("expanded"),
-                        )
-                      ))
-                )
+                        ),
+                      )),
+                ),
             )
-          }
-        )
+          },
+        ),
     )
     // A scaffold is a screen, and a screen inside one box of a screen is a claim about the frame.
     assertTrue(
       "SCAFFOLD_IN_COMPONENT_BODY" in
-        codes(withBody { body -> body.copy(componentId = "layout/scaffold") })
+        codes(withBody { body -> body.copy(componentId = "layout/scaffold") }),
     )
     // The canvas dispatches a click bound to a placement; the call has nowhere to put one.
     assertTrue(
@@ -213,8 +215,8 @@ class ComponentPlacementTest {
         codes(
           withPlacement { placement ->
             placement.copy(eventBindings = JsonObject(mapOf("click" to JsonArray(emptyList()))))
-          }
-        )
+          },
+        ),
     )
     // A colour that is not a colour becomes `Color.Unspecified` — which compiles, and paints
     // nothing.
@@ -231,14 +233,14 @@ class ComponentPlacementTest {
                       JsonObject(
                         mapOf(
                           "containerColor" to
-                            JsonObject(mapOf("value" to JsonPrimitive("chartreuse")))
-                        )
+                            JsonObject(mapOf("value" to JsonPrimitive("chartreuse"))),
+                        ),
                       ),
-                  )
-                )
+                  ),
+                ),
             )
-          }
-        )
+          },
+        ),
     )
     // Outside a body there is no dictionary to read, so the emitter would print the key itself.
     assertTrue(
@@ -259,15 +261,15 @@ class ComponentPlacementTest {
                                   mapOf(
                                     "type" to JsonPrimitive("binding"),
                                     "value" to JsonPrimitive("gap"),
-                                  )
-                                )
-                            )
-                          )
+                                  ),
+                                ),
+                            ),
+                          ),
                       )
-                    })
+                    }),
             )
-          }
-        )
+          },
+        ),
     )
   }
 
@@ -286,7 +288,7 @@ class ComponentPlacementTest {
                   componentId = "m3/primary-tab-row",
                   properties =
                     JsonObject(
-                      mapOf("selectedIndex" to JsonObject(mapOf("value" to JsonPrimitive(0))))
+                      mapOf("selectedIndex" to JsonObject(mapOf("value" to JsonPrimitive(0)))),
                     ),
                   slots = mapOf("tabs" to listOf("cell-0")),
                 )),
@@ -314,10 +316,10 @@ class ComponentPlacementTest {
                   mapOf(
                     "type" to JsonPrimitive("binding"),
                     "value" to JsonPrimitive("modifier"),
-                  )
-                )
-            )
-          )
+                  ),
+                ),
+            ),
+          ),
       )
     }
 
@@ -341,7 +343,7 @@ class ComponentPlacementTest {
 
   private fun catalog() =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
 
   /**
@@ -362,9 +364,9 @@ class ComponentPlacementTest {
                     slots =
                       mapOf(
                         "children" to
-                          (base.nodes.getValue("root").slots["children"].orEmpty() + "cell-body")
-                      )
-                  ))
+                          (base.nodes.getValue("root").slots["children"].orEmpty() + "cell-body"),
+                      ),
+                  )),
         )
       }
     assertEquals(
@@ -399,9 +401,9 @@ class ComponentPlacementTest {
                     slots =
                       mapOf(
                         "children" to
-                          (base.nodes.getValue("root").slots["children"].orEmpty() + "cell-0")
-                      )
-                  ))
+                          (base.nodes.getValue("root").slots["children"].orEmpty() + "cell-0"),
+                      ),
+                  )),
         )
       }
     assertTrue(
@@ -452,10 +454,12 @@ class ComponentPlacementTest {
                       JsonObject(
                         mapOf(
                           "containerColor" to
-                            JsonObject(mapOf("value" to JsonPrimitive(shades[index].toDesignHex())))
-                        )
+                            JsonObject(
+                              mapOf("value" to JsonPrimitive(shades[index].toDesignHex())),
+                            ),
+                        ),
                       ),
-                  )
+                  ),
                 ),
             ),
           )
@@ -474,9 +478,9 @@ class ComponentPlacementTest {
                       mapOf(
                         "type" to JsonPrimitive("binding"),
                         "value" to JsonPrimitive("containerColor"),
-                      )
-                    )
-                )
+                      ),
+                    ),
+                ),
               ),
             modifiers =
               JsonArray(
@@ -486,9 +490,9 @@ class ComponentPlacementTest {
                       "type" to JsonPrimitive("size"),
                       "widthDp" to JsonPrimitive(CELL_PX),
                       "heightDp" to JsonPrimitive(CELL_PX),
-                    )
-                  )
-                )
+                    ),
+                  ),
+                ),
               ),
             slots = mapOf("content" to emptyList()),
           ),
@@ -506,7 +510,7 @@ class ComponentPlacementTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -516,7 +520,7 @@ class ComponentPlacementTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),
@@ -530,9 +534,9 @@ class ComponentPlacementTest {
                 mapOf(
                   "name" to JsonPrimitive("ContributionCell"),
                   "root" to JsonPrimitive("cell-body"),
-                )
-              )
-          )
+                ),
+              ),
+          ),
         ),
     )
   }

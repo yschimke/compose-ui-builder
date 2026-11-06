@@ -89,7 +89,7 @@ class EnumWrapperCanonicalizationTest {
               put("type", "fixedGrid")
               put("columns", 7)
             },
-          )
+          ),
         ),
         validator(),
       )
@@ -162,7 +162,7 @@ class EnumWrapperCanonicalizationTest {
                   platformSupported = JsonPrimitive(true),
                   adapterStatus = WasmAdapterStatus.SUPPORTED,
                 ),
-            )
+            ),
           ),
       )
     return CapabilityPropertyWriteValidator(CapabilityValidator(catalog))

@@ -42,7 +42,7 @@ class UnopenableDesignGuidanceTest {
     assertTrue(unopenableDesignGuidance(null).contains("Reloading the page may help"))
     assertTrue(
       unopenableDesignGuidance(ServiceErrorCodeV1.BAD_REQUEST)
-        .contains("Reloading the page may help")
+        .contains("Reloading the page may help"),
     )
   }
 

@@ -41,7 +41,7 @@ internal enum class LocalHarness(val id: String, val label: String) {
               "--strict-config",
               "--sandbox",
               "read-only",
-            )
+            ),
           )
           // Ignore user/project integrations. Read-only is a second boundary if a tool is exposed.
           addAll(listOf("-c", "approval_policy=\"never\"", "-c", "web_search=\"disabled\""))
@@ -113,7 +113,7 @@ internal enum class LocalHarness(val id: String, val label: String) {
               "none",
               "--max-budget-usd",
               "1",
-            )
+            ),
           )
           if (sessionId != null) addAll(listOf("--resume", sessionId))
         }
@@ -299,7 +299,7 @@ internal class LocalAgentRunner(private val timeoutMillis: Long = 120_000) {
                 "OPENCODE_PERMISSION" to "{\"*\":\"deny\"}",
                 "OPENCODE_CONFIG_CONTENT" to
                   """{"autoupdate":false,"share":"disabled","permission":{"*":"deny"},"agent":{"compose-chat":{"mode":"primary","description":"Private design advice","permission":{"*":"deny"},"steps":1}}}""",
-              )
+              ),
             )
         }
         val process = builder.start()

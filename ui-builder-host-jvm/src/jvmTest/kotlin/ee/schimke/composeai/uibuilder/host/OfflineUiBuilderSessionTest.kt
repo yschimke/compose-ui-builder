@@ -46,7 +46,7 @@ class OfflineUiBuilderSessionTest {
           )
 
         session.submit(
-          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited)),
         )
 
         assertEquals(
@@ -81,7 +81,7 @@ class OfflineUiBuilderSessionTest {
           )
 
         session.submit(
-          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited)),
         )
 
         val saved = withTimeout(10.seconds) { committed.await() }.toUiBuilderDocument()
@@ -116,7 +116,7 @@ class OfflineUiBuilderSessionTest {
 
           // Submitted before anything has awaited the first snapshot.
           session.submit(
-            assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+            assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited)),
           )
 
           val saved = withTimeout(10.seconds) { committed.await() }.toUiBuilderDocument()

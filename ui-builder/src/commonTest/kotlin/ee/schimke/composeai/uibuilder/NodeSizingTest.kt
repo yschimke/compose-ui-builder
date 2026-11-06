@@ -128,7 +128,7 @@ class NodeSizingTest {
   @Test
   fun `a sizing the catalog does not declare is refused rather than written`() {
     assertNull(
-      resize("[]", EditorAxis.Width, EditorSizing.Fixed(80f), declared = setOf("fillMaxWidth"))
+      resize("[]", EditorAxis.Width, EditorSizing.Fixed(80f), declared = setOf("fillMaxWidth")),
     )
     assertNull(resize("[]", EditorAxis.Width, EditorSizing.Fill, declared = setOf("width")))
   }
@@ -162,7 +162,7 @@ class NodeSizingTest {
       chain(
         """[{"type":"padding","startDp":4,"topDp":0,"endDp":10,"bottomDp":0},
            {"type":"scale","scaleX":2,"scaleY":1},
-           {"type":"padding","startDp":1,"topDp":3,"endDp":0,"bottomDp":0}]"""
+           {"type":"padding","startDp":1,"topDp":3,"endDp":0,"bottomDp":0}]""",
       )
     assertEquals(listOf(6f, 3f, 10f, 0f), paddingInsets(chain))
     assertEquals(listOf(10f, 3f, 6f, 0f), paddingInsets(chain, rtl = true))
@@ -176,8 +176,8 @@ class NodeSizingTest {
         chain(
           """[{"type":"padding","startDp":8,"topDp":0,"endDp":8,"bottomDp":4},
              {"type":"width","widthDp":10},
-             {"type":"padding","startDp":2,"topDp":2,"endDp":4,"bottomDp":0}]"""
-        )
+             {"type":"padding","startDp":2,"topDp":2,"endDp":4,"bottomDp":0}]""",
+        ),
       ),
     )
   }

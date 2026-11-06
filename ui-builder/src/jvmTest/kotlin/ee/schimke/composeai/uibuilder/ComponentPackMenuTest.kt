@@ -31,7 +31,7 @@ class ComponentPackMenuTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -122,7 +122,9 @@ class ComponentPackMenuTest {
                   },
               )) +
             ("discover-grid" to
-              grid.copy(slots = grid.slots + ("items" to grid.slots.getValue("items") + "session")))
+              grid.copy(
+                slots = grid.slots + ("items" to grid.slots.getValue("items") + "session"),
+              )),
       )
 
     val records = catalog.packComponentRecords()
@@ -175,7 +177,7 @@ class ComponentPackMenuTest {
                     put("name", "content")
                     put("cardinality", buildJsonObject { put("min", 0) })
                     put("ordered", true)
-                  }
+                  },
                 )
             },
           )
@@ -187,7 +189,7 @@ class ComponentPackMenuTest {
                   put("name", "title")
                   put("jsonType", "string")
                   put("required", true)
-                }
+                },
               )
             },
           )
@@ -236,8 +238,8 @@ class ComponentPackMenuTest {
                   packComponents.associate {
                     it.getValue("componentId").let { id -> (id as JsonPrimitive).content } to
                       buildJsonObject { put("group", "Confetti Mobile") }
-                  }
-              ))
+                  },
+              )),
         )
       val packs = buildJsonArray {
         add(
@@ -250,7 +252,7 @@ class ComponentPackMenuTest {
               "components",
               buildJsonArray { packComponents.forEach { add(it.getValue("componentId")) } },
             )
-          }
+          },
         )
       }
       return Json.encodeToString(
@@ -259,13 +261,13 @@ class ComponentPackMenuTest {
           root +
             ("statusSemantics" to
               JsonObject(
-                statusSemantics + ("componentMenu" to newMenu) + ("componentPacks" to packs)
+                statusSemantics + ("componentMenu" to newMenu) + ("componentPacks" to packs),
               )) +
             ("components" to
               buildJsonArray {
                 root.getValue("components").jsonArray.forEach(::add)
                 packComponents.forEach(::add)
-              })
+              }),
         ),
       )
     }

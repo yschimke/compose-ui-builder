@@ -29,7 +29,7 @@ class SliderAndProgressTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -82,7 +82,7 @@ class SliderAndProgressTest {
     assertTrue("LinearProgressIndicator(progress = { 0.6f }" in exportOf("m3/progress-indicator"))
     assertTrue(
       "CircularProgressIndicator(progress = { 0.6f }" in
-        exportOf("m3/progress-indicator", "variant" to "circular")
+        exportOf("m3/progress-indicator", "variant" to "circular"),
     )
   }
 

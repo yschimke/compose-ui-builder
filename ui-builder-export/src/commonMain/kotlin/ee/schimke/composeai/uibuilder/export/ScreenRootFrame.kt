@@ -58,7 +58,7 @@ object ScreenRootFrame {
         Unwrapped.Document(document)
       else
         Unwrapped.Refused(
-          listOf("`$component` is written by the screen-root frame, so it must be the only root")
+          listOf("`$component` is written by the screen-root frame, so it must be the only root"),
         )
     }
     val where = "`${root.id}` (`$component`)"
@@ -78,7 +78,7 @@ object ScreenRootFrame {
         for (slot in filled.keys.sorted()) {
           add(
             "$where's `$slot` slot is not written by the screen-root frame; the catalog publishes " +
-              "no `screen-root+${filled.keys.sorted().joinToString("+")}` frame"
+              "no `screen-root+${filled.keys.sorted().joinToString("+")}` frame",
           )
         }
       }

@@ -24,7 +24,7 @@ class GoogleAppDesignExportTest {
 
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
 
   private fun export(designId: String): ScreenExportGate.Outcome =
@@ -73,8 +73,8 @@ class GoogleAppDesignExportTest {
                     mapOf(
                       "layoutMode" to EnumValueV1("singlePane"),
                       "paneSpacingDp" to DecimalValueV1(12.0),
-                    )
-              ))
+                    ),
+              )),
       )
     val outcome = ScreenExportGate.export(adjusted, catalog.exportRecord(embeddedComponentRecord()))
     val source =

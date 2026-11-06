@@ -58,19 +58,19 @@ object A2uiComposeExporter {
       appendLine("    materialA2uiBasicCatalogV1(")
       appendLine("      image =")
       appendLine(
-        "        MaterialA2uiBasicCatalogV1Defaults.image { url, contentDescription, contentScale, imageModifier, onError ->"
+        "        MaterialA2uiBasicCatalogV1Defaults.image { url, contentDescription, contentScale, imageModifier, onError ->",
       )
       appendLine("          // TODO: draw the image at `url` with the app's image loader.")
       appendLine("        },")
       appendLine("      video =")
       appendLine(
-        "        MaterialA2uiBasicCatalogV1Defaults.video { url, videoModifier, onError ->"
+        "        MaterialA2uiBasicCatalogV1Defaults.video { url, videoModifier, onError ->",
       )
       appendLine("          // TODO: play the video at `url` with the app's player.")
       appendLine("        },")
       appendLine("      audioPlayer =")
       appendLine(
-        "        MaterialA2uiBasicCatalogV1Defaults.audioPlayer { url, contentDescription, audioModifier, onError ->"
+        "        MaterialA2uiBasicCatalogV1Defaults.audioPlayer { url, contentDescription, audioModifier, onError ->",
       )
       appendLine("          // TODO: play the audio at `url` with the app's player.")
       appendLine("        },")
@@ -82,7 +82,7 @@ object A2uiComposeExporter {
       appendLine("    )")
       appendLine("  }")
       appendLine(
-        "  val processor = remember(catalog) { A2uiMessageProcessor(catalogs = listOf(catalog)) }"
+        "  val processor = remember(catalog) { A2uiMessageProcessor(catalogs = listOf(catalog)) }",
       )
       appendLine("  LaunchedEffect(processor) {")
       appendLine("    launch { processor.collectMessages() }")
@@ -107,7 +107,7 @@ object A2uiComposeExporter {
       appendLine("  }")
       appendLine("  val surfaces by processor.activeSurfaces.collectAsState()")
       appendLine(
-        "  surfaces.firstOrNull()?.let { surface -> A2uiSurface(surfaceModel = surface, modifier = modifier) }"
+        "  surfaces.firstOrNull()?.let { surface -> A2uiSurface(surfaceModel = surface, modifier = modifier) }",
       )
       appendLine("}")
     }

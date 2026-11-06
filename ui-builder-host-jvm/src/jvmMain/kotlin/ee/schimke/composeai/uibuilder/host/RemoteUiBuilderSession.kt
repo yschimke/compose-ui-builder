@@ -238,7 +238,7 @@ internal constructor(
             ?: error("unexpected response while opening the remote design")
         catalog =
           CapabilityCatalogParser.parse(
-            connection.serverHttp.json.encodeToString(opened.snapshot.catalog)
+            connection.serverHttp.json.encodeToString(opened.snapshot.catalog),
           )
         mutableSnapshot.value = opened
         mutableFailure.value = null
@@ -253,7 +253,7 @@ internal constructor(
    * consumed in order, so one that cannot reach the server holds the ones behind it until it does.
    */
   private suspend fun executeRetryingTransport(
-    request: ApplyOperationRequestV1
+    request: ApplyOperationRequestV1,
   ): UiBuilderHttpResult {
     var attempt = 0
     while (true) {
@@ -262,7 +262,7 @@ internal constructor(
       } catch (failure: IOException) {
         val wait = reconnectDelay(attempt++)
         reportConnection(
-          "Could not reach the server · retrying the edit in ${wait.inWholeSeconds.coerceAtLeast(1)}s"
+          "Could not reach the server · retrying the edit in ${wait.inWholeSeconds.coerceAtLeast(1)}s",
         )
         delay(wait)
       }
@@ -379,7 +379,7 @@ internal class RemoteServerHttp(val origin: URI) {
     }
     if (response.statusCode() != 200) {
       return UiBuilderNativeRender(
-        failure = "preview server answered HTTP ${response.statusCode()} while rendering"
+        failure = "preview server answered HTTP ${response.statusCode()} while rendering",
       )
     }
     val result = json.decodeFromString(RemoteNativePreviewResult.serializer(), response.body())
@@ -390,7 +390,7 @@ internal class RemoteServerHttp(val origin: URI) {
     return UiBuilderNativeRender(
       image =
         Image.makeFromEncoded(Base64.getDecoder().decode(image.substringAfterLast("base64,")))
-          .toComposeImageBitmap()
+          .toComposeImageBitmap(),
     )
   }
 

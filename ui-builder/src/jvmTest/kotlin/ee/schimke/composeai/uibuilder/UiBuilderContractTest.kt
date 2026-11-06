@@ -41,7 +41,7 @@ class UiBuilderContractTest {
     val operations = fixture.getValue("operations") as kotlinx.serialization.json.JsonArray
     val retried =
       JsonObject(
-        fixture + ("operations" to kotlinx.serialization.json.JsonArray(operations + operations))
+        fixture + ("operations" to kotlinx.serialization.json.JsonArray(operations + operations)),
       )
 
     assertEquals(
@@ -60,7 +60,7 @@ class UiBuilderContractTest {
     val altered =
       JsonObject(
         fixture +
-          ("operations" to kotlinx.serialization.json.JsonArray(operations.dropLast(1) + invalid))
+          ("operations" to kotlinx.serialization.json.JsonArray(operations.dropLast(1) + invalid)),
       )
 
     val error = assertFailsWith<IllegalArgumentException> { UiBuilderReducer.replay(altered) }

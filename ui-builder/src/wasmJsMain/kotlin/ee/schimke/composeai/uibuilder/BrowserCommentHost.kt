@@ -100,7 +100,7 @@ internal class BrowserCommentHost(private val designId: String) {
     val encoded =
       try {
         awaitCommentString(
-          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null)
+          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null),
         )
       } catch (_: Exception) {
         return CommentHttpResponse(0, "")
@@ -257,7 +257,7 @@ internal suspend fun awaitCommentString(promise: Promise<JsString>): String =
       status: response.status,
       body: text,
     })));
-  }"""
+  }""",
 )
 internal external fun commentFetch(
   method: String,
@@ -273,7 +273,7 @@ internal external fun commentFetch(
     socket.onerror = () => { onDisconnected(); };
     socket.onmessage = (event) => { onTextMessage(String(event.data)); };
     return socket;
-  }"""
+  }""",
 )
 private external fun openCommentSocket(
   url: String,

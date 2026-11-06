@@ -592,7 +592,7 @@ class PublishedRemoteM3CatalogEquivalenceTest {
       mapOf(
         "remote-m3/theme-specimen" to
           "`remote-m3/theme-specimen` is not public or internal, so a generated file cannot " +
-            "call it"
+            "call it",
       )
   }
 }

@@ -62,7 +62,7 @@ internal fun CanvasRenderNode.repeatedTemplateEntries(): List<CanvasRenderNode> 
         JsonObject(
           row +
             ("index" to
-              JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(index))))
+              JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(index)))),
         )
     occurrenceChild(template, index, fields)
   }
@@ -92,7 +92,7 @@ private fun UiBuilderNode.componentArguments(scope: JsonObject): JsonObject {
       val binding = value as? JsonObject ?: return@mapValues value
       val key = binding.bindingKey() ?: return@mapValues value
       scope[key] ?: value
-    }
+    },
   )
 }
 

@@ -108,7 +108,7 @@ class IconOutlineAssetsTest {
     assertTrue(assets === IconOutlineAssets.withOutlines(assets, setOf(search), CAP) { path })
     assertTrue(assets === IconOutlineAssets.withOutlines(assets, emptySet(), CAP) { path })
     assertTrue(
-      assets === IconOutlineAssets.withOutlines(assets, setOf(IconOutlineKeyV1("x")), CAP) { null }
+      assets === IconOutlineAssets.withOutlines(assets, setOf(IconOutlineKeyV1("x")), CAP) { null },
     )
   }
 

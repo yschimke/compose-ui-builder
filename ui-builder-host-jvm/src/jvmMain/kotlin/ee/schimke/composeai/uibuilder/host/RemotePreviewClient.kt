@@ -96,7 +96,7 @@ internal class RemotePreviewClient(
     return UiBuilderNativeRender(
       image =
         Image.makeFromEncoded(Base64.getDecoder().decode(image.substringAfterLast("base64,")))
-          .toComposeImageBitmap()
+          .toComposeImageBitmap(),
     )
   }
 
@@ -165,7 +165,7 @@ fun validatedServerOrigin(server: String): URI {
       (scheme == "https" ||
         (scheme == "http" &&
           uri.host.lowercase().removeSurrounding("[", "]") in
-            setOf("localhost", "127.0.0.1", "::1")))
+            setOf("localhost", "127.0.0.1", "::1"))),
   ) {
     "the remote preview server must be an https origin (http is allowed only on loopback)"
   }
@@ -188,7 +188,7 @@ internal fun sameOriginTarget(origin: URI, target: URI, what: String = "poll URL
       resolved.fragment == null &&
       resolved.scheme.equals(origin.scheme, ignoreCase = true) &&
       resolved.host.equals(origin.host, ignoreCase = true) &&
-      resolved.effectivePort() == origin.effectivePort()
+      resolved.effectivePort() == origin.effectivePort(),
   ) {
     "preview server authentication $what must be same-origin"
   }

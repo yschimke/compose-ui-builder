@@ -235,9 +235,9 @@ class LauncherWidgetResizablePaneTest {
           .writeBytes(
             checkNotNull(
                 Image.makeFromBitmap(onNodeWithTag("preview").captureToImage().asSkiaBitmap())
-                  .encodeToData(EncodedImageFormat.PNG)
+                  .encodeToData(EncodedImageFormat.PNG),
               )
-              .bytes
+              .bytes,
           )
       }
       fun label(size: String) = onNodeWithText("Resizable · $size", substring = true).assertExists()

@@ -72,7 +72,7 @@ class PersistentUiBuilderServiceSoakTest {
     var service = service()
     val created =
       assertIs<UiBuilderServiceResponse.Snapshot>(
-          execute(service, OWNER, UiBuilderServiceRequest.CreateDesign(document()))
+          execute(service, OWNER, UiBuilderServiceRequest.CreateDesign(document())),
         )
         .snapshot
     val clients =
@@ -120,9 +120,9 @@ class PersistentUiBuilderServiceSoakTest {
                 TEXT_NODE_ID,
                 "text",
                 StringValueV1("$operationId-${schedule.nextInt(10_000)}"),
-              )
+              ),
             ),
-          )
+          ),
         )
       val outcome = accepted(execute(service, OWNER, request))
       assertTrue(!outcome.idempotentReplay)
@@ -156,7 +156,7 @@ class PersistentUiBuilderServiceSoakTest {
                 before.state.document.revision,
               ),
             ),
-          )
+          ),
         )
         assertEquals(
           before.state,
@@ -247,7 +247,7 @@ class PersistentUiBuilderServiceSoakTest {
 
   private fun snapshot(service: PersistentUiBuilderService): ServiceSnapshotV1 =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, OWNER, UiBuilderServiceRequest.OpenDesign(DESIGN_ID))
+        execute(service, OWNER, UiBuilderServiceRequest.OpenDesign(DESIGN_ID)),
       )
       .snapshot
 
@@ -279,7 +279,7 @@ class PersistentUiBuilderServiceSoakTest {
             OWNER,
             DESIGN_ID,
             state.lastSequence.takeUnless { forceSnapshot },
-          )
+          ),
         ) { update ->
           receive(update)
         }
@@ -315,7 +315,7 @@ class PersistentUiBuilderServiceSoakTest {
                     node.copy(
                       properties =
                         if (property.value is NullValueV1) node.properties - property.property
-                        else node.properties + (property.property to property.value)
+                        else node.properties + (property.property to property.value),
                     ))
             }
             val outcome = committed.outcome
@@ -419,10 +419,10 @@ class PersistentUiBuilderServiceSoakTest {
                   listOf(
                     PropertyCapabilityV1.Builder("text", JsonPrimitive("string"))
                       .also { property -> property.required = false }
-                      .build()
+                      .build(),
                   )
               }
-              .build()
+              .build(),
           ),
         )
         .also {
@@ -456,7 +456,7 @@ class PersistentUiBuilderServiceSoakTest {
                 TEXT_NODE_ID,
                 "m3.Text",
                 properties = mapOf("text" to StringValueV1("initial")),
-              )
+              ),
           ),
       )
 
@@ -483,7 +483,7 @@ class PersistentUiBuilderServiceSoakTest {
           override fun resumeWith(result: Result<T>) {
             completion = result
           }
-        }
+        },
       )
       return completion?.getOrThrow() ?: error("synchronous service call suspended unexpectedly")
     }

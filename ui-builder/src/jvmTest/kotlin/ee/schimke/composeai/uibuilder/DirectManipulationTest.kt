@@ -320,7 +320,7 @@ class DirectManipulationTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

@@ -29,7 +29,7 @@ internal data class UiBuilderPresenceEntry(
 )
 
 internal data class UiBuilderPresenceState(
-  private val entries: Map<String, UiBuilderPresenceEntry> = emptyMap()
+  private val entries: Map<String, UiBuilderPresenceEntry> = emptyMap(),
 ) {
   fun replace(values: List<PresenceV1>, nowMillis: Long): UiBuilderPresenceState =
     UiBuilderPresenceState(values.associate { it.actorId to UiBuilderPresenceEntry(it, nowMillis) })
@@ -40,7 +40,7 @@ internal data class UiBuilderPresenceState(
         copy(
           entries =
             entries +
-              (update.presence.actorId to UiBuilderPresenceEntry(update.presence, nowMillis))
+              (update.presence.actorId to UiBuilderPresenceEntry(update.presence, nowMillis)),
         )
       is PresenceLeaveV1 -> copy(entries = entries - update.actorId)
     }
@@ -48,7 +48,9 @@ internal data class UiBuilderPresenceState(
   fun expire(nowMillis: Long): UiBuilderPresenceState =
     copy(
       entries =
-        entries.filterValues { nowMillis - it.lastSeenAtMillis < UI_BUILDER_PRESENCE_EXPIRY_MILLIS }
+        entries.filterValues {
+          nowMillis - it.lastSeenAtMillis < UI_BUILDER_PRESENCE_EXPIRY_MILLIS
+        },
     )
 
   fun collaborators(localActorId: String): List<UiBuilderCollaborator> =

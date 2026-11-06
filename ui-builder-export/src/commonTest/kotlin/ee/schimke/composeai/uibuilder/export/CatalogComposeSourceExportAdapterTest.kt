@@ -25,7 +25,7 @@ class CatalogComposeSourceExportAdapterTest {
 
     val resolution =
       assertIs<CatalogComposeSourceExportAdapters.Resolution.Supported>(
-        CatalogComposeSourceExportAdapters.resolve(catalog)
+        CatalogComposeSourceExportAdapters.resolve(catalog),
       )
 
     assertEquals(
@@ -43,8 +43,8 @@ class CatalogComposeSourceExportAdapterTest {
               CatalogComposeSourceExportAdapters.COMPONENT_RECORDS,
               CatalogComposeSourceExportAdapters.COMPONENT_RECORDS_V1,
             )
-            .build()
-        )
+            .build(),
+        ),
       )
     assertEquals(
       CatalogComposeSourceExportAdapter.Strategy.COMPONENT_RECORDS,
@@ -55,13 +55,13 @@ class CatalogComposeSourceExportAdapterTest {
   @Test
   fun `undeclared and unknown adapters do not fall back`() {
     assertIs<CatalogComposeSourceExportAdapters.Resolution.NotDeclared>(
-      CatalogComposeSourceExportAdapters.resolve(catalog())
+      CatalogComposeSourceExportAdapters.resolve(catalog()),
     )
 
     val unknown = ComposeSourceExportCapabilityV1.Builder("other-compose", 7).build()
     val resolution =
       assertIs<CatalogComposeSourceExportAdapters.Resolution.Unsupported>(
-        CatalogComposeSourceExportAdapters.resolve(unknown)
+        CatalogComposeSourceExportAdapters.resolve(unknown),
       )
 
     assertEquals("other-compose", resolution.adapter)

@@ -12,7 +12,7 @@ class RemoteJsonRepetitionTest {
   private fun refused(document: UiBuilderDocument, reason: String) {
     val result =
       assertIs<RemoteDocumentJsonExporter.Result.Refused>(
-        RemoteDocumentJsonExporter.export(document)
+        RemoteDocumentJsonExporter.export(document),
       )
     assertTrue(result.reasons.any { reason in it }, result.reasons.joinToString())
   }
@@ -75,7 +75,9 @@ class RemoteJsonRepetitionTest {
       edit(remoteJsonRepetitionFixture(1), "place") {
         it.copy(
           component =
-            obj("""{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":{}}}}""")
+            obj(
+              """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":{}}}}""",
+            ),
         )
       }
     refused(malformed, "nodes.place.component.arguments.spacing")
@@ -98,7 +100,7 @@ class RemoteJsonRepetitionTest {
       rows(
         remoteJsonRepetitionFixture(1),
         obj(
-          """{"type":"list","values":[{"type":"object","fields":{"gap":{"type":"string","value":"wide"}}}]}"""
+          """{"type":"list","values":[{"type":"object","fields":{"gap":{"type":"string","value":"wide"}}}]}""",
         ),
       ),
       "nodes.row.properties.horizontalSpacingDp: expected a numeric literal",
@@ -150,9 +152,9 @@ class RemoteJsonRepetitionTest {
         it.copy(
           modifiers =
             Json.parseToJsonElement(
-                """[{"type":"width","widthDp":{"type":"binding","value":"gap"}}]"""
+                """[{"type":"width","widthDp":{"type":"binding","value":"gap"}}]""",
               )
-              .jsonArray
+              .jsonArray,
         )
       }
     refused(document, "nodes.red.modifiers[0]")
@@ -173,7 +175,7 @@ class RemoteJsonRepetitionTest {
     val base = remoteJsonRepetitionFixture(1)
     val many =
       obj(
-        """{"type":"list","values":[${List(101) { """{"type":"object","fields":{}}""" }.joinToString(",")}]}"""
+        """{"type":"list","values":[${List(101) { """{"type":"object","fields":{}}""" }.joinToString(",")}]}""",
       )
     val inner =
       UiBuilderNode(
@@ -189,8 +191,8 @@ class RemoteJsonRepetitionTest {
           base.copy(
             roots = listOf("outer"),
             nodes = base.nodes + mapOf("outer" to outer, "inner" to inner),
-          )
-        )
+          ),
+        ),
       )
     // Refused by the count, naming the root, rather than by the emitter tripping its limit
     // part-way through building ten thousand nodes: that took long enough to time out a browser
@@ -200,7 +202,7 @@ class RemoteJsonRepetitionTest {
 
   private fun rowsOf(count: Int) =
     obj(
-      """{"type":"list","values":[${List(count) { """{"type":"object","fields":{}}""" }.joinToString(",")}]}"""
+      """{"type":"list","values":[${List(count) { """{"type":"object","fields":{}}""" }.joinToString(",")}]}""",
     )
 
   private fun expansionRefusal(document: UiBuilderDocument): List<String> =
@@ -226,7 +228,7 @@ class RemoteJsonRepetitionTest {
             mapOf(
               "componentKey" to JsonPrimitive("big"),
               "arguments" to JsonObject(mapOf("rows" to rowsOf(10_001))),
-            )
+            ),
           ),
       )
     assertEquals(
@@ -236,7 +238,7 @@ class RemoteJsonRepetitionTest {
           roots = listOf("placed"),
           nodes = base.nodes + mapOf("placed" to placed, "bound-loop" to loop),
           components = obj("""{"big":{"name":"Big","root":"bound-loop"}}"""),
-        )
+        ),
       ),
     )
   }
@@ -257,7 +259,7 @@ class RemoteJsonRepetitionTest {
         base.copy(
           roots = listOf("a", "b"),
           nodes = base.nodes + mapOf("a" to loop("a"), "b" to loop("b")),
-        )
+        ),
       ),
     )
   }

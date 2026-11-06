@@ -238,9 +238,9 @@ class CanvasRuntimeDeviceViewTest {
               native.recordNodeBounds(it.id, 0f, 0f, size.width.toFloat(), size.height.toFloat())
             }
           onInspection(
-            UiBuilderCanvasInspection(native.snapshot(), editor.snapshot(), capabilities)
+            UiBuilderCanvasInspection(native.snapshot(), editor.snapshot(), capabilities),
           )
-        }
+        },
       )
     }
   }

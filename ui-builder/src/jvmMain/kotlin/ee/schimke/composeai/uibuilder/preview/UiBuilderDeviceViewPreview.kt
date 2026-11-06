@@ -113,9 +113,9 @@ private val wearDeviceViewPreviewDocument: UiBuilderDocument by lazy {
               $rows
             ]
           }
-          """
+          """,
         )
-        .jsonObject
+        .jsonObject,
     )
     .document
 }
@@ -214,9 +214,9 @@ private val deviceViewPreviewDocument: UiBuilderDocument by lazy {
               $episodes
             ]
           }
-          """
+          """,
         )
-        .jsonObject
+        .jsonObject,
     )
     .document
 }

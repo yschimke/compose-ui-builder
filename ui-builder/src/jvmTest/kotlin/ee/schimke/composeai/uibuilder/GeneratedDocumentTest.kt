@@ -43,7 +43,7 @@ class GeneratedDocumentTest {
   private val generator = UiBuilderTreeGenerator(catalog, reducer)
   private val jetcaster =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val blank =
@@ -193,7 +193,7 @@ class GeneratedDocumentTest {
       valid.copy(
         nodes =
           valid.nodes +
-            (button.id to button.copy(slots = button.slots + ("leadingIcon" to emptyList())))
+            (button.id to button.copy(slots = button.slots + ("leadingIcon" to emptyList()))),
       )
 
     assertEquals(emptyList(), validator.validate(stored).issues)
@@ -205,7 +205,7 @@ class GeneratedDocumentTest {
           valid.nodes +
             ("stray-icon" to UiBuilderNode(id = "stray-icon", componentId = "m3/icon")) +
             (button.id to
-              button.copy(slots = button.slots + ("leadingIcon" to listOf("stray-icon"))))
+              button.copy(slots = button.slots + ("leadingIcon" to listOf("stray-icon")))),
       )
     assertTrue(
       validator.validate(withChild).issues.any {
@@ -274,7 +274,7 @@ class GeneratedDocumentTest {
     // The released floor must still refuse until the additive shared vocabulary is available.
     val repetitions = runCatching {
       Json.decodeFromString<ee.schimke.composeai.discovery.ScreenNode>(
-        """{"componentId":"","repetition":{"fields":{},"rows":[]}}"""
+        """{"componentId":"","repetition":{"fields":{},"rows":[]}}""",
       )
     }
       .isSuccess

@@ -38,7 +38,7 @@ class EditorProblemsTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -78,7 +78,7 @@ class EditorProblemsTest {
 
     val wrapping =
       document.copy(
-        nodes = document.nodes + ("root-surface" to root.copy(modifiers = JsonArray(emptyList())))
+        nodes = document.nodes + ("root-surface" to root.copy(modifiers = JsonArray(emptyList()))),
       )
     val reported = problems(wrapping).single { it.code == RootSurfaceGround.CODE }
     assertEquals("root-surface", reported.nodeId)
@@ -125,9 +125,9 @@ class EditorProblemsTest {
             mapOf(
               "assetKey" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("photo"))
-                )
-            )
+                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("photo")),
+                ),
+            ),
           ),
       )
     val withPhoto =
@@ -138,7 +138,7 @@ class EditorProblemsTest {
             (rootId to
               root.copy(
                 slots =
-                  root.slots + ("background" to (root.slots["background"].orEmpty() + "photo"))
+                  root.slots + ("background" to (root.slots["background"].orEmpty() + "photo")),
               )),
         assets =
           JsonObject(
@@ -146,8 +146,8 @@ class EditorProblemsTest {
               ("photo" to
                 Json.parseToJsonElement(
                   """{"mediaType":"image/png","contentDigest":"$digest",""" +
-                    """"source":{"type":"uploaded","storageKey":"$digest"}}"""
-                ))
+                    """"source":{"type":"uploaded","storageKey":"$digest"}}""",
+                )),
           ),
       )
     fun refusedForBytes(assetBytes: (String) -> ByteArray?) =
@@ -179,8 +179,8 @@ class EditorProblemsTest {
           JsonObject(
             mapOf(
               "text" to
-                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("2")))
-            )
+                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("2"))),
+            ),
           ),
       )
     val twoBodies =
@@ -190,8 +190,8 @@ class EditorProblemsTest {
             ("second" to second) +
             (rootId to
               root.copy(
-                slots = root.slots + ("content" to (root.slots["content"].orEmpty() + "second"))
-              ))
+                slots = root.slots + ("content" to (root.slots["content"].orEmpty() + "second")),
+              )),
       )
 
     val reported = problems(twoBodies)
@@ -221,9 +221,9 @@ class EditorProblemsTest {
             mapOf(
               "imageVector" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive("pauseCircle"))
-                )
-            )
+                  mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive("pauseCircle")),
+                ),
+            ),
           ),
       )
     val withGlyph =
@@ -231,7 +231,7 @@ class EditorProblemsTest {
         nodes =
           widget.nodes +
             ("glyph" to glyph) +
-            (rootId to root.copy(slots = root.slots + ("content" to listOf("glyph"))))
+            (rootId to root.copy(slots = root.slots + ("content" to listOf("glyph")))),
       )
 
     val reported =
@@ -261,9 +261,9 @@ class EditorProblemsTest {
                   JsonObject(
                     root.properties +
                       ("horizontalPaddingDp" to
-                        Json.parseToJsonElement("""{"type":"float","value":20.0}"""))
-                  )
-              ))
+                        Json.parseToJsonElement("""{"type":"float","value":20.0}""")),
+                  ),
+              )),
       )
 
     assertTrue(
@@ -281,8 +281,8 @@ class EditorProblemsTest {
           document.nodes +
             mapOf(
               placeholder.id to
-                placeholder.copy(properties = JsonObject(placeholder.properties - "text"))
-            )
+                placeholder.copy(properties = JsonObject(placeholder.properties - "text")),
+            ),
       )
 
     val problem = assertNotNull(problems(broken).firstOrNull())
@@ -300,7 +300,7 @@ class EditorProblemsTest {
       document.copy(
         nodes =
           document.nodes +
-            mapOf(searchInput.id to searchInput.copy(slots = searchInput.slots - "trailingIcon"))
+            mapOf(searchInput.id to searchInput.copy(slots = searchInput.slots - "trailingIcon")),
       )
 
     val problem = assertNotNull(problems(orphaned).firstOrNull { it.code == "UNREACHABLE_NODE" })
@@ -330,7 +330,7 @@ class EditorProblemsTest {
           document.nodes +
             mapOf(
               placeholder.id to
-                placeholder.copy(properties = JsonObject(placeholder.properties - "text"))
+                placeholder.copy(properties = JsonObject(placeholder.properties - "text")),
             ),
       )
 
@@ -342,8 +342,8 @@ class EditorProblemsTest {
         .containsAll(
           CapabilityComposeCodeExporter.diagnose(broken, catalog)
             .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
-            .map { it.code to it.message }
-        )
+            .map { it.code to it.message },
+        ),
     )
     // And nothing beyond the two sources: every problem is a capability error or an export
     // refusal, never a rule this panel invented.
@@ -373,8 +373,8 @@ class EditorProblemsTest {
           document.nodes +
             (original.id to
               original.copy(
-                properties = JsonObject(original.properties + ("oldText" to staleValue))
-              ))
+                properties = JsonObject(original.properties + ("oldText" to staleValue)),
+              )),
       )
 
     val problem = problems(stale).single { it.code == "PROPERTY_NOT_DECLARED" }
@@ -421,9 +421,9 @@ class EditorProblemsTest {
             mapOf(
               "documentBase64" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("AAAA"))
-                )
-            )
+                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("AAAA")),
+                ),
+            ),
           ),
       )
     val onlyThePlayer = document.copy(roots = listOf(player.id), nodes = mapOf(player.id to player))
@@ -460,11 +460,11 @@ class EditorProblemsTest {
                       if (fields["componentId"] == JsonPrimitive("m3/text"))
                         JsonObject(fields + ("code" to JsonNull))
                       else fields
-                    }
-                  ))
+                    },
+                  )),
             )
           },
-        )
+        ),
       )
 
     val reported = UiBuilderEditorReducer(unmapped).problems(document)
@@ -509,8 +509,10 @@ class EditorProblemsTest {
           document.nodes +
             mapOf(
               row.id to
-                row.copy(slots = row.slots + mapOf("items" to row.slots.getValue("items") + "gone"))
-            )
+                row.copy(
+                  slots = row.slots + mapOf("items" to row.slots.getValue("items") + "gone"),
+                ),
+            ),
       )
 
     val rows = reducer.treeRows(dangling)
@@ -523,8 +525,10 @@ class EditorProblemsTest {
           document.nodes +
             mapOf(
               row.id to
-                row.copy(slots = row.slots + mapOf("items" to row.slots.getValue("items") + row.id))
-            )
+                row.copy(
+                  slots = row.slots + mapOf("items" to row.slots.getValue("items") + row.id),
+                ),
+            ),
       )
 
     assertTrue(reducer.treeRows(cyclic).isNotEmpty(), "a cycle terminates rather than recurses")
@@ -552,12 +556,12 @@ class EditorProblemsTest {
                               mapOf(
                                 "type" to JsonPrimitive("string"),
                                 "value" to JsonArray(listOf(JsonPrimitive("a"))),
-                              )
-                            )
-                        )
-                    )
-                )
-            )
+                              ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
       )
 
     val state = reducer.initial(malformed, selectedNodeId = placeholder.id)
@@ -590,12 +594,12 @@ class EditorProblemsTest {
                               mapOf(
                                 "type" to JsonPrimitive("string"),
                                 "value" to JsonArray(emptyList()),
-                              )
-                            )
-                        )
-                    )
-                )
-            )
+                              ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
       )
 
     assertTrue(

@@ -142,7 +142,7 @@ class LocalUiBuilderService(
             ),
           catalog = catalogFor(catalogSystemId) ?: return catalogUnavailable(catalogSystemId),
           retainedFromSequence = 0,
-        )
+        ),
       )
     } catch (failure: LocalDesignStorageException) {
       serviceError(
@@ -189,7 +189,7 @@ class LocalUiBuilderService(
         // Everything this browser holds is retained: the log is the design, and there is no window
         // to fall out of.
         retainedFromSequence = 0,
-      )
+      ),
     )
   }
 
@@ -245,7 +245,7 @@ class LocalUiBuilderService(
             nodeId = outcome.nodeId,
             field = outcome.field,
           )
-      }
+      },
     )
   }
 
@@ -279,8 +279,8 @@ class LocalUiBuilderService(
     val validator =
       CapabilityValidator(
         CapabilityCatalogParser.parse(
-          catalogJson.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
-        )
+          catalogJson.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability),
+        ),
       )
     return LocalDesignValidators(
       property = CapabilityPropertyWriteValidator(validator),

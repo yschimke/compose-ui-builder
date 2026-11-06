@@ -42,7 +42,7 @@ printf '%s' '{"type":"result","is_error":false,"result":"Private review","sessio
       val workspace = storage.resolve("claude/workspace")
       assertFalse(Files.readString(workspace.resolve("arguments.txt")).contains("--resume"))
       assertTrue(
-        Files.readString(workspace.resolve("prompt.txt")).contains("Latest design snapshot")
+        Files.readString(workspace.resolve("prompt.txt")).contains("Latest design snapshot"),
       )
       first.close()
       val otherProvider =
@@ -171,7 +171,7 @@ printf '%s' '{"type":"result","is_error":$failed,"result":"${if (failed) "sensit
       restored.conversation.send("Retry")
       withTimeout(5_000) { while (restored.conversation.busy) delay(10) }
       assertFalse(
-        Files.readString(storage.resolve("claude/workspace/arguments.txt")).contains("--resume")
+        Files.readString(storage.resolve("claude/workspace/arguments.txt")).contains("--resume"),
       )
       assertTrue(Files.readString(storage.resolve("claude/workspace/prompt.txt")).contains("First"))
       restored.close()

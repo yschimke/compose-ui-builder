@@ -131,7 +131,7 @@ fun compareDifferences(input: ReferenceComparisonInput): ReferenceComparison {
     return ReferenceComparison(
       message =
         "Not measured: " +
-          (input.facts?.advice(input.placement.fit) ?: "this picture is not placed dp for dp.")
+          (input.facts?.advice(input.placement.fit) ?: "this picture is not placed dp for dp."),
     )
   }
   val frame = input.measureFrame()
@@ -157,7 +157,7 @@ fun compareLayer(
   val layer =
     input.layers.firstOrNull { it.nodeId == nodeId }
       ?: return ReferenceComparison(
-        message = "Layer `$nodeId` has no box in this render, so it cannot be matched."
+        message = "Layer `$nodeId` has no box in this render, so it cannot be matched.",
       )
   val comparable = input.comparable
   val placed = input.placedDp()
@@ -185,7 +185,7 @@ fun compareLayer(
               .trim()
           else
             "Nothing to match: the layer is a flat colour. Draw a box round where it should be " +
-              "in the reference, then match again."
+              "in the reference, then match again.",
       )
   val font = if (layer.text) node?.referenceFontSize() else null
   return ReferenceComparison(

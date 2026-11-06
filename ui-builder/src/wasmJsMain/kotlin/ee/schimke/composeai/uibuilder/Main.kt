@@ -122,7 +122,7 @@ import org.jetbrains.skia.Image
   """() => {
   const host = document.getElementById('composeApp');
   if (host) host.addEventListener('contextmenu', (event) => event.preventDefault());
-}"""
+}""",
 )
 private external fun suppressBrowserContextMenu()
 
@@ -164,8 +164,8 @@ fun main() {
           catalogPin =
             JsonObject(
               fixtureDocument.catalogPin +
-                ("nativeRuntimeId" to kotlinx.serialization.json.JsonPrimitive(rendererRuntimeId))
-            )
+                ("nativeRuntimeId" to kotlinx.serialization.json.JsonPrimitive(rendererRuntimeId)),
+            ),
         )
       mountSandboxRenderer(
         rendererRuntimeId,
@@ -268,7 +268,7 @@ fun main() {
   console.warn('ui-builder: browser languages ' + JSON.stringify(reported) + ' are not BCP 47; using ' + JSON.stringify(usable));
   Object.defineProperty(navigator, 'languages', { configurable: true, get: () => Object.freeze([...usable]) });
   Object.defineProperty(navigator, 'language', { configurable: true, get: () => usable[0] });
-}"""
+}""",
 )
 private external fun normalizeBrowserLanguages()
 
@@ -284,7 +284,7 @@ private external fun normalizeBrowserLanguages()
   } catch (e) {
     return false;
   }
-}"""
+}""",
 )
 private external fun webGlAvailable(): Boolean
 
@@ -309,7 +309,7 @@ private external fun webGlAvailable(): Boolean
     '</ul>' +
     '<p style="margin: 0; max-width: 44em;">The design is fine: this URL opens in a browser with WebGL, and <code>compose-preview-server design render</code> draws the same design without a browser.</p>' +
     '</div>';
-}"""
+}""",
 )
 private external fun showWebGlRequiredMessage()
 
@@ -320,7 +320,7 @@ private external fun showWebGlRequiredMessage()
       throw new Error('rendererRuntimeId must be an exact safe runtime id');
     }
     return value;
-  }"""
+  }""",
 )
 private external fun sandboxRendererRuntimeId(): String
 
@@ -329,7 +329,7 @@ private external fun sandboxRendererRuntimeId(): String
   """() => {
     const value = new URLSearchParams(globalThis.location.search).get('rendererDocument') || '';
     return /^\/[A-Za-z0-9._\/-]+$/.test(value) && !value.split('/').includes('..') ? value : '';
-  }"""
+  }""",
 )
 private external fun sandboxRendererDocumentPath(): String
 
@@ -347,7 +347,7 @@ internal fun CatalogRuntimeCanvas(
     if (LocalWearWidgetClipContent.current) {
       val shape =
         WearWidgetHostShape.fromId(
-          document.environment[WearWidgetHostShape.ENVIRONMENT_KEY]?.jsonPrimitive?.contentOrNull
+          document.environment[WearWidgetHostShape.ENVIRONMENT_KEY]?.jsonPrimitive?.contentOrNull,
         )
       document.wearWidgetScaffoldSize()?.hostSpec(shape)?.cornerRadiusDp ?: 0f
     } else 0f
@@ -419,8 +419,8 @@ internal fun CatalogRuntimeCanvas(
         }
           .getOrNull()
           ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
-          // Only the nodes the designer placed: see [authoredIn].
-          ?.let { runtimeSnapshot = it.authoredIn(document) }
+        // Only the nodes the designer placed: see [authoredIn].
+        ?.let { runtimeSnapshot = it.authoredIn(document) }
       }
       delay(100)
     }
@@ -431,7 +431,7 @@ internal fun CatalogRuntimeCanvas(
     val snapshot = runtimeSnapshot ?: return@LaunchedEffect
     val current = coordinates?.takeIf { it.isAttached } ?: return@LaunchedEffect
     onInspectionSnapshot(
-      UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(current), capabilities)
+      UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(current), capabilities),
     )
   }
   DisposableEffect(surfaceId) {
@@ -492,7 +492,7 @@ internal fun CatalogRuntimeCanvas(
           Rect(
             nextCoordinates.localToWindow(Offset.Zero),
             nextCoordinates.localToWindow(
-              Offset(nextCoordinates.size.width.toFloat(), nextCoordinates.size.height.toFloat())
+              Offset(nextCoordinates.size.width.toFloat(), nextCoordinates.size.height.toFloat()),
             ),
           )
         positionCatalogRuntimeSurface(
@@ -534,7 +534,7 @@ private fun positionCatalogRuntimeSurface(
       coordinates.localToWindow(Offset(coordinates.size.width.toFloat(), 0f)),
       coordinates.localToWindow(Offset(0f, coordinates.size.height.toFloat())),
       coordinates.localToWindow(
-        Offset(coordinates.size.width.toFloat(), coordinates.size.height.toFloat())
+        Offset(coordinates.size.width.toFloat(), coordinates.size.height.toFloat()),
       ),
     )
   val full =
@@ -559,7 +559,7 @@ private fun positionCatalogRuntimeSurface(
 }
 
 private fun UiBuilderInspectionSnapshot.inEditorCoordinates(
-  coordinates: LayoutCoordinates
+  coordinates: LayoutCoordinates,
 ): UiBuilderInspectionSnapshot {
   val origin = coordinates.positionInRoot()
   val unit = coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
@@ -581,7 +581,7 @@ private fun UiBuilderInspectionSnapshot.inEditorCoordinates(
     const next = (globalThis.__uiBuilderCatalogRuntimeSurfaceSequence || 0) + 1;
     globalThis.__uiBuilderCatalogRuntimeSurfaceSequence = next;
     return 'ui-builder-catalog-runtime-' + next;
-  }"""
+  }""",
 )
 private external fun nextCatalogRuntimeSurfaceId(): String
 
@@ -637,7 +637,7 @@ private external fun nextCatalogRuntimeSurfaceId(): String
         return host;
       },
     };
-  }"""
+  }""",
 )
 private external fun installCatalogRuntimePool()
 
@@ -654,7 +654,7 @@ private fun mountCatalogRuntimeSurface(surfaceId: String): Unit =
       }
       host.style.cssText = 'position:fixed;overflow:hidden;z-index:0;pointer-events:none';
       document.body.append(host);
-    })()"""
+    })()""",
   )
 
 private fun positionCatalogRuntimeSurface(
@@ -690,7 +690,7 @@ private fun positionCatalogRuntimeSurface(
           (Math.max(0, width) / controller.frameWidth) + ',' +
           (Math.max(0, height) / controller.frameHeight) + ')';
       }
-    })()"""
+    })()""",
   )
 
 private fun updateCatalogRuntimeSurface(
@@ -1064,7 +1064,7 @@ private fun updateCatalogRuntimeSurface(
         host.textContent = 'Pinned catalog runtime unavailable: ' + error.message;
         host.__uiBuilderRuntimeError = error.message;
       });
-    })()"""
+    })()""",
   )
 
 private fun readCatalogRuntimeInspection(surfaceId: String): String =
@@ -1084,7 +1084,7 @@ private fun readCatalogRuntimeError(surfaceId: String): String =
       if (!error) return '';
       if (typeof error === 'string') return error;
       return (error.code ? error.code + ': ' : '') + (error.message || '');
-    })()"""
+    })()""",
   )
 
 private fun readCatalogRuntimeCapabilities(surfaceId: String): String =
@@ -1103,7 +1103,7 @@ private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
       delete host.__uiBuilderInspectionJson;
       delete host.__uiBuilderInspection;
       host.remove();
-    })()"""
+    })()""",
   )
 
 /**
@@ -1337,7 +1337,7 @@ private fun mountSandboxRenderer(
           deltaY,
         });
       };
-    })()"""
+    })()""",
   )
 
 internal data class LiveSessionConfig(
@@ -1390,7 +1390,7 @@ internal data class LiveSessionConfig(
 internal suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 =
   catalogRecoveryJson
     .decodeFromString<BrowserCatalogRecoveryPayload>(
-      fetchText("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/catalog-recovery")
+      fetchText("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/catalog-recovery"),
     )
     .preview
 
@@ -1408,7 +1408,7 @@ private val catalogRecoveryJson = Json { ignoreUnknownKeys = true }
     dataset.uiBuilderSelectedThread = threadId;
     dataset.uiBuilderInspectorMode = inspectorMode;
     dataset.uiBuilderPinnedRevision = revisionPinned ? revision : '';
-  }"""
+  }""",
 )
 internal external fun publishDesignSelectors(
   revision: String,
@@ -1443,7 +1443,7 @@ internal suspend fun requestNativeRender(
           // The host shape goes in the body (what to draw), not the query (which version). Hosts
           // that predate the field draw the squircle.
           body = "{\"hostShape\":\"${hostShape.id}\"}",
-        )
+        ),
       )
   if (response.statusCode == 422) {
     val refusal =
@@ -1452,7 +1452,7 @@ internal suspend fun requestNativeRender(
   }
   if (response.statusCode != 200) {
     return UiBuilderNativeRender(
-      failure = "the host answered ${response.statusCode} to a native render request"
+      failure = "the host answered ${response.statusCode} to a native render request",
     )
   }
   val result = nativePreviewJson.decodeFromString(NativePreviewResult.serializer(), response.body)
@@ -1544,7 +1544,7 @@ internal suspend fun fetchBase64(url: String, document: String? = null): String 
       binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + 8192));
     }
     return btoa(binary);
-  })"""
+  })""",
 )
 private external fun fetchBase64Promise(url: String, document: String?): Promise<JsString>
 
@@ -1566,7 +1566,7 @@ internal suspend fun fetchText(url: String): String = suspendCancellableCoroutin
   """(url) => fetch(url).then((response) => {
     if (!response.ok) throw new Error('HTTP ' + response.status);
     return response.text();
-  })"""
+  })""",
 )
 private external fun fetchTextPromise(url: String): Promise<JsString>
 
@@ -1577,7 +1577,7 @@ private external fun captureMode(): String
   """() => {
     const params = new URLSearchParams(globalThis.location.search);
     return params.get('session') === 'live' || !params.has('mode');
-  }"""
+  }""",
 )
 private external fun liveSessionEnabled(): Boolean
 
@@ -1600,7 +1600,7 @@ internal class BrowserLocalSession(config: LiveSessionConfig) {
             endpoint = config.httpEndpoint,
             transport = BrowserUiBuilderHttpTransport(),
             requestIds = MonotonicUiBuilderRequestIds("${config.clientId}-catalog"),
-          )
+          ),
         )
       },
     )
@@ -1762,7 +1762,7 @@ private suspend fun fetchIdentity(url: String): Pair<Int, String> =
         if (continuation.isActive) {
           continuation.resume(
             text.substringBefore('\n').toIntOrNull()?.let { it to text.substringAfter('\n', "") }
-              ?: (0 to "")
+              ?: (0 to ""),
           )
         }
         null
@@ -1777,7 +1777,7 @@ private suspend fun fetchIdentity(url: String): Pair<Int, String> =
 
 @JsFun(
   """(url) => fetch(url, { credentials: 'same-origin' })
-    .then((response) => response.text().then((text) => response.status + '\n' + text))"""
+    .then((response) => response.text().then((text) => response.status + '\n' + text))""",
 )
 private external fun fetchWithStatusPromise(url: String): Promise<JsString>
 
@@ -1923,8 +1923,8 @@ internal suspend fun fetchCatalogRecord(catalogSystemId: String): ComponentRecor
   runCatchingCancellable {
     catalogRecordJson.decodeFromString<ComponentRecordFile>(
       fetchText(
-        "/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/component-record"
-      )
+        "/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/component-record",
+      ),
     )
   }
   .getOrNull()
@@ -1932,7 +1932,7 @@ internal suspend fun fetchCatalogRecord(catalogSystemId: String): ComponentRecor
 private val catalogRecordJson = Json { ignoreUnknownKeys = true }
 
 internal suspend fun loadLiveCatalogs(
-  http: UiBuilderProtocolHttpClient
+  http: UiBuilderProtocolHttpClient,
 ): List<CatalogCapabilityV1> =
   when (val result = http.execute(ListCatalogsRequestV1)) {
     is UiBuilderHttpResult.Response -> {
@@ -1958,7 +1958,7 @@ private fun uiBuilderDesignFromPath(): String =
  */
 @JsFun(
   """() => globalThis.document?.querySelector('meta[name="ui-builder-base-path"]')
-    ?.getAttribute('content') ?? null"""
+    ?.getAttribute('content') ?? null""",
 )
 private external fun uiBuilderBasePathMeta(): String?
 
@@ -1974,7 +1974,7 @@ internal val uiBuilderBasePath: String by lazy {
 /** One of the shell's `<meta>`s by [name], or null on a page without it. */
 @JsFun(
   """(name) => globalThis.document?.querySelector('meta[name="' + name + '"]')
-    ?.getAttribute('content') ?? null"""
+    ?.getAttribute('content') ?? null""",
 )
 private external fun uiBuilderMeta(name: String): String?
 
@@ -2012,7 +2012,7 @@ internal val uiBuilderBrand: UiBuilderBrand? by lazy {
     if (next.toString() !== current.toString()) {
       globalThis.history.replaceState(null, '', next.toString());
     }
-  }"""
+  }""",
 )
 private external fun canonicalizeUiBuilderUrlWith(
   path: String,
@@ -2054,7 +2054,7 @@ internal fun canonicalizeUiBuilderUrl(
       () => resolve(globalThis.location.hash),
       { once: true },
     );
-  })"""
+  })""",
 )
 private external fun awaitHashChangePromise(): Promise<JsString>
 
@@ -2083,7 +2083,7 @@ internal suspend fun awaitHashChange(): String = suspendCancellableCoroutine { c
     if (!current.searchParams.has(name)) return;
     current.searchParams.delete(name);
     globalThis.history.replaceState(null, '', current.toString());
-  }"""
+  }""",
 )
 internal external fun dropDesignUrlQuery(name: String)
 
@@ -2101,7 +2101,7 @@ internal fun stripPageToken() = dropDesignUrlQuery("token")
     if (!current.hash) return;
     current.hash = '';
     globalThis.history.replaceState(null, '', current.toString());
-  }"""
+  }""",
 )
 internal external fun dropDesignUrlFragment()
 
@@ -2114,7 +2114,7 @@ internal external fun dropDesignUrlFragment()
     const current = new URL(globalThis.location.href);
     current.searchParams.delete('revision');
     globalThis.location.assign(current.toString());
-  }"""
+  }""",
 )
 internal external fun goToLatestRevision()
 
@@ -2133,7 +2133,7 @@ internal external fun goToLatestRevision()
       });
     next.searchParams.set('storage', 'local');
     globalThis.history.replaceState(null, '', next.toString());
-  }"""
+  }""",
 )
 private external fun enterLocalDesignUrlAt(path: String)
 
@@ -2151,7 +2151,7 @@ internal fun enterLocalDesignUrl(designId: String) =
         if (value !== null) next.searchParams.set(name, value);
       });
     globalThis.location.assign(next.toString());
-  }"""
+  }""",
 )
 private external fun navigateToUiBuilderPageAt(path: String)
 
@@ -2195,7 +2195,7 @@ internal fun navigateToUiBuilderPage(catalogSystemId: String, designId: String) 
     if (state && state !== '[]') field('state', state);
     globalThis.document.body.appendChild(form);
     form.submit();
-  }"""
+  }""",
 )
 private external fun navigateToNewDesignWith(
   catalogSystemId: String,
@@ -2228,7 +2228,7 @@ internal fun navigateToNewDesign(
   )
 
 @JsFun(
-  """() => globalThis.open('https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
+  """() => globalThis.open('https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')""",
 )
 internal external fun openUiBuilderGuide()
 
@@ -2293,7 +2293,7 @@ internal const val UI_BUILDER_MCP_SERVER_NAME: String = "compose-preview-catalog
       if (value !== null) next.searchParams.set(name, value);
     });
     globalThis.location.assign(next.toString());
-  }"""
+  }""",
 )
 private external fun navigateToDesignsIndexWith(path: String, carried: String)
 
@@ -2320,7 +2320,7 @@ internal external fun formatLocalDateTime(millis: Double): String
       if (value !== null) next.searchParams.set(name, value);
     });
     globalThis.location.assign(next.toString());
-  }"""
+  }""",
 )
 private external fun navigateToDesignWith(path: String, carried: String)
 
@@ -2356,7 +2356,7 @@ internal fun navigateToDesign(designId: String) =
     field('designId', designId);
     globalThis.document.body.appendChild(form);
     form.submit();
-  }"""
+  }""",
 )
 private external fun navigateToCopyDesignWith(
   sourceDesignId: String,
@@ -2375,7 +2375,7 @@ internal fun navigateToCopyDesign(sourceDesignId: String, designId: String) =
   """(name, fallback) => {
     const value = new URLSearchParams(globalThis.location.search).get(name);
     return value === null ? fallback : value;
-  }"""
+  }""",
 )
 private external fun liveConfigValue(name: String, fallback: String): String
 
@@ -2386,7 +2386,7 @@ private external fun liveConfigPresent(name: String): Boolean
   """(name) => {
     const value = new URLSearchParams(globalThis.location.search).get(name);
     return value === '1' || value === 'true';
-  }"""
+  }""",
 )
 private external fun liveConfigFlag(name: String): Boolean
 
@@ -2407,7 +2407,7 @@ private external fun liveConfigFlag(name: String): Boolean
     return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   }
   return 'nonce-' + Date.now().toString(16) + '-' + Math.random().toString(16).slice(2);
-}"""
+}""",
 )
 private external fun livePageNonce(): String
 
@@ -2442,7 +2442,7 @@ private external fun publishUndrawn(key: String, json: String)
   """() => {
   globalThis.composeUiBuilderBoot?.done();
   document.getElementById('ui-builder-boot')?.remove();
-}"""
+}""",
 )
 internal external fun dismissBootScreen()
 
@@ -2459,7 +2459,7 @@ private external fun recordStartupMark(name: String)
         globalThis.__uiBuilderStartup.marks['editor-ready'] !== undefined) return;
     boot.mark('editor-ready');
     requestAnimationFrame(() => requestAnimationFrame(() => boot.mark('editor-paint-opportunity')));
-  }"""
+  }""",
 )
 private external fun recordEditorStartupReady()
 
@@ -2476,7 +2476,7 @@ internal external fun bootPhase(text: String)
     state.protocolReceipts.push({ kind, revision, sequence, receivedAtMs: performance.now() });
     if (state.protocolReceipts.length > 512) state.protocolReceipts.shift();
     globalThis.__uiBuilderPerformance = state;
-  }"""
+  }""",
 )
 internal external fun recordProtocolReceipt(kind: String, revision: Int, sequence: Long)
 
@@ -2491,7 +2491,7 @@ internal external fun recordProtocolReceipt(kind: String, revision: Int, sequenc
     });
     if (state.authoritativeReceipts.length > 512) state.authoritativeReceipts.shift();
     globalThis.__uiBuilderPerformance = state;
-  }"""
+  }""",
 )
 internal external fun recordAuthoritativeReceipt(revision: Int, sequence: Long)
 
@@ -2506,7 +2506,7 @@ internal external fun recordAuthoritativeReceipt(revision: Int, sequence: Long)
       name, revision, startedAtMs, completedAtMs, durationMs: completedAtMs - startedAtMs
     });
     if (state.phases.length > 512) state.phases.shift();
-  }"""
+  }""",
 )
 internal external fun recordPerformancePhase(
   name: String,
@@ -2522,7 +2522,7 @@ internal external fun recordPerformancePhase(
       wasmRenderable,
       plannedOrUnsupportedComponentIds: pendingIds ? pendingIds.split(',') : []
     };
-  }"""
+  }""",
 )
 internal external fun publishCapabilityDiagnostics(
   structurallyValid: Boolean,
@@ -2537,7 +2537,7 @@ internal external fun publishCapabilityDiagnostics(
       selections: JSON.parse(selectionsJson)
     };
     document.documentElement.dataset.uiBuilderCollaborators = String(globalThis.__uiBuilderPresence.actorIds.length);
-  }"""
+  }""",
 )
 internal external fun publishPresenceManifest(actorIds: String, selections: String)
 
@@ -2545,7 +2545,7 @@ internal external fun publishPresenceManifest(actorIds: String, selections: Stri
   """(state) => {
     globalThis.__uiBuilderSocketState = state;
     document.documentElement.dataset.uiBuilderSocketState = state;
-  }"""
+  }""",
 )
 internal external fun publishSocketState(state: String)
 
@@ -2599,7 +2599,7 @@ internal external fun publishSocketState(state: String)
       }
     });
     settle(manifest.generation.stabilityFrames);
-  }"""
+  }""",
 )
 internal external fun publishInspection(json: String)
 
@@ -2720,7 +2720,7 @@ internal fun publishEditorState(state: UiBuilderEditorState) {
       environment: { widthDp, heightDp, density, fontScale, locale, theme, layoutDirection }
     };
     document.documentElement.dataset.uiBuilderEditorRevision = String(revision);
-  }"""
+  }""",
 )
 private external fun publishEditorManifest(
   revision: Int,
@@ -2750,7 +2750,7 @@ private external fun publishEditorManifest(
     globalThis.__uiBuilderEditorCanvas = {
       ...(globalThis.__uiBuilderEditorCanvas || {}), sourceWidthDp, sourceHeightDp, scale
     };
-  }"""
+  }""",
 )
 internal external fun publishEditorCanvasMetrics(
   sourceWidthDp: Int,
@@ -2769,7 +2769,7 @@ internal fun publishEditorCanvasBounds(bounds: androidx.compose.ui.geometry.Rect
       ...current,
       bounds: { left, top, right, bottom, width: right - left, height: bottom - top }
     };
-  }"""
+  }""",
 )
 private external fun publishEditorCanvasBoundsValues(
   left: Float,
@@ -2781,7 +2781,7 @@ private external fun publishEditorCanvasBoundsValues(
 @JsFun(
   """(hovered, label) => {
     globalThis.__uiBuilderEditorDropTarget = { hovered, label };
-  }"""
+  }""",
 )
 internal external fun publishEditorDropTarget(hovered: Boolean, label: String)
 
@@ -2849,7 +2849,7 @@ private fun pinnedComponentsKey(catalogSystemId: String): String =
     } catch (e) {
       return '';
     }
-  }"""
+  }""",
 )
 private external fun readBrowserSetting(key: String): String
 
@@ -2859,7 +2859,7 @@ private external fun readBrowserSetting(key: String): String
       if (value === '') globalThis.localStorage?.removeItem(key);
       else globalThis.localStorage?.setItem(key, value);
     } catch (e) {}
-  }"""
+  }""",
 )
 private external fun writeBrowserSetting(key: String, value: String)
 
@@ -2955,7 +2955,7 @@ internal fun forkDesignIntoBrowser(
         newDesignId = newDesignId,
         server = pageOrigin(),
         nowEpochMillis = browserNowMillis(),
-      )
+      ),
     )
     null
   } catch (failure: LocalDesignStorageException) {
@@ -2987,7 +2987,7 @@ internal fun takeDesignOffline(
         sequence = sequence,
         server = pageOrigin(),
         nowEpochMillis = browserNowMillis(),
-      )
+      ),
     )
     null
   } catch (failure: LocalDesignStorageException) {
@@ -3033,7 +3033,7 @@ private fun Color.toCssColor(): String {
   url.pathname = path;
   url.hash = '';
   globalThis.location.assign(url.toString());
-}"""
+}""",
 )
 private external fun openDesignSharingAt(path: String)
 
@@ -3053,7 +3053,7 @@ internal suspend fun awaitBrowserPaintOpportunity(): Unit =
   // Hidden tabs can suspend animation frames. They must still finish background initialization.
   const timer = setTimeout(finish, 250);
   requestAnimationFrame(() => requestAnimationFrame(finish));
-}"""
+}""",
 )
 private external fun afterBrowserPaint(ready: () -> Unit)
 
@@ -3073,7 +3073,7 @@ internal suspend fun renameServerDesign(designId: String, title: String): String
             .buildJsonObject { put("title", kotlinx.serialization.json.JsonPrimitive(title)) }
             .toString(),
           true,
-        )
+        ),
       )
     } catch (failure: Exception) {
       return failure.message ?: "the server could not be reached"

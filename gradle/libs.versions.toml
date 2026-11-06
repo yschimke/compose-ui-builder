@@ -22,8 +22,8 @@
 java-server = "17"
 java-ui-builder = "21"
 kotlin = "2.4.21"
-ktfmt = "0.27.0"
-ktfmt-cli = "0.64"
+ktfmt = "0.28.0"
+ktfmt-cli = "0.65"
 # Also consumed by compose-preview-ide through its pinned source version catalog.
 intellij-platform-gradle = "2.20.0"
 compose-multiplatform = "1.12.2"
@@ -411,7 +411,7 @@ wearcmp-compose-foundation = { module = "ee.schimke.wearcmp:wear-compose-foundat
 material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "material-icons-extended" }
 material-icons-extended-desktop = { module = "org.jetbrains.compose.material:material-icons-extended-desktop", version.ref = "material-icons-extended" }
 material-icons-core-desktop = { module = "org.jetbrains.compose.material:material-icons-core-desktop", version.ref = "material-icons-extended" }
-ktfmt-cli = { module = "com.facebook:ktfmt", version.ref = "ktfmt-cli" }
+ktfmt-cli = { module = "org.jetbrains.kotlinx:ktfmt", version.ref = "ktfmt-cli" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

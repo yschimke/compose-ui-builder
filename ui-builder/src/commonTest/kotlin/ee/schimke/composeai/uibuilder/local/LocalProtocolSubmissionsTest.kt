@@ -75,8 +75,8 @@ class LocalProtocolSubmissionsTest {
             buildJsonArray {
               add(
                 Json.parseToJsonElement(
-                  """{"type":"padding","startDp":8,"topDp":8,"endDp":8,"bottomDp":8}"""
-                )
+                  """{"type":"padding","startDp":8,"topDp":8,"endDp":8,"bottomDp":8}""",
+                ),
               )
             },
         ),
@@ -131,7 +131,7 @@ class LocalProtocolSubmissionsTest {
             clientId = "client",
             baseRevision = 4,
             targetOperationId = "op-1",
-          )
+          ),
         )
         .toProtocolSubmission("tester", "client", 4)
         .toLocalSubmission()

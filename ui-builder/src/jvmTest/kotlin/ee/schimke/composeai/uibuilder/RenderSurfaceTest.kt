@@ -31,9 +31,9 @@ class RenderSurfaceTest {
                   "type" to JsonPrimitive("size"),
                   "widthDp" to JsonPrimitive(10),
                   "heightDp" to JsonPrimitive(12),
-                )
-              )
-            )
+                ),
+              ),
+            ),
           ),
       )
     val document =

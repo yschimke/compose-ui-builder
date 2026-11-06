@@ -33,8 +33,8 @@ class RemoteDrawingPolylineExportTest {
             "modifiers":[{"type":"size","widthDp":96,"heightDp":96}],
             "slots":{"ops":["wave"]}},
           "wave":{"id":"wave","componentId":"draw/polyline","properties":{$properties}}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private val wave =
@@ -47,14 +47,14 @@ class RemoteDrawingPolylineExportTest {
       "style":{"type":"enum","value":"stroke"},
       "strokeWidthDp":{"type":"float","value":2},
       "color":{"type":"color","value":"#FF6750A4"}
-      """
+      """,
     )
 
   @Test
   fun `points are a path built per index with live coordinates`() {
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(wave, packageName = "proof.draw")
+          WearWidgetCodeExporter.export(wave, packageName = "proof.draw"),
         )
         .source
     File("build/draw-proof")
@@ -84,7 +84,7 @@ class RemoteDrawingPolylineExportTest {
       )) {
       val refused =
         assertIs<WearWidgetCodeExporter.Result.Refused>(
-          WearWidgetCodeExporter.export(document(properties))
+          WearWidgetCodeExporter.export(document(properties)),
         )
       assertTrue(refused.reasons.any { reason in it }, refused.reasons.toString())
     }
@@ -97,7 +97,7 @@ class RemoteDrawingPolylineExportTest {
     assertTrue(
       UiDrawing.BY_ID.getValue(UiDrawing.POLYLINE).properties.any {
         it is UiDrawing.Property.Number && it.name == "count" && it.literal
-      }
+      },
     )
   }
 }

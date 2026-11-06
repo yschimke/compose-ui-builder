@@ -53,7 +53,7 @@ class WearServedRecordExportTest {
         nodes =
           base.nodes +
             ("wear-list" to list.copy(slots = mapOf("items" to listOf("card")))) +
-            ("card" to UiBuilderNode(id = "card", componentId = id))
+            ("card" to UiBuilderNode(id = "card", componentId = id)),
       )
 
     val generated = UiBuilderEditorReducer(catalog, catalogRecord = record).generatedCode(document)

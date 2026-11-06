@@ -39,7 +39,7 @@ class WearCanvasDrawsRealComponentsTest {
     val file =
       File(
           System.getProperty("uiBuilderDesignFixturesDir")
-            ?: "../docs/design/fixtures/ui-builder/designs"
+            ?: "../docs/design/fixtures/ui-builder/designs",
         )
         .resolve("google-home-wear.json")
     assertTrue(file.isFile, "missing the Wear design fixture at $file")
@@ -103,8 +103,8 @@ class WearCanvasDrawsRealComponentsTest {
               ("home-list" to
                 list.copy(
                   slots =
-                    list.slots + ("items" to listOf("empty-group") + list.slots.getValue("items"))
-                ))
+                    list.slots + ("items" to listOf("empty-group") + list.slots.getValue("items")),
+                )),
         )
       var unrolled by mutableStateOf(true)
       setContent { WearCatalogAdapters { UiBuilderSurface(withGroup, unrolled = unrolled) } }

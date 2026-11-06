@@ -36,7 +36,7 @@ class NavigationSuiteUnrolledTest {
           Box(
             Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
               .requiredWidth(1280.dp)
-              .requiredHeightIn(min = 800.dp)
+              .requiredHeightIn(min = 800.dp),
           ) {
             CanvasExtentLayout(Modifier.fillMaxSize()) {
               UiBuilderSurface(designFixtureDocument(designId), unrolled = true)

@@ -48,7 +48,7 @@ class McpAppJsonRpcBridgeTest {
       json(
         """{"protocolVersion":"2026-01-26",
             "appInfo":{"name":"compose-ui-builder","version":"3.70.0"},
-            "appCapabilities":{"availableDisplayModes":["fullscreen","inline"]}}"""
+            "appCapabilities":{"availableDisplayModes":["fullscreen","inline"]}}""",
       ),
       params,
     )
@@ -76,7 +76,7 @@ class McpAppJsonRpcBridgeTest {
     assertEquals(
       "resources/read" to
         json(
-          """{"uri":"host-resource://a","_meta":{"openai/resource":{"representation":"text"}}}"""
+          """{"uri":"host-resource://a","_meta":{"openai/resource":{"representation":"text"}}}""",
         ),
       transport.requests.single(),
     )
@@ -170,8 +170,8 @@ class McpAppJsonRpcBridgeTest {
         McpAppMessage(
           kotlinx.serialization.json.buildJsonArray {
             add(json("""{"type":"text","text":"Make it blue"}"""))
-          }
-        )
+          },
+        ),
       )
     }
 
@@ -179,7 +179,7 @@ class McpAppJsonRpcBridgeTest {
       "ui/message" to
         json(
           """{"role":"user","content":[{"type":"text","text":"Make it blue"}],
-              "_meta":{"openai/message":{"target":"active","send":true}}}"""
+              "_meta":{"openai/message":{"target":"active","send":true}}}""",
         ),
       transport.requests.last(),
     )

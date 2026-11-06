@@ -92,9 +92,9 @@ class CatalogRowRefusalTest {
                           mapOf(
                             "type" to JsonPrimitive("string"),
                             "value" to JsonPrimitive(label),
-                          )
-                        )
-                    )
+                          ),
+                        ),
+                    ),
                   ),
               ),
             )
@@ -109,7 +109,7 @@ class CatalogRowRefusalTest {
       roots = listOf("screen"),
       nodes =
         mapOf(
-          "screen" to UiBuilderNode(id = "screen", componentId = WearScreenCodeExporter.SCAFFOLD)
+          "screen" to UiBuilderNode(id = "screen", componentId = WearScreenCodeExporter.SCAFFOLD),
         ),
     )
 
@@ -127,7 +127,7 @@ class CatalogRowRefusalTest {
             "heightDp" to JsonPrimitive(1400),
             "density" to JsonPrimitive(2.0),
             "theme" to JsonPrimitive("dark"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = roots,

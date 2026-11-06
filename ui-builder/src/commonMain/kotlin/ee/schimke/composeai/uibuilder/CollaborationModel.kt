@@ -200,8 +200,8 @@ internal fun UiBuilderDocument.withValueAt(
         node.copy(
           component =
             JsonObject(
-              if (value == null) placement - "arguments" else placement + ("arguments" to value)
-            )
+              if (value == null) placement - "arguments" else placement + ("arguments" to value),
+            ),
         )
       }
       PropertyTarget.StateVariable,
@@ -220,7 +220,7 @@ internal fun UiBuilderDocument.withComponent(key: String, value: JsonElement?): 
   val after = componentRootOf(value)
   val declared =
     copy(
-      components = JsonObject(if (value == null) components - key else components + (key to value))
+      components = JsonObject(if (value == null) components - key else components + (key to value)),
     )
   var roots = declared.roots
   if (after != null && after in roots && roots.size > 1) roots = roots - after
@@ -528,7 +528,7 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
         nodes =
           document.nodes +
             (nodeId to
-              node.copy(properties = JsonObject(node.properties + (property to encodedValue))))
+              node.copy(properties = JsonObject(node.properties + (property to encodedValue)))),
       )
     // The wrapper question first: a `string` on an `allowedValues` property also passes `jsonType`.
     // See `CapabilityValidator.writeWrapperIssue`.

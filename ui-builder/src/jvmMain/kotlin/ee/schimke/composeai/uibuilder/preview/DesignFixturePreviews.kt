@@ -174,7 +174,7 @@ private val pinnedCatalogs = HashMap<String, CapabilityCatalog?>()
 internal fun designFixtureDocument(designId: String): UiBuilderDocument =
   designFixtureDocuments.getOrPut(designId) {
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(previewResource("/designs/$designId.json")).jsonObject
+        Json.parseToJsonElement(previewResource("/designs/$designId.json")).jsonObject,
       )
       .document
   }

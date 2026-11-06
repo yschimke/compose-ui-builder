@@ -24,16 +24,16 @@ class HostDesignSeedingTest {
       """{"schema":"compose-ui-builder-document/v1-candidate","id":"published-card","title":"Published card","revision":19,
       "catalogPin":{"systemId":"wear-m3","catalogRevision":"candidate","capabilityDigest":"candidate","nativeRuntimeId":"candidate"},
       "environment":{"widthDp":192,"heightDp":192,"density":2.0,"theme":"dark","locale":"en-US","fontScale":1.0,"layoutDirection":"ltr","exportDevices":["id:pixel_6"]},"stateVariables":{},"roots":["root"],
-      "nodes":{"root":{"id":"root","componentId":"wear-m3/card","properties":{},"modifiers":[],"slots":{}}}}"""
+      "nodes":{"root":{"id":"root","componentId":"wear-m3/card","properties":{},"modifiers":[],"slots":{}}}}""",
     )
 
   private fun templates(revision: String = this.revision) =
     localDesignJson.encodeToString(
       CatalogTemplateDocumentsV1.Builder(
-          CatalogReferenceV1("wear-m3", revision, "candidate", runtime)
+          CatalogReferenceV1("wear-m3", revision, "candidate", runtime),
         )
         .also { it.templates = mapOf("card" to template.toDesignDocumentV1()) }
-        .build()
+        .build(),
     )
 
   @Test

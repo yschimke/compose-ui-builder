@@ -102,7 +102,7 @@ class CommentNotificationsControllerTest {
             hasNotification = false,
             userAgent = IPHONE_SAFARI,
             maxTouchPoints = 5,
-          )
+          ),
       )
     val controller = CommentNotificationsController(host)
     controller.load()
@@ -132,7 +132,7 @@ class CommentNotificationsControllerTest {
     assertEquals(
       PushAvailability.Unsupported,
       pushAvailability(
-        READY.copy(hasPushManager = false, userAgent = IPHONE_SAFARI, standalone = true)
+        READY.copy(hasPushManager = false, userAgent = IPHONE_SAFARI, standalone = true),
       ),
     )
     // The iPad that says it is a Mac.

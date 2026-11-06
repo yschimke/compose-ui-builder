@@ -72,10 +72,10 @@ class UiBuilderAssetsTest {
     assertEquals("sha256:bb", remote.storageKey)
     // The registry wins over the built-in key of the same name.
     assertIs<ResolvedUiBuilderAsset.Uploaded>(
-      document.resolveAsset(ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY)
+      document.resolveAsset(ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY),
     )
     assertIs<ResolvedUiBuilderAsset.ProjectOwned>(
-      document(node("p", "x")).resolveAsset(ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY)
+      document(node("p", "x")).resolveAsset(ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY),
     )
     assertEquals(ResolvedUiBuilderAsset.Generated, document.resolveAsset(GATE0_COVER_ASSET_KEY))
     assertEquals(
@@ -166,7 +166,7 @@ class UiBuilderAssetsTest {
             put("type", "size")
             put("widthDp", 40)
             put("heightDp", 40)
-          }
+          },
         )
       },
     )

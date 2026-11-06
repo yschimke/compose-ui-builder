@@ -32,8 +32,8 @@ class RemoteRichnessWireTest {
               "locale":"en-US","fontScale":1.0,"layoutDirection":"ltr"}
             """
               .trimIndent(),
-          )
-        ) as JsonObject
+          ),
+        ) as JsonObject,
       )
       .let { gauge ->
         val canvas = gauge.nodes.getValue("canvas")
@@ -48,10 +48,10 @@ class RemoteRichnessWireTest {
                         Json.parseToJsonElement(
                           """{"type":"remoteCall","name":"border","args":{
                             "width":{"type":"float","value":2},
-                            "color":{"type":"colorToken","value":"primary"}}}"""
-                        )
-                    )
-                ))
+                            "color":{"type":"colorToken","value":"primary"}}}""",
+                        ),
+                    ),
+                )),
         )
       }
 

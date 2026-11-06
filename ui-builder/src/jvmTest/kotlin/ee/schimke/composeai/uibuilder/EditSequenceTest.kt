@@ -37,7 +37,7 @@ class EditSequenceTest {
   private val generator = UiBuilderTreeGenerator(catalog, reducer)
   private val jetcaster =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val blank = blankUiBuilderDocument("edited", jetcaster.catalogPin, jetcaster.environment)

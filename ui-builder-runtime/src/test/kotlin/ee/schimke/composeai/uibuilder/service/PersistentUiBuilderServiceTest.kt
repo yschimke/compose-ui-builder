@@ -52,7 +52,7 @@ class PersistentUiBuilderServiceTest {
     assertEquals(
       documentHash(document),
       documentHash(
-        document.copy(home = DesignHomeV1.Server("https://preview.coo.ee", document.id))
+        document.copy(home = DesignHomeV1.Server("https://preview.coo.ee", document.id)),
       ),
     )
   }
@@ -72,7 +72,7 @@ class PersistentUiBuilderServiceTest {
     assertTrue(documentRetentionBytes(homed) > documentRetentionBytes(unhomed))
     assertTrue(
       limits.retainedRevisionsFor(documentRetentionBytes(unhomed)) >
-        limits.minimumRetainedRevisionSnapshots
+        limits.minimumRetainedRevisionSnapshots,
     )
     assertEquals(
       limits.minimumRetainedRevisionSnapshots,
@@ -91,13 +91,13 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ExportDocument(source, ExportFormatV1.COMPOSE),
-      )
+      ),
     )
     assertEquals(source, requests.single().document)
     assertEquals(27, requests.single().revision)
     assertEquals(source.id, requests.single().designId)
     assertIs<UiBuilderServiceResponse.Error>(
-      execute(service, owner, UiBuilderServiceRequest.GetSnapshot(source.id, null))
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot(source.id, null)),
     )
     // A stored design with the same ID is never read or replaced by supplied-source export.
     create(service)
@@ -106,11 +106,11 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ExportDocument(source, ExportFormatV1.COMPOSE),
-      )
+      ),
     )
     val stored =
       assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.GetSnapshot(source.id, null))
+        execute(service, owner, UiBuilderServiceRequest.GetSnapshot(source.id, null)),
       )
     assertEquals(0, stored.snapshot.state.document.revision)
     val invalid =
@@ -120,7 +120,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ExportDocument(invalid, ExportFormatV1.COMPOSE),
-      )
+      ),
     )
     assertEquals(2, requests.size)
   }
@@ -133,7 +133,7 @@ class PersistentUiBuilderServiceTest {
     for (format in listOf(ExportFormatV1.PNG, ExportFormatV1.JSON, ExportFormatV1.RC)) {
       val result =
         assertIs<UiBuilderServiceResponse.Error>(
-          execute(service, owner, UiBuilderServiceRequest.ExportDocument(document(), format))
+          execute(service, owner, UiBuilderServiceRequest.ExportDocument(document(), format)),
         )
       assertEquals(ServiceErrorCodeV1.BAD_REQUEST, result.error.code)
       assertContains(result.error.message, "disabled in this build")
@@ -169,20 +169,20 @@ class PersistentUiBuilderServiceTest {
           components = mapOf("cell" to DesignComponentV1("Cell", "body")),
         )
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service(storage), owner, UiBuilderServiceRequest.CreateDesign(placed))
+      execute(service(storage), owner, UiBuilderServiceRequest.CreateDesign(placed)),
     )
     val restored = currentDocument(service(storage))
     assertEquals(placed, restored.copy(createdAtEpochMillis = null, updatedAtEpochMillis = null))
     val cyclic =
       placed.copy(
-        nodes = placed.nodes + ("body" to placed.nodes.getValue("first").copy(id = "body"))
+        nodes = placed.nodes + ("body" to placed.nodes.getValue("first").copy(id = "body")),
       )
     assertIs<UiBuilderServiceResponse.Error>(
-      execute(service(), owner, UiBuilderServiceRequest.CreateDesign(cyclic))
+      execute(service(), owner, UiBuilderServiceRequest.CreateDesign(cyclic)),
     )
     val orphan = placed.copy(components = emptyMap())
     assertIs<UiBuilderServiceResponse.Error>(
-      execute(service(), owner, UiBuilderServiceRequest.CreateDesign(orphan))
+      execute(service(), owner, UiBuilderServiceRequest.CreateDesign(orphan)),
     )
   }
 
@@ -198,7 +198,7 @@ class PersistentUiBuilderServiceTest {
     assertEquals(
       DesignAccessActionV1.entries,
       assertIs<UiBuilderServiceResponse.DesignActions>(
-          execute(service, owner, UiBuilderServiceRequest.GetDesignActions("design"))
+          execute(service, owner, UiBuilderServiceRequest.GetDesignActions("design")),
         )
         .actions,
     )
@@ -214,7 +214,7 @@ class PersistentUiBuilderServiceTest {
             viewer.actorId,
             DesignAccessRoleV1.VIEWER,
             listOf(DesignAccessActionV1.READ, DesignAccessActionV1.EXPORT),
-          )
+          ),
         ),
       ),
     )
@@ -224,7 +224,7 @@ class PersistentUiBuilderServiceTest {
     assertEquals(
       listOf(DesignAccessActionV1.READ, DesignAccessActionV1.EXPORT),
       assertIs<UiBuilderServiceResponse.DesignActions>(
-          execute(service, viewer, UiBuilderServiceRequest.GetDesignActions("design"))
+          execute(service, viewer, UiBuilderServiceRequest.GetDesignActions("design")),
         )
         .actions,
     )
@@ -249,7 +249,7 @@ class PersistentUiBuilderServiceTest {
             service,
             AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = owner.actorId),
             UiBuilderServiceRequest.GetDesignActions("design"),
-          )
+          ),
         )
         .actions,
     )
@@ -282,10 +282,10 @@ class PersistentUiBuilderServiceTest {
                   UiBuilderPublicAccess.ANYONE_ACTOR_ID,
                   DesignAccessRoleV1.EDITOR,
                   DesignAccessActionV1.entries,
-                )
+                ),
               ),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -301,19 +301,19 @@ class PersistentUiBuilderServiceTest {
               UiBuilderPublicAccess.ANYONE_ACTOR_ID,
               DesignAccessRoleV1.VIEWER,
               UiBuilderPublicAccess.PUBLIC_ACTIONS,
-            )
+            ),
           ),
         ),
-      )
+      ),
     )
 
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, stranger, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, stranger, UiBuilderServiceRequest.OpenDesign("design")),
     )
     assertEquals(
       UiBuilderPublicAccess.PUBLIC_ACTIONS,
       assertIs<UiBuilderServiceResponse.DesignActions>(
-          execute(service, stranger, UiBuilderServiceRequest.GetDesignActions("design"))
+          execute(service, stranger, UiBuilderServiceRequest.GetDesignActions("design")),
         )
         .actions,
     )
@@ -324,24 +324,24 @@ class PersistentUiBuilderServiceTest {
             service,
             stranger,
             UiBuilderServiceRequest.ApplyOperation(
-              batch("public-write", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+              batch("public-write", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1())),
             ),
-          )
+          ),
         )
         .code,
     )
     // Readable by everyone is not "mine": a stranger's list stays empty, the owner's does not.
     assertTrue(
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, stranger, UiBuilderServiceRequest.ListDesigns(null, 10))
+          execute(service, stranger, UiBuilderServiceRequest.ListDesigns(null, 10)),
         )
         .designs
-        .isEmpty()
+        .isEmpty(),
     )
     assertEquals(
       listOf("design"),
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+          execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10)),
         )
         .designs
         .map { it.designId },
@@ -357,22 +357,22 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("add-first", 0, InsertNodeMutationV1(textNode("first"), NodeLocationV1()))
+          batch("add-first", 0, InsertNodeMutationV1(textNode("first"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("edit-first", 1, SetPropertyMutationV1("first", "text", StringValueV1("second")))
+          batch("edit-first", 1, SetPropertyMutationV1("first", "text", StringValueV1("second"))),
         ),
-      )
+      ),
     )
     val listed =
       assertIs<UiBuilderServiceResponse.Revisions>(
-        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design"))
+        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design")),
       )
     assertEquals(2, listed.currentRevision)
     assertEquals(listOf(2L, 1L, 0L), listed.revisions.map { it.revision })
@@ -392,7 +392,7 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 1, "restore-stale"),
-          )
+          ),
         )
         .code,
     )
@@ -402,7 +402,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 2, "restore-1"),
-        )
+        ),
       )
     assertEquals(3, restored.committedRevision)
     // A retry whose first answer was lost replays that answer rather than being refused.
@@ -412,7 +412,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 2, "restore-1"),
-        )
+        ),
       )
     assertTrue(replayed.idempotentReplay)
     assertEquals(3, replayed.committedRevision)
@@ -425,7 +425,7 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             UiBuilderServiceRequest.RestoreRevision("design", 0, baseRevision = 3, "restore-1"),
-          )
+          ),
         )
         .code,
     )
@@ -436,7 +436,7 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "edit-first"),
-          )
+          ),
         )
         .code,
     )
@@ -449,7 +449,7 @@ class PersistentUiBuilderServiceTest {
             service,
             viewer,
             UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "restore-1"),
-          )
+          ),
         )
         .code,
     )
@@ -462,7 +462,7 @@ class PersistentUiBuilderServiceTest {
             service,
             outsider,
             UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "restore-1"),
-          )
+          ),
         )
         .code,
     )
@@ -477,7 +477,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.RestoreRevision("design", 2, baseRevision = 3, "restore-2"),
-      )
+      ),
     )
     assertEquals(
       StringValueV1("second"),
@@ -490,9 +490,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("after-restore", 4, DeleteNodeMutationV1("first"))
+          batch("after-restore", 4, DeleteNodeMutationV1("first")),
         ),
-      )
+      ),
     )
   }
 
@@ -508,7 +508,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
-      )
+      ),
     )
     accepted(
       execute(
@@ -519,18 +519,18 @@ class PersistentUiBuilderServiceTest {
             "insert-before-move",
             0,
             InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()),
-          )
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("delete-before-move", 1, DeleteNodeMutationV1("temporary"))
+          batch("delete-before-move", 1, DeleteNodeMutationV1("temporary")),
         ),
-      )
+      ),
     )
     val updates = mutableListOf<UiBuilderServiceUpdate>()
     val subscription =
@@ -578,7 +578,7 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             request.copy(targetHome = DesignHomeV1.Repo("designs/other.uid")),
-          )
+          ),
         )
         .code,
     )
@@ -595,7 +595,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 2,
               operationId = "stale-move",
             ),
-          )
+          ),
         )
         .code,
     )
@@ -611,7 +611,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 3,
               operationId = "wrong-source-home",
             ),
-          )
+          ),
         )
         .message,
       "source home",
@@ -629,7 +629,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 3,
               operationId = "outsider-move",
             ),
-          )
+          ),
         )
         .code,
     )
@@ -651,9 +651,9 @@ class PersistentUiBuilderServiceTest {
             "browser",
             3,
             "delete-before-move",
-          )
+          ),
         ),
-      )
+      ),
     )
     assertTrue("temporary" in currentDocument(service).nodes)
 
@@ -670,9 +670,9 @@ class PersistentUiBuilderServiceTest {
             "browser",
             4,
             "insert-before-move",
-          )
+          ),
         ),
-      )
+      ),
     )
     assertFalse("temporary" in currentDocument(service).nodes)
     subscription.close()
@@ -689,9 +689,9 @@ class PersistentUiBuilderServiceTest {
             "edit-after-move",
             5,
             InsertNodeMutationV1(textNode("after-restart"), NodeLocationV1()),
-          )
+          ),
         ),
-      )
+      ),
     )
   }
 
@@ -715,7 +715,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
-      )
+      ),
     )
     accepted(
       execute(
@@ -728,7 +728,7 @@ class PersistentUiBuilderServiceTest {
           baseRevision = 0,
           operationId = "consume-burst",
         ),
-      )
+      ),
     )
     val retry =
       UiBuilderServiceRequest.MoveDesignHome(
@@ -755,16 +755,20 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("aged-out-insert", 0, InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()))
+          batch(
+            "aged-out-insert",
+            0,
+            InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()),
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -775,9 +779,9 @@ class PersistentUiBuilderServiceTest {
             "newer-edit",
             1,
             SetPropertyMutationV1("temporary", "text", StringValueV1("newer")),
-          )
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -790,7 +794,7 @@ class PersistentUiBuilderServiceTest {
           baseRevision = 2,
           operationId = "move-home",
         ),
-      )
+      ),
     )
     // The insert outcome is outside the two-entry window, so its id is reusable. Reusing it for a
     // provenance operation must not leave the old insert's undo record addressable under that id.
@@ -805,7 +809,7 @@ class PersistentUiBuilderServiceTest {
           baseRevision = 3,
           operationId = "aged-out-insert",
         ),
-      )
+      ),
     )
     assertEquals(
       RejectionCodeV1.UNKNOWN_OPERATION,
@@ -820,9 +824,9 @@ class PersistentUiBuilderServiceTest {
                 "browser",
                 4,
                 "aged-out-insert",
-              )
+              ),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -836,7 +840,7 @@ class PersistentUiBuilderServiceTest {
     val service = service(storage = storage, clock = clock)
     val home = DesignHomeV1.Server("https://preview.coo.ee", "design")
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document().copy(home = home)))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document().copy(home = home))),
     )
     grant(
       service,
@@ -905,9 +909,9 @@ class PersistentUiBuilderServiceTest {
                 "stale-after-replacement",
                 0,
                 InsertNodeMutationV1(textNode("stale"), NodeLocationV1()),
-              )
+              ),
             ),
-          )
+          ),
         )
         .code,
       "a historical document remains readable, but cannot be a mutation base after replacement",
@@ -924,7 +928,7 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             request.copy(document = localCopy.copy(title = "Different retry")),
-          )
+          ),
         )
         .code,
     )
@@ -935,7 +939,7 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             request.copy(operationId = "stale-replace", baseRevision = 0),
-          )
+          ),
         )
         .code,
     )
@@ -949,7 +953,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 1,
               document = localCopy.copy(home = DesignHomeV1.Repo("designs/design.uid")),
             ),
-          )
+          ),
         )
         .message,
       "home",
@@ -964,7 +968,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 1,
               document = localCopy.copy(id = "other-design"),
             ),
-          )
+          ),
         )
         .message,
       "id",
@@ -979,7 +983,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 1,
               document = localCopy.copy(roots = listOf("missing"), nodes = emptyMap()),
             ),
-          )
+          ),
         )
         .message,
       "missing",
@@ -998,9 +1002,9 @@ class PersistentUiBuilderServiceTest {
             "edit-after-replace",
             1,
             SetPropertyMutationV1("saved", "text", StringValueV1("still editable")),
-          )
+          ),
         ),
-      )
+      ),
     )
   }
 
@@ -1013,7 +1017,8 @@ class PersistentUiBuilderServiceTest {
     storage.bytes =
       LegacyUiBuilderState.encode(
         loaded.copy(
-          designs = mapOf("design" to stored.copy(document = stored.document.copy(id = "wrong-id")))
+          designs =
+            mapOf("design" to stored.copy(document = stored.document.copy(id = "wrong-id"))),
         ),
         LegacyUiBuilderState.Format.V2,
       )
@@ -1031,7 +1036,7 @@ class PersistentUiBuilderServiceTest {
             baseRevision = 0,
             operationId = "refused-repair",
           ),
-        )
+        ),
       )
     assertContains(refused.message, "requested design")
     assertEquals(
@@ -1051,7 +1056,7 @@ class PersistentUiBuilderServiceTest {
           baseRevision = 0,
           operationId = "repair-key",
         ),
-      )
+      ),
     )
     assertEquals(emptyMap(), reopened.adminUnusableDesigns())
     assertEquals("design", currentDocument(reopened).id)
@@ -1078,7 +1083,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 0,
               operationId = "",
             ),
-          )
+          ),
         )
         .message,
       "operation id",
@@ -1095,7 +1100,7 @@ class PersistentUiBuilderServiceTest {
             baseRevision = 0,
             operationId = "oversized-replacement",
           ),
-        )
+        ),
       )
 
     assertContains(rejection.message, "serialized document byte limit")
@@ -1129,7 +1134,7 @@ class PersistentUiBuilderServiceTest {
           roots = listOf("t"),
           nodes =
             mapOf(
-              "t" to textNode("t").copy(properties = mapOf("text" to StringValueV1("refused")))
+              "t" to textNode("t").copy(properties = mapOf("text" to StringValueV1("refused"))),
             ),
         )
 
@@ -1144,7 +1149,7 @@ class PersistentUiBuilderServiceTest {
             baseRevision = 0,
             operationId = "replace-refused",
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_PROPERTY, rejection.code, rejection.message)
     assertEquals("t", rejection.nodeId)
@@ -1164,13 +1169,14 @@ class PersistentUiBuilderServiceTest {
             roots = listOf("fine"),
             nodes =
               mapOf(
-                "fine" to textNode("fine").copy(properties = mapOf("text" to StringValueV1("fine")))
+                "fine" to
+                  textNode("fine").copy(properties = mapOf("text" to StringValueV1("fine"))),
               ),
           ),
           baseRevision = 0,
           operationId = "replace-fine",
         ),
-      )
+      ),
     )
     assertEquals(listOf("fine" to "text"), checked)
   }
@@ -1184,9 +1190,13 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("aged-out-insert", 0, InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()))
+          batch(
+            "aged-out-insert",
+            0,
+            InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()),
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -1197,9 +1207,9 @@ class PersistentUiBuilderServiceTest {
             "newer-edit",
             1,
             SetPropertyMutationV1("temporary", "text", StringValueV1("newer")),
-          )
+          ),
         ),
-      )
+      ),
     )
     // A recorded whole-document rejection pushes the insert's outcome out of the two-entry window;
     // its undo record must leave with it, as it would for an ordinary operation outcome.
@@ -1215,7 +1225,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 0,
               operationId = "stale-replace",
             ),
-          )
+          ),
         )
         .code,
     )
@@ -1226,9 +1236,9 @@ class PersistentUiBuilderServiceTest {
             service,
             owner,
             UiBuilderServiceRequest.ApplyOperation(
-              UiBuilderSubmission.Undo("design", "undo-aged-out", "browser", 2, "aged-out-insert")
+              UiBuilderSubmission.Undo("design", "undo-aged-out", "browser", 2, "aged-out-insert"),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -1254,9 +1264,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("consume-burst", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+          batch("consume-burst", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val stale =
       UiBuilderServiceRequest.ReplaceDesignDocument(
@@ -1286,7 +1296,7 @@ class PersistentUiBuilderServiceTest {
               baseRevision = 1,
               operationId = "current-replace",
             ),
-          )
+          ),
         )
         .message,
       "rate limit",
@@ -1308,13 +1318,13 @@ class PersistentUiBuilderServiceTest {
         service,
         delegate,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("delegated-insert", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+          batch("delegated-insert", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val delta =
       assertIs<UiBuilderServiceResponse.Delta>(
-        execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 10))
+        execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 10)),
       )
     // The edit is attributed to the agent, not to the person it acted for: delegation decides what
     // may be touched and never who touched it.
@@ -1354,7 +1364,7 @@ class PersistentUiBuilderServiceTest {
               service,
               delegate,
               UiBuilderServiceRequest.UpdateDesignAccess("design", 0, listOf(mutation)),
-            )
+            ),
           )
           .code,
       )
@@ -1366,7 +1376,7 @@ class PersistentUiBuilderServiceTest {
 
     val row =
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10))
+          execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10)),
         )
         .designs
         .single()
@@ -1380,17 +1390,17 @@ class PersistentUiBuilderServiceTest {
     assertEquals(
       row.requesterAccess.allowedActions,
       assertIs<UiBuilderServiceResponse.DesignActions>(
-          execute(service, delegate, UiBuilderServiceRequest.GetDesignActions("design"))
+          execute(service, delegate, UiBuilderServiceRequest.GetDesignActions("design")),
         )
         .actions,
     )
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design")),
     )
     assertEquals(
       owner.actorId,
       assertIs<UiBuilderServiceResponse.DesignAccess>(
-          execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design"))
+          execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design")),
         )
         .access
         .ownerActorId,
@@ -1411,7 +1421,7 @@ class PersistentUiBuilderServiceTest {
 
     val row =
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10))
+          execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10)),
         )
         .designs
         .single()
@@ -1436,7 +1446,7 @@ class PersistentUiBuilderServiceTest {
               0,
               listOf(TransferDesignOwnershipMutationV1(delegate.actorId)),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -1452,7 +1462,7 @@ class PersistentUiBuilderServiceTest {
               mayDeleteForPrincipal = true,
             ),
             UiBuilderServiceRequest.DeleteDesign("design"),
-          )
+          ),
         )
         .code,
     )
@@ -1464,7 +1474,7 @@ class PersistentUiBuilderServiceTest {
             service,
             AuthenticatedUiBuilderActor("agent:abc", mayDeleteForPrincipal = true),
             UiBuilderServiceRequest.DeleteDesign("design"),
-          )
+          ),
         )
         .code,
     )
@@ -1484,7 +1494,7 @@ class PersistentUiBuilderServiceTest {
     val service = service()
     val delegate = AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = owner.actorId)
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, delegate, UiBuilderServiceRequest.CreateDesign(document()))
+      execute(service, delegate, UiBuilderServiceRequest.CreateDesign(document())),
     )
 
     val access =
@@ -1500,14 +1510,14 @@ class PersistentUiBuilderServiceTest {
     // The delegate keeps editing through its principal for as long as the grant lives, but
     // managing access stays with the owner's own credential.
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design")),
     )
     assertEquals(
       ServiceErrorCodeV1.FORBIDDEN,
       error(execute(service, delegate, UiBuilderServiceRequest.GetDesignAccess("design"))).code,
     )
     assertIs<UiBuilderServiceResponse.Error>(
-      execute(service, outsider, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, outsider, UiBuilderServiceRequest.OpenDesign("design")),
     )
   }
 
@@ -1520,7 +1530,7 @@ class PersistentUiBuilderServiceTest {
 
     val listed =
       assertIs<UiBuilderServiceResponse.Designs>(
-        execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10))
+        execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10)),
       )
     val row = listed.designs.single()
     assertEquals(owner.actorId, row.ownerActorId)
@@ -1535,7 +1545,7 @@ class PersistentUiBuilderServiceTest {
         service,
         delegate,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("no-write", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+          batch("no-write", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1())),
         ),
       ),
       "a delegate gets no more than its principal was granted",
@@ -1569,11 +1579,11 @@ class PersistentUiBuilderServiceTest {
                   SetLocaleEnvironmentChangeV1("ar-EG"),
                   SetFontScaleEnvironmentChangeV1(1.4),
                   SetLayoutDirectionEnvironmentChangeV1(LayoutDirectionV1.RTL),
-                )
+                ),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(2_000L, accepted.documentUpdatedAtEpochMillis)
     val committed = currentDocument(service)
@@ -1598,9 +1608,9 @@ class PersistentUiBuilderServiceTest {
             "browser",
             1,
             "render-environment",
-          )
+          ),
         ),
-      )
+      ),
     )
     assertEquals(original.environment, currentDocument(service).environment)
   }
@@ -1622,9 +1632,9 @@ class PersistentUiBuilderServiceTest {
             "set-typeface",
             0,
             UpdateEnvironmentMutationV1(listOf(SetTypefaceEnvironmentChangeV1("Space Grotesk"))),
-          )
+          ),
         ),
-      )
+      ),
     )
     assertEquals("Space Grotesk", currentDocument(service).environment.typeface)
 
@@ -1638,9 +1648,9 @@ class PersistentUiBuilderServiceTest {
             "reset-typeface",
             1,
             UpdateEnvironmentMutationV1(listOf(ResetTypefaceEnvironmentChangeV1)),
-          )
+          ),
         ),
-      )
+      ),
     )
     assertNull(currentDocument(service).environment.typeface)
   }
@@ -1654,9 +1664,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     assertEquals(emptyList<DesignModifierV1>(), currentNode(service, "node").modifiers)
 
@@ -1675,9 +1685,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("pad", 1, SetModifiersMutationV1("node", padded))
+          batch("pad", 1, SetModifiersMutationV1("node", padded)),
         ),
-      )
+      ),
     )
     // Order is the contract: padding then fill is a different layout from fill then padding.
     assertEquals(padded, currentNode(service, "node").modifiers)
@@ -1687,9 +1697,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-pad", "browser", 2, "pad")
+          UiBuilderSubmission.Undo("design", "undo-pad", "browser", 2, "pad"),
         ),
-      )
+      ),
     )
     assertEquals(emptyList<DesignModifierV1>(), currentNode(service, "node").modifiers)
 
@@ -1698,9 +1708,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Redo("design", "redo-pad", "browser", 3, "undo-pad")
+          UiBuilderSubmission.Redo("design", "redo-pad", "browser", 3, "undo-pad"),
         ),
-      )
+      ),
     )
     assertEquals(padded, currentNode(service, "node").modifiers)
 
@@ -1710,9 +1720,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("clear", 4, SetModifiersMutationV1("node", emptyList()))
+          batch("clear", 4, SetModifiersMutationV1("node", emptyList())),
         ),
-      )
+      ),
     )
     assertEquals(emptyList<DesignModifierV1>(), currentNode(service, "node").modifiers)
   }
@@ -1726,9 +1736,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
 
     val unknown =
@@ -1737,9 +1747,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("missing", 1, SetModifiersMutationV1("absent", listOf(FillMaxSizeModifierV1)))
+            batch("missing", 1, SetModifiersMutationV1("absent", listOf(FillMaxSizeModifierV1))),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.UNKNOWN_NODE, unknown.code)
 
@@ -1748,9 +1758,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("first", 1, SetModifiersMutationV1("node", listOf(FillMaxWidthModifierV1)))
+          batch("first", 1, SetModifiersMutationV1("node", listOf(FillMaxWidthModifierV1))),
         ),
-      )
+      ),
     )
     // Written from a base revision that predates the first write: accepted, because the chain is a
     // value and the last writer wins, but the other actor is told their read was stale.
@@ -1760,9 +1770,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("second", 1, SetModifiersMutationV1("node", listOf(FillMaxSizeModifierV1)))
+            batch("second", 1, SetModifiersMutationV1("node", listOf(FillMaxSizeModifierV1))),
           ),
-        )
+        ),
       )
     val conflict = stale.conflicts.single()
     assertEquals(ConflictCodeV1.STALE_PROPERTY_WRITE, conflict.code)
@@ -1790,9 +1800,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("declare", 0, SetStateVariableMutationV1("expanded", flag))
+          batch("declare", 0, SetStateVariableMutationV1("expanded", flag)),
         ),
-      )
+      ),
     )
     assertEquals(mapOf("expanded" to flag), currentDocument(service).stateVariables)
 
@@ -1803,9 +1813,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("redeclare", 1, SetStateVariableMutationV1("expanded", nullableFlag))
+          batch("redeclare", 1, SetStateVariableMutationV1("expanded", nullableFlag)),
         ),
-      )
+      ),
     )
     assertEquals(nullableFlag, currentDocument(service).stateVariables.getValue("expanded"))
 
@@ -1817,9 +1827,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-redeclare", "browser", 2, "redeclare")
+          UiBuilderSubmission.Undo("design", "undo-redeclare", "browser", 2, "redeclare"),
         ),
-      )
+      ),
     )
     assertEquals(flag, currentDocument(service).stateVariables.getValue("expanded"))
 
@@ -1828,9 +1838,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("remove", 3, RemoveStateVariableMutationV1("expanded"))
+          batch("remove", 3, RemoveStateVariableMutationV1("expanded")),
         ),
-      )
+      ),
     )
     assertEquals(emptyMap(), currentDocument(service).stateVariables)
 
@@ -1839,9 +1849,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 4, "remove")
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 4, "remove"),
         ),
-      )
+      ),
     )
     assertEquals(flag, currentDocument(service).stateVariables.getValue("expanded"))
   }
@@ -1869,9 +1879,9 @@ class PersistentUiBuilderServiceTest {
               textNode("node").copy(predicate = StateTruthyPredicateV1("query")),
               NodeLocationV1(),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
 
     // The document would render blank rather than fail, which is the failure mode the contract
@@ -1882,9 +1892,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("remove", 1, RemoveStateVariableMutationV1("query"))
+            batch("remove", 1, RemoveStateVariableMutationV1("query")),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
     assertEquals("node", refused.nodeId)
@@ -1898,9 +1908,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("remove-absent", 1, RemoveStateVariableMutationV1("nothing"))
+            batch("remove-absent", 1, RemoveStateVariableMutationV1("nothing")),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, absent.code)
   }
@@ -1928,9 +1938,9 @@ class PersistentUiBuilderServiceTest {
             // a component's body is not an exception to that.
             InsertNodeMutationV1(textNode("cell"), NodeLocationV1(ParentSlotV1("root", "content"))),
             DeclareComponentMutationV1("contribution-cell", cell),
-          )
+          ),
         ),
-      )
+      ),
     )
     assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
 
@@ -1942,9 +1952,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("redeclare", 1, DeclareComponentMutationV1("contribution-cell", renamed))
+          batch("redeclare", 1, DeclareComponentMutationV1("contribution-cell", renamed)),
         ),
-      )
+      ),
     )
     assertEquals(renamed, currentDocument(service).components.getValue("contribution-cell"))
 
@@ -1954,9 +1964,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-redeclare", "browser", 2, "redeclare")
+          UiBuilderSubmission.Undo("design", "undo-redeclare", "browser", 2, "redeclare"),
         ),
-      )
+      ),
     )
     assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
 
@@ -1965,9 +1975,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("remove", 3, RemoveComponentMutationV1("contribution-cell"))
+          batch("remove", 3, RemoveComponentMutationV1("contribution-cell")),
         ),
-      )
+      ),
     )
     assertEquals(emptyMap(), currentDocument(service).components)
 
@@ -1980,9 +1990,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 4, "remove")
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 4, "remove"),
         ),
-      )
+      ),
     )
     assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
   }
@@ -2009,9 +2019,9 @@ class PersistentUiBuilderServiceTest {
               textNode("other"),
               NodeLocationV1(ParentSlotV1("root", "content"), afterNodeId = "cell"),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     val before = currentDocument(service)
     val makeOutcome =
@@ -2035,7 +2045,7 @@ class PersistentUiBuilderServiceTest {
             DeclareComponentMutationV1("cell-key", DesignComponentV1("Cell", "cell")),
             // The body's text becomes the parameter the placement passes.
             SetPropertyMutationV1("cell", "text", BindingValueV1("label")),
-          )
+          ),
         ),
       )
     assertIs<AcceptedOutcomeV1>(
@@ -2053,9 +2063,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-make", "browser", 2, "make")
+          UiBuilderSubmission.Undo("design", "undo-make", "browser", 2, "make"),
         ),
-      )
+      ),
     )
     val undone = currentDocument(service)
     assertEquals(before.roots, undone.roots)
@@ -2093,9 +2103,9 @@ class PersistentUiBuilderServiceTest {
             MoveNodeMutationV1("cell", NodeLocationV1()),
             DeclareComponentMutationV1("cell-key", DesignComponentV1("Cell", "cell")),
             SetPropertyMutationV1("cell", "text", BindingValueV1("label")),
-          )
+          ),
         ),
-      )
+      ),
     )
     val before = currentDocument(service)
 
@@ -2112,9 +2122,9 @@ class PersistentUiBuilderServiceTest {
                 mapOf("label" to StringValueV1("Tue")),
               )
               .build(),
-          )
+          ),
         ),
-      )
+      ),
     )
     val edited = currentDocument(service)
     assertEquals(before.nodes.keys, edited.nodes.keys)
@@ -2133,7 +2143,7 @@ class PersistentUiBuilderServiceTest {
             "wrong",
             2,
             SetComponentArgumentsMutationV1.Builder("root", emptyMap()).build(),
-          )
+          ),
         ),
       )
     assertIs<RejectedOutcomeV1>(
@@ -2146,9 +2156,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-edit", "browser", 2, "edit")
+          UiBuilderSubmission.Undo("design", "undo-edit", "browser", 2, "edit"),
         ),
-      )
+      ),
     )
     assertEquals(before.nodes, currentDocument(service).nodes)
   }
@@ -2166,9 +2176,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("screen", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+          batch("screen", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -2188,9 +2198,9 @@ class PersistentUiBuilderServiceTest {
               ),
               NodeLocationV1(ParentSlotV1("root", "content")),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     val pasted = currentDocument(service)
     assertEquals(listOf("root"), pasted.roots)
@@ -2222,9 +2232,9 @@ class PersistentUiBuilderServiceTest {
               ),
               NodeLocationV1(ParentSlotV1("root", "content")),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
 
     // The obligation this mutation's contract names: a placement whose component is gone draws
@@ -2235,9 +2245,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("remove", 1, RemoveComponentMutationV1("contribution-cell"))
+            batch("remove", 1, RemoveComponentMutationV1("contribution-cell")),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
     assertEquals("placed", refused.nodeId)
@@ -2250,9 +2260,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("remove-absent", 1, RemoveComponentMutationV1("nothing"))
+            batch("remove-absent", 1, RemoveComponentMutationV1("nothing")),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, absent.code)
   }
@@ -2278,9 +2288,9 @@ class PersistentUiBuilderServiceTest {
                 "contribution-cell",
                 DesignComponentV1(name = "ContributionCell", root = "never-inserted"),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
     assertEquals("never-inserted", refused.field)
@@ -2292,9 +2302,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("blank", 0, DeclareComponentMutationV1("", DesignComponentV1("X", "cell")))
+            batch("blank", 0, DeclareComponentMutationV1("", DesignComponentV1("X", "cell"))),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, blank.code)
   }
@@ -2321,9 +2331,9 @@ class PersistentUiBuilderServiceTest {
             0,
             SetStateVariableMutationV1("expanded", flag),
             InsertNodeMutationV1(textNode("node"), NodeLocationV1()),
-          )
+          ),
         ),
-      )
+      ),
     )
 
     val actions = listOf(ToggleActionV1("expanded"))
@@ -2332,9 +2342,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("bind", 1, SetEventBindingMutationV1("node", "click", actions))
+          batch("bind", 1, SetEventBindingMutationV1("node", "click", actions)),
         ),
-      )
+      ),
     )
     assertEquals(mapOf("click" to actions), currentNode(service, "node").eventBindings)
 
@@ -2345,9 +2355,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("unbind", 2, SetEventBindingMutationV1("node", "click", emptyList()))
+          batch("unbind", 2, SetEventBindingMutationV1("node", "click", emptyList())),
         ),
-      )
+      ),
     )
     assertEquals(emptyMap(), currentNode(service, "node").eventBindings)
 
@@ -2356,9 +2366,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-unbind", "browser", 3, "unbind")
+          UiBuilderSubmission.Undo("design", "undo-unbind", "browser", 3, "unbind"),
         ),
-      )
+      ),
     )
     assertEquals(mapOf("click" to actions), currentNode(service, "node").eventBindings)
   }
@@ -2372,18 +2382,18 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.CreateDesign(
-          document().copy(id = "confirmation", title = "Confirmation")
+          document().copy(id = "confirmation", title = "Confirmation"),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("seed", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("seed", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
 
     accepted(
@@ -2399,9 +2409,9 @@ class PersistentUiBuilderServiceTest {
               "click",
               listOf(NavigatePageActionV1("confirmation")),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     assertEquals(
       listOf(NavigatePageActionV1("confirmation")),
@@ -2422,9 +2432,9 @@ class PersistentUiBuilderServiceTest {
                 "click",
                 listOf(NavigatePageActionV1("missing")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, dangling.code)
     assertEquals("node", dangling.nodeId)
@@ -2436,9 +2446,9 @@ class PersistentUiBuilderServiceTest {
         service,
         outsider,
         UiBuilderServiceRequest.CreateDesign(
-          document().copy(id = "private", title = "Private sibling")
+          document().copy(id = "private", title = "Private sibling"),
         ),
-      )
+      ),
     )
     val unreadable =
       rejected(
@@ -2454,9 +2464,9 @@ class PersistentUiBuilderServiceTest {
                 "click",
                 listOf(NavigatePageActionV1("private")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, unreadable.code)
     assertContains(unreadable.message, "unknown design private")
@@ -2482,9 +2492,9 @@ class PersistentUiBuilderServiceTest {
             0,
             SetStateVariableMutationV1("query", text),
             InsertNodeMutationV1(textNode("node"), NodeLocationV1()),
-          )
+          ),
         ),
-      )
+      ),
     )
 
     val undeclared =
@@ -2497,9 +2507,9 @@ class PersistentUiBuilderServiceTest {
               "undeclared",
               1,
               SetEventBindingMutationV1("node", "click", listOf(ToggleActionV1("absent"))),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, undeclared.code)
     assertEquals("node", undeclared.nodeId)
@@ -2517,9 +2527,9 @@ class PersistentUiBuilderServiceTest {
               "not-a-flag",
               1,
               SetEventBindingMutationV1("node", "click", listOf(ToggleActionV1("query"))),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, notAFlag.code)
 
@@ -2538,9 +2548,9 @@ class PersistentUiBuilderServiceTest {
                 "click",
                 listOf(SelectOrClearActionV1("query", JsonPrimitive("a"))),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, notNullable.code)
     assertEquals(emptyMap(), currentNode(service, "node").eventBindings)
@@ -2564,9 +2574,9 @@ class PersistentUiBuilderServiceTest {
                 persistence = StatePersistenceV1.PREVIEW,
               ),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -2577,9 +2587,9 @@ class PersistentUiBuilderServiceTest {
             "bind",
             2,
             SetEventBindingMutationV1("node", "click", listOf(ToggleActionV1("flag"))),
-          )
+          ),
         ),
-      )
+      ),
     )
     val narrowed =
       rejected(
@@ -2599,9 +2609,9 @@ class PersistentUiBuilderServiceTest {
                   persistence = StatePersistenceV1.PREVIEW,
                 ),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, narrowed.code)
     assertEquals("eventBindings.click", narrowed.field)
@@ -2623,7 +2633,7 @@ class PersistentUiBuilderServiceTest {
             "blank-typeface",
             0,
             UpdateEnvironmentMutationV1(listOf(SetTypefaceEnvironmentChangeV1("   "))),
-          )
+          ),
         ),
       )
 
@@ -2649,9 +2659,9 @@ class PersistentUiBuilderServiceTest {
               0,
               UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.2))),
               UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.4))),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(EnvironmentFieldV1.FONT_SCALE, duplicate.environmentField)
 
@@ -2668,11 +2678,11 @@ class PersistentUiBuilderServiceTest {
                 listOf(
                   SetWidthDpEnvironmentChangeV1(412),
                   SetFontScaleEnvironmentChangeV1(0.0),
-                )
+                ),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(EnvironmentFieldV1.FONT_SCALE, invalid.environmentField)
     assertEquals(original, currentDocument(service))
@@ -2691,9 +2701,9 @@ class PersistentUiBuilderServiceTest {
             "dark-theme",
             0,
             UpdateEnvironmentMutationV1(listOf(SetThemeEnvironmentChangeV1(ThemeV1.DARK))),
-          )
+          ),
         ),
-      )
+      ),
     )
 
     val stale =
@@ -2709,11 +2719,11 @@ class PersistentUiBuilderServiceTest {
                 listOf(
                   SetThemeEnvironmentChangeV1(ThemeV1.SYSTEM),
                   SetFontScaleEnvironmentChangeV1(1.4),
-                )
+                ),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     val conflict = assertIs<CommandConflictV1>(stale.conflicts.single())
     assertEquals(ConflictCodeV1.STALE_ENVIRONMENT_WRITE, conflict.code)
@@ -2728,15 +2738,15 @@ class PersistentUiBuilderServiceTest {
     val service = service(exportRequests = exports)
 
     assertIs<UiBuilderServiceResponse.Catalogs>(
-      execute(service, owner, UiBuilderServiceRequest.ListCatalogs)
+      execute(service, owner, UiBuilderServiceRequest.ListCatalogs),
     )
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document()))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document())),
     )
     assertEquals(
       emptyList(),
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, outsider, UiBuilderServiceRequest.ListDesigns(null, 50))
+          execute(service, outsider, UiBuilderServiceRequest.ListDesigns(null, 50)),
         )
         .designs,
     )
@@ -2763,14 +2773,14 @@ class PersistentUiBuilderServiceTest {
                   viewer.actorId,
                   DesignAccessRoleV1.VIEWER,
                   listOf(DesignAccessActionV1.READ),
-                )
+                ),
               ),
           ),
-        )
+        ),
       )
     assertEquals(1, access.access.accessRevision)
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, viewer, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, viewer, UiBuilderServiceRequest.OpenDesign("design")),
     )
     assertEquals(
       ServiceErrorCodeV1.FORBIDDEN,
@@ -2779,9 +2789,9 @@ class PersistentUiBuilderServiceTest {
             service,
             viewer,
             UiBuilderServiceRequest.ApplyOperation(
-              batch("viewer-write", 0, InsertNodeMutationV1(textNode("denied"), NodeLocationV1()))
+              batch("viewer-write", 0, InsertNodeMutationV1(textNode("denied"), NodeLocationV1())),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -2792,7 +2802,7 @@ class PersistentUiBuilderServiceTest {
             service,
             viewer,
             UiBuilderServiceRequest.ExportDesign("design", null, ExportFormatV1.SVG),
-          )
+          ),
         )
         .code,
     )
@@ -2808,7 +2818,7 @@ class PersistentUiBuilderServiceTest {
               0,
               listOf(RevokeActorAccessMutationV1(viewer.actorId)),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -2825,10 +2835,10 @@ class PersistentUiBuilderServiceTest {
                 CreateDesignShareLinkMutationV1(
                   DesignAccessRoleV1.VIEWER,
                   listOf(DesignAccessActionV1.READ),
-                )
+                ),
               ),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -2839,18 +2849,18 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+            batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
           ),
-        )
+        ),
       )
     assertEquals(1, accepted.sequence)
     assertEquals(1_000L, accepted.documentUpdatedAtEpochMillis)
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1))
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1)),
     )
     val committed =
       assertIs<UiBuilderServiceResponse.Delta>(
-          execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 50))
+          execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 50)),
         )
         .delta
         .operations
@@ -2872,18 +2882,18 @@ class PersistentUiBuilderServiceTest {
             1,
           ),
         ),
-      )
+      ),
     )
 
     val ownerAccess =
       assertIs<UiBuilderServiceResponse.DesignAccess>(
-        execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design"))
+        execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design")),
       )
     assertEquals("owner", ownerAccess.access.ownerActorId)
     assertEquals(
       listOf("design"),
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 50))
+          execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 50)),
         )
         .designs
         .map { it.designId },
@@ -2902,7 +2912,7 @@ class PersistentUiBuilderServiceTest {
           service,
           viewer,
           UiBuilderServiceRequest.ExportDesign("design", 1, ExportFormatV1.SVG),
-        )
+        ),
       )
     assertEquals("<svg data-revision=\"1\"/>", exported.artifact.content)
     assertEquals(viewer, exports.single().actor)
@@ -2916,7 +2926,7 @@ class PersistentUiBuilderServiceTest {
 
     val firstRequest =
       UiBuilderServiceRequest.ApplyOperation(
-        batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+        batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1())),
       )
     val first = accepted(execute(service, owner, firstRequest))
     val retry = accepted(execute(service, owner, firstRequest))
@@ -2926,7 +2936,7 @@ class PersistentUiBuilderServiceTest {
 
     val rejectedRequest =
       UiBuilderServiceRequest.ApplyOperation(
-        batch("bad", 1, SetPropertyMutationV1("missing", "text", StringValueV1("bad")))
+        batch("bad", 1, SetPropertyMutationV1("missing", "text", StringValueV1("bad"))),
       )
     val rejected = rejected(execute(service, owner, rejectedRequest))
     val rejectedRetry = rejected(execute(service, owner, rejectedRequest))
@@ -2957,9 +2967,9 @@ class PersistentUiBuilderServiceTest {
             "two",
             1,
             InsertNodeMutationV1(textNode("two"), NodeLocationV1(ParentSlotV1("one", "content"))),
-          )
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -2973,9 +2983,9 @@ class PersistentUiBuilderServiceTest {
               textNode("three"),
               NodeLocationV1(ParentSlotV1("one", "content"), afterNodeId = "two"),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     val compacted = execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 50))
     assertEquals(ServiceErrorCodeV1.SNAPSHOT_REQUIRED, error(compacted).code)
@@ -3056,9 +3066,9 @@ class PersistentUiBuilderServiceTest {
                 InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()),
                 SetPropertyMutationV1("missing", "text", StringValueV1("bad")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.UNKNOWN_NODE, failed.code)
     assertFalse(
@@ -3066,7 +3076,7 @@ class PersistentUiBuilderServiceTest {
         snapshot(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")))
           .state
           .document
-          .nodes
+          .nodes,
     )
 
     accepted(
@@ -3074,27 +3084,27 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("set", 1, SetPropertyMutationV1("node", "text", StringValueV1("First")))
+          batch("set", 1, SetPropertyMutationV1("node", "text", StringValueV1("First"))),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-set", "browser", 2, "set")
+          UiBuilderSubmission.Undo("design", "undo-set", "browser", 2, "set"),
         ),
-      )
+      ),
     )
     assertNull(currentNode(service, "node").properties["text"])
     accepted(
@@ -3102,9 +3112,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Redo("design", "redo-set", "browser", 3, "undo-set")
+          UiBuilderSubmission.Redo("design", "redo-set", "browser", 3, "undo-set"),
         ),
-      )
+      ),
     )
     assertEquals(StringValueV1("First"), currentNode(service, "node").properties["text"])
 
@@ -3113,9 +3123,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("later", 4, SetPropertyMutationV1("node", "text", StringValueV1("Later")))
+          batch("later", 4, SetPropertyMutationV1("node", "text", StringValueV1("Later"))),
         ),
-      )
+      ),
     )
     val unsafe =
       rejected(
@@ -3123,9 +3133,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            UiBuilderSubmission.Undo("design", "undo-set-again", "browser", 5, "set")
+            UiBuilderSubmission.Undo("design", "undo-set-again", "browser", 5, "set"),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.UNSAFE_COMPENSATION, unsafe.code)
     assertEquals(StringValueV1("Later"), currentNode(service, "node").properties["text"])
@@ -3135,7 +3145,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(batch("delete", 5, DeleteNodeMutationV1("node"))),
-      )
+      ),
     )
     assertFalse("node" in currentDocument(service).nodes)
     accepted(
@@ -3143,7 +3153,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(batch("restore", 6, RestoreNodeMutationV1("node"))),
-      )
+      ),
     )
     assertTrue("node" in currentDocument(service).nodes)
   }
@@ -3159,7 +3169,7 @@ class PersistentUiBuilderServiceTest {
     // one: two inserts at the same anchor, arriving in either order.
     val root =
       UiBuilderServiceRequest.ApplyOperation(
-        batch("root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        batch("root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
       )
     val alpha =
       UiBuilderServiceRequest.ApplyOperation(
@@ -3167,7 +3177,7 @@ class PersistentUiBuilderServiceTest {
           "client-a-insert",
           1,
           InsertNodeMutationV1(textNode("alpha"), NodeLocationV1(ParentSlotV1("root", "content"))),
-        )
+        ),
       )
     val beta =
       UiBuilderServiceRequest.ApplyOperation(
@@ -3175,7 +3185,7 @@ class PersistentUiBuilderServiceTest {
           "client-b-insert",
           1,
           InsertNodeMutationV1(textNode("beta"), NodeLocationV1(ParentSlotV1("root", "content"))),
-        )
+        ),
       )
 
     accepted(execute(firstOrder, owner, root))
@@ -3204,9 +3214,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1())),
         ),
-      )
+      ),
     )
 
     val entered = CountDownLatch(1)
@@ -3246,9 +3256,9 @@ class PersistentUiBuilderServiceTest {
               "two",
               1,
               InsertNodeMutationV1(textNode("two"), NodeLocationV1(ParentSlotV1("one", "content"))),
-            )
+            ),
           ),
-        )
+        ),
       )
       committed.countDown()
     }
@@ -3278,11 +3288,11 @@ class PersistentUiBuilderServiceTest {
                   0,
                   InsertNodeMutationV1(textNode("one"), NodeLocationV1()),
                   InsertNodeMutationV1(textNode("two"), NodeLocationV1()),
-                )
+                ),
               ),
-            )
+            ),
           )
-          .outcome
+          .outcome,
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, outcome.code)
     assertEquals(0, currentDocument(service).revision)
@@ -3298,7 +3308,7 @@ class PersistentUiBuilderServiceTest {
             maximumSubscribers = 1,
             maximumSubscribersPerDesign = 2,
             maximumPresenceSelections = 1,
-          )
+          ),
       )
     create(service)
     accepted(
@@ -3306,9 +3316,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val first = service.subscribe(UiBuilderSubscriptionCall(owner, "design", null)) {}
     val rejected =
@@ -3334,7 +3344,7 @@ class PersistentUiBuilderServiceTest {
                 1,
               ),
             ),
-          )
+          ),
         )
         .code,
     )
@@ -3372,9 +3382,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     accepted(
       execute(
@@ -3385,9 +3395,9 @@ class PersistentUiBuilderServiceTest {
             "two",
             1,
             InsertNodeMutationV1(textNode("two"), NodeLocationV1(ParentSlotV1("one", "content"))),
-          )
+          ),
         ),
-      )
+      ),
     )
 
     assertEquals(2, currentDocument(service).revision)
@@ -3426,7 +3436,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
-        )
+        ),
       )
       completed.countDown()
     }
@@ -3437,7 +3447,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
-        )
+        ),
       )
     assertEquals(ServiceErrorCodeV1.BAD_REQUEST, rejected.code)
     assertTrue(rejected.retryable)
@@ -3468,9 +3478,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1())),
         ),
-      )
+      ),
     )
 
     val rejected =
@@ -3487,11 +3497,11 @@ class PersistentUiBuilderServiceTest {
                     textNode("two"),
                     NodeLocationV1(ParentSlotV1("one", "content")),
                   ),
-                )
+                ),
               ),
-            )
+            ),
           )
-          .outcome
+          .outcome,
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, rejected.code)
     assertEquals(1, currentDocument(service).revision)
@@ -3507,9 +3517,9 @@ class PersistentUiBuilderServiceTest {
             "three",
             1,
             InsertNodeMutationV1(textNode("three"), NodeLocationV1(ParentSlotV1("one", "content"))),
-          )
+          ),
         ),
-      )
+      ),
     )
     assertEquals(2, currentDocument(service).revision)
   }
@@ -3524,9 +3534,9 @@ class PersistentUiBuilderServiceTest {
         documentLimited,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val oversized =
       assertIs<RejectedOutcomeV1>(
@@ -3539,11 +3549,11 @@ class PersistentUiBuilderServiceTest {
                   "oversized",
                   1,
                   SetPropertyMutationV1("node", "text", StringValueV1("x".repeat(2_000))),
-                )
+                ),
               ),
-            )
+            ),
           )
-          .outcome
+          .outcome,
       )
     assertContains(oversized.message, "serialized document byte limit")
     assertEquals(1, currentDocument(documentLimited).revision)
@@ -3564,9 +3574,9 @@ class PersistentUiBuilderServiceTest {
                       mediaType = "image/png",
                       contentDigest = "sha256:unused",
                       source = EmbeddedAssetSourceV1("AAAAAAAA"),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         ),
       )
     assertEquals(ServiceErrorCodeV1.BAD_REQUEST, error(response).code)
@@ -3608,7 +3618,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
-        )
+        ),
       )
 
     assertTrue(entered.await(1, TimeUnit.SECONDS))
@@ -3634,7 +3644,7 @@ class PersistentUiBuilderServiceTest {
     )
     val request =
       UiBuilderServiceRequest.ApplyOperation(
-        batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
       )
     accepted(execute(service, owner, request))
     execute(
@@ -3653,7 +3663,7 @@ class PersistentUiBuilderServiceTest {
     assertEquals(before.access, after.access)
     assertEquals(emptyList(), after.presence)
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, viewer, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, viewer, UiBuilderServiceRequest.OpenDesign("design")),
     )
     val retry = accepted(execute(service, owner, request))
     assertTrue(retry.idempotentReplay)
@@ -3697,7 +3707,7 @@ class PersistentUiBuilderServiceTest {
             "checksumSha256" to
               JsonPrimitive(sha256(canonicalPersistenceJson(aged).encodeToByteArray())),
             "payload" to aged,
-          )
+          ),
       )
     Files.writeString(stateFile, rewritten.toString())
 
@@ -3731,10 +3741,10 @@ class PersistentUiBuilderServiceTest {
                         JsonObject(
                           design +
                             ("document" to
-                              JsonObject(document + ("title" to JsonPrimitive("tampered"))))
-                        ))
-                  ))
-            ))
+                              JsonObject(document + ("title" to JsonPrimitive("tampered")))),
+                        )),
+                  )),
+            )),
       )
     Files.writeString(stateFile, JsonObject(root + ("payload" to tampered)).toString())
 
@@ -3755,9 +3765,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     assertTrue(Files.exists(temporaryDirectory.resolve(FileUiBuilderStateStorage.BACKUP_FILE)))
 
@@ -3809,9 +3819,9 @@ class PersistentUiBuilderServiceTest {
         migrating,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("pre-migration", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("pre-migration", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val preMigration = Files.readAllBytes(stateFile)
     assertContains(preMigration.decodeToString(), "compose-preview-ui-builder-service/v1")
@@ -3874,10 +3884,10 @@ class PersistentUiBuilderServiceTest {
           mapOf(
             "checksumSha256" to
               JsonPrimitive(
-                sha256(canonicalPersistenceJson(mismatchedPayload).encodeToByteArray())
+                sha256(canonicalPersistenceJson(mismatchedPayload).encodeToByteArray()),
               ),
             "payload" to mismatchedPayload,
-          )
+          ),
       )
     Files.writeString(stateFile, rewritten.toString())
 
@@ -3912,7 +3922,7 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("not-durable", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("not-durable", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
       )
     }
@@ -3947,7 +3957,7 @@ class PersistentUiBuilderServiceTest {
           1,
           listOf(RevokeActorAccessMutationV1(viewer.actorId)),
         ),
-      )
+      ),
     )
     assertEquals(
       ServiceErrorCodeV1.FORBIDDEN,
@@ -3970,7 +3980,7 @@ class PersistentUiBuilderServiceTest {
             3,
             listOf(TransferDesignOwnershipMutationV1(viewer.actorId)),
           ),
-        )
+        ),
       )
     assertEquals(viewer.actorId, transferred.access.ownerActorId)
     assertEquals(
@@ -3978,7 +3988,7 @@ class PersistentUiBuilderServiceTest {
       error(execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design"))).code,
     )
     assertIs<UiBuilderServiceResponse.DesignAccess>(
-      execute(service, viewer, UiBuilderServiceRequest.GetDesignAccess("design"))
+      execute(service, viewer, UiBuilderServiceRequest.GetDesignAccess("design")),
     )
 
     val invalidExportService =
@@ -4005,7 +4015,7 @@ class PersistentUiBuilderServiceTest {
             invalidExportService,
             owner,
             UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
-          )
+          ),
         )
         .code,
     )
@@ -4025,7 +4035,7 @@ class PersistentUiBuilderServiceTest {
         service,
         viewer,
         UiBuilderServiceRequest.CreateDesign(document().copy(id = "other", title = "Other")),
-      )
+      ),
     )
     val subscription = service.subscribe(UiBuilderSubscriptionCall(owner, "design", 0)) {}
 
@@ -4067,18 +4077,18 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("set", 1, SetPropertyMutationV1("node", "text", StringValueV1("First")))
+          batch("set", 1, SetPropertyMutationV1("node", "text", StringValueV1("First"))),
         ),
-      )
+      ),
     )
     // The node keeps its id, its place and everything else; only the property goes.
     accepted(
@@ -4086,9 +4096,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("unset", 2, SetPropertyMutationV1("node", "text", NullValueV1))
+          batch("unset", 2, SetPropertyMutationV1("node", "text", NullValueV1)),
         ),
-      )
+      ),
     )
     assertFalse("text" in currentNode(service, "node").properties)
     assertTrue("node" in currentDocument(service).nodes)
@@ -4098,9 +4108,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-unset", "browser", 3, "unset")
+          UiBuilderSubmission.Undo("design", "undo-unset", "browser", 3, "unset"),
         ),
-      )
+      ),
     )
     assertEquals(StringValueV1("First"), currentNode(service, "node").properties["text"])
     accepted(
@@ -4108,9 +4118,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Redo("design", "redo-unset", "browser", 4, "undo-unset")
+          UiBuilderSubmission.Redo("design", "redo-unset", "browser", 4, "undo-unset"),
         ),
-      )
+      ),
     )
     assertFalse("text" in currentNode(service, "node").properties)
 
@@ -4121,9 +4131,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("unset-again", 5, SetPropertyMutationV1("node", "text", NullValueV1))
+          batch("unset-again", 5, SetPropertyMutationV1("node", "text", NullValueV1)),
         ),
-      )
+      ),
     )
     assertFalse("text" in currentNode(service, "node").properties)
   }
@@ -4146,18 +4156,18 @@ class PersistentUiBuilderServiceTest {
               textNode("node").copy(properties = mapOf("text" to StringValueV1("First"))),
               NodeLocationV1(),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     accepted(
       execute(
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("remove", 1, RemoveNodePropertyMutationV1("node", "text"))
+          batch("remove", 1, RemoveNodePropertyMutationV1("node", "text")),
         ),
-      )
+      ),
     )
     assertEquals(emptyMap(), currentNode(service, "node").properties)
     accepted(
@@ -4165,9 +4175,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 2, "remove")
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 2, "remove"),
         ),
-      )
+      ),
     )
     assertEquals(mapOf("text" to StringValueV1("First")), currentNode(service, "node").properties)
     accepted(
@@ -4175,9 +4185,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Redo("design", "redo-remove", "browser", 3, "undo-remove")
+          UiBuilderSubmission.Redo("design", "redo-remove", "browser", 3, "undo-remove"),
         ),
-      )
+      ),
     )
     assertEquals(emptyMap(), currentNode(service, "node").properties)
   }
@@ -4202,9 +4212,9 @@ class PersistentUiBuilderServiceTest {
               ),
               NodeLocationV1(),
             ),
-          )
+          ),
         ),
-      )
+      ),
     )
     val refused =
       rejected(
@@ -4212,9 +4222,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("unset", 1, SetPropertyMutationV1("button", "label", NullValueV1))
+            batch("unset", 1, SetPropertyMutationV1("button", "label", NullValueV1)),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
     assertEquals("required property label is missing", refused.message)
@@ -4230,9 +4240,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("remove", 1, RemoveNodePropertyMutationV1("button", "label"))
+            batch("remove", 1, RemoveNodePropertyMutationV1("button", "label")),
           ),
-        )
+        ),
       )
     assertEquals(refused.copy(operationId = "remove"), explicitlyRefused)
     assertEquals(StringValueV1("Go"), currentNode(service, "button").properties["label"])
@@ -4248,7 +4258,7 @@ class PersistentUiBuilderServiceTest {
 
     val renamed =
       assertIs<UiBuilderServiceResponse.DesignRenamed>(
-        execute(service, editor, UiBuilderServiceRequest.RenameDesign("design", "  Library  "))
+        execute(service, editor, UiBuilderServiceRequest.RenameDesign("design", "  Library  ")),
       )
     assertEquals("Library", renamed.design.title)
     assertEquals("editor", renamed.design.requesterAccess.actorId)
@@ -4265,7 +4275,7 @@ class PersistentUiBuilderServiceTest {
     )
     val listed =
       assertIs<UiBuilderServiceResponse.Designs>(
-        execute(service, viewer, UiBuilderServiceRequest.ListDesigns(null, 10))
+        execute(service, viewer, UiBuilderServiceRequest.ListDesigns(null, 10)),
       )
     assertEquals("Library", listed.designs.single().title)
 
@@ -4307,10 +4317,10 @@ class PersistentUiBuilderServiceTest {
     assertTrue(
       "design" in
         assertIs<UiBuilderServiceResponse.Designs>(
-            execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+            execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10)),
           )
           .designs
-          .map { it.designId }
+          .map { it.designId },
     )
 
     val updates = mutableListOf<UiBuilderServiceUpdate>()
@@ -4367,7 +4377,7 @@ class PersistentUiBuilderServiceTest {
   fun `listing catalogs reports the pin a document must carry for each`() {
     val listed =
       assertIs<UiBuilderServiceResponse.Catalogs>(
-        execute(service(), owner, UiBuilderServiceRequest.ListCatalogs)
+        execute(service(), owner, UiBuilderServiceRequest.ListCatalogs),
       )
     assertEquals(mapOf("m3" to CATALOG_REFERENCE), listed.pins)
   }
@@ -4394,9 +4404,9 @@ class PersistentUiBuilderServiceTest {
                 textNode("child"),
                 NodeLocationV1(ParentSlotV1("parent", "content")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, forward.code)
     assertEquals("parent", forward.nodeId)
@@ -4411,9 +4421,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("existing", 0, InsertNodeMutationV1(textNode("child"), NodeLocationV1()))
+          batch("existing", 0, InsertNodeMutationV1(textNode("child"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val twice =
       rejected(
@@ -4421,9 +4431,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("twice", 1, InsertNodeMutationV1(parent, NodeLocationV1()))
+            batch("twice", 1, InsertNodeMutationV1(parent, NodeLocationV1())),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_COMMAND, twice.code)
     assertTrue("already placed elsewhere" in twice.message, twice.message)
@@ -4465,9 +4475,9 @@ class PersistentUiBuilderServiceTest {
               0,
               InsertNodeMutationV1(textNode("keep"), NodeLocationV1()),
               InsertNodeMutationV1(refusedNode, NodeLocationV1()),
-            )
+            ),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_PROPERTY, insert.code)
     assertEquals("t", insert.nodeId)
@@ -4482,9 +4492,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+          batch("insert", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     val write =
       rejected(
@@ -4492,9 +4502,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            batch("write-refused", 1, SetPropertyMutationV1("t", "text", StringValueV1("refused")))
+            batch("write-refused", 1, SetPropertyMutationV1("t", "text", StringValueV1("refused"))),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.INVALID_PROPERTY, write.code)
     assertEquals("t", write.nodeId)
@@ -4509,9 +4519,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("write", 1, SetPropertyMutationV1("t", "text", StringValueV1("fine")))
+          batch("write", 1, SetPropertyMutationV1("t", "text", StringValueV1("fine"))),
         ),
-      )
+      ),
     )
     assertEquals(listOf("t" to "text"), checked)
   }
@@ -4526,9 +4536,9 @@ class PersistentUiBuilderServiceTest {
         exporter =
           UiBuilderExportExecutor {
             throw IllegalStateException(
-              "render failed: IllegalStateException: unsupported asset 'avatar-lain' on photo"
+              "render failed: IllegalStateException: unsupported asset 'avatar-lain' on photo",
             )
-          }
+          },
       )
     create(service)
 
@@ -4538,7 +4548,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ExportDesign("design", null, ExportFormatV1.PNG),
-        )
+        ),
       )
     assertEquals(ServiceErrorCodeV1.INTERNAL, failure.code)
     assertEquals(
@@ -4567,7 +4577,7 @@ class PersistentUiBuilderServiceTest {
             retainedRevisionSnapshots = 64,
             retainedRevisionBytes = 64,
             minimumRetainedRevisionSnapshots = 2,
-          )
+          ),
       )
     create(service)
     editFourTimes(service)
@@ -4598,7 +4608,7 @@ class PersistentUiBuilderServiceTest {
             retainedRevisionSnapshots = 64,
             retainedRevisionBytes = 64,
             minimumRetainedRevisionSnapshots = 2,
-          )
+          ),
       )
     create(service)
     editFourTimes(service)
@@ -4670,7 +4680,7 @@ class PersistentUiBuilderServiceTest {
             retainedRevisionSnapshots = 64,
             retainedUndoBytes = 1,
             minimumRetainedUndoOperations = 2,
-          )
+          ),
       )
     create(service)
     accepted(
@@ -4678,9 +4688,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     repeat(5) { index ->
       accepted(
@@ -4695,9 +4705,9 @@ class PersistentUiBuilderServiceTest {
                 textNode("node-$index"),
                 NodeLocationV1(ParentSlotV1("root", "content")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     }
 
@@ -4707,9 +4717,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-latest", "browser", 6, "insert-4")
+          UiBuilderSubmission.Undo("design", "undo-latest", "browser", 6, "insert-4"),
         ),
-      )
+      ),
     )
 
     // The first one has aged out of the budget, and says so rather than failing some other way.
@@ -4719,9 +4729,9 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            UiBuilderSubmission.Undo("design", "undo-oldest", "browser", 7, "insert-root")
+            UiBuilderSubmission.Undo("design", "undo-oldest", "browser", 7, "insert-root"),
           ),
-        )
+        ),
       )
     assertEquals(RejectionCodeV1.UNKNOWN_OPERATION, refused.code)
   }
@@ -4740,7 +4750,7 @@ class PersistentUiBuilderServiceTest {
             // A budget nothing fits in, so the floor is the whole window: exactly three records.
             retainedUndoBytes = 1,
             minimumRetainedUndoOperations = 3,
-          )
+          ),
       )
     create(service)
     accepted(
@@ -4748,9 +4758,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     repeat(4) { index ->
       accepted(
@@ -4765,9 +4775,9 @@ class PersistentUiBuilderServiceTest {
                 textNode("node-$index"),
                 NodeLocationV1(ParentSlotV1("root", "content")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     }
 
@@ -4777,9 +4787,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-oldest-kept", "browser", 5, "insert-1")
+          UiBuilderSubmission.Undo("design", "undo-oldest-kept", "browser", 5, "insert-1"),
         ),
-      )
+      ),
     )
 
     // Without the target being pinned this is UNKNOWN_OPERATION: the undo record displaced the
@@ -4789,9 +4799,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Redo("design", "redo-oldest-kept", "browser", 6, "undo-oldest-kept")
+          UiBuilderSubmission.Redo("design", "redo-oldest-kept", "browser", 6, "undo-oldest-kept"),
         ),
-      )
+      ),
     )
   }
 
@@ -4811,7 +4821,7 @@ class PersistentUiBuilderServiceTest {
             // …while the undo records themselves are pruned to three.
             retainedUndoBytes = 1,
             minimumRetainedUndoOperations = 3,
-          )
+          ),
       )
     create(service)
     accepted(
@@ -4819,9 +4829,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     // The write a later submission is going to be stale against, at revision 2.
     accepted(
@@ -4829,9 +4839,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("set-text", 1, SetPropertyMutationV1("root", "text", StringValueV1("first")))
+          batch("set-text", 1, SetPropertyMutationV1("root", "text", StringValueV1("first"))),
         ),
-      )
+      ),
     )
     // Four more commits, which push `set-text` out of the three-record undo window while its
     // revision stays perfectly acceptable as a base.
@@ -4848,9 +4858,9 @@ class PersistentUiBuilderServiceTest {
                 textNode("node-$index"),
                 NodeLocationV1(ParentSlotV1("root", "content")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     }
 
@@ -4865,9 +4875,9 @@ class PersistentUiBuilderServiceTest {
               "set-text-again",
               1,
               SetPropertyMutationV1("root", "text", StringValueV1("second")),
-            )
+            ),
           ),
-        )
+        ),
       )
 
     assertEquals(
@@ -4908,7 +4918,7 @@ class PersistentUiBuilderServiceTest {
             // Sized so several — but not all — of the records below fit when they are ASCII.
             retainedUndoBytes = 5_000,
             minimumRetainedUndoOperations = 1,
-          )
+          ),
       )
     create(service)
     accepted(
@@ -4916,9 +4926,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     // Distinct nodes rather than repeated writes to one property: a second write to the same
     // property is refused for reasons of its own, which would measure that instead of retention.
@@ -4936,9 +4946,9 @@ class PersistentUiBuilderServiceTest {
                   .copy(properties = mapOf("text" to StringValueV1("$text$index"))),
                 NodeLocationV1(ParentSlotV1("root", "content")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     }
 
@@ -4948,7 +4958,7 @@ class PersistentUiBuilderServiceTest {
           service,
           owner,
           UiBuilderServiceRequest.ApplyOperation(
-            UiBuilderSubmission.Undo("design", "undo-probe-$index", "browser", 9, "insert-$index")
+            UiBuilderSubmission.Undo("design", "undo-probe-$index", "browser", 9, "insert-$index"),
           ),
         )
       if (
@@ -4971,7 +4981,7 @@ class PersistentUiBuilderServiceTest {
             retainedRevisionSnapshots = 64,
             retainedUndoBytes = 8L * 1024 * 1024,
             minimumRetainedUndoOperations = 2,
-          )
+          ),
       )
     create(service)
     editFourTimes(service)
@@ -4982,9 +4992,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("design", "undo-oldest", "browser", 4, "insert-2")
+          UiBuilderSubmission.Undo("design", "undo-oldest", "browser", 4, "insert-2"),
         ),
-      )
+      ),
     )
   }
 
@@ -4995,9 +5005,9 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1())),
         ),
-      )
+      ),
     )
     repeat(3) { index ->
       accepted(
@@ -5012,9 +5022,9 @@ class PersistentUiBuilderServiceTest {
                 textNode("node-$index"),
                 NodeLocationV1(ParentSlotV1("root", "content")),
               ),
-            )
+            ),
           ),
-        )
+        ),
       )
     }
   }
@@ -5027,7 +5037,7 @@ class PersistentUiBuilderServiceTest {
     val ghOwner = AuthenticatedUiBuilderActor("github:yschimke")
     val ghCollaborator = AuthenticatedUiBuilderActor("github:ashleyingram")
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, ghOwner, UiBuilderServiceRequest.CreateDesign(document()))
+      execute(service, ghOwner, UiBuilderServiceRequest.CreateDesign(document())),
     )
 
     // Shared the way a human spells the login on GitHub, which is not how the login arrives.
@@ -5044,20 +5054,20 @@ class PersistentUiBuilderServiceTest {
                 "github:AshleyIngram",
                 DesignAccessRoleV1.VIEWER,
                 listOf(DesignAccessActionV1.READ),
-              )
+              ),
             ),
           ),
-        )
+        ),
       )
     // Stored canonical, so the owner reading the access record sees the id that will match.
     assertEquals(listOf("github:ashleyingram"), access.access.actorGrants.map { it.actorId })
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, ghCollaborator, UiBuilderServiceRequest.OpenDesign("design"))
+      execute(service, ghCollaborator, UiBuilderServiceRequest.OpenDesign("design")),
     )
     assertEquals(
       listOf("design"),
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(service, ghCollaborator, UiBuilderServiceRequest.ListDesigns(null, 50))
+          execute(service, ghCollaborator, UiBuilderServiceRequest.ListDesigns(null, 50)),
         )
         .designs
         .map { it.designId },
@@ -5073,7 +5083,7 @@ class PersistentUiBuilderServiceTest {
           1,
           listOf(RevokeActorAccessMutationV1("github:ASHLEYINGRAM")),
         ),
-      )
+      ),
     )
     assertEquals(
       ServiceErrorCodeV1.FORBIDDEN,
@@ -5090,12 +5100,12 @@ class PersistentUiBuilderServiceTest {
             service,
             AuthenticatedUiBuilderActor("agent:ABCD"),
             UiBuilderServiceRequest.OpenDesign("design"),
-          )
+          ),
         )
         .code,
     )
     assertIs<UiBuilderServiceResponse.DesignAccess>(
-      execute(service, ghOwner, UiBuilderServiceRequest.GetDesignAccess("design"))
+      execute(service, ghOwner, UiBuilderServiceRequest.GetDesignAccess("design")),
     )
   }
 
@@ -5132,7 +5142,7 @@ class PersistentUiBuilderServiceTest {
   }
 
   private fun validExporter(
-    exportRequests: MutableList<RevisionPinnedUiBuilderExport> = mutableListOf()
+    exportRequests: MutableList<RevisionPinnedUiBuilderExport> = mutableListOf(),
   ): UiBuilderExportExecutor = UiBuilderExportExecutor { request ->
     exportRequests += request
     val content = "<svg data-revision=\"${request.revision}\"/>"
@@ -5147,7 +5157,7 @@ class PersistentUiBuilderServiceTest {
 
   private fun create(service: PersistentUiBuilderService) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document()))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document())),
     )
   }
 
@@ -5167,7 +5177,7 @@ class PersistentUiBuilderServiceTest {
           baseRevision,
           listOf(GrantActorAccessMutationV1(actor.actorId, DesignAccessRoleV1.VIEWER, actions)),
         ),
-      )
+      ),
     )
   }
 
@@ -5327,7 +5337,7 @@ class PersistentUiBuilderServiceTest {
                   listOf(
                     PropertyCapabilityV1.Builder("text", JsonPrimitive("string"))
                       .also { it.required = false }
-                      .build()
+                      .build(),
                   )
               }
               .build(),
@@ -5343,7 +5353,7 @@ class PersistentUiBuilderServiceTest {
                   listOf(
                     PropertyCapabilityV1.Builder("label", JsonPrimitive("string"))
                       .also { it.required = true }
-                      .build()
+                      .build(),
                   )
               }
               .build(),
@@ -5378,7 +5388,7 @@ private fun <T> runSuspend(block: suspend () -> T): T {
       override fun resumeWith(result: Result<T>) {
         completion = result
       }
-    }
+    },
   )
   return completion?.getOrThrow() ?: error("synchronous service call suspended unexpectedly")
 }
@@ -5421,7 +5431,7 @@ private fun legacyV1(v2: ByteArray): ByteArray {
         "format" to JsonPrimitive("compose-preview-ui-builder-service/v1"),
         "checksumSha256" to JsonPrimitive(checksum),
         "payload" to service,
-      )
+      ),
     )
     .toString()
     .encodeToByteArray()
@@ -5434,7 +5444,7 @@ private fun withoutTypeface(element: JsonElement): JsonElement =
       JsonObject(
         element
           .filterKeys { it != "typeface" || "widthDp" !in element }
-          .mapValues { (_, value) -> withoutTypeface(value) }
+          .mapValues { (_, value) -> withoutTypeface(value) },
       )
     is JsonArray -> JsonArray(element.map(::withoutTypeface))
     is JsonPrimitive -> element

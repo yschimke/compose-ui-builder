@@ -133,8 +133,8 @@ internal fun AdaptiveNavigationSuiteScaffold(
                   if (constraints.hasBoundedHeight) constraints
                   else
                     constraints.copy(
-                      maxHeight = maxOf(constraints.minHeight, screenHeight.roundToPx())
-                    )
+                      maxHeight = maxOf(constraints.minHeight, screenHeight.roundToPx()),
+                    ),
                 )
               layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
             },
@@ -150,7 +150,7 @@ internal fun AdaptiveNavigationSuiteScaffold(
   BoxWithConstraints(modifier) {
     val type =
       NavigationSuiteScaffoldDefaults.navigationSuiteType(
-        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)
+        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture),
       )
     CompositionLocalProvider(LocalFrameNavigationSuiteType provides type) {
       NavigationSuiteScaffold(
@@ -201,7 +201,7 @@ internal fun AdaptiveSupportingPaneScaffold(
     node.dimension(if (listDetail) "listPanePreferredWidthDp" else "mainPanePreferredWidthDp")
   val supportingWidth =
     node.dimension(
-      if (listDetail) "detailPanePreferredWidthDp" else "supportingPanePreferredWidthDp"
+      if (listDetail) "detailPanePreferredWidthDp" else "supportingPanePreferredWidthDp",
     )
   val paneSpacing =
     node.dimension("paneSpacingDp")
@@ -228,12 +228,12 @@ internal fun AdaptiveSupportingPaneScaffold(
         "fixedStart" ->
           PaneExpansionAnchor.Offset.fromStart(
             node.float("fixedPaneWidthDp", 360f).coerceAtLeast(0f).dp +
-              directive.horizontalPartitionSpacerSize / 2
+              directive.horizontalPartitionSpacerSize / 2,
           )
         "fixedEnd" ->
           PaneExpansionAnchor.Offset.fromEnd(
             node.float("fixedPaneWidthDp", 360f).coerceAtLeast(0f).dp +
-              directive.horizontalPartitionSpacerSize / 2
+              directive.horizontalPartitionSpacerSize / 2,
           )
         "split" ->
           PaneExpansionAnchor.Proportion(node.float("splitFraction", .5f).coerceIn(.1f, .9f))
@@ -289,7 +289,7 @@ internal fun AdaptiveSupportingPaneScaffold(
               {
                 content(
                   preferredPaneWidth(Modifier, node.dimension("extraPanePreferredWidthDp"))
-                    .fillMaxSize()
+                    .fillMaxSize(),
                 )
               }
             },
@@ -366,7 +366,8 @@ private fun UnfoldedSupportingPaneScaffold(
     if (supportingVisible) supportingPane(Modifier.weight(supportWidth).fillMaxSize())
     if (extraPane != null && (mainVisible || supportingVisible)) Spacer(Modifier.width(spacing.dp))
     extraPane?.invoke(
-      Modifier.weight(node.float("extraPanePreferredWidthDp", 360f).coerceAtLeast(1f)).fillMaxSize()
+      Modifier.weight(node.float("extraPanePreferredWidthDp", 360f).coerceAtLeast(1f))
+        .fillMaxSize(),
     )
     if (!mainVisible && !supportingVisible) Box(Modifier.fillMaxSize())
   }
@@ -433,7 +434,7 @@ internal fun CompatibleFloatingToolbar(
       // The catalog exposes four padding edges for this component and nothing read them. Absent
       // stays the 6dp this toolbar has always drawn rather than becoming zero.
       Modifier.padding(
-        (node.properties["contentPadding"] as? JsonObject)?.paddingValues() ?: PaddingValues(6.dp)
+        (node.properties["contentPadding"] as? JsonObject)?.paddingValues() ?: PaddingValues(6.dp),
       ),
       horizontalArrangement = Arrangement.spacedBy(6.dp),
       verticalAlignment = Alignment.CenterVertically,
@@ -469,7 +470,7 @@ internal fun BuilderButton(
         enabled = enabled,
         colors =
           ButtonDefaults.buttonColors(
-            node.color("containerColor", MaterialTheme.colorScheme.primary)
+            node.color("containerColor", MaterialTheme.colorScheme.primary),
           ),
       ) {
         content()

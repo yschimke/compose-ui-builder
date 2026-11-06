@@ -67,7 +67,7 @@ class InlineRemoteContentPlaybackTest {
               { nodeId ->
                 if (captured && nodeId == "remote") Result.success(capturedInlineDocument())
                 else null
-              }
+              },
           ) {
             UiBuilderSurface(document = inlineRemoteContentDocument(), editorOverlay = false)
           }
@@ -85,7 +85,7 @@ class InlineRemoteContentPlaybackTest {
           LocalRemoteComposeCaptures provides
             { nodeId ->
               if (captured && nodeId == "remote") Result.success(capturedInlineDocument()) else null
-            }
+            },
         ) {
           UiBuilderSurface(document = document, editorOverlay = false)
         }
@@ -105,7 +105,7 @@ class InlineRemoteContentPlaybackTest {
         componentId = "shape/linear-gradient",
         properties =
           JsonObject(
-            mapOf("startColor" to property("#FFFF0000"), "endColor" to property("#FFFF0000"))
+            mapOf("startColor" to property("#FFFF0000"), "endColor" to property("#FFFF0000")),
           ),
         modifiers = JsonArray(listOf(buildJsonObject { put("type", "fillMaxSize") })),
       )

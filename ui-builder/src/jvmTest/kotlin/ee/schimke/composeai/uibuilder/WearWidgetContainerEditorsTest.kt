@@ -26,7 +26,7 @@ class WearWidgetContainerEditorsTest {
           .getValue("remote-m3/widget-container-small")
           .propertiesByName
           .getValue("background")
-          .editor
+          .editor,
       )
 
     assertEquals(PropertyEditorControl.COLOR, editor.control)

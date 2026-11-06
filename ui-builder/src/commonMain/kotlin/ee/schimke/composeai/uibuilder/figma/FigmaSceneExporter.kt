@@ -146,12 +146,12 @@ class FigmaSceneExporter(private val map: FigmaComponentMap) {
           primaryAxisAlign =
             primaryAlign(
               properties.enumValue(
-                if (horizontal) "horizontalArrangement" else "verticalArrangement"
-              )
+                if (horizontal) "horizontalArrangement" else "verticalArrangement",
+              ),
             ),
           counterAxisAlign =
             counterAlign(
-              properties.enumValue(if (horizontal) "verticalAlignment" else "horizontalAlignment")
+              properties.enumValue(if (horizontal) "verticalAlignment" else "horizontalAlignment"),
             ),
         )
       return copy(
@@ -346,7 +346,7 @@ class FigmaSceneExporter(private val map: FigmaComponentMap) {
         if (value.startsWith("#")) FigmaPaint(color = value)
         else
           FigmaPaint(
-            variable = map.colorVariables.entries.firstOrNull { it.value == value }?.key ?: value
+            variable = map.colorVariables.entries.firstOrNull { it.value == value }?.key ?: value,
           )
       else -> FigmaPaint(color = value)
     }

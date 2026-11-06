@@ -58,7 +58,7 @@ fun PlayedInlineRemoteContentPreview() {
     LocalRemoteComposeCaptures provides
       { nodeId ->
         if (nodeId == "remote") Result.success(capturedInlineDocument()) else null
-      }
+      },
   ) {
     UiBuilderSurface(
       document = inlineRemoteContentDocument(),
@@ -208,6 +208,6 @@ private val inlineRemoteContentEnvironment: JsonObject =
         "animations": "settled",
         "networkAccess": false
       }
-      """
+      """,
     )
     .jsonObject

@@ -95,7 +95,7 @@ public class FileUiBuilderStateStorage(
       }
     if (size > maximumBytes) {
       throw UiBuilderPersistenceException(
-        "UI-builder state at $stateFile is $size bytes; limit is $maximumBytes"
+        "UI-builder state at $stateFile is $size bytes; limit is $maximumBytes",
       )
     }
     try {
@@ -108,7 +108,7 @@ public class FileUiBuilderStateStorage(
   override fun replace(value: ByteArray) {
     if (value.size.toLong() > maximumBytes) {
       throw UiBuilderPersistenceException(
-        "UI-builder state is ${value.size} bytes; limit is $maximumBytes"
+        "UI-builder state is ${value.size} bytes; limit is $maximumBytes",
       )
     }
     locked {
@@ -185,7 +185,7 @@ public class FileUiBuilderStateStorage(
     val size = Files.size(path)
     if (size > maximumBytes) {
       throw UiBuilderPersistenceException(
-        "UI-builder $description at $path is $size bytes; limit is $maximumBytes"
+        "UI-builder $description at $path is $size bytes; limit is $maximumBytes",
       )
     }
     return Files.readAllBytes(path)

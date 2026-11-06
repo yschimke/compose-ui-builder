@@ -42,8 +42,8 @@ class RemoteDrawingDragExportTest {
             "startYDp":{"type":"float","value":48},
             "endYDp":{"type":"float","value":48}}}
           ${if (label != null) ",\"label\":{\"id\":\"label\",\"componentId\":\"$REMOTE_TEXT_COMPONENT_ID\",\"properties\":{\"text\":$label}}" else ""}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   @Test
@@ -88,8 +88,8 @@ class RemoteDrawingDragExportTest {
           document(
             """{"type":"float","value":48}""",
             label = formula("format(dragY(0, 0, 10, 0.1), 1)"),
-          )
-        )
+          ),
+        ),
       )
     assertTrue(outside.reasons.any { "inside a draw/canvas" in it }, outside.reasons.toString())
 
@@ -117,13 +117,13 @@ class RemoteDrawingDragExportTest {
           UiExpressions.parseFormula("dragY(120, 0, 100, 1)", emptySet()),
           UiExpressions.Scope(emptyMap()),
           "x",
-        )
+        ),
       )
     assertEquals(100.0, UiExpressions.evaluate(checked.expr, UiExpressions.Environment()))
     // The player starts from the default unclamped, so the export clamps it as the preview does.
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(document(formula("dragX(120, 8, 88, 1)")))
+          WearWidgetCodeExporter.export(document(formula("dragX(120, 8, 88, 1)"))),
         )
         .source
     assertContains(source, "document.addTouch(88f, 8f, 88f, 0,")

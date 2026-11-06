@@ -26,7 +26,7 @@ import kotlinx.serialization.json.Json
  */
 internal class BrowserCommentNotificationHost(
   /** False for a design kept in this browser (`?storage=local`): nobody to notify about. */
-  hostedByServer: Boolean
+  hostedByServer: Boolean,
 ) : CommentNotificationHost {
   override val environment: PushEnvironment = runCatching {
     pushJson.decodeFromString(PushEnvironmentWire.serializer(), pushEnvironment())
@@ -71,7 +71,7 @@ internal class BrowserCommentNotificationHost(
     val encoded =
       try {
         awaitCommentString(
-          commentFetch(method, sameOriginRequestUrl(path), body ?: "", body != null)
+          commentFetch(method, sameOriginRequestUrl(path), body ?: "", body != null),
         )
       } catch (cancelled: CancellationException) {
         throw cancelled
@@ -158,12 +158,12 @@ private data class PushSubscriptionKeysWire(val p256dh: String = "", val auth: S
         navigator.standalone === true),
       framed: (() => { try { return window.self !== window.top; } catch (e) { return true; } })(),
     });
-  }"""
+  }""",
 )
 private external fun pushEnvironment(): String
 
 @JsFun(
-  """() => { try { return String(Notification.permission); } catch (e) { return 'denied'; } }"""
+  """() => { try { return String(Notification.permission); } catch (e) { return 'denied'; } }""",
 )
 private external fun pushPermission(): String
 
@@ -176,7 +176,7 @@ private external fun pushPermission(): String
     const done = (value) => resolve(String(value));
     const answer = Notification.requestPermission(done);
     if (answer && typeof answer.then === 'function') answer.then(done, () => done('default'));
-  })"""
+  })""",
 )
 private external fun pushRequestPermission(): Promise<JsString>
 
@@ -189,7 +189,7 @@ private external fun pushRequestPermission(): Promise<JsString>
     if (!registration || !registration.pushManager) return '';
     return registration.pushManager.getSubscription().then((subscription) =>
       subscription ? JSON.stringify(subscription.toJSON()) : '');
-  })"""
+  })""",
 )
 private external fun pushExistingSubscription(): Promise<JsString>
 
@@ -236,7 +236,7 @@ private external fun pushExistingSubscription(): Promise<JsString>
         return existing ? existing.unsubscribe().then(fresh) : fresh();
       }))
       .then((subscription) => JSON.stringify(subscription.toJSON()));
-  }"""
+  }""",
 )
 private external fun pushSubscribe(workerUrl: String, publicKey: String): Promise<JsString>
 
@@ -245,7 +245,7 @@ private external fun pushSubscribe(workerUrl: String, publicKey: String): Promis
     if (!registration || !registration.pushManager) return '';
     return registration.pushManager.getSubscription().then((subscription) =>
       subscription ? subscription.unsubscribe().then(() => '') : '');
-  })"""
+  })""",
 )
 private external fun pushUnsubscribe(): Promise<JsString>
 
@@ -254,7 +254,7 @@ private external fun pushUnsubscribe(): Promise<JsString>
   """() => navigator.serviceWorker.getRegistration('/').then((registration) => {
     if (!registration || registration.scope !== new URL('/', window.location.href).href) return '';
     return registration.unregister().then(() => '');
-  })"""
+  })""",
 )
 private external fun pushUnregister(): Promise<JsString>
 

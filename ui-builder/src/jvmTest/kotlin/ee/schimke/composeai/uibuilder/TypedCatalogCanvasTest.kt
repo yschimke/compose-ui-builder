@@ -78,7 +78,7 @@ class TypedCatalogCanvasTest {
             it.signatureKnown = true
             it.parameters =
               listOf(
-                TargetParameter.Builder("count", "Int").also { it.typeFqn = "kotlin.Int" }.build()
+                TargetParameter.Builder("count", "Int").also { it.typeFqn = "kotlin.Int" }.build(),
               )
           }
           .build()

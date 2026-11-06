@@ -86,7 +86,7 @@ class WearListTransformationTest {
     val recorded = RecordingTransformation()
     render {
       CompositionLocalProvider(
-        LocalWearRowTransformation provides WearRowTransformation(recorded)
+        LocalWearRowTransformation provides WearRowTransformation(recorded),
       ) {
         WearCanvasCard(variant = "title", modifier = Modifier.fillMaxSize()) { Text("Row") }
       }
@@ -104,7 +104,7 @@ class WearListTransformationTest {
     val recorded = RecordingTransformation()
     render {
       CompositionLocalProvider(
-        LocalWearRowTransformation provides WearRowTransformation(recorded)
+        LocalWearRowTransformation provides WearRowTransformation(recorded),
       ) {
         WearCanvasButton(
           variant = "filled",

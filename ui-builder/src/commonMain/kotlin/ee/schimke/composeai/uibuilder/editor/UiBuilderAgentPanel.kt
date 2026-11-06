@@ -84,7 +84,7 @@ internal fun agentToolbarDescription(host: UiBuilderAgentHost): String = buildLi
           host.chat!!.busy -> " · working"
           host.chat!!.monitoring -> " · monitoring"
           else -> " · browser chat ready"
-        }
+        },
     )
   }
   if (host.agents == null) add("Agent activity unavailable")
@@ -133,7 +133,7 @@ internal fun AgentPromptDialog(
         host.agents?.isNotEmpty() == true -> "external"
         host.chat != null -> "browser"
         else -> "external"
-      }
+      },
     )
   }
   AlertDialog(
@@ -209,7 +209,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         agents.forEach { agent ->
           Text(
             listOfNotNull(agent.displayName, agent.modelName?.let { "$it (reported)" })
-              .joinToString(" · ")
+              .joinToString(" · "),
           )
         }
       }
@@ -302,11 +302,11 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
                     "threads or applying changes to the main design. Use a scoped, expiring grant for this " +
                     "design and stop when I ask or access expires. Do not send provider credentials or " +
                     "private conversation history to the design server.",
-                )
-              )
+                ),
+              ),
             )
           }
-        }
+        },
       ) {
         Text("Copy monitoring prompt")
       }

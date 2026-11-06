@@ -297,9 +297,9 @@ internal fun CollaborationState.applyOperation(
               environment =
                 JsonObject(
                   if (operation.value is JsonNull) document.environment - operation.field
-                  else document.environment + (operation.field to operation.value)
-                )
-            )
+                  else document.environment + (operation.field to operation.value),
+                ),
+            ),
         )
       val change =
         EnvironmentChange(
@@ -456,7 +456,7 @@ private fun CollaborationState.restoreNode(nodeId: String): CollaborationState {
  * layout. Whether the component may carry it is checked by the document validator after the batch.
  */
 private fun CollaborationState.setModifiers(
-  operation: DesignOperation.SetModifiers
+  operation: DesignOperation.SetModifiers,
 ): CollaborationState {
   val node = liveNode(operation.nodeId)
   operation.modifiers.forEachIndexed { index, element ->
@@ -489,8 +489,8 @@ private fun CollaborationState.setModifiers(
   return copy(
     document =
       document.copy(
-        nodes = document.nodes + (node.id to node.copy(modifiers = operation.modifiers))
-      )
+        nodes = document.nodes + (node.id to node.copy(modifiers = operation.modifiers)),
+      ),
   )
 }
 
@@ -543,8 +543,8 @@ private fun CollaborationState.setProperty(
     node.copy(
       properties =
         kotlinx.serialization.json.JsonObject(
-          node.properties + (operation.property to encodedValue)
-        )
+          node.properties + (operation.property to encodedValue),
+        ),
     )
   return copy(document = document.copy(nodes = document.nodes + (node.id to changed)))
 }
@@ -573,7 +573,7 @@ private fun CollaborationState.removeProperty(
   }
   val changed =
     node.copy(
-      properties = kotlinx.serialization.json.JsonObject(node.properties - operation.property)
+      properties = kotlinx.serialization.json.JsonObject(node.properties - operation.property),
     )
   return copy(document = document.copy(nodes = document.nodes + (node.id to changed)))
 }
@@ -656,7 +656,7 @@ private fun CollaborationState.compensateProperty(
     )
   }
   return copy(
-    document = document.withValueAt(change.address, if (undo) change.before else change.afterValue)
+    document = document.withValueAt(change.address, if (undo) change.before else change.afterValue),
   )
 }
 
@@ -676,7 +676,7 @@ private fun CollaborationState.compensateModifiers(
   }
   val restored = if (undo) change.before else change.after
   return copy(
-    document = document.copy(nodes = document.nodes + (node.id to node.copy(modifiers = restored)))
+    document = document.copy(nodes = document.nodes + (node.id to node.copy(modifiers = restored))),
   )
 }
 
@@ -1275,8 +1275,8 @@ internal fun CommandApplication.retainRejection(mutation: RejectedMutation): Com
       state.copy(
         rejectedOperations =
           state.rejectedOperations +
-            (mutation.operationId to RejectedOperation(mutation, rejection))
-      )
+            (mutation.operationId to RejectedOperation(mutation, rejection)),
+      ),
   )
 }
 

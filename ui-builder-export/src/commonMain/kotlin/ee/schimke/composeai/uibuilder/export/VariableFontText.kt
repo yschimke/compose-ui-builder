@@ -204,7 +204,7 @@ data class VariableFontExport(
       if (files.isNotEmpty() && mode == VariableFontExportMode.LIBRARY) {
         appendLine(
           "// Its variable font text draws through flexpress: " +
-            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\")."
+            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\").",
         )
       }
       append(source.trimEnd())
@@ -213,7 +213,7 @@ data class VariableFontExport(
         appendLine()
         appendLine(
           "// ${it.functionName} draws \"${it.spec.text}\" in ${it.spec.font.family} from the " +
-            "font's outlines (flexpress). It is generated when the design exports."
+            "font's outlines (flexpress). It is generated when the design exports.",
         )
       }
     }

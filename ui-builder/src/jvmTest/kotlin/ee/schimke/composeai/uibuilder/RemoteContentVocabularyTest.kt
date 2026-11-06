@@ -81,7 +81,7 @@ class RemoteContentVocabularyTest {
       .forEach { (type, route) ->
         val refused =
           assertIs<WearWidgetCodeExporter.Result.Refused>(
-            WearWidgetCodeExporter.export(widgetWith(modifier(type)))
+            WearWidgetCodeExporter.export(widgetWith(modifier(type))),
           )
         val reason = refused.reasons.single()
         assertTrue("`$type`" in reason, reason)
@@ -97,7 +97,7 @@ class RemoteContentVocabularyTest {
   fun `a weight outside a row or column is refused`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(widgetWith(modifier("weight"), on = "frame"))
+        WearWidgetCodeExporter.export(widgetWith(modifier("weight"), on = "frame")),
       )
 
     assertTrue("weight" in refused.reasons.single(), refused.reasons.single())
@@ -115,9 +115,11 @@ class RemoteContentVocabularyTest {
         assertIs<WearWidgetCodeExporter.Result.Refused>(
           WearWidgetCodeExporter.export(
             widgetWith(
-              JsonObject(mapOf("type" to JsonPrimitive("weight"), "weight" to JsonPrimitive(value)))
-            )
-          )
+              JsonObject(
+                mapOf("type" to JsonPrimitive("weight"), "weight" to JsonPrimitive(value)),
+              ),
+            ),
+          ),
         )
       val reason = refused.reasons.single()
       assertTrue("`weight`" in reason, reason)
@@ -164,7 +166,7 @@ class RemoteContentVocabularyTest {
   fun `an image naming no asset is refused by name`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(widgetWith(image("")))
+        WearWidgetCodeExporter.export(widgetWith(image(""))),
       )
 
     assertEquals(1, refused.reasons.size)
@@ -179,7 +181,7 @@ class RemoteContentVocabularyTest {
   fun `a content-slot gradient is refused with what to reach for instead`() {
     val gradient =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(widgetWith(node("sky", "shape/linear-gradient")))
+        WearWidgetCodeExporter.export(widgetWith(node("sky", "shape/linear-gradient"))),
       )
     assertTrue("background slot" in gradient.reasons.single(), gradient.reasons.single())
   }
@@ -206,7 +208,7 @@ class RemoteContentVocabularyTest {
         widget(
           listOf(art, title, artist, stack, button, frame).associateBy { it.id },
           root = "frame",
-        )
+        ),
       )
 
     Files.createDirectories(GENERATED)
@@ -246,7 +248,7 @@ class RemoteContentVocabularyTest {
       Json.parseToJsonElement(
           """{"type":"object","fields":{"selector":{"type":"state","variable":"expanded"},""" +
             """"cases":{"type":"object","fields":{"collapsed":{"type":"bool","value":false},""" +
-            """"expanded":{"type":"bool","value":true}}}}}"""
+            """"expanded":{"type":"bool","value":true}}}}}""",
         )
         .jsonObject
     val mode =
@@ -263,7 +265,7 @@ class RemoteContentVocabularyTest {
           it.copy(
             stateVariables =
               Json.parseToJsonElement("""{"expanded":{"initialValue":true,"valueType":"bool"}}""")
-                .jsonObject
+                .jsonObject,
           )
         }
 
@@ -301,7 +303,7 @@ class RemoteContentVocabularyTest {
         mapOf(
           "type" to JsonPrimitive(kind),
           "value" to if (value is Number) JsonPrimitive(value) else JsonPrimitive("$value"),
-        )
+        ),
       )
     fun UiBuilderNode.with(vararg values: Pair<String, JsonObject>) =
       copy(properties = JsonObject(properties + values))
@@ -331,7 +333,7 @@ class RemoteContentVocabularyTest {
             it.id
           },
           root = "frame",
-        )
+        ),
       )
 
     Files.createDirectories(GENERATED)
@@ -361,7 +363,7 @@ class RemoteContentVocabularyTest {
   fun `a collapsible priority outside a collapsible column or row is refused`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(widgetWith(modifier("collapsiblePriority"), on = "frame"))
+        WearWidgetCodeExporter.export(widgetWith(modifier("collapsiblePriority"), on = "frame")),
       )
     assertTrue("layout/collapsible-column" in refused.reasons.single(), refused.reasons.single())
   }
@@ -412,7 +414,7 @@ class RemoteContentVocabularyTest {
     return base.copy(
       nodes =
         mapOf(scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to listOf(root)))) +
-          nodes
+          nodes,
     )
   }
 
@@ -469,7 +471,7 @@ class RemoteContentVocabularyTest {
           buildMap {
             put("assetKey", literal("assetKey", assetKey))
             if (description != null) put("contentDescription", literal("string", description))
-          }
+          },
         ),
     )
 
@@ -528,7 +530,7 @@ class RemoteContentVocabularyTest {
             put(
               "args",
               Json.parseToJsonElement(
-                """{"width":{"type":"float","value":2},"color":{"type":"color","value":"#FF1DB954"}}"""
+                """{"width":{"type":"float","value":2},"color":{"type":"color","value":"#FF1DB954"}}""",
               ),
             )
           }
@@ -536,7 +538,7 @@ class RemoteContentVocabularyTest {
           "alignHorizontal" -> put("alignment", JsonPrimitive("centerHorizontally"))
           "alignVertical" -> put("alignment", JsonPrimitive("centerVertically"))
         }
-      }
+      },
     )
 
   private fun literal(type: String, value: String): JsonObject =

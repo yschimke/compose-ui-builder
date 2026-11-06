@@ -38,7 +38,7 @@ class SpacingMeasureUiTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val title = "Episode 140: Lorem ipsum dolor"
@@ -104,7 +104,7 @@ class SpacingMeasureUiTest {
       .fetchSemanticsNodes()
       .flatMap { node ->
         node.config.getOrElse(
-          androidx.compose.ui.semantics.SemanticsProperties.ContentDescription
+          androidx.compose.ui.semantics.SemanticsProperties.ContentDescription,
         ) {
           emptyList()
         }
@@ -115,7 +115,7 @@ class SpacingMeasureUiTest {
     File(System.getProperty("uiBuilderProjectDir"), "build/alt-measure-evidence/$name.png").apply {
       parentFile.mkdirs()
       writeBytes(
-        requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)).bytes
+        requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)).bytes,
       )
     }
   }

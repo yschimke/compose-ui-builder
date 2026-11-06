@@ -71,7 +71,7 @@ class WearSurfaceTransformationTest {
         nodes =
           base.nodes +
             ("wear-list" to list.copy(slots = mapOf("items" to listOf(node.id)))) +
-            (node.id to node)
+            (node.id to node),
       )
     return when (val result = WearScreenCodeExporter.export(document)) {
       is WearScreenCodeExporter.Result.Emitted -> result.source

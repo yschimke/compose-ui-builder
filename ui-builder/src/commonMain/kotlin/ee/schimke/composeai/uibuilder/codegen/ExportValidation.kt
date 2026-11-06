@@ -98,7 +98,7 @@ private fun validateCatalogPin(
           message =
             "catalogPin.capabilityDigest expected one of ${digests.sorted().joinToString(", ") { "'$it'" }}" +
               " but was '${actual["capabilityDigest"] ?: "<missing>"}'",
-        )
+        ),
       )
   val mismatches = expected.mapNotNull { (field, expectedValue) ->
     val actualValue = actual[field]

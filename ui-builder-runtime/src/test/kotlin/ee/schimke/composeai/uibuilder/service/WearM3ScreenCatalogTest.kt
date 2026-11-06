@@ -30,7 +30,7 @@ class WearM3ScreenCatalogTest {
         setOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        )
+        ),
     )
 
   private val wear =
@@ -221,7 +221,7 @@ class WearM3ScreenCatalogTest {
                 )
                 .build(),
             )
-            .build()
+            .build(),
         ),
       )
       .also {
@@ -229,8 +229,8 @@ class WearM3ScreenCatalogTest {
           JsonObject(
             mapOf(
               CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to
-                JsonPrimitive(if (id == "wear-m3") "wear" else "mobile")
-            )
+                JsonPrimitive(if (id == "wear-m3") "wear" else "mobile"),
+            ),
           )
         it.exportCapabilities =
           ExportCapabilitiesV1.Builder()
@@ -287,7 +287,7 @@ class WearM3ScreenCatalogTest {
       surfaces.getValue("wasm").jsonObject.getValue("fidelity").jsonPrimitive.content,
     )
     assertTrue(
-      surfaces.getValue("wasm").jsonObject.getValue("reason").jsonPrimitive.content.isNotBlank()
+      surfaces.getValue("wasm").jsonObject.getValue("reason").jsonPrimitive.content.isNotBlank(),
     )
     assertEquals(
       "authoritative",

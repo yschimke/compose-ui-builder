@@ -77,7 +77,7 @@ class CatalogOwnershipTest {
       CatalogExportRouting.route(
         catalog("m3-catalog", adapter = CatalogComposeSourceExportAdapters.COMPOSE_MATERIAL3),
         owned,
-      )
+      ),
     )
     assertEquals(
       CatalogExportRouting.Route.Unsupported("wear-compose-screen", 9),
@@ -91,14 +91,14 @@ class CatalogOwnershipTest {
   @Test
   fun `only a declared route offers export to an owned catalog`() {
     assertFalse(
-      CatalogExportRouting.exportsCompose(CatalogExportRouting.Route.NotDeclared) { true }
+      CatalogExportRouting.exportsCompose(CatalogExportRouting.Route.NotDeclared) { true },
     )
     assertTrue(
       CatalogExportRouting.exportsCompose(
-        CatalogExportRouting.Route.BuiltIn(UiBuilderCatalogPlatform.WEAR)
+        CatalogExportRouting.Route.BuiltIn(UiBuilderCatalogPlatform.WEAR),
       ) {
         true
-      }
+      },
     )
   }
 

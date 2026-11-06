@@ -10,7 +10,7 @@ internal const val PUBLISHED_CATALOG_FIXTURES: String = "/published-catalog/"
 
 internal fun publishedCatalogFixture(name: String): String =
   checkNotNull(
-      PublishedUiBuilderCatalog::class.java.getResource(PUBLISHED_CATALOG_FIXTURES + name)
+      PublishedUiBuilderCatalog::class.java.getResource(PUBLISHED_CATALOG_FIXTURES + name),
     ) {
       "missing test resource $PUBLISHED_CATALOG_FIXTURES$name"
     }

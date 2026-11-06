@@ -136,7 +136,7 @@ object MaterialIconData {
         require(
           trimPathStart == DefaultTrimPathStart &&
             trimPathEnd == DefaultTrimPathEnd &&
-            trimPathOffset == DefaultTrimPathOffset
+            trimPathOffset == DefaultTrimPathOffset,
         ) {
           "$icon: a trimmed path is not representable"
         }

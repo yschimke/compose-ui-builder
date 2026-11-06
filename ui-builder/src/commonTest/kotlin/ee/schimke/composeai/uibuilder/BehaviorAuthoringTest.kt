@@ -16,7 +16,7 @@ class BehaviorAuthoringTest {
 
   private val flag =
     obj(
-      """{"type":"value","valueType":"bool","nullable":false,"initialValue":false,"persistence":"preview"}"""
+      """{"type":"value","valueType":"bool","nullable":false,"initialValue":false,"persistence":"preview"}""",
     )
   private val actions =
     Json.parseToJsonElement("""[{"type":"toggle","variable":"expanded"}]""").jsonArray
@@ -114,18 +114,18 @@ class BehaviorAuthoringTest {
   fun `an action may write a formula over state, typed against what the variable holds`() {
     val number =
       obj(
-        """{"type":"value","valueType":"float","nullable":false,"initialValue":40,"persistence":"preview"}"""
+        """{"type":"value","valueType":"float","nullable":false,"initialValue":40,"persistence":"preview"}""",
       )
     val counter =
       obj(
-        """{"type":"value","valueType":"int","nullable":false,"initialValue":0,"persistence":"preview"}"""
+        """{"type":"value","valueType":"int","nullable":false,"initialValue":0,"persistence":"preview"}""",
       )
     val step =
       Json.parseToJsonElement(
           """[{"type":"set","variable":"x","value":{"type":"expr","op":"add","args":[
                {"type":"state","variable":"x"},{"type":"int","value":40}]}},
              {"type":"increment","variable":"count","amount":{"type":"expr","op":"add","args":[
-               {"type":"state","variable":"count"},{"type":"int","value":1}]}}]"""
+               {"type":"state","variable":"count"},{"type":"int","value":1}]}}]""",
         )
         .jsonArray
     val state =
@@ -162,20 +162,20 @@ class BehaviorAuthoringTest {
               ),
             ),
           )
-          .outcome
+          .outcome,
       )
     // A float into an Int, an undeclared read, and a formula that does not type.
     refused(
       """[{"type":"set","variable":"count","value":{"type":"expr","op":"add","args":[
-           {"type":"state","variable":"x"},{"type":"int","value":1}]}}]"""
+           {"type":"state","variable":"x"},{"type":"int","value":1}]}}]""",
     )
     refused(
       """[{"type":"set","variable":"x","value":{"type":"expr","op":"add","args":[
-           {"type":"state","variable":"nope"},{"type":"int","value":1}]}}]"""
+           {"type":"state","variable":"nope"},{"type":"int","value":1}]}}]""",
     )
     refused(
       """[{"type":"set","variable":"x","value":{"type":"expr","op":"lerp","args":[
-           {"type":"int","value":1}]}}]"""
+           {"type":"int","value":1}]}}]""",
     )
   }
 
@@ -193,7 +193,7 @@ class BehaviorAuthoringTest {
         DesignOperation.SetStateVariable(
           "expanded",
           obj(
-            """{"type":"text","valueType":"string","nullable":false,"initialValue":"no","persistence":"preview"}"""
+            """{"type":"text","valueType":"string","nullable":false,"initialValue":"no","persistence":"preview"}""",
           ),
         ),
       )
@@ -213,9 +213,9 @@ class BehaviorAuthoringTest {
         .copy(
           modifiers =
             Json.parseToJsonElement(
-                """[{"type":"alpha","value":{"type":"state","variable":"expanded"}}]"""
+                """[{"type":"alpha","value":{"type":"state","variable":"expanded"}}]""",
               )
-              .jsonArray
+              .jsonArray,
         )
     val initial =
       CollaborationState(
@@ -223,7 +223,7 @@ class BehaviorAuthoringTest {
           .copy(
             stateVariables = JsonObject(mapOf("expanded" to flag)),
             nodes = mapOf("button" to node),
-          )
+          ),
       )
     val result =
       CollaborationReducer.apply(

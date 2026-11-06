@@ -26,8 +26,8 @@ class RemoteMaterialThemeExportTest {
           "label":{"id":"label","componentId":"remote-m3/remote-text",
             "properties":{"text":{"type":"string","value":"Hi"},
               "color":{"type":"colorToken","value":"primary"}}}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(document: UiBuilderDocument): String =
@@ -45,8 +45,8 @@ class RemoteMaterialThemeExportTest {
       exported(
         document(
           """{"themePrimaryColor":{"type":"color","value":"#FFFF5722"},
-            "themeOnPrimaryColor":{"type":"colorToken","value":"onSurface"}}"""
-        )
+            "themeOnPrimaryColor":{"type":"colorToken","value":"onSurface"}}""",
+        ),
       )
     File("build/draw-proof").apply { mkdirs() }.resolve("ThemeWidget.kt").writeText(source)
 

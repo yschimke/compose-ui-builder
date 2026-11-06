@@ -136,7 +136,7 @@ class CanvasExtentTest {
           Box(
             Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
               .requiredWidth(FRAME_DP.dp)
-              .requiredHeightIn(min = FRAME_DP.dp)
+              .requiredHeightIn(min = FRAME_DP.dp),
           ) {
             CanvasExtentLayout(Modifier.fillMaxSize().onSizeChanged { measured = it.height }) {
               // Stands in for text that wraps to more lines in the loaded face.
@@ -177,7 +177,7 @@ class CanvasExtentTest {
       Box(
         Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
           .requiredWidth(FRAME_DP.dp)
-          .onSizeChanged { measured = it.height }
+          .onSizeChanged { measured = it.height },
       ) {
         content()
       }
@@ -271,11 +271,11 @@ class CanvasExtentTest {
       mapOf(
         "color" to
           JsonObject(
-            mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF"))
+            mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF")),
           ),
         "diameterDp" to
           JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(ITEM_DP))),
-      )
+      ),
     )
 
   /**
@@ -295,7 +295,7 @@ class CanvasExtentTest {
           mapOf(
             "widthDp" to JsonPrimitive(FRAME_DP),
             "heightDp" to JsonPrimitive(FRAME_DP),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("wear-screen"),
@@ -314,13 +314,13 @@ class CanvasExtentTest {
                         mapOf(
                           "type" to JsonPrimitive("string"),
                           "value" to JsonPrimitive("10:10"),
-                        )
+                        ),
                       ),
                     "scrollIndicator" to
                       JsonObject(
-                        mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true))
+                        mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true)),
                       ),
-                  )
+                  ),
                 ),
               modifiers = JsonArray(emptyList()),
               slots =

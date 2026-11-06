@@ -11,7 +11,7 @@ class LovelaceConfigExporterTest {
           """{"title":null,"views":[{"type":"sections","sections":[{"cards":[
       {"type":"custom:test","name":{"future":true},"entity":null,"min":"template","grid_options":null},
       {"type":"tile","grid_options":{"columns":"future-size","rows":0}}
-    ]}]}]}"""
+    ]}]}]}""",
         )
         .jsonObject
     assertEquals(
@@ -43,7 +43,7 @@ class LovelaceConfigExporterTest {
           ]
         }
         """
-          .trimIndent()
+          .trimIndent(),
       )
       .jsonObject
 
@@ -84,8 +84,8 @@ class LovelaceConfigExporterTest {
                 buildJsonObject {
                   put("type", "int")
                   put("value", 12)
-                })
-          )
+                }),
+          ),
       )
     val result = exported(document.copy(nodes = document.nodes + (id to updated)))
     val actual =
@@ -108,7 +108,7 @@ class LovelaceConfigExporterTest {
       JsonObject(
         original - "name" +
           ("grid_options" to
-            JsonObject(original["grid_options"]!!.jsonObject + ("columns" to JsonPrimitive(12))))
+            JsonObject(original["grid_options"]!!.jsonObject + ("columns" to JsonPrimitive(12)))),
       ),
       actual,
     )
@@ -127,7 +127,7 @@ class LovelaceConfigExporterTest {
               a.id to a.copy(slots = mapOf("cards" to emptyList())),
               b.id to
                 b.copy(slots = mapOf("cards" to listOf("dashboard-0-0-1", "dashboard-0-1-0"))),
-            )
+            ),
       )
     val sections = exported(changed)["views"]!!.jsonArray[0].jsonObject["sections"]!!.jsonArray
     assertEquals(0, sections[0].jsonObject["cards"]!!.jsonArray.size)
@@ -143,7 +143,7 @@ class LovelaceConfigExporterTest {
     val doc = imported()
     fun refuses(node: UiBuilderNode) {
       assertIs<LovelaceConfigExporter.Result.Refused>(
-        LovelaceConfigExporter.export(doc.copy(nodes = doc.nodes + (node.id to node)))
+        LovelaceConfigExporter.export(doc.copy(nodes = doc.nodes + (node.id to node))),
       )
     }
     val root = doc.nodes.getValue("dashboard")
@@ -161,9 +161,9 @@ class LovelaceConfigExporterTest {
                 buildJsonObject {
                   put("type", "int")
                   put("value", 13)
-                })
-          )
-      )
+                }),
+          ),
+      ),
     )
     refuses(
       card.copy(
@@ -174,9 +174,9 @@ class LovelaceConfigExporterTest {
                 buildJsonObject {
                   put("type", "state")
                   put("variable", "credential")
-                })
-          )
-      )
+                }),
+          ),
+      ),
     )
   }
 
@@ -196,7 +196,7 @@ class LovelaceConfigExporterTest {
   fun `unknown scalar representations remain opaque rather than acquiring invalid catalog properties`() {
     val config =
       Json.parseToJsonElement(
-          """{"views":[{"type":"sections","max_columns":"future","sections":[{"cards":[{"type":"tile","min":"5","show_state":"true","future":9007199254740993},{"type":"gauge","min":9007199254740993,"max":0.12345678901234567890}]}]}]}"""
+          """{"views":[{"type":"sections","max_columns":"future","sections":[{"cards":[{"type":"tile","min":"5","show_state":"true","future":9007199254740993},{"type":"gauge","min":9007199254740993,"max":0.12345678901234567890}]}]}]}""",
         )
         .jsonObject
     val document = LovelaceConfigExporter.import(config, "future", JsonObject(emptyMap()))
@@ -210,7 +210,7 @@ class LovelaceConfigExporterTest {
   fun `strategy views stay opaque and new custom cards need an actual config type`() {
     val source =
       Json.parseToJsonElement(
-          """{"views":[{"type":"sections","strategy":{"type":"custom:strategy"},"sections":[{"future":true}]}]}"""
+          """{"views":[{"type":"sections","strategy":{"type":"custom:strategy"},"sections":[{"future":true}]}]}""",
         )
         .jsonObject
     val document = LovelaceConfigExporter.import(source, "strategy", JsonObject(emptyMap()))
@@ -227,7 +227,7 @@ class LovelaceConfigExporterTest {
       LovelaceConfigExporter.exportCard(
         original.copy(nodes = original.nodes + (card.id to withoutType)),
         card.id,
-      )
+      ),
     )
   }
 }

@@ -195,7 +195,7 @@ internal fun MobileEditorToolbar(
                 UiBuilderMenuEntry.Action("Sharing") {
                   expanded = false
                   onManageVisibility()
-                }
+                },
               )
             add(UiBuilderMenuEntry.Divider)
           }
@@ -215,7 +215,7 @@ internal fun MobileEditorToolbar(
                     expanded = false
                     dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
                   },
-                )
+                ),
               )
             }
             add(
@@ -228,7 +228,7 @@ internal fun MobileEditorToolbar(
                   expanded = false
                   dispatch(UiBuilderEditorEvent.ToggleWearWidgetClipContent)
                 },
-              )
+              ),
             )
           }
           if (onNewDesign != null) {
@@ -236,7 +236,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("New design") {
                 expanded = false
                 onNewDesign()
-              }
+              },
             )
           }
           if (onRenameDesign != null) {
@@ -244,7 +244,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Rename design…") {
                 expanded = false
                 onRenameDesign()
-              }
+              },
             )
           }
           if (onBrowseDesigns != null) {
@@ -252,7 +252,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("My designs") {
                 expanded = false
                 onBrowseDesigns()
-              }
+              },
             )
           }
           if (onForkDesign != null) {
@@ -260,45 +260,45 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Fork this design") {
                 expanded = false
                 onForkDesign()
-              }
+              },
             )
           }
           add(
             UiBuilderMenuEntry.Action("Duplicate", enabled = canDuplicate) {
               expanded = false
               dispatch(UiBuilderEditorEvent.DuplicateSelected)
-            }
+            },
           )
           add(
             UiBuilderMenuEntry.Action("Copy", enabled = canCopy) {
               expanded = false
               dispatch(UiBuilderEditorEvent.CopySelected)
-            }
+            },
           )
           add(
             UiBuilderMenuEntry.Action("Cut", enabled = canCut) {
               expanded = false
               dispatch(UiBuilderEditorEvent.CutSelected)
-            }
+            },
           )
           add(
             UiBuilderMenuEntry.Action("Paste", enabled = canPaste) {
               expanded = false
               dispatch(UiBuilderEditorEvent.Paste)
-            }
+            },
           )
           add(
             UiBuilderMenuEntry.Action("Delete", enabled = canDelete) {
               expanded = false
               dispatch(UiBuilderEditorEvent.DeleteSelected)
-            }
+            },
           )
           if (onReconnect != null) {
             add(
               UiBuilderMenuEntry.Action("Reconnect") {
                 expanded = false
                 onReconnect()
-              }
+              },
             )
           }
           if (onTakeOffline != null) {
@@ -306,7 +306,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Keep in this browser") {
                 expanded = false
                 onTakeOffline()
-              }
+              },
             )
           }
           if (onSyncToServer != null) {
@@ -314,7 +314,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Sync to the server") {
                 expanded = false
                 onSyncToServer()
-              }
+              },
             )
           }
           if (onPublishToServer != null) {
@@ -322,7 +322,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Publish to the server") {
                 expanded = false
                 onPublishToServer()
-              }
+              },
             )
           }
           if (onComponentPacks != null) {
@@ -330,7 +330,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Component packs…") {
                 expanded = false
                 onComponentPacks()
-              }
+              },
             )
           }
           if (onCopyAiPrompt != null) {
@@ -342,7 +342,7 @@ internal fun MobileEditorToolbar(
                   expanded = false
                   scope.launch { onNotice(onCopyAiPrompt()) }
                 },
-              )
+              ),
             )
           }
           if (onHelp != null) {
@@ -350,7 +350,7 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("Help") {
                 expanded = false
                 onHelp()
-              }
+              },
             )
           }
         }
@@ -704,7 +704,7 @@ internal fun EditorToolbar(
                   UiBuilderMenuEntry.Action("Sharing") {
                     overflowOpen = false
                     onManageVisibility()
-                  }
+                  },
                 )
               add(UiBuilderMenuEntry.Divider)
             }
@@ -713,7 +713,7 @@ internal fun EditorToolbar(
                 UiBuilderMenuEntry.Action("New design") {
                   overflowOpen = false
                   onNewDesign()
-                }
+                },
               )
             }
             if (onForkDesign != null) {
@@ -721,7 +721,7 @@ internal fun EditorToolbar(
                 UiBuilderMenuEntry.Action("Fork this design") {
                   overflowOpen = false
                   onForkDesign()
-                }
+                },
               )
             }
           }
@@ -730,7 +730,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Rename design…", icon = UiBuilderMenuIcon.QuickEdit) {
                 overflowOpen = false
                 onRenameDesign()
-              }
+              },
             )
           }
           if (onBrowseDesigns != null) {
@@ -738,7 +738,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("My designs", icon = UiBuilderMenuIcon.Folder) {
                 overflowOpen = false
                 onBrowseDesigns()
-              }
+              },
             )
           }
           add(
@@ -748,7 +748,7 @@ internal fun EditorToolbar(
             ) {
               overflowOpen = false
               showShortcuts = true
-            }
+            },
           )
           if (onTidy != null) {
             add(
@@ -758,7 +758,7 @@ internal fun EditorToolbar(
               ) {
                 overflowOpen = false
                 onTidy.invoke()
-              }
+              },
             )
           }
           if (onReconnect != null) {
@@ -766,7 +766,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Reconnect", icon = UiBuilderMenuIcon.Refresh) {
                 overflowOpen = false
                 onReconnect()
-              }
+              },
             )
           }
           if (onTakeOffline != null) {
@@ -774,7 +774,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Keep in this browser") {
                 overflowOpen = false
                 onTakeOffline()
-              }
+              },
             )
           }
           if (onSyncToServer != null) {
@@ -782,7 +782,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Sync to the server") {
                 overflowOpen = false
                 onSyncToServer()
-              }
+              },
             )
           }
           if (onPublishToServer != null) {
@@ -790,7 +790,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Publish to the server") {
                 overflowOpen = false
                 onPublishToServer()
-              }
+              },
             )
           }
           if (onComponentPacks != null) {
@@ -801,7 +801,7 @@ internal fun EditorToolbar(
               ) {
                 overflowOpen = false
                 onComponentPacks()
-              }
+              },
             )
           }
           if (onHelp != null) {
@@ -809,7 +809,7 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Help", icon = UiBuilderMenuIcon.Help) {
                 overflowOpen = false
                 onHelp()
-              }
+              },
             )
           }
         }
@@ -892,7 +892,7 @@ private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
                         statusGeneration++
                       }
                     },
-                  )
+                  ),
                 )
               }
             }
@@ -1089,13 +1089,13 @@ internal fun UiBuilderDocument.canvasFrameDp(hostShape: WearWidgetHostShape): Pa
  * under [WearWidgetHostShape.ENVIRONMENT_KEY]. Non-widgets are sent unchanged.
  */
 internal fun UiBuilderDocument.withWearWidgetHostShape(
-  shape: WearWidgetHostShape
+  shape: WearWidgetHostShape,
 ): UiBuilderDocument =
   if (wearWidgetScaffoldSize() == null) this
   else
     copy(
       environment =
-        JsonObject(environment + (WearWidgetHostShape.ENVIRONMENT_KEY to JsonPrimitive(shape.id)))
+        JsonObject(environment + (WearWidgetHostShape.ENVIRONMENT_KEY to JsonPrimitive(shape.id))),
     )
 
 internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize? {
@@ -1245,7 +1245,7 @@ internal fun editorSelectionMenuEntries(
       UiBuilderMenuEntry.Action("Properties", icon = UiBuilderMenuIcon.Properties) {
         onDismiss()
         onOpenProperties()
-      }
+      },
     )
   }
   if (onQuickEdit != null) {
@@ -1258,7 +1258,7 @@ internal fun editorSelectionMenuEntries(
       ) {
         onDismiss()
         onQuickEdit()
-      }
+      },
     )
   }
   if (onComment != null) {
@@ -1270,7 +1270,7 @@ internal fun editorSelectionMenuEntries(
       ) {
         onDismiss()
         onComment()
-      }
+      },
     )
   }
   // Beside Properties: both point at the selected layer. This copies a layer's address; the Export
@@ -1285,7 +1285,7 @@ internal fun editorSelectionMenuEntries(
           onDismiss()
           onCopyLink()
         },
-      )
+      ),
     )
   }
   // Beside Copy link for the same reason: it is about this layer, where the code pane and the
@@ -1300,7 +1300,7 @@ internal fun editorSelectionMenuEntries(
           onDismiss()
           onCopyCode()
         },
-      )
+      ),
     )
   }
   if (
@@ -1320,7 +1320,7 @@ internal fun editorSelectionMenuEntries(
       shortcut = "$COMMAND_MODIFIER+D",
     ) {
       act(UiBuilderEditorEvent.DuplicateSelected)
-    }
+    },
   )
   add(
     UiBuilderMenuEntry.Action(
@@ -1330,7 +1330,7 @@ internal fun editorSelectionMenuEntries(
       shortcut = "$COMMAND_MODIFIER+C",
     ) {
       act(UiBuilderEditorEvent.CopySelected)
-    }
+    },
   )
   add(
     UiBuilderMenuEntry.Action(
@@ -1340,7 +1340,7 @@ internal fun editorSelectionMenuEntries(
       shortcut = "$COMMAND_MODIFIER+X",
     ) {
       act(UiBuilderEditorEvent.CutSelected)
-    }
+    },
   )
   add(
     UiBuilderMenuEntry.Action(
@@ -1350,7 +1350,7 @@ internal fun editorSelectionMenuEntries(
       shortcut = "$COMMAND_MODIFIER+V",
     ) {
       act(UiBuilderEditorEvent.Paste)
-    }
+    },
   )
   add(
     UiBuilderMenuEntry.Action(
@@ -1360,7 +1360,7 @@ internal fun editorSelectionMenuEntries(
       shortcut = "Delete",
     ) {
       act(UiBuilderEditorEvent.DeleteSelected)
-    }
+    },
   )
   // Layout before container verbs: the chain is the node's own business, wrapping its parent's.
   if (modifierToggles.isNotEmpty()) {
@@ -1376,7 +1376,7 @@ internal fun editorSelectionMenuEntries(
     add(UiBuilderMenuEntry.Divider)
   componentActions.forEach { action ->
     add(
-      UiBuilderMenuEntry.Action(action.label, icon = UiBuilderMenuIcon.Wrap) { act(action.event) }
+      UiBuilderMenuEntry.Action(action.label, icon = UiBuilderMenuIcon.Wrap) { act(action.event) },
     )
   }
   // Beside the container verbs, because it is one: it turns the subtree into the body of a
@@ -1390,7 +1390,7 @@ internal fun editorSelectionMenuEntries(
         contentDescription = makeComponentRefusal ?: "Make a reusable component of this layer",
       ) {
         act(UiBuilderEditorEvent.MakeComponent())
-      }
+      },
     )
   }
   // Behind one row rather than inline: the containers a selection can be wrapped in run to thirty
@@ -1409,7 +1409,7 @@ internal fun editorSelectionMenuEntries(
             }
           },
         onClick = {},
-      )
+      ),
     )
   }
   if (canUnwrap) {
@@ -1755,7 +1755,7 @@ internal fun CanvasStatusBar(
         val undrawn =
           remember(UiBuilderUndrawnNodes.version, state.document) {
             UiBuilderUndrawnNodes.forGeneration(
-                undrawnGenerationKey(state.document.id, state.document.revision)
+                undrawnGenerationKey(state.document.id, state.document.revision),
               )
               .filter { it.nodeId in state.document.nodes }
           }
@@ -1821,7 +1821,7 @@ internal fun panesLabel(panes: Set<EditorPane>): String =
  * components are browser stand-ins.
  */
 internal fun EditorPane.supportingText(
-  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
+  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
 ): String {
   val wasmDescription =
     if (surfaces.wasm.fidelity.isAuthoritative) "Wasm" else "Wasm stand-in, for authoring"
@@ -1842,7 +1842,7 @@ internal fun EditorPane.supportingText(
  * sentence where written.
  */
 internal fun EditorPane.unavailableText(
-  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
+  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
 ): String =
   when {
     this != EditorPane.Native -> supportingText(surfaces)
@@ -1863,7 +1863,7 @@ internal fun ToolbarIconAction(
   onClick: () -> Unit,
 ) {
   LocalUiBuilderChrome.current.ToolbarAction(
-    UiBuilderToolbarActionModel(label, shortcut, icon, enabled, onClick)
+    UiBuilderToolbarActionModel(label, shortcut, icon, enabled, onClick),
   )
 }
 
@@ -1876,7 +1876,7 @@ internal fun ToolbarToggleAction(
   onClick: () -> Unit,
 ) {
   LocalUiBuilderChrome.current.ToolbarToggle(
-    UiBuilderToolbarToggleModel(label, icon, checked, onClick)
+    UiBuilderToolbarToggleModel(label, icon, checked, onClick),
   )
 }
 
@@ -2457,10 +2457,10 @@ internal fun HostChromeToolbar(
           "Undo",
           canUndo,
           shortcut = "$COMMAND_MODIFIER+Z",
-        )
+        ),
       ) {
         dispatch(UiBuilderEditorEvent.Undo)
-      }
+      },
     )
     add(
       entry(
@@ -2471,10 +2471,10 @@ internal fun HostChromeToolbar(
           "Redo",
           canRedo,
           shortcut = "$COMMAND_MODIFIER+Shift+Z",
-        )
+        ),
       ) {
         dispatch(UiBuilderEditorEvent.Redo)
-      }
+      },
     )
     if (state.reference.hasContent) {
       val visible = state.reference.settings.visible
@@ -2486,10 +2486,10 @@ internal fun HostChromeToolbar(
             "toolbar",
             if (visible) "Show" else "Hide",
             checked = visible,
-          )
+          ),
         ) {
           dispatch(UiBuilderEditorEvent.ToggleReference)
-        }
+        },
       )
     }
     add(
@@ -2501,19 +2501,19 @@ internal fun HostChromeToolbar(
           "Fit",
         ),
         onTidy,
-      )
+      ),
     )
     add(
       entry(UiBuilderHostAction("overflow.shortcuts", "Keyboard shortcuts", "overflow", "More")) {
         showShortcuts = true
-      }
+      },
     )
     if (onComponentPacks != null) {
       add(
         entry(
           UiBuilderHostAction("overflow.packs", "Component packs…", "overflow", "Components"),
           onComponentPacks,
-        )
+        ),
       )
     }
     if (onHelp != null) {

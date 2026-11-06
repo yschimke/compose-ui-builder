@@ -31,7 +31,7 @@ class SurfaceContentColorTest {
       hello.copy(
         nodes =
           hello.nodes +
-            ("hello-text" to label.copy(properties = JsonObject(label.properties - "color")))
+            ("hello-text" to label.copy(properties = JsonObject(label.properties - "color"))),
       )
 
     val onDark = render(uncoloured, host = Color.White)

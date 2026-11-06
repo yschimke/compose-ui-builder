@@ -29,7 +29,7 @@ class RecentComponentsTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -104,7 +104,7 @@ class RecentComponentsTest {
     assertTrue(
       rows.filterIsInstance<EditorCatalogRow.Component>().any {
         it.item.componentId == "m3/text" && !it.recent
-      }
+      },
     )
   }
 
@@ -145,7 +145,7 @@ class RecentComponentsTest {
     assertEquals(listOf("m3/text"), recentShelf(state))
     assertTrue(
       RECENT_SHELF !in
-        shelfNames(reducer.catalogRows(state.copy(recentComponents = listOf("not/a-component"))))
+        shelfNames(reducer.catalogRows(state.copy(recentComponents = listOf("not/a-component")))),
     )
   }
 
@@ -176,15 +176,15 @@ class RecentComponentsTest {
           "groupOrder" to JsonArray(listOf(JsonPrimitive(RECENT_SHELF))),
           "components" to
             JsonObject(
-              mapOf("m3/button" to JsonObject(mapOf("group" to JsonPrimitive(RECENT_SHELF))))
+              mapOf("m3/button" to JsonObject(mapOf("group" to JsonPrimitive(RECENT_SHELF)))),
             ),
-        )
+        ),
       )
     val semantics =
       JsonObject(base["statusSemantics"]?.jsonObject.orEmpty() + ("componentMenu" to menu))
     val reducer =
       UiBuilderEditorReducer(
-        CapabilityCatalogParser.parse(JsonObject(base + ("statusSemantics" to semantics)))
+        CapabilityCatalogParser.parse(JsonObject(base + ("statusSemantics" to semantics))),
       )
     val state =
       reducer

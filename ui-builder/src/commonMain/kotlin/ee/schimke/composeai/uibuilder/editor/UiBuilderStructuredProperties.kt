@@ -251,7 +251,7 @@ internal object StructuredProperties {
         val case =
           composite.case(draft)
             ?: return Outcome.Refused(
-              "`$draft` is not a case of ${composite.unionType.substringAfterLast('.')}"
+              "`$draft` is not a case of ${composite.unionType.substringAfterLast('.')}",
             )
         if (!isNull && located.wrapper.string("case") == case.name) return written(located.wrapper)
         return written(PropertyValueShapes.seedCase(case))
@@ -326,7 +326,7 @@ internal object StructuredProperties {
           is EditorListEdit.Remove -> "$spelled has no row ${edit.index}; it holds $count"
           is EditorListEdit.Move ->
             "$spelled cannot move row ${edit.from} to ${edit.to}; it holds $count"
-        }
+        },
       )
   }
 

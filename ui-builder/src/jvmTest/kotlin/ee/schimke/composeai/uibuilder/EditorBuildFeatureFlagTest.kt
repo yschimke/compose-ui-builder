@@ -23,13 +23,13 @@ class EditorBuildFeatureFlagTest {
       val root = File(System.getProperty("uiBuilderProjectDir"), "..")
       val catalog =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       val document = Json {
         ignoreUnknownKeys = true
       }
         .decodeFromString<UiBuilderDocument>(
-          File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
+          File(root, "experiments/remote-state-selection/bound-actions.uid").readText(),
         )
       assertEquals(
         UiBuilderBuildFeatures.remoteCompose,
@@ -53,9 +53,9 @@ class EditorBuildFeatureFlagTest {
         parentFile.mkdirs()
         writeBytes(
           checkNotNull(
-              Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
+              Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG),
             )
-            .bytes
+            .bytes,
         )
       }
     }

@@ -487,7 +487,7 @@ object UiDrawing {
           Property.Flag(
             "condition",
             "Its operations draw only while this is true; bind it to state or a formula.",
-          )
+          ),
         ),
         container = true,
       ),

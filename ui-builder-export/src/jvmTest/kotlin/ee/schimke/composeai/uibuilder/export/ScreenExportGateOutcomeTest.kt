@@ -28,14 +28,15 @@ class ScreenExportGateOutcomeTest {
     ignoreUnknownKeys = true
   }
     .decodeFromString(
-      File(root, "docs/design/fixtures/ui-builder/compose-foundation-components-v1.json").readText()
+      File(root, "docs/design/fixtures/ui-builder/compose-foundation-components-v1.json")
+        .readText(),
     )
 
   private fun image(assetKey: UiValueV1): DesignDocumentV1 {
     val base =
       Json.decodeFromString<DesignDocumentV1>(
         File(root, "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid")
-          .readText()
+          .readText(),
       )
     val image = DesignNodeV1("hero", "asset/image", properties = mapOf("assetKey" to assetKey))
     return base.copy(

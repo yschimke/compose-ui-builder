@@ -93,7 +93,7 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
   var design by remember {
     mutableStateOf<DesktopDesign>(
       options.designFile?.let { DesktopDesign.File(it) }
-        ?: DesktopDesign.Scratch(options.catalog, options.template)
+        ?: DesktopDesign.Scratch(options.catalog, options.template),
     )
   }
   Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder — ${design.title}") {
@@ -142,7 +142,7 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
               catalogRevision = capabilities.catalogRevision,
               nativeRuntimeId = capabilities.nativeRuntimeId,
             )
-            .copy(title = templateLabel(id))
+            .copy(title = templateLabel(id)),
         )
       }
     }
@@ -193,7 +193,10 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
                 storageRoot
                   .resolve("agents")
                   .resolve(
-                    referenceStoreFor(design, storageRoot).fileName.toString().removeSuffix(".json")
+                    referenceStoreFor(design, storageRoot)
+                      .fileName
+                      .toString()
+                      .removeSuffix(".json"),
                   ),
               // The same three verbs as the Designs menu, where the design is.
               fileDesigns =
@@ -396,7 +399,7 @@ internal data class DesktopLaunchOptions(
       // A catalog file names its own system id, which picks the scratch workspace when `--catalog`
       // does not; naming both is fine only when they agree.
       require(
-        named == null || catalogOverride == null || named.systemId == catalogOverride.systemId
+        named == null || catalogOverride == null || named.systemId == catalogOverride.systemId,
       ) {
         "--catalog ${named?.systemId} and --catalog-file ${catalogOverride?.systemId} disagree"
       }

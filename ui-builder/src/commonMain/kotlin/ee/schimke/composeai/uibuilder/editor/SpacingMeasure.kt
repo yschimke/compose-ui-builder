@@ -99,7 +99,7 @@ internal fun spacingMeasurement(selected: Rect, hovered: Rect): SpacingMeasureme
         segment(Offset(inner.right, cy), Offset(outer.right, cy)),
         segment(Offset(cx, outer.top), Offset(cx, inner.top)),
         segment(Offset(cx, inner.bottom), Offset(cx, outer.bottom)),
-      )
+      ),
     )
   }
   val apartX = selected.right <= hovered.left || hovered.right <= selected.left
@@ -127,7 +127,7 @@ internal fun spacingMeasurement(selected: Rect, hovered: Rect): SpacingMeasureme
           Offset(cx, min(selected.bottom, hovered.bottom)),
           Offset(cx, max(selected.bottom, hovered.bottom)),
         ),
-      )
+      ),
     )
   }
   val segments = mutableListOf<SpacingSegment>()

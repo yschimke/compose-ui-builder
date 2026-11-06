@@ -59,7 +59,7 @@ val generateMaterialIconData =
     javaLauncher.set(
       javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.java.server.get().toInt()))
-      }
+      },
     )
     val output = layout.buildDirectory.dir("generated/materialIconData")
     outputs.dir(output)
@@ -80,6 +80,6 @@ tasks.named<Test>("jvmTest") {
   jvmArgumentProviders.add(
     CommandLineArgumentProvider {
       listOf("-DmaterialIconInventory=${inventory.get().asFile.absolutePath}")
-    }
+    },
   )
 }

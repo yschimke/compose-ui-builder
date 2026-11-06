@@ -59,7 +59,7 @@ class UiBuilderHomeScreenTest {
         label = "Mobile app",
         primary = true,
         templates = listOf(UiBuilderNewDesignTemplate("blank", "Blank", "An empty scaffold")),
-      )
+      ),
     )
 
   private val designs =
@@ -69,7 +69,7 @@ class UiBuilderHomeScreenTest {
         title = "Morning player",
         catalogSystemId = "m3-catalog",
         updatedLabel = "updated yesterday",
-      )
+      ),
     )
 
   @Test
@@ -295,7 +295,7 @@ class UiBuilderHomeScreenTest {
                   UiBuilderNewDesignTemplate("blank", "Blank screen", ""),
                   UiBuilderNewDesignTemplate("hello", "Hello sample", ""),
                 ),
-              )
+              ),
             ),
           initialCatalogSystemId = "m3-catalog",
           releaseNotes = listOf(UiBuilderReleaseNote("9.9.0", "2026-09-25", listOf("a new thing"))),
@@ -358,7 +358,7 @@ class UiBuilderHomeScreenTest {
                 .copy(primary = true)
                 .withTemplatePreviews(
                   CapabilityCatalogParser.parse(
-                    resource("/${choice.systemId}-capabilities-v1.json")
+                    resource("/${choice.systemId}-capabilities-v1.json"),
                   ),
                   publishedTestTemplates(choice.systemId),
                 )
@@ -381,9 +381,9 @@ class UiBuilderHomeScreenTest {
           .writeBytes(
             requireNotNull(
                 Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap())
-                  .encodeToData(EncodedImageFormat.PNG)
+                  .encodeToData(EncodedImageFormat.PNG),
               )
-              .bytes
+              .bytes,
           )
       }
       capture("mobile-app")
@@ -453,7 +453,7 @@ class UiBuilderHomeScreenTest {
           )
         val normalized =
           document.copy(
-            environment = JsonObject(document.environment + ("density" to JsonPrimitive(1)))
+            environment = JsonObject(document.environment + ("density" to JsonPrimitive(1))),
           )
         val (width, height) = document.canvasFrameDp(WearWidgetHostShape.Default)
         template to
@@ -520,9 +520,9 @@ class UiBuilderHomeScreenTest {
         .writeBytes(
           requireNotNull(
               Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap())
-                .encodeToData(EncodedImageFormat.PNG)
+                .encodeToData(EncodedImageFormat.PNG),
             )
-            .bytes
+            .bytes,
         )
       onNodeWithContentDescription("More actions for wear-list").performClick()
       onNodeWithText("Move to folder").assertIsDisplayed()
@@ -572,9 +572,9 @@ class UiBuilderHomeScreenTest {
       .writeBytes(
         requireNotNull(
             Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap())
-              .encodeToData(EncodedImageFormat.PNG)
+              .encodeToData(EncodedImageFormat.PNG),
           )
-          .bytes
+          .bytes,
       )
   }
 

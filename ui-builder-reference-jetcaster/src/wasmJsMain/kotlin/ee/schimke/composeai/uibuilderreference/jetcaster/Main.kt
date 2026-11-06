@@ -238,9 +238,9 @@ private fun MainDiscoverPane(modifier: Modifier = Modifier) {
             colors = listOf(scrimColor, Color.Transparent),
             center = Offset(0f, 0f),
             radius = size.maxDimension * 0.82f,
-          )
+          ),
       )
-    }
+    },
   ) {
     Scaffold(
       containerColor = Color.Transparent,
@@ -372,7 +372,7 @@ private fun PodcastArtworkCard(podcast: Podcast) {
       Artwork(podcast, Modifier.fillMaxSize())
       Box(
         Modifier.fillMaxSize()
-          .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black)))
+          .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black))),
       )
       IconButton(
         onClick = {},
@@ -605,6 +605,6 @@ private fun PodcastHeader() {
     globalThis.__uiBuilderReferenceJetcaster = { ready: true };
     globalThis.__uiBuilderReferenceJetcasterReady = true;
     document.documentElement.setAttribute('data-ui-builder-reference-jetcaster-ready', 'true');
-  }"""
+  }""",
 )
 private external fun publishReady()

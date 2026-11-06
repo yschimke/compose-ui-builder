@@ -53,7 +53,7 @@ internal suspend fun publishDesignToServer(document: DesignDocumentV1): String? 
   val answer =
     try {
       awaitStatusText(
-        putCreatePromise(url, Json.encodeToString(DesignDocumentV1.serializer(), publishable))
+        putCreatePromise(url, Json.encodeToString(DesignDocumentV1.serializer(), publishable)),
       )
     } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
       throw cancelled
@@ -86,7 +86,7 @@ private suspend fun awaitStatusText(promise: Promise<JsString>): String =
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'If-None-Match': '*' },
       body,
-    }).then((response) => response.text().then((text) => response.status + '\n' + text))"""
+    }).then((response) => response.text().then((text) => response.status + '\n' + text))""",
 )
 private external fun putCreatePromise(url: String, body: String): Promise<JsString>
 
@@ -101,7 +101,7 @@ private external fun putCreatePromise(url: String, body: String): Promise<JsStri
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  }"""
+  }""",
 )
 private external fun downloadText(filename: String, text: String)
 
@@ -117,7 +117,7 @@ private external fun downloadText(filename: String, text: String)
       });
     next.searchParams.set('storage', 'local');
     globalThis.location.assign(next.toString());
-  }"""
+  }""",
 )
 private external fun navigateToBrowserDesignAt(path: String)
 

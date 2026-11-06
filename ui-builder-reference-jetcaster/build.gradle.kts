@@ -60,8 +60,8 @@ tasks.register<Sync>("wasmFrontendDist") {
   from(layout.projectDirectory.dir("src/wasmJsMain/resources"))
   from(
     rootProject.layout.projectDirectory.dir(
-      "ui-builder-artwork/src/commonMain/composeResources/files/artwork"
-    )
+      "ui-builder-artwork/src/commonMain/composeResources/files/artwork",
+    ),
   ) {
     include("manifest-v1.json")
     into("ui-builder-artwork/files/artwork")

@@ -29,7 +29,7 @@ import kotlinx.serialization.json.jsonPrimitive
 class LocalComponentsClipboardTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -107,7 +107,7 @@ class LocalComponentsClipboardTest {
               else
                 node.copy(
                   component =
-                    JsonObject(node.component!! + ("componentKey" to JsonPrimitive("inbox-email")))
+                    JsonObject(node.component!! + ("componentKey" to JsonPrimitive("inbox-email"))),
                 )
             },
         )
@@ -132,8 +132,8 @@ class LocalComponentsClipboardTest {
     assertNull(decodeEditorClipboard("""{"format":"something-else","roots":["a"],"nodes":{}}"""))
     assertNull(
       decodeEditorClipboard(
-        """{"format":"compose-ui-builder-clipboard/v1","roots":["missing"],"nodes":{}}"""
-      )
+        """{"format":"compose-ui-builder-clipboard/v1","roots":["missing"],"nodes":{}}""",
+      ),
     )
   }
 
@@ -239,7 +239,7 @@ class LocalComponentsClipboardTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -249,7 +249,7 @@ class LocalComponentsClipboardTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),

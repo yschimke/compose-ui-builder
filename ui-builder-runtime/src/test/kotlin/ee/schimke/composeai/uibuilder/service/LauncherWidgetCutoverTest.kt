@@ -129,7 +129,7 @@ class LauncherWidgetCutoverTest {
     val catalog = declared()
     val renamedPolicy =
       Json.parseToJsonElement(
-          policy.toString().replace("remote-widgets/launcher-widget", "acme-widgets/home-widget")
+          policy.toString().replace("remote-widgets/launcher-widget", "acme-widgets/home-widget"),
         )
         .jsonObject
     assertEquals(
@@ -198,7 +198,7 @@ class LauncherWidgetCutoverTest {
   fun `a record-driven route is never answered by a record-free emitter`() {
     val catalog =
       declared(
-        ee.schimke.composeai.uibuilder.export.CatalogComposeSourceExportAdapters.COMPOSE_MATERIAL3
+        ee.schimke.composeai.uibuilder.export.CatalogComposeSourceExportAdapters.COMPOSE_MATERIAL3,
       )
     assertEquals(
       null,

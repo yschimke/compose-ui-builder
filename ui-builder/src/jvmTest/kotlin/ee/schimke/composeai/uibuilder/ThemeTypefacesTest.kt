@@ -28,7 +28,7 @@ class ThemeTypefacesTest {
   fun `each group names its own roles, and Wear has no headline group`() {
     val families =
       ThemeTypefaces.families(
-        mapOf("themeDisplayTypeface" to "Michroma", "themeBodyTypeface" to " Exo 2 ")::get
+        mapOf("themeDisplayTypeface" to "Michroma", "themeBodyTypeface" to " Exo 2 ")::get,
       )
     assertEquals(setOf("display", "body"), families.keys.map { it.name }.toSet())
     val wear = ThemeTypefaces.wearRoleFamilies(families)

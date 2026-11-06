@@ -82,16 +82,16 @@ class UiBuilderLiveSessionApiTest {
                   put("type", JsonPrimitive("string"))
                   put("value", JsonPrimitive("Shared edit"))
                 },
-              )
+              ),
             ),
-        )
+        ),
       )
     assertIs<UiBuilderHttpResult.Response>(
       http.execute(
         ApplyOperationRequestV1(
-          localEdit.toProtocolSubmission("actor-a", "tab-a", authoritativeRevision = 0)
-        )
-      )
+          localEdit.toProtocolSubmission("actor-a", "tab-a", authoritativeRevision = 0),
+        ),
+      ),
     )
     assertIs<UiBuilderHttpResult.Response>(api.open())
 
@@ -115,7 +115,7 @@ class UiBuilderLiveSessionApiTest {
         override fun resumeWith(result: Result<T>) {
           completed = result
         }
-      }
+      },
     )
     return completed?.getOrThrow() ?: error("fake transport suspended unexpectedly")
   }

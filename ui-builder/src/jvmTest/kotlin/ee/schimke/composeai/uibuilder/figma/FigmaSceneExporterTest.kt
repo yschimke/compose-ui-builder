@@ -23,7 +23,7 @@ class FigmaSceneExporterTest {
     UiBuilderReducer.replay(
         importer
           .import(FigmaSnapshot.parse(resource("/figma/checkout-snapshot-v1.json")), "checkout")
-          .operations
+          .operations,
       )
       .document
 
@@ -54,8 +54,8 @@ class FigmaSceneExporterTest {
                 put("topDp", kotlinx.serialization.json.JsonPrimitive(8))
                 put("endDp", kotlinx.serialization.json.JsonPrimitive(0))
                 put("bottomDp", kotlinx.serialization.json.JsonPrimitive(0))
-              }
-            )
+              },
+            ),
           ),
         slots = mapOf("children" to listOf("dot")),
       )
@@ -70,8 +70,8 @@ class FigmaSceneExporterTest {
                 put("type", kotlinx.serialization.json.JsonPrimitive("offset"))
                 put("xDp", kotlinx.serialization.json.JsonPrimitive(4))
                 put("yDp", kotlinx.serialization.json.JsonPrimitive(2))
-              }
-            )
+              },
+            ),
           ),
       )
     val document =
@@ -139,7 +139,7 @@ class FigmaSceneExporterTest {
   fun `a committed design exports, names what Figma has no counterpart for, and comes back valid`() {
     val gmail =
       UiBuilderReducer.replay(
-          Json.parseToJsonElement(resource("/designs/google-gmail-tablet.json")).jsonObject
+          Json.parseToJsonElement(resource("/designs/google-gmail-tablet.json")).jsonObject,
         )
         .document
     val scene = exporter.export(gmail)

@@ -34,9 +34,9 @@ class RemoteFormulaActionExportTest {
               "slots":{"content":["box"]}},
             "box":{"id":"box","componentId":"layout/box",
               "eventBindings":{"click":$actions}}}}
-          """
-        ) as JsonObject
-      )
+          """,
+        ) as JsonObject,
+      ),
     )
 
   @Test
@@ -47,8 +47,8 @@ class RemoteFormulaActionExportTest {
             """[{"type":"set","variable":"x","value":{"type":"expr","op":"add","args":[
                  {"type":"state","variable":"x"},{"type":"int","value":40}]}},
                {"type":"set","variable":"label","value":{"type":"expr","op":"concat","args":[
-                 {"type":"state","variable":"count"},{"type":"string","value":" taps"}]}}]"""
-          )
+                 {"type":"state","variable":"count"},{"type":"string","value":" taps"}]}}]""",
+          ),
         )
         .source
 
@@ -63,8 +63,8 @@ class RemoteFormulaActionExportTest {
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
           export(
             """[{"type":"increment","variable":"count","amount":{"type":"expr","op":"add","args":[
-                 {"type":"state","variable":"count"},{"type":"int","value":1}]}}]"""
-          )
+                 {"type":"state","variable":"count"},{"type":"int","value":1}]}}]""",
+          ),
         )
         .source
 
@@ -77,8 +77,8 @@ class RemoteFormulaActionExportTest {
       assertIs<WearWidgetCodeExporter.Result.Refused>(
         export(
           """[{"type":"set","variable":"count","value":{"type":"expr","op":"add","args":[
-               {"type":"state","variable":"x"},{"type":"int","value":1}]}}]"""
-        )
+               {"type":"state","variable":"x"},{"type":"int","value":1}]}}]""",
+        ),
       )
 
     assertTrue(refused.reasons.any { "box" in it && "click" in it }, refused.reasons.toString())

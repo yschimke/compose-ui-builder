@@ -188,7 +188,7 @@ class DesignSuggestionsTest {
             service,
             owner,
             UiBuilderBranchRequest.MergeBranch("design-s", acceptOperationIds = setOf("s-1")),
-          )
+          ),
         )
         .report
     assertTrue(report.merged)
@@ -232,7 +232,7 @@ class DesignSuggestionsTest {
             service,
             owner,
             UiBuilderBranchRequest.MergeBranch("design-s", acceptOperationIds = setOf("s-1")),
-          )
+          ),
         )
         .report
     assertTrue(partial.merged, partial.toString())
@@ -265,7 +265,7 @@ class DesignSuggestionsTest {
               "design-s",
               acceptOperationIds = setOf("s-1", "s-3"),
             ),
-          )
+          ),
         )
         .report
     assertTrue(report.merged, report.toString())
@@ -330,7 +330,7 @@ class DesignSuggestionsTest {
             branchId = suggestionId,
             kind = UiBuilderBranchKind.SUGGESTION,
           ),
-        )
+        ),
       )
       .branch
 
@@ -346,7 +346,7 @@ class DesignSuggestionsTest {
     suggestionId: String,
   ): UiBuilderBranch =
     assertIs<UiBuilderBranchResponse.Branch>(
-        execute(service, actor, UiBuilderBranchRequest.ArchiveBranch(suggestionId))
+        execute(service, actor, UiBuilderBranchRequest.ArchiveBranch(suggestionId)),
       )
       .branch
 
@@ -357,14 +357,14 @@ class DesignSuggestionsTest {
     kind: UiBuilderBranchKind?,
   ): List<UiBuilderBranch> =
     assertIs<UiBuilderBranchResponse.Branches>(
-        execute(service, actor, UiBuilderBranchRequest.ListBranches("design", includeClosed, kind))
+        execute(service, actor, UiBuilderBranchRequest.ListBranches("design", includeClosed, kind)),
       )
       .branches
 
   /** A design whose root holds one Text node, `title`, at revision 1. */
   private fun seed(service: PersistentUiBuilderService) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(designDocument()))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(designDocument())),
     )
     accepted(
       service,
@@ -386,10 +386,10 @@ class DesignSuggestionsTest {
               actor.actorId,
               DesignAccessRoleV1.EDITOR,
               listOf(DesignAccessActionV1.READ, DesignAccessActionV1.WRITE),
-            )
+            ),
           ),
         ),
-      )
+      ),
     )
   }
 
@@ -404,7 +404,7 @@ class DesignSuggestionsTest {
           service,
           actor,
           UiBuilderBranchRequest.CreateBranch("design", name, branchId = branchId),
-        )
+        ),
       )
       .branch
 
@@ -414,7 +414,7 @@ class DesignSuggestionsTest {
     branchId: String,
   ): UiBuilderBranch =
     assertIs<UiBuilderBranchResponse.Branch>(
-        execute(service, actor, UiBuilderBranchRequest.GetBranch(branchId))
+        execute(service, actor, UiBuilderBranchRequest.GetBranch(branchId)),
       )
       .branch
 
@@ -426,7 +426,7 @@ class DesignSuggestionsTest {
     skip: Set<String> = emptySet(),
   ): UiBuilderBranchMergeReport =
     assertIs<UiBuilderBranchResponse.Merge>(
-        execute(service, actor, UiBuilderBranchRequest.MergeBranch(branchId, dryRun, skip))
+        execute(service, actor, UiBuilderBranchRequest.MergeBranch(branchId, dryRun, skip)),
       )
       .report
 
@@ -439,7 +439,7 @@ class DesignSuggestionsTest {
 
   private fun document(service: PersistentUiBuilderService, designId: String): DesignDocumentV1 =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId))
+        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId)),
       )
       .snapshot
       .state
@@ -455,7 +455,7 @@ class DesignSuggestionsTest {
   ): AcceptedOutcomeV1 {
     val outcome =
       assertIs<UiBuilderServiceResponse.OperationOutcome>(
-          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission))
+          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission)),
         )
         .outcome
     return assertIs<AcceptedOutcomeV1>(outcome, "${submission.operationId}: $outcome")
@@ -468,9 +468,9 @@ class DesignSuggestionsTest {
   ): RejectedOutcomeV1 =
     assertIs<RejectedOutcomeV1>(
       assertIs<UiBuilderServiceResponse.OperationOutcome>(
-          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission))
+          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission)),
         )
-        .outcome
+        .outcome,
     )
 
   private fun batch(
@@ -556,7 +556,7 @@ class DesignSuggestionsTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }
@@ -601,10 +601,10 @@ class DesignSuggestionsTest {
                   listOf(
                     PropertyCapabilityV1.Builder("text", JsonPrimitive("string"))
                       .also { it.required = false }
-                      .build()
+                      .build(),
                   )
               }
-              .build()
+              .build(),
           ),
         )
         .build()

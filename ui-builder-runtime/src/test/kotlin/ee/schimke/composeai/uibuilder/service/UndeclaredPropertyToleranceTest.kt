@@ -165,7 +165,7 @@ class UndeclaredPropertyToleranceTest {
               baseRevision = 0,
               operationId = "move-home",
             ),
-          )
+          ),
         )
         .outcome
     assertIs<AcceptedOutcomeV1>(moved)
@@ -214,7 +214,7 @@ class UndeclaredPropertyToleranceTest {
 
     val refused =
       assertIs<UiBuilderServiceResponse.Error>(
-        execute(gone, owner, UiBuilderServiceRequest.OpenDesign("widget"))
+        execute(gone, owner, UiBuilderServiceRequest.OpenDesign("widget")),
       )
     assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
   }
@@ -242,7 +242,7 @@ class UndeclaredPropertyToleranceTest {
                   .build()
               }
             }
-            .build()
+            .build(),
         ),
       )
       .also {
@@ -316,7 +316,7 @@ class UndeclaredPropertyToleranceTest {
       if (withTint) mapOf("text" to "hi", "tint" to "#FF0000") else mapOf("text" to "hi")
     val document = document(designId).withNode(node("label", TEXT, properties))
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document)),
     )
   }
 
@@ -349,9 +349,9 @@ class UndeclaredPropertyToleranceTest {
                 nodeId = nodeId,
                 property = property,
                 value = StringValueV1(value),
-              )
+              ),
             ),
-          )
+          ),
         ),
       )
     return assertIs<UiBuilderServiceResponse.OperationOutcome>(response).outcome
@@ -359,7 +359,7 @@ class UndeclaredPropertyToleranceTest {
 
   private fun openedDocument(service: PersistentUiBuilderService, designId: String) =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId))
+        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId)),
       )
       .snapshot
       .state
@@ -411,7 +411,7 @@ class UndeclaredPropertyToleranceTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return assertNotNull(completion, "suspend function did not complete").getOrThrow()
   }

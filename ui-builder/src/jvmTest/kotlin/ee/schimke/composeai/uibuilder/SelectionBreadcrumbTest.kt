@@ -139,7 +139,7 @@ class SelectionBreadcrumbTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

@@ -85,7 +85,7 @@ internal class BrowserExportHost(
     val document = currentDocument(format)
     val url =
       sameOriginRequestUrl(
-        if (document == null) livePath(format, download = true) else suppliedPath(format)
+        if (document == null) livePath(format, download = true) else suppliedPath(format),
       )
     val outcome =
       try {
@@ -184,7 +184,7 @@ internal suspend fun copyAiPrompt(prompt: String): String =
     const resolved = new URL(path, window.location.href);
     resolved.searchParams.delete('token');
     return resolved.toString();
-  }"""
+  }""",
 )
 internal external fun shareableUrl(path: String): String
 
@@ -198,7 +198,7 @@ internal external fun shareableUrl(path: String): String
       () => '',
       (error) => 'the browser refused the clipboard: ' + (error && error.message ? error.message : error),
     );
-  }"""
+  }""",
 )
 private external fun copyTextPromise(text: String): Promise<JsString>
 
@@ -224,7 +224,7 @@ private external fun copyTextPromise(text: String): Promise<JsString>
       () => '',
       (error) => 'the browser refused the clipboard: ' + (error && error.message ? error.message : error),
     ));
-  }"""
+  }""",
 )
 private external fun copySvgTextPromise(url: String, document: String?): Promise<JsString>
 
@@ -254,7 +254,7 @@ private external fun copySvgTextPromise(url: String, document: String?): Promise
       () => '',
       (error) => 'the browser refused the clipboard: ' + (error && error.message ? error.message : error),
     );
-  }"""
+  }""",
 )
 private external fun copyPngImagePromise(url: String, document: String?): Promise<JsString>
 
@@ -283,7 +283,7 @@ private external fun copyPngImagePromise(url: String, document: String?): Promis
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       return '';
     });
-  }"""
+  }""",
 )
 private external fun downloadPromise(
   url: String,
@@ -329,7 +329,7 @@ private external fun downloadPromise(
         return 'Could not share ' + filename + ', so it was downloaded instead';
       }
     });
-  }"""
+  }""",
 )
 private external fun sharePromise(
   url: String,

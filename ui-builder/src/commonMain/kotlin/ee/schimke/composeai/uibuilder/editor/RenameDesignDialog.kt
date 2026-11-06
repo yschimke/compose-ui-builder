@@ -87,7 +87,7 @@ internal fun RenameDesignDialog(
             Text(
               error
                 ?: if (trimmed.isEmpty()) "A design needs a title"
-                else "The id $designId, and every link to it, stays the same."
+                else "The id $designId, and every link to it, stays the same.",
             )
           },
           singleLine = true,

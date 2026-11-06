@@ -12,7 +12,7 @@ internal fun remoteJsonRepetitionFixture(density: Int): UiBuilderDocument {
             """[
         {"type":"size","widthDp":16,"heightDp":16},
         {"type":"background","color":{"type":"color","value":"$color"}}
-      ]"""
+      ]""",
           )
           .jsonArray,
       eventBindings =
@@ -42,7 +42,7 @@ internal fun remoteJsonRepetitionFixture(density: Int): UiBuilderDocument {
             {"type":"object","fields":{"gap":{"type":"float","value":0}}},
             {"type":"object","fields":{"gap":{"type":"float","value":8}}},
             {"type":"object","fields":{"gap":{"type":"float","value":16}}}
-          ]}}"""
+          ]}}""",
               ),
             slots = mapOf("template" to listOf("place")),
           ),
@@ -52,12 +52,12 @@ internal fun remoteJsonRepetitionFixture(density: Int): UiBuilderDocument {
             "design/component-instance",
             modifiers =
               Json.parseToJsonElement(
-                  """[{"type":"padding","startDp":4,"topDp":2,"endDp":4,"bottomDp":2}]"""
+                  """[{"type":"padding","startDp":4,"topDp":2,"endDp":4,"bottomDp":2}]""",
                 )
                 .jsonArray,
             component =
               repetitionObject(
-                """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":"gap"}}}"""
+                """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":"gap"}}}""",
               ),
           ),
         "row" to

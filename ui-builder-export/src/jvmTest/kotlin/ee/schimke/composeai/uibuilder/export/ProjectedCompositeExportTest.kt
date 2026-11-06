@@ -75,8 +75,8 @@ class ProjectedCompositeExportTest {
           { "targets": [ { "record": "app/com.example.InboxKt.Inbox", "parameters": {
               "contacts": { "property": "contacts", "codec": { "list": { "element": $CONTACT } } },
               "pinned": { "property": "pinned", "codec": $CONTACT } } } ] }
-          """
-        )
+          """,
+        ),
       )
       .getOrThrow()
 
@@ -90,7 +90,7 @@ class ProjectedCompositeExportTest {
     val base =
       Json.decodeFromString<DesignDocumentV1>(
         File(root, "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid")
-          .readText()
+          .readText(),
       )
     val node = DesignNodeV1("inbox", "acme/inbox", properties = properties.toMap())
     return base.copy(
@@ -107,7 +107,7 @@ class ProjectedCompositeExportTest {
       buildMap {
         put("name", StringValueV1(name))
         unread?.let { put("unread", IntegerValueV1(it)) }
-      }
+      },
     )
 
   @Test
@@ -155,9 +155,9 @@ class ProjectedCompositeExportTest {
           "contacts" to
             ListValueV1(
               listOf(
-                ObjectValueV1(mapOf("name" to StringValueV1("Ada"), "age" to IntegerValueV1(3)))
-              )
-            )
+                ObjectValueV1(mapOf("name" to StringValueV1("Ada"), "age" to IntegerValueV1(3))),
+              ),
+            ),
         ),
         records,
         projections,

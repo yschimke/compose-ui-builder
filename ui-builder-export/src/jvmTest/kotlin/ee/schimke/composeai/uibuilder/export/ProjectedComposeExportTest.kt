@@ -146,7 +146,7 @@ class ProjectedComposeExportTest {
                           "type": "$BUTTON_COLORS",
                           "arguments": { "containerColor": { "property": "containerColor",
                             "codec": { "color": { "scheme": "androidx.wear.compose.material3.MaterialTheme" } } } } } } } ] }
-      """
+      """,
     )
 
   private val textProjection =
@@ -154,7 +154,7 @@ class ProjectedComposeExportTest {
       """
       { "targets": [ { "record": "wear/androidx.wear.compose.material3.TextKt.Text",
           "parameters": { "text": { "property": "text", "codec": "text" } } } ] }
-      """
+      """,
     )
 
   /** The button again, recognising one or two lines as `label` and `secondaryLabel`. */
@@ -167,7 +167,7 @@ class ProjectedComposeExportTest {
               "patterns": [ { "match": [
                 { "lines": { "text": "wear-m3/text", "min": 1, "max": 2 },
                   "to": ["label", "secondaryLabel"] } ] } ] } } } ] }
-      """
+      """,
     )
 
   /** `ListHeader`'s header is its `text` property, written as the catalog's own `Text`. */
@@ -178,7 +178,7 @@ class ProjectedComposeExportTest {
           { "record": "wear/androidx.wear.compose.material3.ListHeaderKt.ListHeader",
             "synthesize": { "content": { "component": "wear-m3/text",
                                          "properties": { "text": "text" } } } } ] }
-      """
+      """,
     )
 
   private val projections: Map<String, ExportProjection> =
@@ -198,7 +198,7 @@ class ProjectedComposeExportTest {
     val base =
       Json.decodeFromString<DesignDocumentV1>(
         File(root, "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid")
-          .readText()
+          .readText(),
       )
     val label =
       DesignNodeV1(
@@ -248,8 +248,8 @@ class ProjectedComposeExportTest {
       ExportProjectionJson.decode(
           Json.parseToJsonElement(
             """{ "targets": [ { "record": "${group.canonicalId}",
-              "slots": { "children": "content" } } ] }"""
-          )
+              "slots": { "children": "content" } } ] }""",
+          ),
         )
         .getOrThrow()
     fun export(fill: Boolean?, weight: Double = 0.7): ScreenExportGate.Outcome {
@@ -288,8 +288,8 @@ class ProjectedComposeExportTest {
             "variant" to EnumValueV1("filled-tonal"),
             "enabled" to BooleanValueV1(false),
             "containerColor" to ColorTokenValueV1("primary"),
-          )
-        )
+          ),
+        ),
       )
     assertContains(source, "FilledTonalButton(")
     assertContains(source, "enabled = false")
@@ -347,12 +347,12 @@ class ProjectedComposeExportTest {
                   "java.lang.Runtime.getRuntime",
                   BUTTON_COLORS,
                   mapOf(
-                    "x" to ExportProjection.Value.Property("enabled", ExportProjection.Codec.Bool)
+                    "x" to ExportProjection.Value.Property("enabled", ExportProjection.Codec.Bool),
                   ),
-                )
+                ),
             ),
-          )
-        )
+          ),
+        ),
       )
     val owners =
       ScreenExportGate.projectedOwners(
@@ -383,13 +383,13 @@ class ProjectedComposeExportTest {
                     mapOf(
                       "transformation" to
                         ExportProjection.Value.Fixed(
-                          ScreenValue.Construct(callable, typeFqn = "$callable.Type")
-                        )
-                    )
-                  )
+                          ScreenValue.Construct(callable, typeFqn = "$callable.Type"),
+                        ),
+                    ),
+                  ),
               ),
-          )
-        )
+          ),
+        ),
       )
     // `SurfaceTransformation(spec)` is top level in the package the catalog's buttons live in.
     val owners =
@@ -487,10 +487,10 @@ class ProjectedComposeExportTest {
             icon.canonicalId,
             mapOf(
               "imageVector" to
-                ExportProjection.Value.Property("iconKey", ExportProjection.Codec.MaterialIcon)
+                ExportProjection.Value.Property("iconKey", ExportProjection.Codec.MaterialIcon),
             ),
-          )
-        )
+          ),
+        ),
       )
     fun exported(key: String): ScreenExportGate.Outcome {
       val base = document(button())
@@ -658,7 +658,7 @@ class ProjectedComposeExportTest {
         document(button()).copy(roots = listOf("header"), nodes = mapOf("header" to header)),
         records,
         mapOf(
-          "wear-m3/list-header" to ExportProjectionJson.decode(listHeaderProjection).getOrThrow()
+          "wear-m3/list-header" to ExportProjectionJson.decode(listHeaderProjection).getOrThrow(),
         ),
       )
     val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
@@ -725,13 +725,13 @@ class ProjectedComposeExportTest {
           mapOf(
             "state" to
               ExportProjection.Value.Fixed(
-                ScreenValue.LocalRead.Builder("listState", listState).build()
-              )
+                ScreenValue.LocalRead.Builder("listState", listState).build(),
+              ),
           ),
           items = mapOf("content" to "item"),
           itemRoles = mapOf("content" to "list-item"),
-        )
-      )
+        ),
+      ),
     )
 
   /** The button, adding `transformedHeight(this, spec)` when it is a list item. */
@@ -754,12 +754,12 @@ class ProjectedComposeExportTest {
                                 ScreenValue.ScopeRead.Builder(itemScope).build(),
                                 ScreenValue.LocalRead.Builder("spec", spec).build(),
                               ),
-                          )
-                        )
-                    )
-                )
+                          ),
+                        ),
+                    ),
+                ),
             )
-          }
+          },
       )
     }
 
@@ -777,9 +777,9 @@ class ProjectedComposeExportTest {
               "locals": { "listState": "$listState", "spec": "$spec" },
               "scopes": { "list-item": "$itemScope" } },
             "builtins": { "wear-m3/screen-scaffold": { "role": "screen-root" } } }
-          """
+          """,
         )
-        .jsonObject
+        .jsonObject,
     )
 
   private fun listDocument(): DesignDocumentV1 {
@@ -886,7 +886,7 @@ class ProjectedComposeExportTest {
         scaffolded(
           "timeText" to StringValueV1("10:10"),
           "scrollIndicator" to BooleanValueV1(true),
-        )
+        ),
       )
     val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
     assertEquals(
@@ -906,8 +906,8 @@ class ProjectedComposeExportTest {
               "scrollIndicator" to BooleanValueV1(false),
               "background" to StringValueV1("#000000"),
               slots = mapOf("content" to listOf("list"), "edgeButton" to listOf("go")),
-            )
-          )
+            ),
+          ),
         )
         .reasons
     assertTrue(reasons.any { "`scrollIndicator`" in it }, reasons.toString())
@@ -937,8 +937,8 @@ class ProjectedComposeExportTest {
                 "  ${'$'}{edgeButton}\n" +
                 "}) { contentPadding ->\n" +
                 "  ${'$'}{content}\n" +
-                "}"
-          )
+                "}",
+          ),
       )
     val outcome =
       ScreenExportGate.export(
@@ -960,7 +960,7 @@ class ProjectedComposeExportTest {
         projections +
           mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
         structure,
-      )
+      ),
     )
   }
 
@@ -970,9 +970,9 @@ class ProjectedComposeExportTest {
       CatalogScreenStructure.from(
         Json.parseToJsonElement(
             """{ "code": { "templates": { "screen-root": "a", "screen-root+edgeButton": "b",
-              "screen-root+edgeButton+overlays": "c" } } }"""
+              "screen-root+edgeButton+overlays": "c" } } }""",
           )
-          .jsonObject
+          .jsonObject,
       )
     assertEquals("a", structure.frameFor(emptySet()))
     assertEquals("b", structure.frameFor(setOf("edgeButton")))
@@ -984,7 +984,7 @@ class ProjectedComposeExportTest {
   fun `without a frame the screen-root builtin is left to the record path`() {
     val document = scaffolded()
     assertIs<ScreenRootFrame.Unwrapped.Document>(
-        ScreenRootFrame.unwrap(document, wearStructure.copy(frame = null))
+        ScreenRootFrame.unwrap(document, wearStructure.copy(frame = null)),
       )
       .let { assertEquals(document, it.document) }
   }

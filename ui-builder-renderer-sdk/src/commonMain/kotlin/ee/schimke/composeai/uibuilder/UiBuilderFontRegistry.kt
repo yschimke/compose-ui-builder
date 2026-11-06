@@ -232,7 +232,7 @@ fun variableFontFamily(files: List<UiBuilderFontFile>, axes: List<FontSettings.A
         weight = FontWeight(file.weight),
         variationSettings = FontVariation.Settings(*settings.toTypedArray()),
       )
-    }
+    },
   )
 
 /**

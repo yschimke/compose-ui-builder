@@ -72,7 +72,7 @@ object McpAppSelectionContext {
     buildString {
       val path = nodePath(document, node.id)
       append(
-        "${file.name}: ${componentName(node.componentId)} `${node.id}` (${node.componentId})\n"
+        "${file.name}: ${componentName(node.componentId)} `${node.id}` (${node.componentId})\n",
       )
       append("Path: ").append(path.joinToString(" › ") { it.label() }).append('\n')
       if (node.properties.isEmpty()) append("Properties: none")
@@ -97,7 +97,7 @@ object McpAppSelectionContext {
               put("componentId", step.componentId)
               step.slot?.let { put("slot", it) }
               step.index?.let { put("index", it) }
-            }
+            },
           )
         }
       }

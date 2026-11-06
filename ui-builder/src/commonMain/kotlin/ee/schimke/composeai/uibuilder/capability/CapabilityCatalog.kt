@@ -348,9 +348,9 @@ object CapabilityCatalogParser {
               catalog.components.map {
                 it.copy(
                   properties =
-                    it.properties.filterNot { property -> property.name == SHOW_BY_STATE }
+                    it.properties.filterNot { property -> property.name == SHOW_BY_STATE },
                 )
-              }
+              },
           )
       }
       .also(::validateCatalogShape)
@@ -407,9 +407,9 @@ object CapabilityCatalogParser {
                   .filter { (name, _) -> name !in declared }
                   .map { (name, notes) ->
                     PropertyCapability(name, JsonPrimitive("string"), notes = notes)
-                  }
+                  },
           )
-        }
+        },
     )
 
   /**
@@ -418,7 +418,7 @@ object CapabilityCatalogParser {
    * because [PropertyCapability.editor] is builder-side metadata the wire type does not carry.
    */
   private fun compositeEditors(
-    element: JsonElement
+    element: JsonElement,
   ): Map<Pair<String, String>, PropertyEditorCapability> =
     ((element as? JsonObject)?.get("components") as? JsonArray)
       .orEmpty()
@@ -445,7 +445,7 @@ object CapabilityCatalogParser {
    * is the only description of that value's shape.
    */
   private fun CapabilityCatalog.withEditorMetadata(
-    composite: Map<Pair<String, String>, PropertyEditorCapability>
+    composite: Map<Pair<String, String>, PropertyEditorCapability>,
   ): CapabilityCatalog =
     copy(
       components =
@@ -466,11 +466,11 @@ object CapabilityCatalogParser {
                         component.componentId,
                         property.name,
                       )
-                      ?: editorMetadata(component.componentId, property)
+                      ?: editorMetadata(component.componentId, property),
                 )
               },
           )
-        }
+        },
     )
 
   private fun editorMetadata(

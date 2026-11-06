@@ -126,7 +126,7 @@ private val wearScreenSampleCatalogPin: JsonObject =
         "capabilityDigest": "candidate",
         "nativeRuntimeId": "candidate"
       }
-      """
+      """,
     )
     .jsonObject
 
@@ -146,7 +146,7 @@ private fun wearScreenSampleEnvironment(widthDp: Int): JsonObject =
         "locale": "en-US",
         "layoutDirection": "ltr"
       }
-      """
+      """,
     )
     .jsonObject
 

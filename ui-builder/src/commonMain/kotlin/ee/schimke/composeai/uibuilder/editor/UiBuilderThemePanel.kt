@@ -92,7 +92,7 @@ internal fun ThemePanel(
     if (schemeTarget.isEmpty) {
       ThemeNote(
         if (host == null) "Add a root Material surface to hold the theme's colours."
-        else "This theme host carries no colours of its own."
+        else "This theme host carries no colours of its own.",
       )
     } else {
       ThemeBuilderImport(schemeTarget, preferredScheme, onTextInputFocusChanged, dispatch)
@@ -265,7 +265,7 @@ private fun ThemeBuilderImport(
     val read = importDesignTokens(text, target.tokens).getOrNull()
     if (read != null && read.values.isNotEmpty()) {
       ThemeNote(
-        "${read.format}: ${read.values.size} token${if (read.values.size == 1) "" else "s"}."
+        "${read.format}: ${read.values.size} token${if (read.values.size == 1) "" else "s"}.",
       )
       TextButton(
         enabled = !applied,
@@ -403,7 +403,7 @@ private fun SeedSchemeGenerator(
       filled = true,
       modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
       onClick = { dispatch(UiBuilderEditorEvent.ApplyColorScheme(roles)) },
-    )
+    ),
   )
 }
 
@@ -441,11 +441,11 @@ private fun MaterialColourFields(
               backgroundColor = background,
               surfaceColor = surface,
               contentColor = content,
-            )
-          )
+            ),
+          ),
         )
       },
-    )
+    ),
   )
 }
 
@@ -467,7 +467,7 @@ private fun ThemeNumberField(
         contentDescription = actionLabel,
         enabled = draft != value,
         onClick = { onApply(draft.toFloatOrNull()) },
-      )
+      ),
     )
   }
 }
@@ -562,7 +562,7 @@ private fun SchemeSwatches(roles: Map<String, String>) {
         Box(
           Modifier.size(width = 52.dp, height = 28.dp)
             .background(colour, RoundedCornerShape(6.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp)),
         )
         Text(
           role,
@@ -640,7 +640,7 @@ private fun ThemeTypefacePickers(
   ) { role ->
     dispatch(
       if (role == null) UiBuilderEditorEvent.ClearProperty(host.id, ThemeTextStyle.PROPERTY)
-      else UiBuilderEditorEvent.CommitProperty(host.id, ThemeTextStyle.PROPERTY, role)
+      else UiBuilderEditorEvent.CommitProperty(host.id, ThemeTextStyle.PROPERTY, role),
     )
   }
 }
@@ -714,6 +714,6 @@ private fun ThemeField(
       modifier = Modifier.fillMaxWidth(),
       onFocusChanged = onFocusChanged,
       onValueChange = onValueChange,
-    )
+    ),
   )
 }

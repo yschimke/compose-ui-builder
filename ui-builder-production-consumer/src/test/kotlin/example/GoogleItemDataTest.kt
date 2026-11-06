@@ -50,7 +50,7 @@ class GoogleItemDataTest {
         (0 until minOf(unchecked.height, checked.height)).any { y ->
           unchecked[x, y] != checked[x, y]
         }
-      }
+      },
     )
     onNodeWithText("Packed").assertExists()
     onNodeWithText("Pack").assertDoesNotExist()

@@ -21,7 +21,7 @@ class LovelacePublishedCatalogIntegrationTest {
             File(path, "ui-builder.json").readText(),
             null,
             ExportCapabilitiesV1.Builder().build(),
-          )
+          ),
         )
         .catalog
     assertEquals("lovelace", composed.benchmark.catalogSystemId)

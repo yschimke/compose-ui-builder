@@ -18,12 +18,12 @@ object GenerateJetcasterComposeFixture {
     val loader = GenerateJetcasterComposeFixture::class.java
     val fixture =
       Json.parseToJsonElement(
-          checkNotNull(loader.getResource("/jetcaster-discover-operations-v1.json")).readText()
+          checkNotNull(loader.getResource("/jetcaster-discover-operations-v1.json")).readText(),
         )
         .jsonObject
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(loader.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(loader.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
     val result =
       CapabilityComposeCodeExporter.export(
@@ -56,12 +56,12 @@ object GenerateJetcasterComposeFixture {
           ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY to
             ComposeAssetBinding(
               sourceIdentity =
-                "project-owned-artwork/v1/$ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY/square-512"
+                "project-owned-artwork/v1/$ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY/square-512",
             ),
           GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY to
             ComposeAssetBinding(
               sourceIdentity =
-                "project-owned-artwork/v1/$GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY/square-512"
+                "project-owned-artwork/v1/$GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY/square-512",
             ),
         ),
     )

@@ -313,7 +313,7 @@ class CanvasZoomGestureTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

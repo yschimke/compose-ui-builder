@@ -26,7 +26,7 @@ class EditorLayerDragTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val state = reducer.initial(document, selectedNodeId = "root-surface")
@@ -100,7 +100,7 @@ class EditorLayerDragTest {
         nodes =
           document.nodes +
             ("main-episode-copy" to
-              document.nodes.getValue("main-episode-copy").copy(slots = emptyMap()))
+              document.nodes.getValue("main-episode-copy").copy(slots = emptyMap())),
       )
     val rows = reducer.layerRows(reducer.initial(emptied, selectedNodeId = "root-surface"))
 
@@ -138,7 +138,7 @@ class EditorLayerDragTest {
     // dragging.
     val refusal =
       assertNotNull(
-        reducer.moveRefusal(state, "main-content", ParentSlot("main-background", "children"))
+        reducer.moveRefusal(state, "main-content", ParentSlot("main-background", "children")),
       )
 
     assertEquals(RejectionCode.INVALID_LOCATION, refusal.code)

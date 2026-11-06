@@ -61,7 +61,7 @@ internal class BrowserSuggestionHost(
     }
     return Result.Failed(
       errorReason(response)
-        ?: "The host answered ${response.status} while accepting that suggestion."
+        ?: "The host answered ${response.status} while accepting that suggestion.",
     )
   }
 
@@ -75,12 +75,12 @@ internal class BrowserSuggestionHost(
       ) ?: return Result.Failed("The host could not be reached while rejecting that suggestion.")
     if (response.status in 200..299) {
       return Result.Decided(
-        DesignSuggestionOutcome.Rejected(suggestion.suggestionId, suggestion.summary)
+        DesignSuggestionOutcome.Rejected(suggestion.suggestionId, suggestion.summary),
       )
     }
     return Result.Failed(
       errorReason(response)
-        ?: "The host answered ${response.status} while rejecting that suggestion."
+        ?: "The host answered ${response.status} while rejecting that suggestion.",
     )
   }
 
@@ -107,7 +107,7 @@ internal class BrowserSuggestionHost(
     val encoded =
       try {
         awaitCommentString(
-          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null)
+          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null),
         )
       } catch (_: Exception) {
         return null

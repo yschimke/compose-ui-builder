@@ -57,7 +57,7 @@ object LauncherAdaptiveLayout {
             { it.second.widthDp * it.second.heightDp },
             { it.second.widthDp },
             { it.second.heightDp },
-          )
+          ),
         )
     if (breakpoints.isEmpty()) return BREAKPOINTS.first().slot
     val fitting = breakpoints.filter {

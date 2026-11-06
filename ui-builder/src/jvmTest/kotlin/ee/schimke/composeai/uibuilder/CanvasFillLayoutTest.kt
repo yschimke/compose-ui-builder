@@ -65,7 +65,7 @@ class CanvasFillLayoutTest {
               "layout/box",
               modifiers =
                 Json.parseToJsonElement(
-                    """[{"type":"height","heightDp":40},{"type":"fillMaxWidth"}]"""
+                    """[{"type":"height","heightDp":40},{"type":"fillMaxWidth"}]""",
                   )
                   .jsonArray,
             )
@@ -87,7 +87,7 @@ class CanvasFillLayoutTest {
                       slots = mapOf("items" to items.keys.toList()),
                       eventBindings = setPage(10),
                     ),
-              )
+              ),
         )
       var inspection: UiBuilderInspectionSnapshot? = null
       var canvasHeight = 0
@@ -120,9 +120,9 @@ class CanvasFillLayoutTest {
           .copy(
             modifiers =
               Json.parseToJsonElement(
-                  """[{"type":"fillMaxWidth"},{"type":"height","heightDp":800}]"""
+                  """[{"type":"fillMaxWidth"},{"type":"height","heightDp":800}]""",
                 )
-                .jsonArray
+                .jsonArray,
           )
       var document by
         mutableStateOf(
@@ -134,11 +134,11 @@ class CanvasFillLayoutTest {
                   "page" to
                     JsonObject(
                       saved.stateVariables.getValue("page").jsonObject +
-                        ("initialValue" to JsonPrimitive(20))
-                    )
-                )
+                        ("initialValue" to JsonPrimitive(20)),
+                    ),
+                ),
               ),
-          )
+          ),
         )
       var inspection: UiBuilderInspectionSnapshot? = null
       var canvasHeight = 0
@@ -162,7 +162,7 @@ class CanvasFillLayoutTest {
       )
     val saved = json.decodeFromString<UiBuilderDocument>(sample.readText())
     return saved.copy(
-      environment = JsonObject(saved.environment + ("density" to JsonPrimitive(designDensity)))
+      environment = JsonObject(saved.environment + ("density" to JsonPrimitive(designDensity))),
     )
   }
 

@@ -93,11 +93,11 @@ class ProductionComposeGeneratorTest {
                                 put("type", "string")
                                 put("value", "Static title")
                               }
-                            }
-                        ))
+                            },
+                        )),
               ),
           )
-        }
+        },
       )
     assertContains(
       fewerReads.single { it.path.endsWith("LibraryScreen.kt") }.source,
@@ -120,10 +120,10 @@ class ProductionComposeGeneratorTest {
                 entryPoint =
                   it.entryPoint!!.copy(
                     bindings =
-                      listOf(it.entryPoint!!.bindings.single().copy(property = "unsupported"))
-                  )
+                      listOf(it.entryPoint!!.bindings.single().copy(property = "unsupported")),
+                  ),
               )
-            }
+            },
           )
         }
         .message!!,
@@ -148,10 +148,10 @@ class ProductionComposeGeneratorTest {
           file.copy(
             entryPoint =
               file.entryPoint!!.copy(
-                events = file.entryPoint!!.events + ProductionEvent("onRefresh")
-              )
+                events = file.entryPoint!!.events + ProductionEvent("onRefresh"),
+              ),
           )
-        }
+        },
       )
     assertContains(
       unbound.single { it.path.endsWith("LibraryScreen.kt") }.source,
@@ -188,8 +188,8 @@ class ProductionComposeGeneratorTest {
                   entry.copy(
                     events = listOf(ProductionEvent("onEpisodeClick", payload)),
                     eventBindings = entry.eventBindings.map { it.copy(payloadPath = path) },
-                  )
-              )
+                  ),
+              ),
           )
       }
       val files = generate(changed)
@@ -228,13 +228,13 @@ class ProductionComposeGeneratorTest {
       file.copy(
         entryPoint =
           file.entryPoint!!.copy(
-            components = file.entryPoint!!.components.map { it.copy(events = emptyMap()) }
-          )
+            components = file.entryPoint!!.components.map { it.copy(events = emptyMap()) },
+          ),
       )
     }
     val result =
       assertIs<ProductionContractResult.Invalid>(
-        ProductionContractValidator.validate(missingForward)
+        ProductionContractValidator.validate(missingForward),
       )
     assertTrue(result.issues.any { it.code == "COMPONENT_EVENT_MISMATCH" })
   }
@@ -250,9 +250,9 @@ class ProductionComposeGeneratorTest {
               input.file.copy(
                 entryPoint =
                   entry.copy(
-                    eventBindings = listOf(entry.eventBindings.single().copy(property = property))
-                  )
-              )
+                    eventBindings = listOf(entry.eventBindings.single().copy(property = property)),
+                  ),
+              ),
           )
         } else input
       }
@@ -273,7 +273,7 @@ class ProductionComposeGeneratorTest {
                 ("root" to
                   root.copy(
                     slots =
-                      root.slots + ("children" to root.slots.getValue("children") + "subtitle")
+                      root.slots + ("children" to root.slots.getValue("children") + "subtitle"),
                   )) +
                 ("subtitle" to
                   design.nodes
@@ -287,8 +287,8 @@ class ProductionComposeGeneratorTest {
                             put("value", "p0")
                           }
                         },
-                    ))
-          )
+                    )),
+          ),
       )
     }
     assertContains(
@@ -315,12 +315,12 @@ class ProductionComposeGeneratorTest {
                         put("type", "string")
                         put("value", "Ordinary export")
                       }
-                    }
+                    },
                 )),
       )
     val emitted =
       assertIs<ScreenExportGate.Outcome.Emitted>(
-          ScreenExportGate.export(literal.toDesignDocumentV1(), record)
+          ScreenExportGate.export(literal.toDesignDocumentV1(), record),
         )
         .source
     assertContains(emitted, "Ordinary export")
@@ -340,12 +340,12 @@ class ProductionComposeGeneratorTest {
                         put("type", "binding")
                         put("value", "p0")
                       }
-                    }
-                ))
+                    },
+                )),
       )
     val refused =
       assertIs<ScreenExportGate.Outcome.Refused>(
-        ScreenExportGate.export(bound.toDesignDocumentV1(), record)
+        ScreenExportGate.export(bound.toDesignDocumentV1(), record),
       )
     assertTrue(refused.reasons.any { "outside a component or loop" in it })
   }
@@ -404,7 +404,7 @@ class ProductionComposeGeneratorTest {
     check("INVALID_LIST_KEY") {
       it.copy(
         components =
-          it.components.map { c -> if (c.keyPath != null) c.copy(keyPath = emptyList()) else c }
+          it.components.map { c -> if (c.keyPath != null) c.copy(keyPath = emptyList()) else c },
       )
     }
     check("UNKNOWN_DATA_FIELD") {
@@ -412,7 +412,7 @@ class ProductionComposeGeneratorTest {
         components =
           it.components.map { c ->
             if (c.keyPath != null) c.copy(keyPath = listOf("missing")) else c
-          }
+          },
       )
     }
     check("INVALID_DATA_PATH") {
@@ -420,7 +420,7 @@ class ProductionComposeGeneratorTest {
         components =
           it.components.map { c ->
             if (c.keyPath != null) c.copy(keyPath = listOf("id", "missing")) else c
-          }
+          },
       )
     }
     check("UNKNOWN_DATA_FIELD") {
@@ -443,7 +443,7 @@ class ProductionComposeGeneratorTest {
                       bindings =
                         entry.bindings.map {
                           it.copy(expectedType = ProductionType.Scalar(type), fallback = fallback)
-                        }
+                        },
                     )
                 },
               models =
@@ -455,10 +455,10 @@ class ProductionComposeGeneratorTest {
                         model.fields.map { field ->
                           if (field.name != "title") field
                           else field.copy(type = ProductionType.Scalar(type, nullable = true))
-                        }
+                        },
                     )
                 },
-            )
+            ),
         )
       }
     for ((type, value) in
@@ -471,7 +471,7 @@ class ProductionComposeGeneratorTest {
         ScalarType.STRING to JsonPrimitive("literal"),
       )) {
       assertIs<ProductionContractResult.Valid>(
-        ProductionContractValidator.validate(scalarInputs(type, value))
+        ProductionContractValidator.validate(scalarInputs(type, value)),
       )
     }
     for ((type, value) in
@@ -484,7 +484,7 @@ class ProductionComposeGeneratorTest {
       )) {
       val invalid =
         assertIs<ProductionContractResult.Invalid>(
-          ProductionContractValidator.validate(scalarInputs(type, value))
+          ProductionContractValidator.validate(scalarInputs(type, value)),
         )
       assertTrue(invalid.issues.any { it.code == "INVALID_NULL_FALLBACK" })
     }
@@ -505,18 +505,18 @@ class ProductionComposeGeneratorTest {
                             field.copy(
                               type =
                                 ProductionType.ListType(
-                                  ProductionType.Model("external", nullable = true)
-                                )
+                                  ProductionType.Model("external", nullable = true),
+                                ),
                             )
-                        }
+                        },
                     )
-                }
-            )
+                },
+            ),
         )
       }
     val invalid =
       assertIs<ProductionContractResult.Invalid>(
-        ProductionContractValidator.validate(nullableItems)
+        ProductionContractValidator.validate(nullableItems),
       )
     assertTrue(invalid.issues.any { it.code == "INVALID_LIST_KEY" })
     assertTrue(invalid.issues.any { it.code == "COMPONENT_INPUT_MISMATCH" })

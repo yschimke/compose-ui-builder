@@ -55,8 +55,8 @@ class LocalDesignSyncStalenessTest {
           mapOf(
             "m3-catalog" to
               Json.decodeFromString<CatalogCapabilityV1>(
-                checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
-              )
+                checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
+              ),
           )
       }
       .build()
@@ -74,7 +74,8 @@ class LocalDesignSyncStalenessTest {
           catalog.benchmark.nativeRuntimeId,
         ),
         Json.parseToJsonElement(
-            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+              .readText(),
           )
           .jsonObject,
       )
@@ -119,9 +120,9 @@ class LocalDesignSyncStalenessTest {
               (request.submission as DesignCommandV1)
                 .newBuilder()
                 .also { it.stalenessBaseRevision = null }
-                .build()
+                .build(),
             )
-          else request
+          else request,
         )
       }
 
@@ -153,7 +154,7 @@ class LocalDesignSyncStalenessTest {
     execute: suspend (UiBuilderRequestV1) -> UiBuilderHttpResult,
   ): LocalSyncReport =
     assertIs<LocalSyncResult.Replayed>(
-        LocalDesignSyncBack(ACTOR.actorId, OFFLINE_CLIENT, execute).sync(record)
+        LocalDesignSyncBack(ACTOR.actorId, OFFLINE_CLIENT, execute).sync(record),
       )
       .report
 
@@ -205,7 +206,7 @@ class LocalDesignSyncStalenessTest {
             clientId = OFFLINE_CLIENT,
             baseRevision = 0,
             operations = listOf(DesignOperation.SetEnvironment(field, value)),
-          )
+          ),
         )
       return LocalDesignRecordV1(
         designId = DESIGN_ID,
@@ -244,7 +245,7 @@ class LocalDesignSyncStalenessTest {
       val response =
         assertIs<UiBuilderHttpResult.Response>(execute(ApplyOperationRequestV1(command)))
       return assertIs<AcceptedOutcomeV1>(
-        assertIs<OperationOutcomeResponseV1>(response.response).outcome
+        assertIs<OperationOutcomeResponseV1>(response.response).outcome,
       )
     }
   }

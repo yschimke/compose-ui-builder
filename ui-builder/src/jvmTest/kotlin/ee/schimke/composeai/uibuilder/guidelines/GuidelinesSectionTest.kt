@@ -117,7 +117,7 @@ class GuidelinesSectionTest {
         verdicts =
           DesignGuidelinePrompt.parseVerdicts(
             """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
-              """"confidence":0.9,"nodeIds":["stop"],"reason":"Recorded by an agent."}]}"""
+              """"confidence":0.9,"nodeIds":["stop"],"reason":"Recorded by an agent."}]}""",
           ),
         ranBy = "agent:review-bot",
       )

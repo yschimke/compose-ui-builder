@@ -40,7 +40,7 @@ internal fun undeclaredProperties(
  * tolerated value. Returns the receiver unchanged when there is nothing to drop.
  */
 internal fun DesignDocumentV1.withoutProperties(
-  drop: Map<String, Map<String, UiValueV1>>
+  drop: Map<String, Map<String, UiValueV1>>,
 ): DesignDocumentV1 {
   if (drop.isEmpty()) return this
   return copy(
@@ -49,6 +49,6 @@ internal fun DesignDocumentV1.withoutProperties(
         val tolerated = drop[nodeId] ?: return@mapValues node
         val kept = node.properties.filterNot { (name, value) -> tolerated[name] == value }
         if (kept.size == node.properties.size) node else node.copy(properties = kept)
-      }
+      },
   )
 }

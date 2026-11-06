@@ -104,7 +104,7 @@ internal class ComposeEmitter(
     appendLine("@Composable")
     appendLine(
       if (navigates) "fun $functionName(onNavigatePage: (String) -> Unit = {}) {"
-      else "fun $functionName() {"
+      else "fun $functionName() {",
     )
     emitState(1)
     document.roots.forEach { rootId -> emitNode(rootId, 1) }
@@ -145,19 +145,19 @@ internal class ComposeEmitter(
       .forEach { importName -> appendLine("import $importName") }
     appendLine()
     appendLine(
-      "// Generated from design ${document.id.escapeComment()} revision ${document.revision}."
+      "// Generated from design ${document.id.escapeComment()} revision ${document.revision}.",
     )
     document.home?.let { home ->
       appendLine("// Canonical home: ${home.description().escapeComment()}.")
     }
     appendLine(
-      "// Catalog ${document.catalogString("systemId").escapeComment()}@${document.catalogString("catalogRevision").escapeComment()}; capability ${document.catalogString("capabilityDigest").escapeComment()}."
+      "// Catalog ${document.catalogString("systemId").escapeComment()}@${document.catalogString("catalogRevision").escapeComment()}; capability ${document.catalogString("capabilityDigest").escapeComment()}.",
     )
     diagnostics
       .filter { it.severity == ComposeExportSeverity.WARNING }
       .forEach { diagnostic ->
         appendLine(
-          "// TODO[${diagnostic.code.escapeComment()}] node=${diagnostic.nodeId?.escapeComment() ?: "document"}: ${diagnostic.message.escapeComment()}"
+          "// TODO[${diagnostic.code.escapeComment()}] node=${diagnostic.nodeId?.escapeComment() ?: "document"}: ${diagnostic.message.escapeComment()}",
         )
       }
     return (out.toString() + body).trimEnd() + "\n"
@@ -1277,43 +1277,43 @@ internal class ComposeEmitter(
   private fun emitAdaptiveHelper() {
     if (!emittedSupportingPaneScaffold) return
     appendLine(
-      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, listDetail: Boolean, activePane: String, activePaneIndex: Int?, paneSizing: String, fixedPaneWidth: Dp?, splitFraction: Float, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPaneWidth: Dp?, supportingPaneWidth: Dp?, paneSpacing: Dp?, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit, extraPaneWidth: Dp? = null, extraPane: (@Composable () -> Unit)? = null) {"
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, listDetail: Boolean, activePane: String, activePaneIndex: Int?, paneSizing: String, fixedPaneWidth: Dp?, splitFraction: Float, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPaneWidth: Dp?, supportingPaneWidth: Dp?, paneSpacing: Dp?, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit, extraPaneWidth: Dp? = null, extraPane: (@Composable () -> Unit)? = null) {",
     )
     appendLine("  val posture = currentWindowAdaptiveInfo().windowPosture")
     appendLine("  BoxWithConstraints(modifier) {")
     appendLine(
-      "    val frameDirective = calculatePaneScaffoldDirective(WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)); val partitioned = if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective; val directive = if (paneSpacing != null) partitioned.copy(horizontalPartitionSpacerSize = paneSpacing) else partitioned"
+      "    val frameDirective = calculatePaneScaffoldDirective(WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)); val partitioned = if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective; val directive = if (paneSpacing != null) partitioned.copy(horizontalPartitionSpacerSize = paneSpacing) else partitioned",
     )
     appendLine(
-      "    val anchor = when (paneSizing) { \"fixedStart\" -> PaneExpansionAnchor.Offset.fromStart((fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2); \"fixedEnd\" -> PaneExpansionAnchor.Offset.fromEnd((fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2); \"split\" -> PaneExpansionAnchor.Proportion(splitFraction.coerceIn(.1f, .9f)); else -> null }"
+      "    val anchor = when (paneSizing) { \"fixedStart\" -> PaneExpansionAnchor.Offset.fromStart((fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2); \"fixedEnd\" -> PaneExpansionAnchor.Offset.fromEnd((fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2); \"split\" -> PaneExpansionAnchor.Proportion(splitFraction.coerceIn(.1f, .9f)); else -> null }",
     )
     appendLine(
-      "    val expansion = rememberPaneExpansionState(anchors = listOfNotNull(anchor), initialAnchoredIndex = if (anchor == null) -1 else 0)"
+      "    val expansion = rememberPaneExpansionState(anchors = listOfNotNull(anchor), initialAnchoredIndex = if (anchor == null) -1 else 0)",
     )
     appendLine("    if (listDetail) {")
     appendLine(
-      "      val requestedRole = if (activePaneIndex != null) listOf(ListDetailPaneScaffoldRole.List, ListDetailPaneScaffoldRole.Detail, ListDetailPaneScaffoldRole.Extra)[activePaneIndex.coerceIn(0, 2)] else when (activePane) { \"detail\" -> ListDetailPaneScaffoldRole.Detail; \"extra\" -> ListDetailPaneScaffoldRole.Extra; else -> ListDetailPaneScaffoldRole.List }"
+      "      val requestedRole = if (activePaneIndex != null) listOf(ListDetailPaneScaffoldRole.List, ListDetailPaneScaffoldRole.Detail, ListDetailPaneScaffoldRole.Extra)[activePaneIndex.coerceIn(0, 2)] else when (activePane) { \"detail\" -> ListDetailPaneScaffoldRole.Detail; \"extra\" -> ListDetailPaneScaffoldRole.Extra; else -> ListDetailPaneScaffoldRole.List }",
     )
     appendLine(
-      "      val available = buildList { if (mainPaneVisible) add(ListDetailPaneScaffoldRole.List); if (supportingPaneVisible) add(ListDetailPaneScaffoldRole.Detail); if (extraPane != null) add(ListDetailPaneScaffoldRole.Extra) }"
+      "      val available = buildList { if (mainPaneVisible) add(ListDetailPaneScaffoldRole.List); if (supportingPaneVisible) add(ListDetailPaneScaffoldRole.Detail); if (extraPane != null) add(ListDetailPaneScaffoldRole.Extra) }",
     )
     appendLine(
-      "      val role = requestedRole.takeIf { it in available } ?: available.firstOrNull()"
+      "      val role = requestedRole.takeIf { it in available } ?: available.firstOrNull()",
     )
     appendLine(
-      "      val computed = calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions, ListDetailPaneScaffoldDefaults.adaptStrategies(), currentDestination = role?.let { ThreePaneScaffoldDestinationItem<Nothing>(it) })"
+      "      val computed = calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions, ListDetailPaneScaffoldDefaults.adaptStrategies(), currentDestination = role?.let { ThreePaneScaffoldDestinationItem<Nothing>(it) })",
     )
     appendLine(
-      "      ListDetailPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (supportingPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (mainPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = if (extraPane != null) computed.tertiary else PaneAdaptedValue.Hidden), listPane = { BuilderPane(mainPaneWidth, mainPane) }, detailPane = { BuilderPane(supportingPaneWidth, supportingPane) }, extraPane = extraPane?.let { content -> { BuilderPane(extraPaneWidth, content) } }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())"
+      "      ListDetailPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (supportingPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (mainPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = if (extraPane != null) computed.tertiary else PaneAdaptedValue.Hidden), listPane = { BuilderPane(mainPaneWidth, mainPane) }, detailPane = { BuilderPane(supportingPaneWidth, supportingPane) }, extraPane = extraPane?.let { content -> { BuilderPane(extraPaneWidth, content) } }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())",
     )
     appendLine("    } else {")
     // A supporting-only design must name the supporting pane as the destination, or the sole
     // partition goes to the primary and masking it afterwards leaves a blank frame.
     appendLine(
-      "    val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = if (!mainPaneVisible && supportingPaneVisible) ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting) else null)"
+      "    val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = if (!mainPaneVisible && supportingPaneVisible) ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting) else null)",
     )
     appendLine(
-      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { BuilderPane(mainPaneWidth, mainPane) }, supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())"
+      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { BuilderPane(mainPaneWidth, mainPane) }, supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())",
     )
     appendLine("    }")
     appendLine("  }")
@@ -1321,40 +1321,40 @@ internal class ComposeEmitter(
     // A pane whose width the design did not state is composed exactly as it was before this
     // existed — no wrapper, no parent data — so those designs export byte-identical source.
     appendLine(
-      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun PaneScaffoldScope.BuilderPane(width: Dp?, content: @Composable () -> Unit) { if (width == null) content() else Box(Modifier.preferredWidth(width)) { content() } }"
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun PaneScaffoldScope.BuilderPane(width: Dp?, content: @Composable () -> Unit) { if (width == null) content() else Box(Modifier.preferredWidth(width)) { content() } }",
     )
   }
 
   private fun emitCompatibilityHelpers() {
     appendLine(
-      "// Compatibility helpers are explicit export diagnostics, not claims of API parity."
+      "// Compatibility helpers are explicit export diagnostics, not claims of API parity.",
     )
     appendLine(
-      "@Composable private fun builderCardColors(containerColor: Color) = CardDefaults.cardColors(containerColor = containerColor)"
+      "@Composable private fun builderCardColors(containerColor: Color) = CardDefaults.cardColors(containerColor = containerColor)",
     )
     emitAdaptiveHelper()
     appendLine(
-      "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }"
+      "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }",
     )
     appendLine(
-      "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, contentPadding: PaddingValues, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(contentPadding), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
+      "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, contentPadding: PaddingValues, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(contentPadding), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }",
     )
     appendLine(
-      "@Composable private fun BuilderRadialGradient(modifier: Modifier, innerColor: Color, innerAlpha: Float, outerColor: Color, centerFraction: Offset) { Box(modifier.drawBehind { drawRect(Brush.radialGradient(listOf(innerColor.copy(alpha = innerAlpha), outerColor), center = Offset(size.width * centerFraction.x, size.height * centerFraction.y), radius = size.maxDimension * .82f)) }) }"
+      "@Composable private fun BuilderRadialGradient(modifier: Modifier, innerColor: Color, innerAlpha: Float, outerColor: Color, centerFraction: Offset) { Box(modifier.drawBehind { drawRect(Brush.radialGradient(listOf(innerColor.copy(alpha = innerAlpha), outerColor), center = Offset(size.width * centerFraction.x, size.height * centerFraction.y), radius = size.maxDimension * .82f)) }) }",
     )
     appendLine(
-      "// Asset adapter: ${assetAdapter?.id?.escapeComment() ?: "none (visible placeholder)"}."
+      "// Asset adapter: ${assetAdapter?.id?.escapeComment() ?: "none (visible placeholder)"}.",
     )
     val renderer = assetAdapter?.renderer
     if (renderer != null) {
       appendLine(
-        "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; ${renderer.symbol}(assetKey = assetKey, contentDescription = contentDescription, modifier = modifier) }"
+        "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; ${renderer.symbol}(assetKey = assetKey, contentDescription = contentDescription, modifier = modifier) }",
       )
       appendLine(builderIconFunction(usedGoogleMaterialIcons))
       return
     }
     appendLine(
-      "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { val semanticModifier = if (contentDescription == null) modifier else modifier.semantics { this.contentDescription = contentDescription }; Canvas(semanticModifier) { val palette = when (assetKey) {"
+      "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { val semanticModifier = if (contentDescription == null) modifier else modifier.semantics { this.contentDescription = contentDescription }; Canvas(semanticModifier) { val palette = when (assetKey) {",
     )
     assetAdapter
       ?.bindings
@@ -1365,7 +1365,7 @@ internal class ComposeEmitter(
         appendLine("  \"${assetKey.escape()}\" -> listOf($colors)")
       }
     appendLine(
-      "  else -> listOf(Color(0xFFFF00FF), Color(0xFF202020), Color(0xFFFF00FF)) }; check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height))); drawCircle(Color.White.copy(alpha = .18f), size.minDimension * .34f, Offset(size.width * .76f, size.height * .24f)); drawCircle(Color.Black.copy(alpha = .18f), size.minDimension * .22f, Offset(size.width * .22f, size.height * .72f)); val path = Path().apply { moveTo(size.width * .19f, size.height * .32f); lineTo(size.width * .48f, size.height * .18f); lineTo(size.width * .82f, size.height * .58f); lineTo(size.width * .48f, size.height * .78f); close() }; drawPath(path, Color.White.copy(alpha = .27f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .30f, size.height * .39f), Size(size.width * .10f, size.height * .28f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .47f, size.height * .30f), Size(size.width * .10f, size.height * .38f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .64f, size.height * .43f), Size(size.width * .10f, size.height * .24f)); drawCircle(Color.White.copy(alpha = .72f), size.minDimension * .28f, style = Stroke(size.minDimension * .035f)) } }"
+      "  else -> listOf(Color(0xFFFF00FF), Color(0xFF202020), Color(0xFFFF00FF)) }; check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height))); drawCircle(Color.White.copy(alpha = .18f), size.minDimension * .34f, Offset(size.width * .76f, size.height * .24f)); drawCircle(Color.Black.copy(alpha = .18f), size.minDimension * .22f, Offset(size.width * .22f, size.height * .72f)); val path = Path().apply { moveTo(size.width * .19f, size.height * .32f); lineTo(size.width * .48f, size.height * .18f); lineTo(size.width * .82f, size.height * .58f); lineTo(size.width * .48f, size.height * .78f); close() }; drawPath(path, Color.White.copy(alpha = .27f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .30f, size.height * .39f), Size(size.width * .10f, size.height * .28f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .47f, size.height * .30f), Size(size.width * .10f, size.height * .38f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .64f, size.height * .43f), Size(size.width * .10f, size.height * .24f)); drawCircle(Color.White.copy(alpha = .72f), size.minDimension * .28f, style = Stroke(size.minDimension * .035f)) } }",
     )
     appendLine(builderIconFunction(usedGoogleMaterialIcons))
   }
@@ -2160,7 +2160,7 @@ internal fun UiBuilderDocument.placementRefusals(
               "UNKNOWN_COMPONENT_KEY",
               "placement names no component of this design: ${key.ifEmpty { "(none)" }}",
               node.id,
-            )
+            ),
           )
       val arguments = node.component?.get("arguments")?.let { it as? JsonObject }
       buildList {
@@ -2236,7 +2236,7 @@ internal fun UiBuilderDocument.placementRefusals(
  * either.
  */
 internal fun UiBuilderDocument.strayBindingRefusals(
-  signatures: Map<String, ComponentSignature>
+  signatures: Map<String, ComponentSignature>,
 ): List<ExportRefusal> {
   val inABody = scopedNodeIds(signatures)
   return nodes.values
@@ -2451,7 +2451,7 @@ private val LAZY_CONTAINER_IDS = setOf("layout/lazy-column", "layout/lazy-row", 
 
 /** Every node with a dictionary around it: a component's body or a loop's template, in one set. */
 internal fun UiBuilderDocument.scopedNodeIds(
-  signatures: Map<String, ComponentSignature>
+  signatures: Map<String, ComponentSignature>,
 ): Set<String> {
   val scoped =
     signatures.values.flatMapTo(mutableSetOf()) { signature ->
@@ -2619,7 +2619,7 @@ private fun UiBuilderNode.bindingKey(property: String): String? {
  * arguments, typed by the placed component's parameter.
  */
 private fun UiBuilderNode.bindingKinds(
-  components: Map<String, ComponentSignature> = emptyMap()
+  components: Map<String, ComponentSignature> = emptyMap(),
 ): List<Triple<String, String, BindingKind?>> {
   if (componentId == DESIGN_COMPONENT_INSTANCE_ID) {
     val placed = components[placementKey()] ?: return emptyList()
@@ -3174,7 +3174,7 @@ private val HANDLED_FIELDS =
           "textDecoration",
           "alignment",
           "weight",
-        ) + FontSettings.PROPERTIES
+        ) + FontSettings.PROPERTIES,
       ),
     "shape/colour-dot" to HandledFields(setOf("color", "diameterDp")),
     "shape/linear-gradient" to HandledFields(setOf("startColor", "endColor", "direction")),

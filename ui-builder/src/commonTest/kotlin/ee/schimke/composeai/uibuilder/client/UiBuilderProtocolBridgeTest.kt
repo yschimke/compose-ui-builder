@@ -112,7 +112,7 @@ class UiBuilderProtocolBridgeTest {
                 put("type", JsonPrimitive("string"))
                 put("value", JsonPrimitive("Observed by B"))
               },
-            )
+            ),
           ),
       )
 
@@ -151,7 +151,7 @@ class UiBuilderProtocolBridgeTest {
             actorId = "actor-a",
             clientId = "browser-a",
             authoritativeRevision = 7,
-          )
+          ),
       )
     val mutation = assertIs<RemoveNodePropertyMutationV1>(sent.operations.single())
     assertEquals("title", mutation.nodeId)
@@ -205,8 +205,8 @@ class UiBuilderProtocolBridgeTest {
                 }
                 .build(),
               accepted,
-            )
-          )
+            ),
+          ),
       )
     val fromNull =
       assertNotNull(before.preparePropertyDelta(before.toRendererDocument(), nullWrite))
@@ -234,7 +234,7 @@ class UiBuilderProtocolBridgeTest {
     val command =
       assertIs<DesignCommandV1>(
         EditorSubmission.Batch(local)
-          .toProtocolSubmission("actor-a", "browser-a", authoritativeRevision = 41)
+          .toProtocolSubmission("actor-a", "browser-a", authoritativeRevision = 41),
       )
 
     assertEquals(41, command.baseRevision)
@@ -309,10 +309,10 @@ class UiBuilderProtocolBridgeTest {
           delta.copy(
             operations =
               listOf(
-                CommittedOperationV1(command, accepted.copy(documentHash = "not-the-server-hash"))
-              )
+                CommittedOperationV1(command, accepted.copy(documentHash = "not-the-server-hash")),
+              ),
           ),
-        )
+        ),
       )
     assertFalse(wrongHash.hasVerifiedHash())
 
@@ -326,8 +326,8 @@ class UiBuilderProtocolBridgeTest {
               CommittedOperationV1(
                 command,
                 accepted.copy(documentUpdatedAtEpochMillis = null),
-              )
-            )
+              ),
+            ),
         ),
       ),
       "legacy outcomes without the committed document timestamp require a snapshot",
@@ -362,7 +362,7 @@ class UiBuilderProtocolBridgeTest {
               id = "title",
               componentId = "m3/text",
               properties = mapOf("text" to StringValueV1(text)),
-            )
+            ),
         ),
     )
 }

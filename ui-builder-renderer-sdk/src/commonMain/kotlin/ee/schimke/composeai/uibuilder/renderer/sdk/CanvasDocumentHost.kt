@@ -289,7 +289,7 @@ fun CanvasDocumentHost(
         ),
         ancestry,
       )
-    }
+    },
   ) {
     FlushForgottenBounds(forgetRequests, flushForgets)
     val roots: @Composable BoxScope.() -> Unit = {

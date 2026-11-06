@@ -46,7 +46,7 @@ class WearLayoutAndColourExportTest {
               properties = JsonObject(root.properties + (scaffold ?: JsonObject(emptyMap()))),
               slots = root.slots + ("edgeButton" to listOfNotNull(edgeButton?.id)),
             )) +
-          (items + nested.toList() + listOfNotNull(edgeButton)).associateBy { it.id }
+          (items + nested.toList() + listOfNotNull(edgeButton)).associateBy { it.id },
     )
   }
 
@@ -97,8 +97,8 @@ class WearLayoutAndColourExportTest {
               WearScreenCodeExporter.TEXT,
               properties("text" to "Range", "style" to "headlineSmall"),
             ),
-          )
-        )
+          ),
+        ),
       )
     assertTrue("style = MaterialTheme.typography.numeralMedium" in source, source)
     assertTrue("style = MaterialTheme.typography.titleSmall" in source, source)
@@ -113,7 +113,7 @@ class WearLayoutAndColourExportTest {
   fun `a screen's default text role is provided as Wear's role`() {
     val source =
       export(
-        screenWith(listOf(text("t")), scaffold = properties("themeTextStyle" to "headlineSmall"))
+        screenWith(listOf(text("t")), scaffold = properties("themeTextStyle" to "headlineSmall")),
       )
     assertTrue("ProvideTextStyle(MaterialTheme.typography.titleSmall) {" in source, source)
     assertTrue("import androidx.wear.compose.material3.ProvideTextStyle" in source, source)
@@ -136,11 +136,11 @@ class WearLayoutAndColourExportTest {
               "layout/column",
               properties("horizontalAlignment" to "center", "verticalSpacingDp" to 4),
               slots = mapOf("children" to listOf("a", "b")),
-            )
+            ),
           ),
           text("a"),
           text("b"),
-        )
+        ),
       )
 
     assertTrue("verticalArrangement = Arrangement.spacedBy(4.dp)," in source, source)
@@ -182,7 +182,7 @@ class WearLayoutAndColourExportTest {
           text("hi"),
           text("lock"),
           text("x"),
-        )
+        ),
       )
 
     assertTrue("horizontalArrangement = Arrangement.SpaceBetween," in source, source)
@@ -211,10 +211,10 @@ class WearLayoutAndColourExportTest {
               "layout/box",
               properties("contentAlignment" to "center"),
               slots = mapOf("children" to listOf("t")),
-            )
+            ),
           ),
           text("t"),
-        )
+        ),
       )
 
     assertTrue("Box(contentAlignment = Alignment.Center) {" in source, source)
@@ -230,7 +230,7 @@ class WearLayoutAndColourExportTest {
               "card",
               WearScreenCodeExporter.CARD,
               slots = mapOf("content" to listOf("col")),
-            )
+            ),
           ),
           UiBuilderNode(
             "col",
@@ -240,7 +240,7 @@ class WearLayoutAndColourExportTest {
           ),
           text("t1"),
           text("t2"),
-        )
+        ),
       )
 
     assertTrue("horizontalAlignment = Alignment.CenterHorizontally" in source, source)
@@ -282,7 +282,7 @@ class WearLayoutAndColourExportTest {
                       "widthDp" to 1,
                       "shape" to "large",
                     ),
-                  )
+                  ),
                 ),
               slots = mapOf("content" to listOf("t")),
             ),
@@ -295,12 +295,12 @@ class WearLayoutAndColourExportTest {
                     modifier("size", "widthDp" to 40, "heightDp" to 4),
                     modifier("clip", "shape" to "8"),
                     modifier("background", "color" to color("#2BE4D3")),
-                  )
+                  ),
                 ),
             ),
           ),
           text("t"),
-        )
+        ),
       )
 
     assertTrue(
@@ -333,10 +333,10 @@ class WearLayoutAndColourExportTest {
                 "contentColor" to "#2BE4D3",
               ),
               slots = mapOf("content" to listOf("t")),
-            )
+            ),
           ),
           text("t"),
-        )
+        ),
       )
     assertTrue(
       "colors = CardDefaults.cardColors(containerColor = Color(0xFF102A2B), contentColor = Color(0xFF2BE4D3))," in
@@ -353,10 +353,10 @@ class WearLayoutAndColourExportTest {
               WearScreenCodeExporter.CARD,
               properties("variant" to "outlined", "containerColor" to "#102A2B"),
               slots = mapOf("content" to listOf("t")),
-            )
+            ),
           ),
           text("t"),
-        )
+        ),
       )
     assertTrue(refused.any { "`outlined`" in it && "OutlinedCard" in it }, refused.toString())
   }
@@ -391,7 +391,7 @@ class WearLayoutAndColourExportTest {
               properties("containerColor" to "#2BE4D3", "contentColor" to "#00201E"),
               slots = mapOf("content" to listOf("go-label")),
             ),
-        )
+        ),
       )
 
     assertTrue(
@@ -416,7 +416,7 @@ class WearLayoutAndColourExportTest {
           listOf(text("t")),
           scaffold =
             properties("themePrimaryColor" to "#2BE4D3", "themeOnPrimaryColor" to "#00201E"),
-        )
+        ),
       )
 
     assertTrue(
@@ -446,7 +446,7 @@ class WearLayoutAndColourExportTest {
               "themeDisplayTypeface" to "Michroma",
               "themeBodyTypeface" to "google:Exo 2",
             ),
-        )
+        ),
       )
 
     assertTrue(
@@ -506,7 +506,7 @@ class WearLayoutAndColourExportTest {
                       "shape" to "large",
                     ),
                     modifier("shadow", "elevationDp" to 2, "shape" to "small"),
-                  )
+                  ),
                 ),
               slots = mapOf("content" to listOf("hero-col")),
             ),
@@ -519,7 +519,7 @@ class WearLayoutAndColourExportTest {
                   listOf(
                     modifier("background", "color" to color("surfaceContainer")),
                     modifier("wrapContentSize", "alignment" to "center"),
-                  )
+                  ),
                 ),
               slots = mapOf("children" to listOf("battery")),
             ),
@@ -565,7 +565,7 @@ class WearLayoutAndColourExportTest {
               properties("contentColor" to "#00201E"),
               slots = mapOf("content" to listOf("go-label")),
             ),
-        )
+        ),
       )
 
     assertTrue("MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(" in source, source)

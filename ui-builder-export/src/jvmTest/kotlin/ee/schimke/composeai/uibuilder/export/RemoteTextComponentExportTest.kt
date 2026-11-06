@@ -165,12 +165,12 @@ class RemoteTextComponentExportTest {
                   .also { b ->
                     b.typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString"
                   }
-                  .build()
+                  .build(),
               )
             builder_.slots = emptyList()
             builder_.signatureKnown = true
           }
-          .build()
+          .build(),
     )
 
   private fun kotlinx.serialization.json.JsonObjectBuilder.string(name: String, value: String) =

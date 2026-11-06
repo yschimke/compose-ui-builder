@@ -53,7 +53,7 @@ class RemoteStateSelectionExportTest {
                   put("topDp", 8)
                   put("endDp", 8)
                   put("bottomDp", 8)
-                }
+                },
               )
             },
           slots = mapOf("children" to ids),
@@ -70,7 +70,7 @@ class RemoteStateSelectionExportTest {
                     put("type", "size")
                     put("widthDp", 40 + index * 10)
                     put("heightDp", 40 + index * 10)
-                  }
+                  },
                 )
               },
           )
@@ -118,7 +118,7 @@ class RemoteStateSelectionExportTest {
             document.copy(title = name),
             "remote",
             "proof.generated",
-          )
+          ),
         )
       assertContains(emitted.source, "RemoteStateLayout(")
       assertContains(emitted.source, "val page = rememberMutableRemote")
@@ -133,7 +133,7 @@ class RemoteStateSelectionExportTest {
     val string = document("string", listOf(JsonPrimitive("first"), JsonPrimitive("second")))
     val refusal =
       assertIs<InlineRemoteContentExporter.Result.Refused>(
-        InlineRemoteContentExporter.export(string, "remote")
+        InlineRemoteContentExporter.export(string, "remote"),
       )
     assertTrue(refusal.reasons.any { "switch" in it && "String equality" in it })
     val numeric = document("int", listOf(JsonPrimitive(10)))
@@ -146,10 +146,10 @@ class RemoteStateSelectionExportTest {
               put("initialValue", JsonNull)
               put("nullable", true)
             }
-          }
+          },
       )
     assertIs<InlineRemoteContentExporter.Result.Refused>(
-      InlineRemoteContentExporter.export(nullable, "remote")
+      InlineRemoteContentExporter.export(nullable, "remote"),
     )
   }
 
@@ -174,7 +174,7 @@ class RemoteStateSelectionExportTest {
                 buildJsonObject {
                   put("type", "toggle")
                   put("variable", "page")
-                }
+                },
               )
             }
           },
@@ -263,14 +263,14 @@ class RemoteStateSelectionExportTest {
     val doc = base.copy(nodes = mapOf("remote" to remote, "label" to text))
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(
-          InlineRemoteContentExporter.export(doc, "remote")
+          InlineRemoteContentExporter.export(doc, "remote"),
         )
         .source
     assertContains(source, "val page = rememberMutableRemoteString(\"Ready\")")
     assertContains(source, "text = page")
     val wrong = doc.copy(stateVariables = document("int", listOf(JsonPrimitive(10))).stateVariables)
     assertIs<InlineRemoteContentExporter.Result.Refused>(
-      InlineRemoteContentExporter.export(wrong, "remote")
+      InlineRemoteContentExporter.export(wrong, "remote"),
     )
   }
 }

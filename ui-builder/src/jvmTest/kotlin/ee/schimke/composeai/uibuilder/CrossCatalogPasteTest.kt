@@ -64,7 +64,7 @@ class CrossCatalogPasteTest {
   fun `a subtree of this catalog's components still pastes`() {
     val own =
       m3Clipboard.copy(
-        nodes = m3Clipboard.nodes + ("copied-button" to UiBuilderNode("copied-button", "m3/text"))
+        nodes = m3Clipboard.nodes + ("copied-button" to UiBuilderNode("copied-button", "m3/text")),
       )
     val state =
       reducer.initial(widget, selectedNodeId = widget.roots.single()).copy(clipboard = own)

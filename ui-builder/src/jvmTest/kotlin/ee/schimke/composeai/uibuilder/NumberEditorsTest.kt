@@ -21,7 +21,7 @@ class NumberEditorsTest {
       listOf("m3-catalog", "wear-m3", "remote-m3").flatMap { systemId ->
         val catalog =
           CapabilityCatalogParser.parse(
-            checkNotNull(javaClass.getResource("/$systemId-capabilities-v1.json")).readText()
+            checkNotNull(javaClass.getResource("/$systemId-capabilities-v1.json")).readText(),
           )
         catalog.components.flatMap { component ->
           component.properties

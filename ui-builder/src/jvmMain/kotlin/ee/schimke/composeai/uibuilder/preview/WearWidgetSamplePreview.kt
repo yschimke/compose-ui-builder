@@ -186,7 +186,7 @@ fun WearWidgetBackgroundBrushPreview() {
               "startColor" to previewLiteral("color", "#FF101820"),
               "endColor" to previewLiteral("color", "#FF2C4A6E"),
               "direction" to previewLiteral("enum", "topToBottom"),
-            )
+            ),
           ),
       ),
       widgetBackgroundDocument(
@@ -199,7 +199,7 @@ fun WearWidgetBackgroundBrushPreview() {
               "asset/image",
               "assetKey" to previewLiteral("assetKey", ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY),
               "contentScale" to previewLiteral("enum", "crop"),
-            )
+            ),
           ),
       ),
     )
@@ -236,7 +236,7 @@ private fun widgetBackgroundDocument(
       componentId = WearWidgetScaffoldSize.Small.componentId,
       properties =
         JsonObject(
-          background?.let { mapOf("background" to previewLiteral("color", it)) } ?: emptyMap()
+          background?.let { mapOf("background" to previewLiteral("color", it)) } ?: emptyMap(),
         ),
       modifiers = JsonArray(emptyList()),
       slots =
@@ -304,7 +304,7 @@ internal val wearWidgetSampleCatalogPin: JsonObject =
         "capabilityDigest": "candidate",
         "nativeRuntimeId": "candidate"
       }
-      """
+      """,
     )
     .jsonObject
 
@@ -330,6 +330,6 @@ internal val wearWidgetSampleEnvironment: JsonObject =
         "animations": "settled",
         "networkAccess": false
       }
-      """
+      """,
     )
     .jsonObject

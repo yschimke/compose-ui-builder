@@ -16,7 +16,7 @@ public data class CatalogComposeSourceExportAdapter(
   /** The source model an adapter interprets. More strategies may be added without changing JSON. */
   public enum class Strategy {
     /** Generate calls from the catalog's discovered component records. */
-    COMPONENT_RECORDS
+    COMPONENT_RECORDS,
   }
 }
 

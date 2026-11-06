@@ -25,7 +25,7 @@ class ScreenThemeExportTest {
   private val record: ComponentRecordFile = run {
     fun read(name: String) =
       json.decodeFromString<ComponentRecordFile>(
-        File(root, "docs/design/fixtures/ui-builder/$name").readText()
+        File(root, "docs/design/fixtures/ui-builder/$name").readText(),
       )
     val m3 = read("m3-catalog-components-v1.json")
     m3
@@ -57,7 +57,7 @@ class ScreenThemeExportTest {
             "slots": {}, "modifiers": []}
         }
       }
-      """
+      """,
     )
 
   private fun source(document: DesignDocumentV1): String =
@@ -81,7 +81,7 @@ class ScreenThemeExportTest {
             "themeCornerRadiusDp": {"type": "int", "value": 20}
             """,
           text = """, "color": {"type": "colorToken", "value": "primary"}""",
-        )
+        ),
       )
     assertTrue("darkColorScheme(" in source, source)
     assertTrue("primary = Color(0xFFD0BCFF)" in source, source)
@@ -107,8 +107,8 @@ class ScreenThemeExportTest {
             """
             "themeDisplayTypeface": {"type": "string", "value": "Michroma"},
             "themeBodyTypeface": {"type": "string", "value": "google:Exo 2"}
-            """
-        )
+            """,
+        ),
       )
     assertTrue("lightColorScheme()" in source, source)
     assertTrue("GoogleFont.Provider(" in source, source)
@@ -138,7 +138,7 @@ class ScreenThemeExportTest {
     // component's name, so carrying `MaterialTheme` always refused this `MaterialTheme.typography`.
     val source =
       source(
-        document(surface = "", text = """, "style": {"type": "enum", "value": "titleLarge"}""")
+        document(surface = "", text = """, "style": {"type": "enum", "value": "titleLarge"}"""),
       )
     assertFalse("MaterialTheme(" in source, source)
     assertTrue("MaterialTheme.typography.titleLarge" in source, source)
@@ -167,7 +167,7 @@ class ScreenThemeExportTest {
               "slots": {"content": []}, "modifiers": []}
           }
         }
-        """
+        """,
       )
     val source = source(document)
     assertTrue("primary = Color(0xFF336699)" in source, source)
@@ -209,7 +209,7 @@ class ScreenThemeExportTest {
               "slots": {"content": []}, "modifiers": []}
           }
         }
-        """
+        """,
       )
     val projected = ScreenDocumentProjection.project(document)
     assertIs<ScreenDocumentProjection.Outcome.Projected>(projected)

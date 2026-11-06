@@ -21,7 +21,7 @@ class EditorLayerFilterTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -30,7 +30,7 @@ class EditorLayerFilterTest {
       reducer.reduce(
         reducer.initial(document, selectedNodeId = "root-surface"),
         UiBuilderEditorEvent.SearchLayers(query),
-      )
+      ),
     )
 
   @Test
@@ -134,7 +134,7 @@ class EditorLayerFilterTest {
     assertEquals(matches, selected.selection)
     // Every selected node is a chip: the ancestors shown as context are not in the selection.
     assertTrue(
-      selected.selection.all { document.nodes.getValue(it).componentId == "m3/filter-chip" }
+      selected.selection.all { document.nodes.getValue(it).componentId == "m3/filter-chip" },
     )
   }
 

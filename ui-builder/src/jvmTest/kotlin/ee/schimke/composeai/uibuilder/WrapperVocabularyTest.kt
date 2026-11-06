@@ -57,13 +57,13 @@ class WrapperVocabularyTest {
       propertyWrapperIssue(
         "resource",
         JsonObject(
-          mapOf("type" to JsonPrimitive("resource"), "resourceKey" to JsonPrimitive("card_title"))
+          mapOf("type" to JsonPrimitive("resource"), "resourceKey" to JsonPrimitive("card_title")),
         ),
-      )
+      ),
     )
     assertTrue(
       propertyWrapperIssue("resource", JsonObject(mapOf("type" to JsonPrimitive("resource"))))
-        ?.startsWith("resource wrapper") == true
+        ?.startsWith("resource wrapper") == true,
     )
   }
 
@@ -74,7 +74,7 @@ class WrapperVocabularyTest {
       propertyWrapperIssue(
         "string",
         JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Inbox"))),
-      )
+      ),
     )
   }
 
@@ -85,7 +85,7 @@ class WrapperVocabularyTest {
     val directory =
       java.io.File(
         System.getProperty("uiBuilderDesignFixturesDir")
-          ?: "../docs/design/fixtures/ui-builder/designs"
+          ?: "../docs/design/fixtures/ui-builder/designs",
       )
     val found = mutableSetOf<String>()
     fun walk(properties: JsonObject) {
@@ -116,7 +116,7 @@ class WrapperVocabularyTest {
   fun `a replayed document carrying an invented wrapper is reported by the validator`() {
     val catalog =
       ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
     val grid =
       UiBuilderNode(
@@ -127,13 +127,13 @@ class WrapperVocabularyTest {
             mapOf(
               "columns" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("fixedGrid"), "columns" to JsonPrimitive(7))
+                  mapOf("type" to JsonPrimitive("fixedGrid"), "columns" to JsonPrimitive(7)),
                 ),
               "scrollStateKey" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("month"))
+                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("month")),
                 ),
-            )
+            ),
           ),
       )
     val document =

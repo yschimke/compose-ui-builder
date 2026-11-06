@@ -87,14 +87,14 @@ class LocalDesignSessionTest {
             clientId = "test-client",
             baseRevision = reloaded.document.revision,
             targetOperationId = "op-first",
-          )
-        )
+          ),
+        ),
       )
 
     assertIs<CommandOutcome.Accepted>(undo.outcome)
     assertTrue("first" !in reloaded.document.nodes)
     assertTrue(
-      "first" !in open(assertNotNull(store.read(LocalDesignFixtures.DESIGN_ID))).document.nodes
+      "first" !in open(assertNotNull(store.read(LocalDesignFixtures.DESIGN_ID))).document.nodes,
     )
   }
 
@@ -186,7 +186,7 @@ class LocalDesignSessionTest {
     // by a builder whose reducer differed, looks like from here.
     val corrupt =
       stored.copy(
-        log = stored.log + LocalDesignFixtures.deleteMissing("op-broken", baseRevision = 1)
+        log = stored.log + LocalDesignFixtures.deleteMissing("op-broken", baseRevision = 1),
       )
 
     val reopened = open(corrupt)

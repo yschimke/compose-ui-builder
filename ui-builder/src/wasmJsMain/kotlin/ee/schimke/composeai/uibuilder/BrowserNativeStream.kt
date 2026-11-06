@@ -150,7 +150,7 @@ internal fun nativeStreamUrl(sessionId: String, previewId: String): String =
       if (url.protocol === 'http:') url.protocol = 'ws:';
       if (url.protocol === 'https:') url.protocol = 'wss:';
       return url.toString();
-    })()"""
+    })()""",
   )
 
 private fun openNativeStreamSocket(
@@ -174,7 +174,7 @@ private fun openNativeStreamSocket(
       socket.onmessage = function (event) { onTextMessage(String(event.data)); };
       document.addEventListener('visibilitychange', reportVisibility);
       return socket;
-    })()"""
+    })()""",
   )
 
 private fun sendNativeStreamText(socket: JsAny, text: String): Unit =

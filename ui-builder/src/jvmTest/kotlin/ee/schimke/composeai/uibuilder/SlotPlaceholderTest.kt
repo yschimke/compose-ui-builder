@@ -220,7 +220,7 @@ class SlotPlaceholderTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

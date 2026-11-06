@@ -106,7 +106,7 @@ class CatalogThumbnailRenderTest {
     needsContent: Set<String> = emptySet(),
     catalog: CapabilityCatalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/$systemId-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/$systemId-capabilities-v1.json")).readText(),
       ),
   ) {
     val reducer = UiBuilderEditorReducer(catalog)
@@ -193,7 +193,7 @@ class CatalogThumbnailRenderTest {
           Modifier.testTag("sheet")
             .width(SHEET_WIDTH.dp)
             .background(MaterialTheme.colorScheme.surface)
-            .padding(8.dp)
+            .padding(8.dp),
         ) {
           tiles.forEachIndexed { index, tile ->
             Column(Modifier.width(120.dp).padding(4.dp)) {

@@ -253,7 +253,7 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
       val measured =
         checkNotNull(snapshot) { "layout provenance pass produced no inspection snapshot" }
       require(
-        measured.documentId == document.id && measured.documentRevision == document.revision
+        measured.documentId == document.id && measured.documentRevision == document.revision,
       ) {
         "layout provenance does not match the saved document revision"
       }
@@ -343,7 +343,7 @@ private constructor(
             else ->
               error(
                 "raster export node $nodeId names asset '$assetKey', which has no bytes this " +
-                  "recorder can embed"
+                  "recorder can embed",
               )
           }
           JvmStructuredSvgRasterIdentity(
@@ -417,7 +417,7 @@ private fun UiBuilderNode.rasterPixelSize(
         modifiers.count { modifier ->
           (modifier as? JsonObject)?.get("type")?.let { it as? JsonPrimitive }?.content ==
             "matchParentSize"
-        } == 1
+        } == 1,
       ) {
         "raster node $id needs one explicit size or matchParentSize modifier for deterministic export"
       }
@@ -440,7 +440,7 @@ private fun UiBuilderNode.stringProperty(name: String): String =
 
 internal fun UiBuilderDocument.environmentNumber(name: String): Float =
   requireNotNull(
-    (environment[name] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toFloatOrNull()
+    (environment[name] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toFloatOrNull(),
   ) {
     "validated environment.$name is missing"
   }
@@ -543,7 +543,7 @@ private fun String.annotateTextTypography(
               .take(3)
               .joinToString { candidate ->
                 "${candidate.nodeId}:${candidate.bounds}:${candidate.text}"
-              }
+              },
         )
     require(candidates.drop(1).none { kotlin.math.abs(it.second - selected.second) < 0.01f }) {
       "SVG text at ${position.x},${position.y} has ambiguous authored nodes " +

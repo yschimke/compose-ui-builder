@@ -19,7 +19,7 @@ class AgentPromptContentsTest {
   private class Host : UiBuilderAgentHost {
     override var preferences by
       mutableStateOf(
-        UiBuilderAgentPreferences(connectedBefore = true, generalInstructions = "Keep it concise")
+        UiBuilderAgentPreferences(connectedBefore = true, generalInstructions = "Keep it concise"),
       )
     override val agents = emptyList<UiBuilderCollaborator>()
     var copied = ""

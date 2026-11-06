@@ -113,7 +113,7 @@ public val LocalUiBuilderAssetBytes: ProvidableCompositionLocal<(String) -> Byte
  * Only `source` changes; assets without bytes yet are left alone.
  */
 internal fun UiBuilderDocument.withInlinedUploadedAssets(
-  bytesByDigest: (String) -> ByteArray?
+  bytesByDigest: (String) -> ByteArray?,
 ): UiBuilderDocument {
   val inlined =
     uploadedAssets().mapNotNull { (key, asset) ->
@@ -128,8 +128,8 @@ internal fun UiBuilderDocument.withInlinedUploadedAssets(
                 mapOf(
                   "type" to JsonPrimitive("embedded"),
                   "base64" to JsonPrimitive(Base64.Default.encode(bytes)),
-                )
-              ))
+                ),
+              )),
         )
     }
   return if (inlined.isEmpty()) this else copy(assets = JsonObject(assets + inlined))

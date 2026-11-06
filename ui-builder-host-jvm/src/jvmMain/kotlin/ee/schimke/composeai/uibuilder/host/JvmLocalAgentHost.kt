@@ -79,7 +79,7 @@ internal constructor(
     append(UiBuilderChatController.DEFAULT_INSTRUCTIONS).append('\n')
     if (includeSetup)
       append(
-        "Use your own local agent login. This is a design snapshot, not a hosted MCP session.\n"
+        "Use your own local agent login. This is a design snapshot, not a hosted MCP session.\n",
       )
     append(instructions.take(4_000)).append('\n').append(context().take(64_000))
   }
@@ -104,8 +104,8 @@ internal constructor(
               LocalHarness.Codex -> "https://developers.openai.com/codex/cli/"
               LocalHarness.Claude -> "https://code.claude.com/docs/en/setup"
               LocalHarness.OpenCode -> "https://opencode.ai/docs/"
-            }
-          )
+            },
+          ),
         )
     }
   }
@@ -162,7 +162,7 @@ internal constructor(
       val input = buildString {
         append(UiBuilderChatController.DEFAULT_INSTRUCTIONS).append('\n')
         append(
-          "Use only this supplied snapshot. No tool calls, local file access or shared writes.\n"
+          "Use only this supplied snapshot. No tool calls, local file access or shared writes.\n",
         )
         append(preferences.instructions().take(4_000)).append('\n')
         append(if (unchanged) "Design snapshot unchanged since the last turn." else snapshot)
@@ -206,7 +206,7 @@ internal constructor(
                 .map { it.copy(content = it.content.take(12_000)) },
             reviewedComments =
               saved.chat.reviewedComments.entries.take(500).associate { it.toPair() },
-          )
+          ),
       )
     }
       .getOrDefault(LocalAgentRecord())

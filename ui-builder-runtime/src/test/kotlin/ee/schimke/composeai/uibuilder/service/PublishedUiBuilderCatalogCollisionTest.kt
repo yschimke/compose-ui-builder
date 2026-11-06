@@ -67,7 +67,7 @@ class PublishedUiBuilderCatalogCollisionTest {
         {"schemaVersion":1,"module":":m3","variant":"debug",
          "components":[${components.joinToString(",")}]}
         """
-          .trimIndent()
+          .trimIndent(),
       )
   }
 
@@ -209,7 +209,7 @@ class PublishedUiBuilderCatalogCollisionTest {
     ignoreUnknownKeys = true
   }
     .decodeFromString(
-      """{"schemaVersion":1,"module":":m3","variant":"debug","components":[${entries.joinToString(",")}]}"""
+      """{"schemaVersion":1,"module":":m3","variant":"debug","components":[${entries.joinToString(",")}]}""",
     )
 
   @Test

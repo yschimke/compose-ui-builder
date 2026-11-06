@@ -162,7 +162,7 @@ class SlotPlaceholderUiTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
 
@@ -228,7 +228,7 @@ class SlotPlaceholderUiTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

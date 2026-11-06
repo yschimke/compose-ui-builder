@@ -251,7 +251,7 @@ internal fun PersistedDesignV1.deltaAfter(afterSequence: Long, limit: Int): Serv
 }
 
 internal fun UiBuilderSubmission.toProtocol(
-  actor: AuthenticatedUiBuilderActor
+  actor: AuthenticatedUiBuilderActor,
 ): DesignSubmissionV1 =
   when (this) {
     is UiBuilderSubmission.Batch ->
@@ -515,7 +515,7 @@ internal fun DesignDocumentV1.rebuildLocation(
   return copy(
     nodes =
       nodes +
-        (parentNode.id to parentNode.copy(slots = parentNode.slots + (parent.slot to children)))
+        (parentNode.id to parentNode.copy(slots = parentNode.slots + (parent.slot to children))),
   )
 }
 
@@ -534,7 +534,7 @@ internal fun DesignDocumentV1.withComponent(
   val after = declaration?.root
   val declared =
     copy(
-      components = if (declaration == null) components - key else components + (key to declaration)
+      components = if (declaration == null) components - key else components + (key to declaration),
     )
   var roots = declared.roots
   if (after != null && after in roots && roots.size > 1) roots = roots - after
@@ -581,7 +581,7 @@ internal data class StateUsageIssue(val nodeId: String, val field: String, val m
  * `selectOrClear` on a non-nullable, which the exporter could not perform.
  */
 internal fun DesignDocumentV1.stateUsageIssue(
-  declarations: Map<String, StateVariableV1>
+  declarations: Map<String, StateVariableV1>,
 ): StateUsageIssue? {
   nodes.values.forEach { node ->
     node.properties.forEach { (property, value) ->
@@ -694,7 +694,7 @@ internal fun staleStateWrites(
         null,
         name,
         staleness.through,
-      )
+      ),
     )
   else emptyList()
 
@@ -711,7 +711,7 @@ internal fun staleComponentWrites(
         null,
         componentKey,
         staleness.through,
-      )
+      ),
     )
   else emptyList()
 
@@ -1215,7 +1215,7 @@ internal fun artifactDigest(artifact: ExportArtifactV1): String =
     when (artifact.encoding) {
       ExportEncodingV1.UTF8 -> artifact.content.encodeToByteArray()
       ExportEncodingV1.BASE64 -> Base64.getDecoder().decode(artifact.content)
-    }
+    },
   )
 
 internal object PersistentUiBuilderServiceJson {

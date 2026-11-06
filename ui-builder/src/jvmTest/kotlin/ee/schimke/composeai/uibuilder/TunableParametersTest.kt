@@ -38,7 +38,7 @@ class TunableParametersTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -205,8 +205,8 @@ class TunableParametersTest {
         .initial(document)
         .on(
           UiBuilderEditorEvent.TuneTarget(
-            TunableTarget.Modifier("podcast-card-android", 1, "clip", "shape")
-          )
+            TunableTarget.Modifier("podcast-card-android", 1, "clip", "shape"),
+          ),
         )
     assertIs<CommandOutcome.Rejected>(bound.lastOutcome)
     assertEquals(emptyList(), bound.tunables)
@@ -216,8 +216,8 @@ class TunableParametersTest {
         .initial(document)
         .on(
           UiBuilderEditorEvent.TuneTarget(
-            TunableTarget.Modifier("podcast-card-android", 1, "size", "widthDp")
-          )
+            TunableTarget.Modifier("podcast-card-android", 1, "size", "widthDp"),
+          ),
         )
     assertIs<CommandOutcome.Rejected>(moved.lastOutcome, "index 1 is the clip, not a size")
   }

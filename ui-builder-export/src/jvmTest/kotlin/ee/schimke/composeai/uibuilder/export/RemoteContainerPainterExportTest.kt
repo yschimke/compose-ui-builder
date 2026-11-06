@@ -25,8 +25,8 @@ class RemoteContainerPainterExportTest {
             "slots":{"content":["title"]}},
           "title":{"id":"title","componentId":"remote-m3/remote-text",
             "properties":{"text":{"type":"string","value":"Summit"}}}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(document: UiBuilderDocument): String =
@@ -45,7 +45,7 @@ class RemoteContainerPainterExportTest {
         document(
           "remote-m3/remote-card",
           """{"containerImageKey":{"type":"assetKey","value":"mountain"}}""",
-        )
+        ),
       )
     File("build/draw-proof").apply { mkdirs() }.resolve("PictureCardWidget.kt").writeText(source)
 
@@ -64,7 +64,7 @@ class RemoteContainerPainterExportTest {
         document(
           "remote-m3/remote-button",
           """{"containerImageKey":{"type":"assetKey","value":"mountain"}}""",
-        )
+        ),
       )
 
     assertContains(source, "containerPainter = painterRemoteImageBitmap(")

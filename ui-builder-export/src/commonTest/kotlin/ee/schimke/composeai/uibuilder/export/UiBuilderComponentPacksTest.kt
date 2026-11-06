@@ -71,13 +71,13 @@ class UiBuilderComponentPacksTest {
             buildJsonObject {
               put("id", "unknown-platform")
               put("platform", "desktop")
-            }
+            },
           )
           add(
             buildJsonObject {
               put("id", "bare")
               put("platform", "wear")
-            }
+            },
           )
         },
       )
@@ -93,7 +93,7 @@ class UiBuilderComponentPacksTest {
           platform = UiBuilderCatalogPlatform.WEAR,
           nativeCatalog = null,
           componentIds = emptyList(),
-        )
+        ),
       ),
       packs.packs,
     )

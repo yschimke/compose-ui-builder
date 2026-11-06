@@ -85,7 +85,7 @@ class DesignBranchesTest {
     // Archived: kept, but closed to edits.
     val archived =
       assertIs<UiBuilderBranchResponse.Branch>(
-          execute(service, owner, UiBuilderBranchRequest.ArchiveBranch("design-a"))
+          execute(service, owner, UiBuilderBranchRequest.ArchiveBranch("design-a")),
         )
         .branch
     assertEquals(UiBuilderBranchStatus.ARCHIVED, archived.status)
@@ -114,9 +114,9 @@ class DesignBranchesTest {
                 service,
                 owner,
                 UiBuilderServiceRequest.RestoreRevision("design-a", 1, 2, "restore"),
-              )
+              ),
             )
-            .outcome
+            .outcome,
         )
         .code,
     )
@@ -128,7 +128,7 @@ class DesignBranchesTest {
             service,
             owner,
             UiBuilderServiceRequest.ReplaceDesignDocument("design-a", current, 2, "replace"),
-          )
+          ),
         )
         .error
         .code,
@@ -208,7 +208,7 @@ class DesignBranchesTest {
     // merging owner — can undo it on the parent.
     val revisions =
       assertIs<UiBuilderServiceResponse.Revisions>(
-        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design"))
+        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design")),
       )
     assertEquals(
       listOf("agent", "agent", "agent"),
@@ -408,12 +408,12 @@ class DesignBranchesTest {
     val retained = revisions(service, "design")
     assertEquals(listOf(7L, 6L, 5L, 1L), retained.revisions.map { it.revision })
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1))
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1)),
     )
     // Revision 2 is gone, and the floor a client is told is the unbroken run, not the pin below it.
     val gone =
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 2))
+          execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 2)),
         )
         .error
     assertEquals(ServiceErrorCodeV1.SNAPSHOT_REQUIRED, gone.code)
@@ -455,7 +455,7 @@ class DesignBranchesTest {
         service,
         owner,
         UiBuilderServiceRequest.ReplaceDesignDocument("design", current, 2, "replace"),
-      )
+      ),
     )
 
     val report = merge(service, owner, "design-a")
@@ -467,7 +467,7 @@ class DesignBranchesTest {
     )
     // The fork's document is still kept, so the branch can be compared with where it started.
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1))
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1)),
     )
   }
 
@@ -525,7 +525,7 @@ class DesignBranchesTest {
   /** A design whose root holds one Text node, `title`, at revision 1. */
   private fun seed(service: PersistentUiBuilderService) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(designDocument()))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(designDocument())),
     )
     accepted(
       service,
@@ -547,10 +547,10 @@ class DesignBranchesTest {
               actor.actorId,
               DesignAccessRoleV1.EDITOR,
               listOf(DesignAccessActionV1.READ, DesignAccessActionV1.WRITE),
-            )
+            ),
           ),
         ),
-      )
+      ),
     )
   }
 
@@ -565,7 +565,7 @@ class DesignBranchesTest {
           service,
           actor,
           UiBuilderBranchRequest.CreateBranch("design", name, branchId = branchId),
-        )
+        ),
       )
       .branch
 
@@ -575,7 +575,7 @@ class DesignBranchesTest {
     branchId: String,
   ): UiBuilderBranch =
     assertIs<UiBuilderBranchResponse.Branch>(
-        execute(service, actor, UiBuilderBranchRequest.GetBranch(branchId))
+        execute(service, actor, UiBuilderBranchRequest.GetBranch(branchId)),
       )
       .branch
 
@@ -586,7 +586,7 @@ class DesignBranchesTest {
     includeClosed: Boolean = true,
   ): List<UiBuilderBranch> =
     assertIs<UiBuilderBranchResponse.Branches>(
-        execute(service, actor, UiBuilderBranchRequest.ListBranches(designId, includeClosed))
+        execute(service, actor, UiBuilderBranchRequest.ListBranches(designId, includeClosed)),
       )
       .branches
 
@@ -598,7 +598,7 @@ class DesignBranchesTest {
     skip: Set<String> = emptySet(),
   ): UiBuilderBranchMergeReport =
     assertIs<UiBuilderBranchResponse.Merge>(
-        execute(service, actor, UiBuilderBranchRequest.MergeBranch(branchId, dryRun, skip))
+        execute(service, actor, UiBuilderBranchRequest.MergeBranch(branchId, dryRun, skip)),
       )
       .report
 
@@ -614,7 +614,7 @@ class DesignBranchesTest {
     actor: AuthenticatedUiBuilderActor,
   ): List<String> =
     assertIs<UiBuilderServiceResponse.Designs>(
-        execute(service, actor, UiBuilderServiceRequest.ListDesigns(null, 50))
+        execute(service, actor, UiBuilderServiceRequest.ListDesigns(null, 50)),
       )
       .designs
       .map { it.designId }
@@ -624,12 +624,12 @@ class DesignBranchesTest {
     designId: String,
   ): UiBuilderServiceResponse.Revisions =
     assertIs<UiBuilderServiceResponse.Revisions>(
-      execute(service, owner, UiBuilderServiceRequest.ListRevisions(designId))
+      execute(service, owner, UiBuilderServiceRequest.ListRevisions(designId)),
     )
 
   private fun document(service: PersistentUiBuilderService, designId: String): DesignDocumentV1 =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId))
+        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId)),
       )
       .snapshot
       .state
@@ -645,7 +645,7 @@ class DesignBranchesTest {
   ): AcceptedOutcomeV1 {
     val outcome =
       assertIs<UiBuilderServiceResponse.OperationOutcome>(
-          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission))
+          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission)),
         )
         .outcome
     return assertIs<AcceptedOutcomeV1>(outcome, "${submission.operationId}: $outcome")
@@ -658,9 +658,9 @@ class DesignBranchesTest {
   ): RejectedOutcomeV1 =
     assertIs<RejectedOutcomeV1>(
       assertIs<UiBuilderServiceResponse.OperationOutcome>(
-          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission))
+          execute(service, actor, UiBuilderServiceRequest.ApplyOperation(submission)),
         )
-        .outcome
+        .outcome,
     )
 
   private fun batch(
@@ -754,7 +754,7 @@ class DesignBranchesTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }
@@ -799,10 +799,10 @@ class DesignBranchesTest {
                   listOf(
                     PropertyCapabilityV1.Builder("text", JsonPrimitive("string"))
                       .also { it.required = false }
-                      .build()
+                      .build(),
                   )
               }
-              .build()
+              .build(),
           ),
         )
         .build()

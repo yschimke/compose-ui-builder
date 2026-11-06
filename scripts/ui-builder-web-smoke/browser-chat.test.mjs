@@ -10,7 +10,7 @@ function jsFunction(name, globals, code = source) {
   const declaration = code.indexOf(`external fun ${name}(`);
   assert.ok(declaration >= 0, name);
   const annotation = code.slice(code.lastIndexOf('@JsFun(', declaration), declaration);
-  const body = annotation.match(/@JsFun\(\s*"""([\s\S]*?)"""\s*\)/)?.[1];
+  const body = annotation.match(/@JsFun\(\s*"""([\s\S]*?)"""\s*,?\s*\)/)?.[1];
   assert.ok(body, `JavaScript body for ${name}`);
   return vm.runInNewContext(`(${body})`, globals);
 }

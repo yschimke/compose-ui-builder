@@ -57,7 +57,7 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
             { cards[it.value]?.int("order") == null },
             { cards[it.value]?.int("order") ?: 0 },
             { it.index },
-          )
+          ),
         )
         .map { (_, id) ->
           val card = cards[id]
@@ -98,7 +98,7 @@ fun newDesignCatalogs(
         { it.value.newDesignOrder() == null },
         { it.value.newDesignOrder() ?: 0 },
         { it.index },
-      )
+      ),
     )
     .map { catalogOwnedNewDesignCatalog(it.value) }
 

@@ -251,7 +251,7 @@ object PropertyValueShapes {
         put("type", JsonPrimitive(UNION))
         put("case", JsonPrimitive(case.name))
         case.fields?.let { put("fields", seedFields(it)) }
-      }
+      },
     )
 
   /** `{"type": "null"}`, a [PropertyValueShape.nullable] value's null. */
@@ -311,7 +311,7 @@ object PropertyValueShapes {
           composite.case(name)
             ?: return at(
               "`$name` is not a case of ${composite.unionType}: " +
-                composite.cases.joinToString(", ") { it.name }
+                composite.cases.joinToString(", ") { it.name },
             )
         val declared = case.fields
         if (declared == null) {
@@ -466,7 +466,7 @@ object PropertyValueShapes {
             "type" to JsonPrimitive(UNION),
             "case" to JsonPrimitive(case.name),
             "fields" to JsonObject(fields),
-          )
+          ),
         )
       }
       null -> null

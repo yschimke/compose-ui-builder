@@ -43,7 +43,7 @@ class RemoteComposeBuildGateTest {
         nodes =
           blank.nodes +
             (root to blank.nodes.getValue(root).copy(slots = mapOf("content" to listOf("loop")))) +
-            ("loop" to loop)
+            ("loop" to loop),
       )
 
     assertTrue("layout/for-each" in remote.componentsById)

@@ -37,12 +37,12 @@ class ScaffoldContentPaddingProjectionTest {
             "modifiers": $contentModifiers}
         }
       }
-      """
+      """,
     )
 
   private fun root(document: DesignDocumentV1): ScreenNode =
     assertIs<ScreenDocumentProjection.Outcome.Projected>(
-        ScreenDocumentProjection.project(document, "ScaffoldPadding")
+        ScreenDocumentProjection.project(document, "ScaffoldPadding"),
       )
       .document
       .root
@@ -56,7 +56,7 @@ class ScaffoldContentPaddingProjectionTest {
           ScreenValue.SlotParameterRead(
             "contentPadding",
             "androidx.compose.foundation.layout.PaddingValues",
-          )
+          ),
         ),
     )
 

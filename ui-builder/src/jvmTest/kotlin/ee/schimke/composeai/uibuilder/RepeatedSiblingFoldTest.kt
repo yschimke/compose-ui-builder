@@ -24,7 +24,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class RepeatedSiblingFoldTest {
   private val reference by lazy {
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")) as JsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")) as JsonObject,
       )
       .document
   }
@@ -222,10 +222,10 @@ class RepeatedSiblingFoldTest {
                   mapOf(
                     "itemWidthDp" to JsonObject(mapOf("value" to JsonPrimitive(128))),
                     "scrollStateKey" to JsonObject(mapOf("value" to JsonPrimitive("carousel"))),
-                  )
+                  ),
                 ),
               slots = mapOf("items" to itemIds),
-            ))
+            )),
     )
   }
 
@@ -239,10 +239,10 @@ class RepeatedSiblingFoldTest {
                 mapOf(
                   "valueType" to JsonPrimitive("string"),
                   "initialValue" to JsonPrimitive("x"),
-                )
-              )
-          )
-        )
+                ),
+              ),
+          ),
+        ),
     )
 
   /**
@@ -299,7 +299,7 @@ class RepeatedSiblingFoldTest {
                     if (stableKeys) {
                       put("stableKey", JsonObject(mapOf("value" to JsonPrimitive(id))))
                     }
-                  }
+                  },
                 ),
               slots = mapOf("content" to listOf("$id-label")),
             ),

@@ -75,7 +75,7 @@ class PublishedUiBuilderCatalogTest {
         ]
       }
       """
-        .trimIndent()
+        .trimIndent(),
     )
 
   private fun published(
@@ -206,7 +206,7 @@ class PublishedUiBuilderCatalogTest {
       PublishedUiBuilderCatalog.compose(
         published(
           extra =
-            ", \"composeSourceExport\": { \"adapter\": \"compose-material3\", \"version\": 1 }"
+            ", \"composeSourceExport\": { \"adapter\": \"compose-material3\", \"version\": 1 }",
         ),
         record,
         exports,
@@ -235,7 +235,7 @@ class PublishedUiBuilderCatalogTest {
                 "notes": "policy overrides the convention" }
             ]
           }
-        }"""
+        }""",
       )
 
     val result = PublishedUiBuilderCatalog.compose(document, record, exports)
@@ -335,7 +335,7 @@ class PublishedUiBuilderCatalogTest {
             ],
             "modifierCapabilities": ["padding"]
           }
-        }"""
+        }""",
       )
     val result = PublishedUiBuilderCatalog.compose(document, record, exports)
     assertTrue(
@@ -409,7 +409,7 @@ class PublishedUiBuilderCatalogTest {
             "shelfRole": "Scaffold",
             "slots": { "children": {} }
           }
-        }"""
+        }""",
       )
     val result = PublishedUiBuilderCatalog.compose(document, record, exports)
     assertTrue(
@@ -478,7 +478,7 @@ class PublishedUiBuilderCatalogTest {
             "canvas": "layout/scrollable-tab-row",
             "unrolled": { "layout": "carousel-of-cards" }
           }
-        }"""
+        }""",
       )
     val result = PublishedUiBuilderCatalog.compose(document, record, exports)
     assertTrue(
@@ -522,7 +522,7 @@ class PublishedUiBuilderCatalogTest {
             "svg": { "status": "verified", "fallback": "tracing-paper" },
             "slots": { "children": {} }
           }
-        }"""
+        }""",
       )
     val result = PublishedUiBuilderCatalog.compose(document, record, exports)
     assertTrue(
@@ -558,12 +558,12 @@ class PublishedUiBuilderCatalogTest {
             "slots": { "content": { "required": true } },
             "implementation": ":test-catalog/com.example.TestKt.Unlabelled"
           }
-        }"""
+        }""",
       )
 
     val result =
       assertIs<PublishedUiBuilderCatalog.Result.Composed>(
-        PublishedUiBuilderCatalog.compose(document, record, exports)
+        PublishedUiBuilderCatalog.compose(document, record, exports),
       )
     val host = result.catalog.components.single { it.componentId == "test-catalog/novel-host" }
 

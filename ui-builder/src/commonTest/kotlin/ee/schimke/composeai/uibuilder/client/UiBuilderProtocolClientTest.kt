@@ -78,8 +78,8 @@ class UiBuilderProtocolClientTest {
                 0,
                 listOf(UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.4)))),
               )
-              .build()
-          )
+              .build(),
+          ),
         )
     }
 
@@ -130,7 +130,7 @@ class UiBuilderProtocolClientTest {
       )
     val forged =
       ApplyOperationRequestV1(
-        DesignCommandV1.Builder("design", "op", "forged", "browser", 0, emptyList()).build()
+        DesignCommandV1.Builder("design", "op", "forged", "browser", 0, emptyList()).build(),
       )
 
     assertFailsWith<IllegalArgumentException> { runImmediate { client.execute(forged) } }
@@ -162,7 +162,7 @@ class UiBuilderProtocolClientTest {
                 message = "cursor compacted",
                 currentRevision = 9,
                 retainedFromSequence = 7,
-              )
+              ),
             ),
         )
         .encoded()
@@ -196,8 +196,8 @@ class UiBuilderProtocolClientTest {
           currentRevision = 4,
           code = RejectionCodeV1.INVALID_COMMAND,
           message = "invalid",
-        )
-      )
+        ),
+      ),
     )
     transport.emit(DeltaDesignUpdateV1(delta(after = 4, through = 5)))
 
@@ -406,7 +406,7 @@ class UiBuilderProtocolClientTest {
         override fun resumeWith(result: Result<T>) {
           completed = result
         }
-      }
+      },
     )
     return completed?.getOrThrow() ?: error("fake transport suspended unexpectedly")
   }

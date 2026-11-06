@@ -58,8 +58,8 @@ class ServiceConformanceTest {
           mapOf(
             "m3-catalog" to
               Json.decodeFromString<CatalogCapabilityV1>(
-                checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
-              )
+                checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
+              ),
           )
       }
       .build()
@@ -77,7 +77,8 @@ class ServiceConformanceTest {
           catalog.benchmark.nativeRuntimeId,
         ),
         Json.parseToJsonElement(
-            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+              .readText(),
           )
           .jsonObject,
       )
@@ -106,7 +107,7 @@ class ServiceConformanceTest {
               UiBuilderProtocolMapper.toProtocolResponse(hosted.execute(mapping.call))
             is ProtocolRequestMapping.Rejected ->
               UiBuilderProtocolMapper.toProtocolResponse(
-                UiBuilderServiceResponse.Error(mapping.error)
+                UiBuilderServiceResponse.Error(mapping.error),
               )
           }
         },
@@ -115,7 +116,7 @@ class ServiceConformanceTest {
 
   /** Runs [scenario] against both services and asserts they produced the same observations. */
   private fun conform(
-    scenario: suspend (suspend (UiBuilderRequestV1) -> UiBuilderResponseV1) -> List<Any?>
+    scenario: suspend (suspend (UiBuilderRequestV1) -> UiBuilderResponseV1) -> List<Any?>,
   ) = runBlocking {
     val observed = services().associate { (name, service) -> name to scenario(service) }
     assertEquals(observed.getValue("hosted"), observed.getValue("local"))
@@ -161,7 +162,7 @@ class ServiceConformanceTest {
             clientId = CLIENT,
             baseRevision = 0,
             operations = listOf(DesignOperation.DeleteNode("nothing-here")),
-          )
+          ),
         )
         .toProtocolSubmission(ACTOR.actorId, CLIENT, 0)
     val outcome =
@@ -183,7 +184,7 @@ class ServiceConformanceTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          settings.copy(heightDp = settings.heightDp + heightDelta)
+          settings.copy(heightDp = settings.heightDp + heightDelta),
         ),
       )
     val submission =

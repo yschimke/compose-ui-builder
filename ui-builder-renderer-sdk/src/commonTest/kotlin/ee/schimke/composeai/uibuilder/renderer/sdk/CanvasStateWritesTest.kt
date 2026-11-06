@@ -13,7 +13,7 @@ class CanvasStateWritesTest {
     Json.parseToJsonElement(
       """[{"type":"set","variable":"x","value":{"type":"expr","op":"add","args":[
            {"type":"state","variable":"x"},{"type":"int","value":40}]}},
-         {"type":"increment","variable":"x","amount":1}]"""
+         {"type":"increment","variable":"x","amount":1}]""",
     ) as JsonArray
 
   @Test

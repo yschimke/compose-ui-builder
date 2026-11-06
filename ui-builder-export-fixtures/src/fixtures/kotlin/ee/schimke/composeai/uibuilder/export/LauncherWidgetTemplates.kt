@@ -91,9 +91,9 @@ object LauncherWidgetTemplates {
                     "color" to string(ON_ACCENT),
                     "fontSize" to
                       JsonObject(
-                        mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(24))
+                        mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(24)),
                       ),
-                  )
+                  ),
                 ),
               modifiers =
                 JsonArray(
@@ -102,9 +102,9 @@ object LauncherWidgetTemplates {
                       mapOf(
                         "type" to JsonPrimitive("align"),
                         "alignment" to JsonPrimitive("center"),
-                      )
-                    )
-                  )
+                      ),
+                    ),
+                  ),
                 ),
               slots = emptyMap(),
             ),
@@ -127,7 +127,7 @@ object LauncherWidgetTemplates {
         it["density"] = JsonPrimitive(LAUNCHER_DENSITY)
         it["theme"] = JsonPrimitive("light")
         it["exportDevices"] = JsonArray(emptyList())
-      }
+      },
     )
 
   private fun string(value: String): JsonObject =

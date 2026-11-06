@@ -42,8 +42,8 @@ class RemoteNodeTagExportTest {
             "modifiers":[{"type":"remoteCall","name":"semantics","args":{
               "contentDescription":{"type":"string","value":"Steps today"},
               "clear":{"type":"bool","value":true}}}]}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(tagNodes: Boolean): String {
@@ -102,7 +102,7 @@ class RemoteNodeTagExportTest {
     assertEquals(
       source,
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(document, "proof.tags")
+          WearWidgetCodeExporter.export(document, "proof.tags"),
         )
         .source,
     )
@@ -112,23 +112,23 @@ class RemoteNodeTagExportTest {
   fun `the record-free generator and the native preview lane pass tagNodes to a widget`() {
     val generated =
       assertIs<RecordFreeExport.Generated.Emitted>(
-        RecordFreeExport.generate(document, "proof.tags", tagNodes = true)
+        RecordFreeExport.generate(document, "proof.tags", tagNodes = true),
       )
     assertContains(generated.source, tag("play"))
     val untagged =
       assertIs<RecordFreeExport.Generated.Emitted>(
-        RecordFreeExport.generate(document, "proof.tags")
+        RecordFreeExport.generate(document, "proof.tags"),
       )
     assertFalse(NativeNodeTags.PREFIX in untagged.source)
 
     val native =
       assertIs<WearWidgetNativePreviewExporter.Result.Emitted>(
-        WearWidgetNativePreviewExporter.export(document, "proof.tags", tagNodes = true)
+        WearWidgetNativePreviewExporter.export(document, "proof.tags", tagNodes = true),
       )
     assertContains(native.source, tag("steps"))
     val plain =
       assertIs<WearWidgetNativePreviewExporter.Result.Emitted>(
-        WearWidgetNativePreviewExporter.export(document, "proof.tags")
+        WearWidgetNativePreviewExporter.export(document, "proof.tags"),
       )
     assertFalse(NativeNodeTags.PREFIX in plain.source)
   }

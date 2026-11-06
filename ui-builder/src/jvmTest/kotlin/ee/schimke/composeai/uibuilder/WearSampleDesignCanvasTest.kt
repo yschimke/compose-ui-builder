@@ -103,7 +103,7 @@ class WearSampleDesignCanvasTest {
       Box(
         Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
           .requiredWidth(192.dp)
-          .onSizeChanged { measured = it.height }
+          .onSizeChanged { measured = it.height },
       ) {
         WearCatalogAdapters(content)
       }
@@ -135,7 +135,7 @@ class WearSampleDesignCanvasTest {
     val file =
       File(
           System.getProperty("uiBuilderDesignFixturesDir")
-            ?: "../docs/design/fixtures/ui-builder/designs"
+            ?: "../docs/design/fixtures/ui-builder/designs",
         )
         .resolve("$design.json")
     return UiBuilderReducer.replay(Json.parseToJsonElement(file.readText()).jsonObject).document

@@ -14,7 +14,7 @@ class RemoteDocumentJsonPlayerFixturesTest {
       value ->
       val result =
         assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-          RemoteDocumentJsonExporter.export(remoteJsonStringFixture(value))
+          RemoteDocumentJsonExporter.export(remoteJsonStringFixture(value)),
         )
       File(output, "$index.json").writeText(result.source)
       File(output, "$index.expected.txt").writeText(value)
@@ -42,7 +42,7 @@ class RemoteDocumentJsonPlayerFixturesTest {
       for (density in listOf(1, 2)) {
         val result =
           assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-            RemoteDocumentJsonExporter.export(remoteJsonSelectionFixture(values, density))
+            RemoteDocumentJsonExporter.export(remoteJsonSelectionFixture(values, density)),
           )
         File(output, "$name-$density.json").writeText(result.source)
       }

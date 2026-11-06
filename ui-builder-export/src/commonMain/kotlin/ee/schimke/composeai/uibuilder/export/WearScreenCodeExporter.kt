@@ -89,7 +89,7 @@ object WearScreenCodeExporter {
     if (root.componentId != SCAFFOLD) {
       return refuse(
         "the root is `${root.componentId}`, not `$SCAFFOLD` — this generator writes Wear screens, " +
-          "and a widget belongs to WearWidgetCodeExporter"
+          "and a widget belongs to WearWidgetCodeExporter",
       )
     }
 
@@ -147,7 +147,7 @@ object WearScreenCodeExporter {
       if (variableFontFiles.isNotEmpty() && variableFontMode == VariableFontExportMode.LIBRARY) {
         appendLine(
           "// Its variable font text draws through flexpress: " +
-            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\")."
+            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\").",
         )
       }
       appendLine()
@@ -185,7 +185,7 @@ object WearScreenCodeExporter {
         // paint it once per slice.
         if (root.flag("scrollIndicator") ?: true) {
           appendLine(
-            "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+            "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },",
           )
         } else {
           appendLine("${INDENT}${INDENT}scrollIndicator = null,")
@@ -246,7 +246,7 @@ object WearScreenCodeExporter {
         // draws — so this render checks canvas parity. One device suffices: the small round screen
         // designs are authored on.
         appendLine(
-          "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
+          "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)",
         )
         appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
         appendLine("@Composable")
@@ -264,7 +264,7 @@ object WearScreenCodeExporter {
         appendLine()
         appendLine(
           "// ${it.functionName} draws \"${it.spec.text}\" in ${it.spec.font.family} " +
-            "from the font's outlines (flexpress). It is generated when the design exports."
+            "from the font's outlines (flexpress). It is generated when the design exports.",
         )
       }
     }

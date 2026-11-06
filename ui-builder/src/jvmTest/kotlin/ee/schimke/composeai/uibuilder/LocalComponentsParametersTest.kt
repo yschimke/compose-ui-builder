@@ -25,7 +25,7 @@ import kotlinx.serialization.json.jsonObject
 class LocalComponentsParametersTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -176,9 +176,9 @@ class LocalComponentsParametersTest {
             mapOf(
               "containerColor" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF6750A4"))
-                )
-            )
+                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF6750A4")),
+                ),
+            ),
           ),
         slots = mapOf("content" to emptyList()),
       )
@@ -211,7 +211,7 @@ class LocalComponentsParametersTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -221,7 +221,7 @@ class LocalComponentsParametersTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),

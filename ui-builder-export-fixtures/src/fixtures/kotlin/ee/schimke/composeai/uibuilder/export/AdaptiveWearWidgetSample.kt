@@ -71,7 +71,7 @@ private fun text(id: String, text: String, style: String, color: String) =
           "text" to literal("string", JsonPrimitive(text)),
           "style" to enum(style),
           "color" to colorToken(color),
-        )
+        ),
       ),
     modifiers = JsonArray(emptyList()),
     slots = emptyMap(),

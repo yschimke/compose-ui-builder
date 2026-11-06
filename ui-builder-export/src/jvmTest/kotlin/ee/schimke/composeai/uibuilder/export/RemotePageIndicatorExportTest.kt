@@ -30,16 +30,16 @@ class RemotePageIndicatorExportTest {
               "properties":{"pageCount":{"type":"int","value":5},"selectedPage":$selectedPage,
                 "selectedColor":{"type":"colorToken","value":"primary"},
                 "backgroundColor":{"type":"color","value":"#80000000"}}}}}
-          """
-        ) as JsonObject
-      )
+          """,
+        ) as JsonObject,
+      ),
     )
 
   @Test
   fun `a selected page read from state follows it`() {
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          export("""{"type":"state","variable":"page"}""")
+          export("""{"type":"state","variable":"page"}"""),
         )
         .source
 

@@ -98,6 +98,6 @@ private fun UiBuilderDocument.withText(nodeId: String, value: String): UiBuilder
   val text = JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value)))
   return copy(
     nodes =
-      nodes + (nodeId to node.copy(properties = JsonObject(node.properties + ("text" to text))))
+      nodes + (nodeId to node.copy(properties = JsonObject(node.properties + ("text" to text)))),
   )
 }

@@ -22,7 +22,7 @@ class WearWidgetSampleTemplatesTest {
   private val catalog = publishedTestCatalog("remote-m3")
   private val reference =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 

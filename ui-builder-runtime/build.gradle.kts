@@ -107,7 +107,7 @@ tasks.withType<Test>().configureEach {
       rootProject.fileTree("docs/design/fixtures/ui-builder") {
         include("*-capabilities-v1.json")
         include("slot-acceptance-v1.json")
-      }
+      },
     )
     .withPropertyName("uiBuilderGoldenFixtures")
     .withPathSensitivity(PathSensitivity.RELATIVE)
@@ -181,7 +181,7 @@ tasks.register<CheckUiBuilderRuntimeBoundary>("checkUiBuilderRuntimeBoundary") {
           }
           .toSet()
       }
-    }
+    },
   )
 }
 

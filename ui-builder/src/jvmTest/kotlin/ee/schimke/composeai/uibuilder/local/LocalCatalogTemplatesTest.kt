@@ -34,7 +34,7 @@ class LocalCatalogTemplatesTest {
       """{"schema":"compose-ui-builder-document/v1-candidate","id":"published-card","title":"Published card","revision":19,
       "catalogPin":{"systemId":"watch-kit","catalogRevision":"candidate","capabilityDigest":"candidate","nativeRuntimeId":"candidate"},
       "environment":{"widthDp":192,"heightDp":192,"density":2.0,"theme":"dark","locale":"en-US","fontScale":1.0,"layoutDirection":"ltr","exportDevices":["id:pixel_6"]},"stateVariables":{},"roots":["root"],
-      "nodes":{"root":{"id":"root","componentId":"watch/card","properties":{},"modifiers":[],"slots":{}}}}"""
+      "nodes":{"root":{"id":"root","componentId":"watch/card","properties":{},"modifiers":[],"slots":{}}}}""",
     )
 
   private fun payload(
@@ -43,10 +43,10 @@ class LocalCatalogTemplatesTest {
   ) =
     localDesignJson.encodeToString(
       CatalogTemplateDocumentsV1.Builder(
-          CatalogReferenceV1("watch-kit", revision, digest, catalog.benchmark.nativeRuntimeId)
+          CatalogReferenceV1("watch-kit", revision, digest, catalog.benchmark.nativeRuntimeId),
         )
         .also { it.templates = mapOf("card" to template.toDesignDocumentV1()) }
-        .build()
+        .build(),
     )
 
   @Test

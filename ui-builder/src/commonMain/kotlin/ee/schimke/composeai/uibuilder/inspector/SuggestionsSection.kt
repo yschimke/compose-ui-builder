@@ -129,7 +129,7 @@ private fun SuggestionCard(
         if (shown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
         RoundedCornerShape(6.dp),
       )
-      .padding(8.dp)
+      .padding(8.dp),
   ) {
     Text(
       suggestion.summary,

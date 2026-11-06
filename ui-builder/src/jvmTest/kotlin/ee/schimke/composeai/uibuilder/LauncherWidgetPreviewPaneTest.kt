@@ -75,7 +75,7 @@ class LauncherWidgetPreviewPaneTest {
     val offGrid =
       hello()
         .withEnvironmentOverrides(
-          mapOf("widthDp" to JsonPrimitive(216), "heightDp" to JsonPrimitive(76))
+          mapOf("widthDp" to JsonPrimitive(216), "heightDp" to JsonPrimitive(76)),
         )
     val panes = offGrid.widgetPreviewPanes()!!
 
@@ -90,7 +90,7 @@ class LauncherWidgetPreviewPaneTest {
   fun `a design that is not a widget keeps its device strip`() {
     assertNull(
       blankUiBuilderDocument("blank", JsonObject(emptyMap()), JsonObject(emptyMap()))
-        .widgetPreviewPanes()
+        .widgetPreviewPanes(),
     )
   }
 

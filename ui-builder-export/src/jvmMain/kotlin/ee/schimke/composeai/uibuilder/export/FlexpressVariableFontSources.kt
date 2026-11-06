@@ -27,7 +27,7 @@ class FlexpressVariableFontSources(private val readFont: (file: String) -> ByteA
     val font =
       font(spec.font).getOrElse {
         return VariableFontSource.Refused(
-          "${spec.font.family} (${spec.font.file}) could not be read: ${it.message}"
+          "${spec.font.family} (${spec.font.file}) could not be read: ${it.message}",
         )
       }
     val missing =
@@ -37,7 +37,7 @@ class FlexpressVariableFontSources(private val readFont: (file: String) -> ByteA
     if (missing.isNotEmpty()) {
       val characters = missing.joinToString(" ") { String(Character.toChars(it)) }
       return VariableFontSource.Refused(
-        "${spec.font.family} has no glyph for $characters in \"${spec.text}\""
+        "${spec.font.family} has no glyph for $characters in \"${spec.text}\"",
       )
     }
     val source =

@@ -32,7 +32,7 @@ class SelectionControlTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -48,9 +48,9 @@ class SelectionControlTest {
                   "type" to JsonPrimitive("flag"),
                   "initialValue" to JsonPrimitive(false),
                   "persistence" to JsonPrimitive("preview"),
-                )
-              ))
-        )
+                ),
+              )),
+        ),
     )
 
   @Test
@@ -190,8 +190,8 @@ class SelectionControlTest {
               node.copy(
                 eventBindings =
                   Json.parseToJsonElement("""{"click":[{"type":"toggle","variable":"notify"}]}""")
-                    .jsonObject
-              ))
+                    .jsonObject,
+              )),
       )
     val source = CapabilityComposeCodeExporter.export(legacy, catalog).requireSource()
     assertTrue("onCheckedChange = { notify = !notify }" in source, source)

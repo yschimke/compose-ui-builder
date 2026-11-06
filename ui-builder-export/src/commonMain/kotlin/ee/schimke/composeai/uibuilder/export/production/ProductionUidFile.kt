@@ -176,7 +176,7 @@ data class ProductionComponentUse(
 
 @Serializable
 enum class ProductionNullPolicy {
-  @SerialName("skip") SKIP
+  @SerialName("skip") SKIP,
 }
 
 object ProductionUidFiles {

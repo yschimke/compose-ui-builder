@@ -45,7 +45,7 @@ class ThemeSchemesTest {
   private val m3 = UiBuilderEditorReducer(m3Catalog)
   private val m3Document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -191,7 +191,7 @@ class ThemeSchemesTest {
     assertTrue(
       container.typographyProperties.all {
         it in ThemeTypefaces.PROPERTIES || it == ThemeTextStyle.PROPERTY
-      }
+      },
     )
   }
 
@@ -268,7 +268,7 @@ class ThemeSchemesTest {
     assertTrue(listed.isNotEmpty())
     assertTrue(listed.none { it in ThemeTypefaces.PROPERTIES || it == ThemeTextStyle.PROPERTY })
     assertFalse(
-      ownsThemePanelProperties(m3.propertyFields(m3.initial(m3Document, "discover-grid")))
+      ownsThemePanelProperties(m3.propertyFields(m3.initial(m3Document, "discover-grid"))),
     )
 
     val committed =
@@ -286,7 +286,7 @@ class ThemeSchemesTest {
     assertTrue(
       inspectorPropertyFields(wearFields).none {
         it.name in ThemeTypefaces.PROPERTIES || it.name == ThemeTextStyle.PROPERTY
-      }
+      },
     )
     val plain =
       EditorPropertyField(

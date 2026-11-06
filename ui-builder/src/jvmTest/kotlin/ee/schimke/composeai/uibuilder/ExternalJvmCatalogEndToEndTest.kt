@@ -39,7 +39,7 @@ class ExternalJvmCatalogEndToEndTest {
           bundle.resolve("ui-builder.json").readText(),
           records,
           ExportCapabilitiesV1.Builder().build(),
-        )
+        ),
       )
     val hostLoader = javaClass.classLoader
     for (record in records.components) {
@@ -71,12 +71,12 @@ class ExternalJvmCatalogEndToEndTest {
       adapters.values.forEach { assertNotNull(registry[it]) }
       val imported =
         CapabilityCatalogParser.parse(
-          Json.encodeToString(CatalogCapabilityV1.serializer(), published.catalog)
+          Json.encodeToString(CatalogCapabilityV1.serializer(), published.catalog),
         )
       // Structural layout and mirror labels belong to the host's existing vocabulary, not Meshcore.
       val builtins =
         CapabilityCatalogParser.parse(
-            requireNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+            requireNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
           )
           .components
           .filter { it.componentId in setOf("layout/column", "m3/text") }
@@ -85,7 +85,7 @@ class ExternalJvmCatalogEndToEndTest {
       val reducer = UiBuilderEditorReducer(catalog)
       val saved =
         Json.decodeFromString<UiBuilderDocument>(
-          bundle.resolve("designs/chat-input.uid").readText()
+          bundle.resolve("designs/chat-input.uid").readText(),
         )
       var editor by mutableStateOf(reducer.initial(saved, "input"))
       var opened by mutableStateOf(0)

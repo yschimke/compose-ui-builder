@@ -91,8 +91,8 @@ internal fun DesignSubmissionV1.toLocalSubmission(): LocalSubmissionMapping =
               clientId = clientId,
               baseRevision = baseRevision.toRevision(),
               operations = operations,
-            )
-          )
+            ),
+          ),
         )
     }
     is UndoCommandV1 ->
@@ -105,8 +105,8 @@ internal fun DesignSubmissionV1.toLocalSubmission(): LocalSubmissionMapping =
             clientId = clientId,
             baseRevision = baseRevision.toRevision(),
             targetOperationId = targetOperationId,
-          )
-        )
+          ),
+        ),
       )
     is RedoCommandV1 ->
       LocalSubmissionMapping.Mapped(
@@ -118,8 +118,8 @@ internal fun DesignSubmissionV1.toLocalSubmission(): LocalSubmissionMapping =
             clientId = clientId,
             baseRevision = baseRevision.toRevision(),
             targetUndoOperationId = targetUndoOperationId,
-          )
-        )
+          ),
+        ),
       )
   }
 
@@ -139,8 +139,8 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
               node = node.toUiBuilderNode(),
               parent = location.parent.toReducer(),
               afterNodeId = location.afterNodeId,
-            )
-          )
+            ),
+          ),
         )
     is MoveNodeMutationV1 ->
       location.reject()
@@ -150,8 +150,8 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
               nodeId = nodeId,
               parent = location.parent.toReducer(),
               afterNodeId = location.afterNodeId,
-            )
-          )
+            ),
+          ),
         )
     is DeleteNodeMutationV1 -> MutationMapping.Mapped(listOf(DesignOperation.DeleteNode(nodeId)))
     // The reducer restores a tombstone to the location it retained; an override is a shape the
@@ -166,8 +166,8 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
             nodeId = nodeId,
             property = property,
             value = localBridgeJson.encodeToJsonElement(UiValueV1.serializer(), value),
-          )
-        )
+          ),
+        ),
       )
     is RemoveNodePropertyMutationV1 ->
       MutationMapping.Mapped(listOf(DesignOperation.RemoveNodeProperty(nodeId, property)))
@@ -179,8 +179,8 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
             localBridgeJson
               .encodeToJsonElement(StateVariableV1.serializer(), declaration)
               .jsonObject,
-          )
-        )
+          ),
+        ),
       )
     is RemoveStateVariableMutationV1 ->
       MutationMapping.Mapped(listOf(DesignOperation.RemoveStateVariable(name)))
@@ -192,8 +192,8 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
             localBridgeJson
               .encodeToJsonElement(DesignComponentV1.serializer(), declaration)
               .jsonObject,
-          )
-        )
+          ),
+        ),
       )
     is RemoveComponentMutationV1 ->
       MutationMapping.Mapped(listOf(DesignOperation.RemoveComponent(componentKey)))
@@ -205,10 +205,10 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
             JsonObject(
               arguments.mapValues { (_, value) ->
                 localBridgeJson.encodeToJsonElement(UiValueV1.serializer(), value)
-              }
+              },
             ),
-          )
-        )
+          ),
+        ),
       )
     is SetEventBindingMutationV1 ->
       MutationMapping.Mapped(
@@ -217,10 +217,10 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
             nodeId,
             event,
             JsonArray(
-              actions.map { localBridgeJson.encodeToJsonElement(DesignActionV1.serializer(), it) }
+              actions.map { localBridgeJson.encodeToJsonElement(DesignActionV1.serializer(), it) },
             ),
-          )
-        )
+          ),
+        ),
       )
     is SetModifiersMutationV1 ->
       MutationMapping.Mapped(
@@ -231,10 +231,10 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
               JsonArray(
                 modifiers.map {
                   localBridgeJson.encodeToJsonElement(DesignModifierV1.serializer(), it)
-                }
+                },
               ),
-          )
-        )
+          ),
+        ),
       )
     // One reducer operation per field: the reducer versions environment fields individually so
     // authors editing different fields don't conflict.

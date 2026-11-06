@@ -58,7 +58,7 @@ class DrawCurvedTextCanvasRenderTest {
           "text":{"type":"string","value":"ALONG"},
           "pathData":{"type":"string","value":"M8 70 Q50 10 92 70"},
           "textSizeSp":{"type":"float","value":12},
-          "color":{"type":"color","value":"#FFFF0000"}},"modifiers":[],"slots":{},"eventBindings":{}}"""
+          "color":{"type":"color","value":"#FFFF0000"}},"modifiers":[],"slots":{},"eventBindings":{}}""",
       )
 
     assertTrue(count > 20, "no text along the path ($count samples)")

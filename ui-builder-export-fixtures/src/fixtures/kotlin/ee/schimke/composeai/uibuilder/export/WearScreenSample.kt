@@ -47,8 +47,8 @@ fun wearScreenUiBuilderDocument(
           JsonObject(
             mapOf(
               // `title`: Wear's four variants are the four cards it publishes.
-              "variant" to literal("enum", JsonPrimitive("title"))
-            )
+              "variant" to literal("enum", JsonPrimitive("title")),
+            ),
           ),
         modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
         // One column, not two texts: a card's content slot is a `Box`, so two children would stack.
@@ -106,7 +106,7 @@ fun wearScreenUiBuilderDocument(
             mapOf(
               "timeText" to literal("string", JsonPrimitive(WEAR_FROZEN_CLOCK)),
               "scrollIndicator" to literal("bool", JsonPrimitive(true)),
-            )
+            ),
           ),
         modifiers = JsonArray(emptyList()),
         slots =
@@ -120,7 +120,7 @@ fun wearScreenUiBuilderDocument(
         componentId = "wear-m3/transforming-lazy-column",
         properties =
           JsonObject(
-            mapOf("verticalSpacingDp" to literal("float", JsonPrimitive(WEAR_LIST_SPACING_DP)))
+            mapOf("verticalSpacingDp" to literal("float", JsonPrimitive(WEAR_LIST_SPACING_DP))),
           ),
         modifiers = JsonArray(emptyList()),
         slots =
@@ -178,7 +178,8 @@ private fun wearScreenText(
           "style" to literal("typographyToken", JsonPrimitive(style)),
           "color" to colorToken(color),
           "textAlign" to literal("enum", JsonPrimitive(textAlign)),
-        ) + fontSizeSp?.let { mapOf("fontSizeSp" to literal("float", JsonPrimitive(it))) }.orEmpty()
+        ) +
+          fontSizeSp?.let { mapOf("fontSizeSp" to literal("float", JsonPrimitive(it))) }.orEmpty(),
       ),
     modifiers = modifiers,
     slots = emptyMap(),

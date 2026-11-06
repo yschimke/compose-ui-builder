@@ -29,7 +29,7 @@ class EmptyRemoteBodyImportsTest {
         )
       val source =
         assertIs<WearWidgetNativePreviewExporter.Result.Emitted>(
-            WearWidgetNativePreviewExporter.export(empty, "preview")
+            WearWidgetNativePreviewExporter.export(empty, "preview"),
           )
           .source
       assertTrue("RemoteBox(modifier = RemoteModifier.fillMaxSize())" in source, source)

@@ -101,7 +101,7 @@ internal object CatalogCutoverFixtures {
   val packagedFoundationRecord: ComponentRecordFile by lazy {
     val fixtures = "docs/design/fixtures/ui-builder/compose-foundation-components-v1.json"
     json.decodeFromString(
-      (java.io.File("../$fixtures").takeIf { it.isFile } ?: java.io.File(fixtures)).readText()
+      (java.io.File("../$fixtures").takeIf { it.isFile } ?: java.io.File(fixtures)).readText(),
     )
   }
 

@@ -121,9 +121,9 @@ private fun DesignToken.dtcg(value: JsonPrimitive): JsonObject {
                   mapOf(
                     "component" to JsonPrimitive(it.componentId),
                     "property" to JsonPrimitive(it.property),
-                  )
+                  ),
                 )
-              }
+              },
             ),
           )
       }
@@ -134,7 +134,7 @@ private fun DesignToken.dtcg(value: JsonPrimitive): JsonObject {
       put("\$value", encoded)
       put("\$description", JsonPrimitive(label))
       put("\$extensions", JsonObject(mapOf(DTCG_EXTENSION to JsonObject(extension))))
-    }
+    },
   )
 }
 
@@ -333,7 +333,7 @@ private fun dtcgColour(literal: String): JsonObject? {
         put("alpha", tidyNumber(round(value / 255.0 * 10000) / 10000))
       }
       put("hex", JsonPrimitive("#" + rgb.lowercase()))
-    }
+    },
   )
 }
 

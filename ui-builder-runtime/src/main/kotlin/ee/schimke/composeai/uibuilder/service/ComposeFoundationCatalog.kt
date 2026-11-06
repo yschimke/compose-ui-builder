@@ -45,7 +45,7 @@ internal fun composeFoundationCatalog(
             put(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY, JsonPrimitive(platform))
             base.statusSemantics[registryKey]?.let { put(registryKey, it) }
             put("componentMenu", curation.menu(base))
-          }
+          },
         )
     }
     .build()

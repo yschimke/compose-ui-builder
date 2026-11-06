@@ -149,7 +149,7 @@ internal class BrowserChatHost(
             buildJsonObject {
               put("role", "system")
               put("content", UiBuilderChatController.DEFAULT_INSTRUCTIONS)
-            }
+            },
           )
           add(
             buildJsonObject {
@@ -159,14 +159,14 @@ internal class BrowserChatHost(
                 currentContext.take(64_000) +
                   if (currentContext.length > 64_000) "\n(Context abbreviated.)" else "",
               )
-            }
+            },
           )
           recent.forEach { message ->
             add(
               buildJsonObject {
                 put("role", message.role)
                 put("content", message.content)
-              }
+              },
             )
           }
         },
@@ -236,7 +236,7 @@ private external fun readChatSetting(key: String): String
     if (value) localStorage.setItem(key, value); else localStorage.removeItem(key);
     return null;
   } catch (_) { return 'Could not update chat storage in this browser.'; }
-}"""
+}""",
 )
 private external fun writeChatSetting(key: String, value: String): String?
 
@@ -244,7 +244,7 @@ private external fun writeChatSetting(key: String, value: String): String?
   """(actorId) => {
   try { sessionStorage.setItem('ui-builder.chat.pkce-account', actorId); return true; }
   catch (_) { return false; }
-}"""
+}""",
 )
 private external fun rememberChatSignInAccount(actorId: String): Boolean
 
@@ -255,7 +255,7 @@ private external fun rememberChatSignInAccount(actorId: String): Boolean
     sessionStorage.removeItem('ui-builder.chat.pkce-account');
     return account;
   } catch (_) { return ''; }
-}"""
+}""",
 )
 private external fun takeChatSignInAccount(): String
 
@@ -269,12 +269,12 @@ private external fun takeChatSignInAccount(): String
   url.searchParams.delete('code');
   url.searchParams.delete('openrouter-chat-callback');
   globalThis.history.replaceState(globalThis.history.state, '', url.toString());
-}"""
+}""",
 )
 private external fun discardChatSignInReturn()
 
 @JsFun(
-  "() => new URL(globalThis.location.href).searchParams.get('openrouter-chat-callback') === '1'"
+  "() => new URL(globalThis.location.href).searchParams.get('openrouter-chat-callback') === '1'",
 )
 private external fun isChatSignInReturn(): Boolean
 
@@ -307,7 +307,7 @@ private external fun isChatSignInReturn(): Boolean
     } finally { reader.releaseLock(); }
   }).catch(() => onError()).finally(() => clearTimeout(timeout));
   return controller;
-}"""
+}""",
 )
 private external fun openBrowserChatRequest(
   body: String,

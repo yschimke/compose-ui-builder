@@ -26,7 +26,7 @@ class BindableLineCountPropertyTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -96,7 +96,7 @@ class BindableLineCountPropertyTest {
       mapOf(
         "type" to JsonPrimitive("state"),
         "variable" to JsonPrimitive(document.stateVariables.keys.first()),
-      )
+      ),
     )
 
   private fun UiBuilderDocument.withProperty(
@@ -119,7 +119,7 @@ class BindableLineCountPropertyTest {
     val node = nodes.getValue(nodeId)
     return copy(
       nodes =
-        nodes + (nodeId to node.copy(properties = JsonObject(node.properties + (name to value))))
+        nodes + (nodeId to node.copy(properties = JsonObject(node.properties + (name to value)))),
     )
   }
 

@@ -28,8 +28,8 @@ class RemoteLabelButtonExportTest {
           "detail":{"id":"detail","componentId":"remote-m3/remote-text",
             "properties":{"text":{"type":"string","value":"5 km"}}},
           "glyph":{"id":"glyph","componentId":"remote-m3/remote-icon"}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(document: UiBuilderDocument): String =

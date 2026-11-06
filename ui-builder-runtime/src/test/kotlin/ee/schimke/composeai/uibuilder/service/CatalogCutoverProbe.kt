@@ -15,7 +15,7 @@ internal object CatalogCutoverProbe {
 
   val fixture by lazy {
     Json.parseToJsonElement(
-        File("../docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json").readText()
+        File("../docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json").readText(),
       )
       .jsonObject
   }

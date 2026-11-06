@@ -221,7 +221,7 @@ internal class BrowserMcpAppTransport(
             put("id", id)
             put("method", method)
             put("params", params)
-          }
+          },
         )
       }
     }
@@ -233,7 +233,7 @@ internal class BrowserMcpAppTransport(
         put("jsonrpc", "2.0")
         put("method", method)
         put("params", params)
-      }
+      },
     )
   }
 
@@ -283,7 +283,7 @@ internal class BrowserMcpAppTransport(
             },
           )
         }
-      }
+      },
     )
   }
 
@@ -298,7 +298,7 @@ internal class BrowserMcpAppTransport(
   """() => {
   const app = globalThis.composeUiBuilderMcpApp;
   return !!app && typeof app === 'object';
-}"""
+}""",
 )
 internal external fun mcpAppEnabled(): Boolean
 
@@ -313,7 +313,7 @@ private external fun mcpAppVersion(): String
   """() => {
   const fromUrl = new URLSearchParams(globalThis.location?.search ?? '').get('layout');
   return String(fromUrl ?? globalThis.composeUiBuilderMcpApp?.layout ?? '');
-}"""
+}""",
 )
 private external fun mcpAppLayout(): String
 
@@ -344,7 +344,7 @@ private external fun mcpAppCatalogBase(): String
     if (!data || data.jsonrpc !== '2.0') return;
     onMessage(JSON.stringify(data));
   });
-}"""
+}""",
 )
 private external fun listenForMcpAppMessages(onMessage: (String) -> Unit)
 
@@ -374,7 +374,7 @@ private suspend fun fetchMcpAppAsset(path: String): String =
   """(url) => fetch(url).then((response) => {
     if (!response.ok) throw new Error('HTTP ' + response.status);
     return response.text();
-  })"""
+  })""",
 )
 private external fun fetchMcpAppAssetPromise(url: String): Promise<JsString>
 

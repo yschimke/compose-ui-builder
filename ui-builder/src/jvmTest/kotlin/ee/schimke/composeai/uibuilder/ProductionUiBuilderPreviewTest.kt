@@ -10,7 +10,7 @@ class ProductionUiBuilderPreviewTest {
   fun `production preview reads a pinned catalog's frame adapter`() {
     val document =
       decodeProductionRendererDocument(
-        """{"schema":"compose-ui-builder-document/v1-candidate","id":"wear","title":"Wear","revision":0,"catalogPin":{"systemId":"wear-m3"},"environment":{},"stateVariables":{},"roots":[],"nodes":{}}"""
+        """{"schema":"compose-ui-builder-document/v1-candidate","id":"wear","title":"Wear","revision":0,"catalogPin":{"systemId":"wear-m3"},"environment":{},"stateVariables":{},"roots":[],"nodes":{}}""",
       )
 
     val catalog = assertNotNull(productionPreviewCatalog(document))

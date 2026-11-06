@@ -60,7 +60,7 @@ class TypefacePickerTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -190,7 +190,7 @@ class TypefacePickerTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(typeface = "Space Grotesk")
+          initial.document.screenEnvironmentSettings().copy(typeface = "Space Grotesk"),
         ),
       )
     assertEquals("Space Grotesk", picked.document.screenEnvironmentSettings().typeface)
@@ -201,13 +201,13 @@ class TypefacePickerTest {
       reducer.reduce(
         picked,
         UiBuilderEditorEvent.UpdateEnvironment(
-          picked.document.screenEnvironmentSettings().copy(typeface = null)
+          picked.document.screenEnvironmentSettings().copy(typeface = null),
         ),
       )
     // Cleared means absent: the document reads as one that never chose a family.
     assertFalse("typeface" in cleared.document.environment)
     assertIs<ResetTypefaceEnvironmentChangeV1>(
-      wireChange(reducer.acceptedSubmission(picked, cleared))
+      wireChange(reducer.acceptedSubmission(picked, cleared)),
     )
   }
 
@@ -223,14 +223,14 @@ class TypefacePickerTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(typeface = "Inter")
+          initial.document.screenEnvironmentSettings().copy(typeface = "Inter"),
         ),
       )
     val cleared =
       reducer.reduce(
         picked,
         UiBuilderEditorEvent.UpdateEnvironment(
-          picked.document.screenEnvironmentSettings().copy(typeface = null)
+          picked.document.screenEnvironmentSettings().copy(typeface = null),
         ),
       )
     assertNull(typeface(cleared))
@@ -253,7 +253,7 @@ class TypefacePickerTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(fontScale = 1.3)
+          initial.document.screenEnvironmentSettings().copy(fontScale = 1.3),
         ),
       )
     assertFalse("typeface" in next.document.environment)
@@ -451,7 +451,7 @@ class TypefacePickerTest {
       val designed =
         document.copy(
           environment =
-            JsonObject(document.environment + ("typeface" to JsonPrimitive("Lobster Two")))
+            JsonObject(document.environment + ("typeface" to JsonPrimitive("Lobster Two"))),
         )
       var fontsOn by mutableStateOf(false)
       setContent {
@@ -482,10 +482,10 @@ class TypefacePickerTest {
     assertIs<UpdateEnvironmentMutationV1>(
         assertIs<DesignCommandV1>(
             assertIs<EditorSubmission.Batch>(submission)
-              .toProtocolSubmission("actor", "client", document.revision)
+              .toProtocolSubmission("actor", "client", document.revision),
           )
           .operations
-          .single()
+          .single(),
       )
       .changes
       .single()

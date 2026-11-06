@@ -102,7 +102,7 @@ internal object StarterContent {
                   "label" to starterLiteral("string", label),
                   "value" to starterLiteral("string", label.lowercase()),
                 )
-              }
+              },
             ),
           "value" to starterList(listOf(starterLiteral("string", "one"))),
         ),
@@ -177,8 +177,8 @@ internal object StarterContent {
               StarterNode(
                 componentId = "a2ui/Text",
                 properties = mapOf("text" to starterLiteral("string", "Button")),
-              )
-            )
+              ),
+            ),
         ),
       // `content` takes exactly one `IconContent` child; seed a recognisable icon rather than the
       // enum's first (`accessTime`, a clock).
@@ -200,7 +200,7 @@ internal object StarterContent {
                 WearScreenCodeExporter.BUTTON,
                 slots = mapOf("content" to listOf(wearText(label))),
               )
-            }
+            },
         ),
       WearScreenCodeExporter.CARD to mapOf("content" to listOf(wearText("Card"))),
       // Buttons, because `ButtonGroup` lays out buttons — anything else has no scope to be laid
@@ -211,7 +211,7 @@ internal object StarterContent {
             listOf(
               StarterNode(WearScreenCodeExporter.BUTTON),
               StarterNode(WearScreenCodeExporter.BUTTON),
-            )
+            ),
         ),
       WearScreenCodeExporter.EDGE_BUTTON to mapOf("content" to listOf(wearText("Done"))),
       // The adaptive widget arrives with each role filled, so both preview sizes have something to
@@ -226,7 +226,7 @@ internal object StarterContent {
               StarterNode(
                 "remote-m3/remote-button",
                 slots = mapOf("content" to listOf(remoteText("Open"))),
-              )
+              ),
             ),
         ),
       "remote-m3/remote-button" to mapOf("content" to listOf(remoteText("Button"))),
@@ -237,7 +237,7 @@ internal object StarterContent {
       "remote-m3/remote-button-group" to
         mapOf(
           "content" to
-            listOf(StarterNode("remote-m3/remote-button"), StarterNode("remote-m3/remote-button"))
+            listOf(StarterNode("remote-m3/remote-button"), StarterNode("remote-m3/remote-button")),
         ),
       "remote-m3/remote-card" to mapOf("content" to listOf(remoteText("Card"))),
       "remote-m3/remote-outlined-card" to mapOf("content" to listOf(remoteText("Card"))),
@@ -285,7 +285,7 @@ internal object StarterContent {
               tab("Tab 3"),
               tab("Tab 4"),
               tab("Tab 5"),
-            )
+            ),
         ),
       "m3/tab" to mapOf("text" to listOf(text("Tab", "titleSmall"))),
       // A dialog with a message and the two usual answers; `confirmButton` has a minimum of one,
@@ -308,8 +308,8 @@ internal object StarterContent {
               column(
                 text("Card title", "titleMedium"),
                 text("Supporting text for this card.", "bodyMedium"),
-              )
-            )
+              ),
+            ),
         ),
       // Reached without an entry of its own on `m3/search-bar`, whose required `inputField` fill
       // resolves to this component and then picks this entry up.
@@ -325,8 +325,8 @@ internal object StarterContent {
               column(
                 text("Headline", "headlineSmall"),
                 text("Body text goes here.", "bodyMedium"),
-              )
-            )
+              ),
+            ),
         ),
       // Both panes, including the optional one: a supporting-pane scaffold showing one pane is
       // indistinguishable from the plain scaffold above it in the palette.
@@ -375,7 +375,7 @@ internal object StarterContent {
               iconButton("edit", "Edit"),
               iconButton("share", "Share"),
               iconButton("delete", "Delete"),
-            )
+            ),
         ),
     )
 }
@@ -397,12 +397,12 @@ private fun rowTemplate(): StarterNode =
                       mapOf(
                         "type" to JsonPrimitive("binding"),
                         "value" to JsonPrimitive("label"),
-                      )
+                      ),
                     ),
                   "style" to starterLiteral("enum", "bodyMedium"),
                 ),
-            )
-          )
+            ),
+          ),
       ),
   )
 

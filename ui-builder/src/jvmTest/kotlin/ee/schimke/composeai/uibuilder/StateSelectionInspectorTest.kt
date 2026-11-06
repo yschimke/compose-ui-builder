@@ -41,7 +41,7 @@ class StateSelectionInspectorTest {
 
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -59,7 +59,7 @@ class StateSelectionInspectorTest {
     return initial.copy(
       stateVariables =
         Json.parseToJsonElement(
-            """{"page":{"type":"value","persistence":"preview","valueType":"int","initialValue":10}}"""
+            """{"page":{"type":"value","persistence":"preview","valueType":"int","initialValue":10}}""",
           )
           .jsonObject,
       nodes =
@@ -166,7 +166,7 @@ class StateSelectionInspectorTest {
             parentFile.mkdirs()
             writeBytes(
               requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG))
-                .bytes
+                .bytes,
             )
           }
       }

@@ -211,7 +211,7 @@ internal fun CommentsInspector(
                   }
               },
             body = draft,
-          )
+          ),
         )
         draft = ""
       },
@@ -326,7 +326,7 @@ private fun CommentThreadCard(
         }
       }
       .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
-      .padding(10.dp)
+      .padding(10.dp),
   ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
       Text(
@@ -534,7 +534,7 @@ internal fun CommentField(
     Modifier.fillMaxWidth()
       .padding(top = 8.dp)
       .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-      .padding(horizontal = 8.dp, vertical = 7.dp)
+      .padding(horizontal = 8.dp, vertical = 7.dp),
   ) {
     if (value.isEmpty()) {
       Text(

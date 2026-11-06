@@ -27,7 +27,7 @@ class RemoteClockTemplatesTest {
           "proof.draw.${template.name.lowercase()}",
           emptyMap(),
           WidgetAssetBytes { null },
-        )
+        ),
       )
       .source
       .also { source ->

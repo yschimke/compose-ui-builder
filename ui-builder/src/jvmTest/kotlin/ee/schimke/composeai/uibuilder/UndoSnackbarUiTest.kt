@@ -41,7 +41,7 @@ class UndoSnackbarUiTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val deleted = "main-episode-title"
@@ -152,7 +152,7 @@ class UndoSnackbarUiTest {
 
   /** Mounts [editor], deletes the title from the canvas and checks the offer is up. */
   private fun ComposeUiTest.deleteThenAssertOffer(
-    editor: @Composable ((UiBuilderEditorState) -> Unit) -> Unit
+    editor: @Composable ((UiBuilderEditorState) -> Unit) -> Unit,
   ) {
     var state: UiBuilderEditorState? = null
     setContent { MaterialTheme { editor { state = it } } }
@@ -171,7 +171,7 @@ class UndoSnackbarUiTest {
       .apply {
         parentFile.mkdirs()
         writeBytes(
-          requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)).bytes
+          requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)).bytes,
         )
       }
   }

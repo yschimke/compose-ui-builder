@@ -26,9 +26,9 @@ class CanvasRenderTreeTest {
                     "type" to JsonPrimitive("stateEquals"),
                     "variable" to JsonPrimitive("selection"),
                     "value" to JsonPrimitive("label"),
-                  )
+                  ),
                 ),
-            )
+            ),
           ),
         slots = mapOf("body" to listOf("leaf")),
       )
@@ -50,7 +50,7 @@ class CanvasRenderTreeTest {
                   properties = mapOf("text" to "headline")
                   slots = mapOf("content" to "body")
                 }
-                .build()
+                .build(),
           ),
       )
 
@@ -61,7 +61,7 @@ class CanvasRenderTreeTest {
           nodeId = "label",
           index = 2,
           arguments = JsonObject(mapOf("title" to wrapper("string", "Resolved"))),
-        )
+        ),
       )
 
     assertEquals("catalog/text", resolved.adapterId)
@@ -80,7 +80,7 @@ class CanvasRenderTreeTest {
           mapOf(
             "root" to node("root", slots = mapOf("content" to listOf("child", "missing"))),
             "child" to node("child", slots = mapOf("content" to listOf("root"))),
-          )
+          ),
       )
 
     val root = requireNotNull(tree.root("root"))

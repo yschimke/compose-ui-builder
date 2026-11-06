@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class McpAppDesignCollectionTest {
   private val home =
     UidDesignFiles.decode(
-      checkNotNull(javaClass.classLoader.getResource("state-actions.uid")).readText()
+      checkNotNull(javaClass.classLoader.getResource("state-actions.uid")).readText(),
     )
   private val detail = home.copy(id = "detail", title = "Detail")
   private val text =

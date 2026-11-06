@@ -33,7 +33,7 @@ internal fun UiBuilderDocument.forCatalogRuntime(): UiBuilderDocument =
  * `content`), so a drop never targets a parent the document lacks.
  */
 internal fun UiBuilderInspectionSnapshot.authoredIn(
-  authored: UiBuilderDocument
+  authored: UiBuilderDocument,
 ): UiBuilderInspectionSnapshot =
   copy(
     nodes = nodes.filter { it.nodeId in authored.nodes },

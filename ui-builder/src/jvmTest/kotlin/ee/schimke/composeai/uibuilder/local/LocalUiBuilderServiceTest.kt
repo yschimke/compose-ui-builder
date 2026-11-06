@@ -103,7 +103,7 @@ class LocalUiBuilderServiceTest {
               store = LocalDesignStore(storage),
               catalogs = { listOf(catalog) },
               clock = { 1_700_000_000_000 },
-            )
+            ),
           ),
         requestIds = MonotonicUiBuilderRequestIds("reopen"),
       )
@@ -138,8 +138,8 @@ class LocalUiBuilderServiceTest {
               actorId = "tester",
               clientId = "test-client",
               authoritativeRevision = 0,
-            )
-        )
+            ),
+        ),
       )
 
     val response = assertIs<UiBuilderHttpResult.Response>(applied)
@@ -176,8 +176,8 @@ class LocalUiBuilderServiceTest {
               actorId = "tester",
               clientId = "test-client",
               authoritativeRevision = 0,
-            )
-        )
+            ),
+        ),
       )
       val reloaded =
         LocalUiBuilderService(store = store, catalogs = { listOf(catalog) }, clock = { 1 })
@@ -230,7 +230,7 @@ class LocalUiBuilderServiceTest {
                 it.slots =
                   listOf(
                     SlotCapabilityV1.Builder("content", SlotCardinalityV1.Builder().build(), true)
-                      .build()
+                      .build(),
                   )
               }
               .build(),

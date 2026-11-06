@@ -29,7 +29,7 @@ class ComposeFoundationFaithfulnessTest {
         linkedSetOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        )
+        ),
     )
 
   private fun served(systemId: String): CatalogCapabilityV1 =
@@ -298,7 +298,7 @@ class ComposeFoundationFaithfulnessTest {
                 )
                 .build(),
             )
-            .build()
+            .build(),
         ),
       )
       .also {

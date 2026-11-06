@@ -137,9 +137,9 @@ object UidDesignFiles {
                     DesignDocumentV1.serializer(),
                     it.toDesignDocumentV1(),
                   )
-              }
+              },
             ),
-        )
+        ),
       )
     return json.encodeToString(JsonObject.serializer(), encoded) + "\n"
   }
@@ -273,7 +273,7 @@ internal constructor(
       "a production binding or component references a removed node; update its contract in source"
     }
     require(
-      current.stateVariables.isEmpty() && current.nodes.values.all { it.eventBindings.isEmpty() }
+      current.stateVariables.isEmpty() && current.nodes.values.all { it.eventBindings.isEmpty() },
     ) {
       "production callbacks and state must come from the declared API, not preview actions"
     }

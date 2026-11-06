@@ -63,7 +63,7 @@ private suspend fun fetchBytes(url: String): ByteArray =
       binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
     }
     return btoa(binary);
-  })"""
+  })""",
 )
 private external fun fetchBase64(url: String): Promise<JsString>
 

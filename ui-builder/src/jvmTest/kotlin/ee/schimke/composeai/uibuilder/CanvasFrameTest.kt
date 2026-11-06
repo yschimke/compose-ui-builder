@@ -46,7 +46,7 @@ class CanvasFrameTest {
           "widthDp" to JsonPrimitive(1280),
           "heightDp" to JsonPrimitive(800),
           "density" to JsonPrimitive(1),
-        )
+        ),
       )
     val weather = weatherWidgetUiBuilderDocument("weather", JsonObject(emptyMap()), environment)
     // The piece covers the middle half of the frame, so its centre is the frame's centre.

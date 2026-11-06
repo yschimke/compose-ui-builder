@@ -54,7 +54,7 @@ internal class BrowserReviewHost(private val designId: String) {
     if (response.status in 200..299) {
       return try {
         Result.Recorded(
-          reviewJson.decodeFromString(ReviewWire.serializer(), response.body).toReview()
+          reviewJson.decodeFromString(ReviewWire.serializer(), response.body).toReview(),
         )
       } catch (_: Exception) {
         Result.Refused("The host recorded the verdict but answered something unreadable.")
@@ -70,7 +70,7 @@ internal class BrowserReviewHost(private val designId: String) {
       }
     return Result.Refused(
       reason?.takeIf { it.isNotBlank() }
-        ?: "The host answered ${response.status} while recording that verdict."
+        ?: "The host answered ${response.status} while recording that verdict.",
     )
   }
 
@@ -86,7 +86,7 @@ internal class BrowserReviewHost(private val designId: String) {
     val encoded =
       try {
         awaitCommentString(
-          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null)
+          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null),
         )
       } catch (_: Exception) {
         return null
@@ -112,7 +112,7 @@ private fun ReviewWire.toReview() =
           note = wire.note,
           decidedAtEpochMillis = wire.decidedAtEpochMillis,
         )
-      }
+      },
   )
 
 /** Tolerant on the way in, as the comment payload is. */

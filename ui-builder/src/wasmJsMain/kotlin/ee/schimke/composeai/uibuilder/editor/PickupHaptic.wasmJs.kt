@@ -13,6 +13,6 @@ internal actual fun pickupHaptic() = vibrateBriefly()
     try {
       if (typeof navigator.vibrate === 'function') navigator.vibrate(10);
     } catch (e) {}
-  }"""
+  }""",
 )
 private external fun vibrateBriefly()

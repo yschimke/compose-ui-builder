@@ -82,7 +82,7 @@ class RootSurfaceGroundTest {
               modifiers =
                 JsonArray(
                   if (fillsFrame) listOf(JsonObject(mapOf("type" to JsonPrimitive("fillMaxSize"))))
-                  else emptyList()
+                  else emptyList(),
                 ),
               slots = mapOf("content" to listOf("text")),
             ),
@@ -95,9 +95,9 @@ class RootSurfaceGroundTest {
                   mapOf(
                     "text" to
                       JsonObject(
-                        mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("hello"))
-                      )
-                  )
+                        mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("hello")),
+                      ),
+                  ),
                 ),
             ),
         ),

@@ -30,7 +30,7 @@ class WearWidgetCodeExporterTest {
   fun `hello generates the sample's own shape`() {
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(helloWidgetUiBuilderDocument("hello", pin, environment))
+          WearWidgetCodeExporter.export(helloWidgetUiBuilderDocument("hello", pin, environment)),
         )
         .source
 
@@ -71,7 +71,7 @@ class WearWidgetCodeExporterTest {
         nodes =
           authored.nodes +
             ("weather-content" to
-              authored.nodes.getValue("weather-content").copy(modifiers = JsonArray(emptyList())))
+              authored.nodes.getValue("weather-content").copy(modifiers = JsonArray(emptyList()))),
       )
     val generated = source(unsized)
     assertTrue("RemoteBox(modifier = RemoteModifier.fillMaxSize()," in generated, generated)
@@ -103,12 +103,12 @@ class WearWidgetCodeExporterTest {
                             "type" to JsonPrimitive("size"),
                             "widthDp" to JsonPrimitive(48),
                             "heightDp" to JsonPrimitive(48),
-                          )
+                          ),
                         ),
                         JsonObject(mapOf("type" to JsonPrimitive("fillMaxSize"))),
-                      )
-                    )
-                ))
+                      ),
+                    ),
+                )),
       )
     val generated =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(sized)).source
@@ -123,7 +123,9 @@ class WearWidgetCodeExporterTest {
   fun `weather generates its literal colours and its column`() {
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(weatherWidgetUiBuilderDocument("weather", pin, environment))
+          WearWidgetCodeExporter.export(
+            weatherWidgetUiBuilderDocument("weather", pin, environment),
+          ),
         )
         .source
 
@@ -151,8 +153,8 @@ class WearWidgetCodeExporterTest {
               pin,
               environment,
               WearWidgetScaffoldSize.Small,
-            )
-          )
+            ),
+          ),
         )
         .source
 
@@ -190,7 +192,7 @@ class WearWidgetCodeExporterTest {
               "startColor" to literal("color", "#FF2196F3"),
               "endColor" to literal("color", "#FF0D47A1"),
               "direction" to literal("enum", "leftToRight"),
-            )
+            ),
           ),
       )
     val document =
@@ -201,7 +203,7 @@ class WearWidgetCodeExporterTest {
               gradient.id to gradient,
               scaffold.id to
                 scaffold.copy(slots = scaffold.slots + ("background" to listOf(gradient.id))),
-            )
+            ),
       )
 
     val source =
@@ -228,7 +230,7 @@ class WearWidgetCodeExporterTest {
   fun `a lottie element is compiled into the widget's document`() {
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-          WearWidgetCodeExporter.export(lottieWidget(LOTTIE_JSON))
+          WearWidgetCodeExporter.export(lottieWidget(LOTTIE_JSON)),
         )
         .source
 
@@ -258,8 +260,8 @@ class WearWidgetCodeExporterTest {
             (lottie.id to
               lottie.copy(
                 properties =
-                  JsonObject(lottie.properties + ("progress" to literalNumber("number", 0f)))
-              ))
+                  JsonObject(lottie.properties + ("progress" to literalNumber("number", 0f))),
+              )),
       )
 
     val source =
@@ -279,8 +281,8 @@ class WearWidgetCodeExporterTest {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
         WearWidgetCodeExporter.export(
-          lottieWidget(json = "", url = "https://example.test/spin.json")
-        )
+          lottieWidget(json = "", url = "https://example.test/spin.json"),
+        ),
       )
 
     assertEquals(1, refused.reasons.size)
@@ -295,7 +297,7 @@ class WearWidgetCodeExporterTest {
   fun `a lottie element holding something other than json is refused`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(lottieWidget("not an animation"))
+        WearWidgetCodeExporter.export(lottieWidget("not an animation")),
       )
 
     assertTrue("valid JSON" in refused.reasons.single(), refused.reasons.single())
@@ -331,7 +333,7 @@ class WearWidgetCodeExporterTest {
             buildMap {
               if (json.isNotEmpty()) put("json", literal("string", json))
               if (url.isNotEmpty()) put("url", literal("string", url))
-            }
+            },
           ),
       )
     return base.copy(
@@ -340,7 +342,7 @@ class WearWidgetCodeExporterTest {
           mapOf(
             lottie.id to lottie,
             scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to listOf(lottie.id))),
-          )
+          ),
     )
   }
 
@@ -367,7 +369,7 @@ class WearWidgetCodeExporterTest {
   fun `the editor's code pane generates the widget, not a compose refusal`() {
     val catalog =
       ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
     val reducer = UiBuilderEditorReducer(catalog)
 
@@ -397,7 +399,7 @@ class WearWidgetCodeExporterTest {
           WearWidgetCodeExporter.export(
             document,
             assets = { key -> if (key == "cover") "QUJD" else null },
-          )
+          ),
         )
         .source
 
@@ -432,11 +434,11 @@ class WearWidgetCodeExporterTest {
                 "type" to JsonPrimitive("offset"),
                 "xDp" to JsonPrimitive(4),
                 "yDp" to JsonPrimitive(-2),
-              )
+              ),
             ),
           ),
           assets = { key -> if (key == "cover") "QUJD" else null },
-        )
+        ),
       )
 
     val reason = refused.reasons.single { "bg-art" in it }
@@ -452,11 +454,11 @@ class WearWidgetCodeExporterTest {
           WearWidgetCodeExporter.export(
             backgroundWithModifiers(
               JsonObject(
-                mapOf("type" to JsonPrimitive("testTag"), "tag" to JsonPrimitive("cover-art"))
-              )
+                mapOf("type" to JsonPrimitive("testTag"), "tag" to JsonPrimitive("cover-art")),
+              ),
             ),
             assets = { key -> if (key == "cover") "QUJD" else null },
-          )
+          ),
         )
         .source
 
@@ -468,7 +470,7 @@ class WearWidgetCodeExporterTest {
     val base = imageBackgroundDocument()
     val art = base.nodes.getValue("bg-art")
     return base.copy(
-      nodes = base.nodes + ("bg-art" to art.copy(modifiers = JsonArray(modifiers.toList())))
+      nodes = base.nodes + ("bg-art" to art.copy(modifiers = JsonArray(modifiers.toList()))),
     )
   }
 
@@ -477,7 +479,7 @@ class WearWidgetCodeExporterTest {
   fun `an image background with no bytes is refused by name`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(imageBackgroundDocument())
+        WearWidgetCodeExporter.export(imageBackgroundDocument()),
       )
 
     assertTrue(refused.reasons.any { "bg-art" in it }, refused.reasons.toString())
@@ -497,7 +499,7 @@ class WearWidgetCodeExporterTest {
             assets = { key ->
               if (key == "cover") WidgetAssetContent("image/png", "QUJD") else null
             },
-          )
+          ),
         )
         .bundle
 
@@ -536,7 +538,7 @@ class WearWidgetCodeExporterTest {
             assets = { key ->
               if (key == "album-art") WidgetAssetContent("image/jpeg", "QUJD") else null
             },
-          )
+          ),
         )
         .bundle
 
@@ -565,7 +567,7 @@ class WearWidgetCodeExporterTest {
   fun `a content picture with no bytes still exports as a parameter`() {
     val bundle =
       assertIs<WearWidgetCodeExporter.BundleResult.Emitted>(
-          WearWidgetCodeExporter.exportBundle(contentImageDocument(), assets = { null })
+          WearWidgetCodeExporter.exportBundle(contentImageDocument(), assets = { null }),
         )
         .bundle
 
@@ -578,7 +580,7 @@ class WearWidgetCodeExporterTest {
   fun `a bundled image background with no bytes is refused by name`() {
     val refused =
       assertIs<WearWidgetCodeExporter.BundleResult.Refused>(
-        WearWidgetCodeExporter.exportBundle(imageBackgroundDocument(), assets = { null })
+        WearWidgetCodeExporter.exportBundle(imageBackgroundDocument(), assets = { null }),
       )
 
     assertTrue(refused.reasons.any { "bg-art" in it }, refused.reasons.toString())
@@ -600,7 +602,7 @@ class WearWidgetCodeExporterTest {
           mapOf(
             art.id to art,
             scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to listOf(art.id))),
-          )
+          ),
     )
   }
 
@@ -620,7 +622,7 @@ class WearWidgetCodeExporterTest {
           mapOf(
             art.id to art,
             scaffold.id to scaffold.copy(slots = scaffold.slots + ("background" to listOf(art.id))),
-          )
+          ),
     )
   }
 }

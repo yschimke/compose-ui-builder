@@ -89,7 +89,7 @@ object ProductionComposeGenerator {
             listOfNotNull(
               (element["value"] as? JsonPrimitive)
                 ?.takeIf { (element["type"] as? JsonPrimitive)?.contentOrNull == "binding" }
-                ?.content
+                ?.content,
             ) + element.values.flatMap(::bindings)
           is JsonArray -> element.flatMap(::bindings)
           else -> emptyList()
@@ -125,8 +125,8 @@ object ProductionComposeGenerator {
                     buildJsonObject {
                       put("type", "binding")
                       put("value", parameter)
-                    })
-              )
+                    }),
+              ),
           )
       }
       val callbacks = mutableListOf<Callback>()
@@ -162,7 +162,7 @@ object ProductionComposeGenerator {
           }
           val arguments =
             linkedMapOf<String, ScreenValue>(
-              "modifier" to ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER)
+              "modifier" to ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
             )
           child.reads.forEachIndexed { index, read ->
             val parameter = "p${reads.size}"
@@ -267,7 +267,7 @@ object ProductionComposeGenerator {
                           listOf(
                             TargetParameter.Builder(name = "modifier", type = "Modifier")
                               .also { b -> b.typeFqn = MODIFIER }
-                              .build()
+                              .build(),
                           ) +
                             child.reads.mapIndexed { index, read ->
                               TargetParameter.Builder(
@@ -379,7 +379,7 @@ object ProductionComposeGenerator {
                       "mutableStateListOf",
                       "mutableStateMapOf",
                     )
-              }
+              },
             ) {
               "${entry.id}: generated body owns Compose state"
             }
@@ -441,7 +441,7 @@ object ProductionComposeGenerator {
                 .forEach { appendLine(it.text) }
               body.placements.forEachIndexed { index, placement ->
                 appendLine(
-                  "import ${placement.entry.kotlinFunction} as ${local("uidComponent$index")}"
+                  "import ${placement.entry.kotlinFunction} as ${local("uidComponent$index")}",
                 )
               }
               if (body.placements.any { it.use.keyPath != null }) {
@@ -453,7 +453,7 @@ object ProductionComposeGenerator {
               appendLine()
               appendLine("@androidx.compose.runtime.Composable")
               appendLine(
-                "${entry.visibility.name.lowercase()} fun ${entry.kotlinFunction.substringAfterLast('.')}("
+                "${entry.visibility.name.lowercase()} fun ${entry.kotlinFunction.substringAfterLast('.')}(",
               )
               appendLine("  data: ${contract.models.getValue(entry.inputModel).kotlinType},")
               entry.events.forEach { event ->
@@ -466,7 +466,7 @@ object ProductionComposeGenerator {
               appendLine("    modifier = modifier,")
               body.reads.forEachIndexed { index, read ->
                 appendLine(
-                  "    p$index = ${readExpression(contract, entry.inputModel, read.path, safe = read.fallback != null)}${read.fallback?.let { " ?: " + literal(it, read.type.scalar) }.orEmpty()},"
+                  "    p$index = ${readExpression(contract, entry.inputModel, read.path, safe = read.fallback != null)}${read.fallback?.let { " ?: " + literal(it, read.type.scalar) }.orEmpty()},",
                 )
               }
               body.callbacks.forEachIndexed { index, callback ->
@@ -510,10 +510,10 @@ object ProductionComposeGenerator {
                         .type
                   }
                   appendLine(
-                    "      val $keys: kotlin.collections.List<${kotlinType(contract, keyType)}> = $value.map { $item -> $key }"
+                    "      val $keys: kotlin.collections.List<${kotlinType(contract, keyType)}> = $value.map { $item -> $key }",
                   )
                   appendLine(
-                    "      $requireName($keys.toSet().size == $value.size) { \"Duplicate production list keys\" }"
+                    "      $requireName($keys.toSet().size == $value.size) { \"Duplicate production list keys\" }",
                   )
                   appendLine("      $value.forEachIndexed { $position, $item ->")
                   appendLine("        $keyName($keys[$position]) {")
