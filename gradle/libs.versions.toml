@@ -296,7 +296,7 @@ materialkolor = "5.0.1"
 # runs its code generator (`FlexpressVariableFontSources`) to write a design's variable font text as
 # Kotlin; the generated code needs `flexpress-compose` / `flexpress-remote` at this version, unless
 # it is generated standalone. JVM only, so nothing reaches the wasm editor.
-flexpress = "0.2.0"
+flexpress = "0.3.0"
 
 [libraries]
 composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping" }
