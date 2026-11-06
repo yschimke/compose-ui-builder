@@ -258,7 +258,8 @@ composeai-contracts = "3.39.1"
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 # 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
 # of a `time.*` RemoteCanvas needs once time runs. 2.4.0 plays shared elements and a component's own
-# enter/exit across a StateLayout switch (rc-players#604, rc-players#606).
+# enter/exit across a StateLayout switch (rc-players#604, rc-players#606). 2.25.0 converts text to
+# embedded bitmap fonts (`coreTextAsBitmapFonts`), which the widget export's bitmap-font option uses.
 rc-players = "2.25.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.12.0"
@@ -373,6 +374,7 @@ composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data
 composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol" }
 composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose" }
+composeai-rc-player-edit = { module = "ee.schimke.composeai:rc-player-edit" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

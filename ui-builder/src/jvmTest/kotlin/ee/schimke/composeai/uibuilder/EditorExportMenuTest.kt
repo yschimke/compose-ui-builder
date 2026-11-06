@@ -123,6 +123,31 @@ class EditorExportMenuTest {
   }
 
   @Test
+  fun `a host with the editor's faces downloads a bitmap-font rc for each widget host`() {
+    val rc = listOf(EditorExportFormat.Rc)
+    val downloads = exportMenuEntries(rc, supportsBitmapFonts = true).last()
+    assertEquals(
+      listOf(
+        "Download Remote document (.rc)",
+        "Download .rc for a Wear widget",
+        "Download .rc for a launcher widget",
+      ),
+      downloads.map { it.label },
+    )
+    assertEquals(
+      listOf("Download Remote document (.rc)"),
+      exportMenuEntries(rc).last().map { it.label },
+      "not without the faces",
+    )
+    assertTrue(
+      exportMenuEntries(listOf(EditorExportFormat.Png), supportsBitmapFonts = true).flatten().none {
+        it is EditorExportMenuEntry.DownloadBitmapFonts
+      },
+      "not without a document",
+    )
+  }
+
+  @Test
   fun `a catalog that renders nothing has no menu at all`() {
     assertEquals(emptyList(), exportFormatsFor(svg = false, png = false))
     assertEquals(emptyList(), exportMenuEntries(emptyList()))

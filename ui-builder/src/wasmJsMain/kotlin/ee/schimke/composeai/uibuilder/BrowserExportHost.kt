@@ -2,12 +2,17 @@
 
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.rcplayer.compose.RcTypefaceLoader
+import ee.schimke.composeai.uibuilder.editor.BitmapFontWidgetHost
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
+import ee.schimke.composeai.uibuilder.editor.WidgetBitmapFonts
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.js.JsString
 import kotlin.js.Promise
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -43,7 +48,57 @@ internal class BrowserExportHost(
   private val revision: Long? = null,
   override val supportsLinks: Boolean = true,
   private val suppliedDocument: ((EditorExportFormat) -> UiBuilderDocument?)? = null,
+  /**
+   * The editor's faces for the families a bitmap-font `.rc` names ([downloadWithBitmapFonts]),
+   * loading any it hasn't yet; null for a page without them, which offers no such row.
+   */
+  private val typefaces: (suspend (families: Set<String>) -> RcTypefaceLoader)? = null,
 ) : UiBuilderExportHost {
+
+  override val supportsBitmapFonts: Boolean
+    get() = typefaces != null && EditorExportFormat.Rc in formats
+
+  /**
+   * The `.rc` the Download row saves, fetched into the page, its named faces drawn from bitmap
+   * fonts here with the editor's text stack ([WidgetBitmapFonts]), then saved: the server draws no
+   * text.
+   */
+  @OptIn(ExperimentalEncodingApi::class)
+  override suspend fun downloadWithBitmapFonts(host: BitmapFontWidgetHost): String {
+    val loader = typefaces ?: return "Bitmap fonts need the browser editor"
+    val format = EditorExportFormat.Rc
+    val document = currentDocument(format)
+    val filename = "$designId-${host.fileSuffix}.${format.extension}"
+    return try {
+      val bytes =
+        Base64.decode(
+          if (document == null) fetchBase64(livePath(format))
+          else fetchBase64(suppliedPath(format), document),
+        )
+      val families =
+        WidgetBitmapFonts.namedFamilies(bytes)
+          ?: return "Download failed: the export is not a Remote Compose document"
+      val converted =
+        WidgetBitmapFonts.convert(bytes, host, loader(families))
+          ?: return "Download failed: the export is not a Remote Compose document"
+      val outcome =
+        awaitJsString(
+          saveBase64Promise(Base64.encode(converted.bytes), filename, format.mediaType()),
+        )
+      outcome.ifEmpty {
+        when {
+          converted.converted == 0 && converted.skipped == 0 ->
+            "Downloading $filename · no fonts to convert"
+          converted.skipped == 0 -> "Downloading $filename · ${converted.converted} texts converted"
+          else ->
+            "Downloading $filename · ${converted.converted} texts converted, " +
+              "${converted.skipped} left as text"
+        }
+      }
+    } catch (failure: Exception) {
+      "Download failed: ${failure.message?.trimJsError() ?: "unknown error"}"
+    }
+  }
 
   override suspend fun copyPicture(format: EditorExportFormat): String {
     val document = currentDocument(format)
@@ -289,6 +344,30 @@ private external fun downloadPromise(
   url: String,
   filename: String,
   document: String?,
+): Promise<JsString>
+
+/** Saves base64 [content] as [filename] through an anchor click. Resolves empty. */
+@JsFun(
+  """(content, filename, type) => {
+    const binary = atob(content);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const objectUrl = URL.createObjectURL(new Blob([bytes], { type }));
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    return Promise.resolve('');
+  }""",
+)
+private external fun saveBase64Promise(
+  content: String,
+  filename: String,
+  type: String,
 ): Promise<JsString>
 
 /**

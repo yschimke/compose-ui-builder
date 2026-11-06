@@ -831,8 +831,13 @@ internal fun EditorToolbar(
 @Composable
 private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
   val groups =
-    remember(host.formats, host.supportsLinks, host.supportsShare) {
-      exportMenuEntries(host.formats, host.supportsLinks, host.supportsShare)
+    remember(host.formats, host.supportsLinks, host.supportsShare, host.supportsBitmapFonts) {
+      exportMenuEntries(
+        host.formats,
+        host.supportsLinks,
+        host.supportsShare,
+        host.supportsBitmapFonts,
+      )
     }
   if (groups.isEmpty()) return
   var open by remember { mutableStateOf(false) }
@@ -878,7 +883,8 @@ private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
                         // The menu icon set has no share glyph, and a host chrome that draws its
                         // own icons never offers Share: it is a phone browser's row.
                         is EditorExportMenuEntry.Share -> UiBuilderMenuIcon.Link
-                        is EditorExportMenuEntry.Download -> UiBuilderMenuIcon.Download
+                        is EditorExportMenuEntry.Download,
+                        is EditorExportMenuEntry.DownloadBitmapFonts -> UiBuilderMenuIcon.Download
                       },
                     onClick = {
                       open = false
@@ -931,7 +937,8 @@ internal fun ExportMenuRows(
               is EditorExportMenuEntry.CopyPicture -> Icons.Filled.ContentCopy
               is EditorExportMenuEntry.CopyLink -> Icons.Filled.Link
               is EditorExportMenuEntry.Share -> Icons.Filled.Share
-              is EditorExportMenuEntry.Download -> Icons.Filled.Download
+              is EditorExportMenuEntry.Download,
+              is EditorExportMenuEntry.DownloadBitmapFonts -> Icons.Filled.Download
             },
             contentDescription = null,
           )
