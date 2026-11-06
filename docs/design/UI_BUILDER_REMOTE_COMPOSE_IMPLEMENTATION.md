@@ -84,6 +84,21 @@ limitation skips the two density variants of that fixture until the local player
 and the four lifecycle/routing tests pass. Staged validation can require playback with
 `VERIFY_REMOTE_DOCUMENT_PREVIEW=true`.
 
+## Bitmap-font documents for widget hosts
+
+A Wear widget or Android 16 launcher widget host draws the document with the system's faces only,
+so a design's named faces (theme typefaces, Google Fonts, vendored families) fall back there. The
+browser editor's Export menu adds **Download .rc for a Wear widget** and **… for a launcher widget**
+beside the plain `.rc` download. Each fetches the same `.rc` (saved or supplied, as that row does),
+then converts it in the page with rc-players' `coreTextAsBitmapFonts`
+(`WidgetBitmapFonts`, `ui-builder` commonMain), drawing each glyph once with the editor's own text
+stack over the faces the canvas has loaded. The server draws no text and nothing in the export
+service or its routes changes. Text in a generic family stays text; a face the editor can't load,
+text on a path and styling a bitmap font can't draw stay text too, and the toolbar sentence says how
+many texts were converted and left. A text bound to state gets letters, digits and common signs,
+with room for 12, or as many as it shows now where 12 won't fit. Evidence:
+[`evidence/ui-builder-bitmap-font-export`](evidence/ui-builder-bitmap-font-export/README.md).
+
 ## Unsaved and local Remote documents
 
 `POST /api/ui-builder/v1/documents/export.json` and `.rc` accept the existing `DesignDocumentV1`

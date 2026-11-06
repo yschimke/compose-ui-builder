@@ -129,6 +129,8 @@ kotlin {
       // existing consumers of :ui-builder see the same signatures transitively.
       api(project(":ui-builder-renderer-sdk"))
       implementation(libs.composeai.rc.player.compose)
+      // The Export menu's bitmap-font `.rc` (`WidgetBitmapFonts`): `coreTextAsBitmapFonts`.
+      implementation(libs.composeai.rc.player.edit)
       implementation(libs.kotlinx.serialization.json)
       implementation(project(":ui-builder-artwork"))
       // Kotlin syntax highlighting for the Code pane. See `UiBuilderCodeHighlighting.kt` for why a

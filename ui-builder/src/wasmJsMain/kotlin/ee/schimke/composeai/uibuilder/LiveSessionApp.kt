@@ -79,6 +79,7 @@ import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
+import ee.schimke.composeai.uibuilder.editor.typefacesFor
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
@@ -209,6 +210,7 @@ private fun LiveSessionApp(
   onOpenDesign: (LiveSessionConfig) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
+  val fontRegistry = LocalUiBuilderFontRegistry.current
   // The store, the catalogs it falls back on, and the service answering this page's requests. Null
   // in a server-backed session.
   val localSession =
@@ -942,6 +944,9 @@ private fun LiveSessionApp(
               lovelaceJson = lovelace && capability.exportCapabilities.remoteJson,
             ),
           revision = revision,
+          // The bitmap-font `.rc` draws its glyphs here, in the faces the canvas shows.
+          typefaces =
+            fontRegistry?.let { registry -> { families -> registry.typefacesFor(families) } },
         )
       // The server draws every export and will not for a caller who may not write. The menu stays,
       // each row saying why, rather than vanishing or failing on the press.

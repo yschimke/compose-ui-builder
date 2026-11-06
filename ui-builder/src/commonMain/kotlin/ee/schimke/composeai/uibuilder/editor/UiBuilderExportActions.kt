@@ -9,7 +9,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
  * - **Copy SVG** puts SVG markup on the clipboard: the Figma route, pasted as editable layers.
  * - **Copy PNG** puts the picture on the clipboard as an image.
  * - **Copy link** copies a live URL that renders the current committed revision on every request.
- * - **Download** saves the file through the browser.
+ * - **Download** saves the file through the browser; for a `.rc`, also with its fonts drawn from
+ *   bitmap fonts, for a widget host that can't load them ([WidgetBitmapFonts]).
  *
  * [UiBuilderExportHost] is the seam to the clipboard, network, downloads and origin: the editor
  * decides what to offer, the host does it and answers with a sentence. Null in previews and tests,
@@ -64,6 +65,21 @@ interface UiBuilderExportHost {
    * saving the file.
    */
   suspend fun share(format: EditorExportFormat): String = download(format)
+
+  /**
+   * Whether this host can save a `.rc` with its named faces drawn from bitmap fonts
+   * ([downloadWithBitmapFonts]): it needs the editor's own text stack and loaded faces, so only a
+   * host that has both offers it, and only alongside [EditorExportFormat.Rc].
+   */
+  val supportsBitmapFonts: Boolean
+    get() = false
+
+  /**
+   * Saves the design's `.rc` for [host], its named faces drawn from bitmap fonts
+   * ([WidgetBitmapFonts]); returns a sentence for the toolbar.
+   */
+  suspend fun downloadWithBitmapFonts(host: BitmapFontWidgetHost): String =
+    "Bitmap fonts need the browser editor"
 }
 
 /** One row of the Export menu. */
@@ -112,6 +128,18 @@ sealed interface EditorExportMenuEntry {
     override val detail: String
       get() = "Save the current design as a file"
   }
+
+  /** A `.rc` for a widget host that can't load fonts; see [WidgetBitmapFonts]. */
+  data class DownloadBitmapFonts(val host: BitmapFontWidgetHost) : EditorExportMenuEntry {
+    override val format: EditorExportFormat
+      get() = EditorExportFormat.Rc
+
+    override val label: String
+      get() = "Download .rc for a ${host.label}"
+
+    override val detail: String
+      get() = "Its fonts drawn from embedded bitmap fonts"
+  }
 }
 
 /**
@@ -122,6 +150,7 @@ fun exportMenuEntries(
   formats: List<EditorExportFormat>,
   supportsLinks: Boolean = true,
   supportsShare: Boolean = false,
+  supportsBitmapFonts: Boolean = false,
 ): List<List<EditorExportMenuEntry>> =
   if (formats.isEmpty()) emptyList()
   else
@@ -134,7 +163,10 @@ fun exportMenuEntries(
         .filter { it == EditorExportFormat.Svg || it == EditorExportFormat.Png }
         .map(EditorExportMenuEntry::Share)
         .takeIf { supportsShare && it.isNotEmpty() },
-      formats.map(EditorExportMenuEntry::Download),
+      formats.map(EditorExportMenuEntry::Download) +
+        if (supportsBitmapFonts && EditorExportFormat.Rc in formats)
+          BitmapFontWidgetHost.entries.map(EditorExportMenuEntry::DownloadBitmapFonts)
+        else emptyList(),
     )
 
 /** Runs one row against the host and hands back the sentence it answered with. */
@@ -144,6 +176,7 @@ suspend fun UiBuilderExportHost.perform(entry: EditorExportMenuEntry): String =
     is EditorExportMenuEntry.CopyLink -> copyLink(entry.format)
     is EditorExportMenuEntry.Share -> share(entry.format)
     is EditorExportMenuEntry.Download -> download(entry.format)
+    is EditorExportMenuEntry.DownloadBitmapFonts -> downloadWithBitmapFonts(entry.host)
   }
 
 /**
@@ -190,5 +223,10 @@ fun UiBuilderExportHost.refusing(reason: String): UiBuilderExportHost {
       get() = delegate.supportsShare
 
     override suspend fun share(format: EditorExportFormat): String = reason
+
+    override val supportsBitmapFonts: Boolean
+      get() = delegate.supportsBitmapFonts
+
+    override suspend fun downloadWithBitmapFonts(host: BitmapFontWidgetHost): String = reason
   }
 }
