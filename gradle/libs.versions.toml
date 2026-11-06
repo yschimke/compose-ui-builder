@@ -22,7 +22,7 @@
 java-server = "17"
 java-ui-builder = "21"
 kotlin = "2.4.21"
-ktfmt = "0.27.0"
+ktfmt = "0.28.0"
 ktfmt-cli = "0.64"
 # Also consumed by compose-preview-ide through its pinned source version catalog.
 intellij-platform-gradle = "2.20.0"
