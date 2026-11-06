@@ -36,6 +36,7 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
 import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
+import ee.schimke.composeai.uibuilder.canonicalFamilyName
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -221,21 +222,33 @@ internal fun PlayedInlineRemoteContent(
 }
 
 /**
- * The player's faces: the families the host has loaded ([LocalUiBuilderFontFamilies]), by the
- * document's names (e.g. `google:Exo 2`), over the player's defaults, so theme typefaces show on
- * the canvas and in PNGs.
+ * The player's faces: the families the host has loaded ([LocalUiBuilderFontFamilies]) over the
+ * player's defaults, so theme typefaces show on the canvas and in PNGs.
  */
 @Composable
 private fun hostTypefaces(): RcTypefaceLoader {
   val loaded = LocalUiBuilderFontFamilies.current
-  return remember(loaded) {
-    object : RcTypefaceLoader {
-      override val families: Set<String>
-        get() = RcTypefaceLoader.Default.families + loaded.keys
+  return remember(loaded) { hostTypefaces(loaded) }
+}
 
-      override fun typeface(family: String, variations: RcFontVariations?): FontFamily? =
-        loaded[family] ?: RcTypefaceLoader.Default.typeface(family, variations)
-    }
+/**
+ * [loaded] as the player asks for it. The host keys a family by the document's spelling
+ * (`google:Exo 2`, `Lobster Two`), but the player asks by the normalised name, lower case with no
+ * `google:` ([RcTypefaceLoader.typeface]), so both sides meet at [canonicalFamilyName]: looked up
+ * verbatim, no named face would ever reach the canvas.
+ */
+internal fun hostTypefaces(loaded: Map<String, FontFamily>): RcTypefaceLoader {
+  val byName =
+    loaded.entries
+      .mapNotNull { (name, family) -> canonicalFamilyName(name)?.let { it to family } }
+      .toMap()
+  return object : RcTypefaceLoader {
+    override val families: Set<String>
+      get() = RcTypefaceLoader.Default.families + byName.keys
+
+    override fun typeface(family: String, variations: RcFontVariations?): FontFamily? =
+      canonicalFamilyName(family)?.let(byName::get)
+        ?: RcTypefaceLoader.Default.typeface(family, variations)
   }
 }
 
