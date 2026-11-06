@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.platform.Font
@@ -20,6 +22,7 @@ import ee.schimke.composeai.rcplayer.protocol.RcTextStyleProperty.FloatValue
 import ee.schimke.composeai.rcplayer.protocol.RcTextStyleProperty.IntValue
 import ee.schimke.composeai.rcplayer.protocol.RcVersion
 import ee.schimke.composeai.uibuilder.canvas.hostTypefaces
+import ee.schimke.composeai.uibuilder.canvas.rememberHostTypefaces
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -80,6 +83,30 @@ class CanvasTypefaceNamesTest {
     assertSame(orbitron, loaded.typeface("orbitron"))
     assertSame(orbitron, loaded.typeface("lobster two"))
     assertEquals(null, loaded.typeface("exo 2"), "a family nobody loaded is the player's to answer")
+  }
+
+  /**
+   * The host's map fills in place as families load: a face that arrives later reaches the canvas.
+   */
+  @Test
+  fun aFaceThatLoadsAfterTheCanvasComposesIsUsed() {
+    val fonts = mutableStateMapOf<String, FontFamily>()
+    var loader: RcTypefaceLoader? = null
+    val scene = ImageComposeScene(10, 10, Density(1f))
+    try {
+      scene.setContent {
+        CompositionLocalProvider(LocalUiBuilderFontFamilies provides fonts) {
+          loader = rememberHostTypefaces()
+        }
+      }
+      scene.render()
+      assertEquals(null, loader!!.typeface("orbitron"))
+      fonts["google:Orbitron"] = orbitron
+      scene.render()
+      assertSame(orbitron, loader!!.typeface("orbitron"))
+    } finally {
+      scene.close()
+    }
   }
 
   @Test

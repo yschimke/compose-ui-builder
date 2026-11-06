@@ -139,7 +139,7 @@ internal fun RemoteComposeDocument(
     namedValues = namedValues,
     onEvent = onEvent,
     customComponents = customComponents,
-    typefaces = hostTypefaces(),
+    typefaces = rememberHostTypefaces(),
   )
 }
 
@@ -217,7 +217,7 @@ internal fun PlayedInlineRemoteContent(
         else -> inherited
       },
     customComponents = customComponents,
-    typefaces = hostTypefaces(),
+    typefaces = rememberHostTypefaces(),
   )
 }
 
@@ -226,8 +226,10 @@ internal fun PlayedInlineRemoteContent(
  * player's defaults, so theme typefaces show on the canvas and in PNGs.
  */
 @Composable
-private fun hostTypefaces(): RcTypefaceLoader {
-  val loaded = LocalUiBuilderFontFamilies.current
+internal fun rememberHostTypefaces(): RcTypefaceLoader {
+  // The host's map fills in as families load, in place: copy it here, where reading it subscribes
+  // this composition to it, and key the loader on the copy, so a face that arrives later is drawn.
+  val loaded = LocalUiBuilderFontFamilies.current.toMap()
   return remember(loaded) { hostTypefaces(loaded) }
 }
 
