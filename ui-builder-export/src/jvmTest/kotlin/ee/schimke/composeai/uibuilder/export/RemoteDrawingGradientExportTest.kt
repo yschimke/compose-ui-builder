@@ -73,8 +73,8 @@ class RemoteDrawingGradientExportTest {
             """"color":{"type":"colorToken","value":"outlineVariant"}}}""",
             """"color":{"type":"colorToken","value":"outlineVariant"},
               "gradient":{"type":"enum","value":"radial"}}}""",
-          )
-        ) as JsonObject
+          ),
+        ) as JsonObject,
       )
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(document))
@@ -141,7 +141,7 @@ class RemoteDrawingGradientExportTest {
       val document: UiBuilderDocument =
         Json.decodeFromJsonElement(Json.parseToJsonElement(gauge) as JsonObject)
       return assertIs<WearWidgetCodeExporter.Result.Refused>(
-          WearWidgetCodeExporter.export(document)
+          WearWidgetCodeExporter.export(document),
         )
         .reasons
     }
@@ -169,7 +169,7 @@ class RemoteDrawingGradientExportTest {
   fun `a shape without a gradient keeps its plain colour`() {
     val document: UiBuilderDocument =
       Json.decodeFromJsonElement(
-        Json.parseToJsonElement(RemoteDrawingExportTest.GAUGE) as JsonObject
+        Json.parseToJsonElement(RemoteDrawingExportTest.GAUGE) as JsonObject,
       )
     val source =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(document))

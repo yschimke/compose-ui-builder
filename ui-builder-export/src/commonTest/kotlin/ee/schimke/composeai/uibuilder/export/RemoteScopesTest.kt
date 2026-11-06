@@ -130,8 +130,8 @@ class RemoteScopesTest {
                           put("type", "number")
                           put("value", 48)
                         }
-                      }
-                  ))
+                      },
+                  )),
         )
       }
 
@@ -161,7 +161,7 @@ class RemoteScopesTest {
           nodes =
             design.nodes +
               ("custom" to
-                design.nodes.getValue("custom").copy(properties = JsonObject(emptyMap())))
+                design.nodes.getValue("custom").copy(properties = JsonObject(emptyMap()))),
         )
       }
 

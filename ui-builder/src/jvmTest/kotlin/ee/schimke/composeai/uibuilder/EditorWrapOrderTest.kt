@@ -23,7 +23,7 @@ class EditorWrapOrderTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -207,7 +207,7 @@ class EditorWrapOrderTest {
           "nullable" to JsonPrimitive(false),
           "initialValue" to JsonPrimitive("a"),
           "persistence" to JsonPrimitive("preview"),
-        )
+        ),
       ),
     )
 
@@ -254,7 +254,7 @@ class EditorWrapOrderTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(false),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
       )
 
@@ -278,7 +278,7 @@ class EditorWrapOrderTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(false),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
       )
     val bound =
@@ -304,7 +304,7 @@ class EditorWrapOrderTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(false),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
       )
 
@@ -332,7 +332,7 @@ class EditorWrapOrderTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(0),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
       )
 
@@ -356,20 +356,20 @@ class EditorWrapOrderTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(0.0),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
       )
 
     listOf("NaN", "Infinity", "-Infinity").forEach { value ->
       val outcome =
         assertIs<CommandOutcome.Rejected>(
-          insertWith(ratio, EditorStateAction.Set("ratio", value)).lastOutcome
+          insertWith(ratio, EditorStateAction.Set("ratio", value)).lastOutcome,
         )
       assertTrue(outcome.message.contains("not a decimal value"), outcome.message)
     }
 
     assertIs<CommandOutcome.Accepted>(
-      insertWith(ratio, EditorStateAction.Set("ratio", "0.5")).lastOutcome
+      insertWith(ratio, EditorStateAction.Set("ratio", "0.5")).lastOutcome,
     )
   }
 
@@ -405,7 +405,7 @@ class EditorWrapOrderTest {
 
     assertTrue(reducer.wrapCandidates(adjacent).any { it.componentId == "layout/row" })
     assertIs<CommandOutcome.Accepted>(
-      reducer.reduce(adjacent, UiBuilderEditorEvent.WrapSelection("layout/row")).lastOutcome
+      reducer.reduce(adjacent, UiBuilderEditorEvent.WrapSelection("layout/row")).lastOutcome,
     )
   }
 
@@ -505,12 +505,12 @@ class EditorWrapOrderTest {
                             mapOf(
                               "type" to JsonPrimitive("string"),
                               "value" to JsonPrimitive(collidingKey),
-                            )
-                          )
-                      )
-                  )
+                            ),
+                          ),
+                      ),
+                  ),
               )
-          }
+          },
       )
 
     val duplicated =
@@ -538,7 +538,7 @@ class EditorWrapOrderTest {
             "nullable" to JsonPrimitive(false),
             "initialValue" to JsonPrimitive(false),
             "persistence" to JsonPrimitive("preview"),
-          )
+          ),
         ),
       )
 

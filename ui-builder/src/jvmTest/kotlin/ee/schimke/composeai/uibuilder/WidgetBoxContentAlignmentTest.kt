@@ -79,7 +79,7 @@ class WidgetBoxContentAlignmentTest {
             "theme" to JsonPrimitive("dark"),
             "locale" to JsonPrimitive("en-US"),
             "layoutDirection" to JsonPrimitive("ltr"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("host"),
@@ -108,7 +108,7 @@ class WidgetBoxContentAlignmentTest {
                   listOf(
                     modifier("weight", "weight" to JsonPrimitive(1)),
                     modifier("fillMaxHeight"),
-                  )
+                  ),
                 ),
               slots = mapOf("content" to listOf("box")),
             ),
@@ -129,7 +129,7 @@ class WidgetBoxContentAlignmentTest {
                   mapOf(
                     "text" to literal("string", "Home"),
                     "color" to literal("color", "#FFFFFFFF"),
-                  )
+                  ),
                 ),
             ),
         ),

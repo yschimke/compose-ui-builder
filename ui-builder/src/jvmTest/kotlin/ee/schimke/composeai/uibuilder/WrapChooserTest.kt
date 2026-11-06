@@ -46,7 +46,7 @@ class WrapChooserTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val title = "Episode 140: Lorem ipsum dolor"
@@ -60,7 +60,7 @@ class WrapChooserTest {
     // A selection a Column cannot hold still keeps Row on 2, so the sequence a hand learns holds.
     val choices =
       quickWrapChoices(
-        listOf(item("m3/card", "Card"), item("layout/box", "Box"), item("layout/row", "Row"))
+        listOf(item("m3/card", "Card"), item("layout/box", "Box"), item("layout/row", "Row")),
       )
     assertEquals(
       listOf(2 to "layout/row", 3 to "layout/box"),
@@ -194,7 +194,7 @@ class WrapChooserTest {
       .apply {
         parentFile.mkdirs()
         writeBytes(
-          requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)).bytes
+          requireNotNull(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)).bytes,
         )
       }
   }

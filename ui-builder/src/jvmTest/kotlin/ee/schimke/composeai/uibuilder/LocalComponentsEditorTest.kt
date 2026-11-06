@@ -32,7 +32,7 @@ import org.jetbrains.skia.Image
 class LocalComponentsEditorTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -134,7 +134,7 @@ class LocalComponentsEditorTest {
                 id = "row",
                 componentId = "layout/row",
                 slots = mapOf("children" to parameters.toList()),
-              )
+              ),
             ) +
               parameters.map {
                 UiBuilderNode(
@@ -166,7 +166,7 @@ class LocalComponentsEditorTest {
           state = ComponentDriftState.DRIFTED,
           importedDigest = "sha256:one",
           currentDigest = "sha256:two",
-        )
+        ),
       )
     val newer = symbol("sha256:two", "sender", "snippet")
     updateCapture(state.document, state.selection.single(), drift, newer, "update-before")
@@ -241,9 +241,9 @@ class LocalComponentsEditorTest {
       parentFile.mkdirs()
       writeBytes(
         checkNotNull(
-            Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
+            Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG),
           )
-          .bytes
+          .bytes,
       )
     }
   }
@@ -265,8 +265,8 @@ class LocalComponentsEditorTest {
           JsonObject(
             mapOf(
               "horizontalSpacingDp" to
-                JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(12)))
-            )
+                JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(12))),
+            ),
           ),
         slots = mapOf("children" to listOf("$id-avatar", "$id-sender", "$id-subject")),
       )
@@ -280,9 +280,9 @@ class LocalComponentsEditorTest {
             mapOf(
               "containerColor" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF6750A4"))
-                )
-            )
+                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF6750A4")),
+                ),
+            ),
           ),
         modifiers =
           kotlinx.serialization.json.JsonArray(
@@ -292,9 +292,9 @@ class LocalComponentsEditorTest {
                   "type" to JsonPrimitive("size"),
                   "widthDp" to JsonPrimitive(40),
                   "heightDp" to JsonPrimitive(40),
-                )
-              )
-            )
+                ),
+              ),
+            ),
           ),
         slots = mapOf("content" to emptyList()),
       )
@@ -323,7 +323,7 @@ class LocalComponentsEditorTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -333,7 +333,7 @@ class LocalComponentsEditorTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),

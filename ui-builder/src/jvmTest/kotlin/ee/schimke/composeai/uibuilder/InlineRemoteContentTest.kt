@@ -97,7 +97,7 @@ class InlineRemoteContentTest {
           ),
           text("field", "type here"),
           text("outro", "Recently played"),
-        )
+        ),
       )
 
     val codes =
@@ -169,7 +169,7 @@ class InlineRemoteContentTest {
         ),
         text("field", "type here"),
         text("outro", "Recently played"),
-      )
+      ),
     )
 
   private fun text(id: String, value: String) =
@@ -203,7 +203,7 @@ class InlineRemoteContentTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         JsonObject(
@@ -212,7 +212,7 @@ class InlineRemoteContentTest {
             "heightDp" to JsonPrimitive(892),
             "density" to JsonPrimitive(2.625),
             "theme" to JsonPrimitive("dark"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("screen"),

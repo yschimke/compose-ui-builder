@@ -586,11 +586,11 @@ object ScreenDocumentProjection {
           buildJsonObject {
             put("type", "ee.schimke.composeai.discovery.ScreenValue.ActionLambda")
             put("actions", json.encodeToJsonElement(projected))
-          }
+          },
         )
       } catch (_: kotlinx.serialization.SerializationException) {
         return refuse(
-          "node `${node.id}`: layout clicks need action-lambda support in the shared generator; use a local dependency build or a release containing it"
+          "node `${node.id}`: layout clicks need action-lambda support in the shared generator; use a local dependency build or a release containing it",
         )
       }
     }
@@ -623,13 +623,13 @@ object ScreenDocumentProjection {
         is IncrementActionV1 ->
           refuse(
             "$where increments `${action.variable}`, which needs a shared increment lowering in " +
-              "the screen generator; the Remote Compose export writes it today"
+              "the screen generator; the Remote Compose export writes it today",
           )
         is SetValueActionV1 -> assignment(action.variable, action.value)
         is SelectActionV1 -> assignment(action.variable, action.value)
         is SetTextActionV1 ->
           refuse(
-            "$where consumes the callback's text value, which needs a parameter-aware shared handler"
+            "$where consumes the callback's text value, which needs a parameter-aware shared handler",
           )
         else -> {
           refuse("$where uses `${action::class.simpleName}`, which needs a shared action lowering")
@@ -728,7 +728,7 @@ object ScreenDocumentProjection {
           JsonArray(
             listOf(parameter("modifier", MODIFIER)) +
               bindings.fields.values.map { parameter(it.name, it.type) } +
-              captures.values.map { it.first }
+              captures.values.map { it.first },
           ),
         )
         put("root", Json.encodeToJsonElement(checkNotNull(root)))
@@ -751,7 +751,7 @@ object ScreenDocumentProjection {
         Json.decodeFromJsonElement<T>(value)
       } catch (_: kotlinx.serialization.SerializationException) {
         refuse(
-          "$feature needs shared generator support; use a local dependency build or a release containing it"
+          "$feature needs shared generator support; use a local dependency build or a release containing it",
         )
       }
 
@@ -761,7 +761,7 @@ object ScreenDocumentProjection {
       return shared(
         JsonObject(
           Json.encodeToJsonElement(screen).jsonObject +
-            ("functions" to JsonArray(themeFunctions + functions.values.map { it.encode() }))
+            ("functions" to JsonArray(themeFunctions + functions.values.map { it.encode() })),
         ),
         if (functions.isEmpty()) "the design's theme" else "reusable components",
       )
@@ -848,7 +848,7 @@ object ScreenDocumentProjection {
           placement.slots.isNotEmpty()
       )
         return refuse(
-          "node `${placement.id}`: component placement needs design/component-instance with no properties or slots"
+          "node `${placement.id}`: component placement needs design/component-instance with no properties or slots",
         )
       val definition =
         document.components[key]
@@ -910,7 +910,7 @@ object ScreenDocumentProjection {
       return shared<ScreenNode>(
         JsonObject(
           Json.encodeToJsonElement(ScreenNode("", arguments)).jsonObject +
-            ("function" to JsonPrimitive(function.name))
+            ("function" to JsonPrimitive(function.name)),
         ),
         "node `${placement.id}` component call",
       )
@@ -979,7 +979,7 @@ object ScreenDocumentProjection {
                     Json.encodeToJsonElement(rowScope.fields.mapValues { it.value.type }),
                   )
                   put("rows", Json.encodeToJsonElement(rows))
-                })
+                }),
           ),
           "$where repetition",
         ) ?: return null
@@ -1212,7 +1212,7 @@ object ScreenDocumentProjection {
         if (parameter == null) {
           refuse(
             "$where.`$property` is bound, and `${node.componentId}` writes it only inside a " +
-              "factory call, which a bound value cannot be passed through"
+              "factory call, which a bound value cannot be passed through",
           )
           refused = true
           continue
@@ -1264,7 +1264,7 @@ object ScreenDocumentProjection {
                   if (receiver == null) {
                     refuse(
                       "$where.`$slot`: `$parameter` wraps its children in `$member`, but " +
-                        "its record declares no DSL receiver for it"
+                        "its record declares no DSL receiver for it",
                     )
                     refused = true
                     continue
@@ -1321,7 +1321,7 @@ object ScreenDocumentProjection {
       val projection =
         exportProjections[synthesis.component]
           ?: return refuse(
-            "$where is written as a `${synthesis.component}`, which publishes no export projection"
+            "$where is written as a `${synthesis.component}`, which publishes no export projection",
           )
       val properties =
         synthesis.properties.mapValues { (property, raw) ->
@@ -1390,7 +1390,7 @@ object ScreenDocumentProjection {
         (node.properties["text"] as? StringValueV1)?.value
           ?: return refuse(
             "$where.`text` is not a literal, and a variable font text's outline is worked out " +
-              "from its text when the design exports"
+              "from its text when the design exports",
           )
       val animated = mutableListOf<String>()
       val location = mutableMapOf<String, Float>()
@@ -1415,7 +1415,7 @@ object ScreenDocumentProjection {
           else ->
             return refuse(
               "$where.`$property` is computed; a Compose screen animates an axis from a state " +
-                "variable, and a computed one is a Remote widget's"
+                "variable, and a computed one is a Remote widget's",
             )
         }
       }
@@ -1499,14 +1499,14 @@ object ScreenDocumentProjection {
                 put("subject", json.encodeToJsonElement<ScreenValue>(subject))
                 put("cases", json.encodeToJsonElement(cases))
                 selection.fallback?.let { put("elseSlot", JsonPrimitive(it)) }
-              })
+              }),
         )
       val selected =
         try {
           json.decodeFromJsonElement<ScreenNode>(encoded)
         } catch (_: kotlinx.serialization.SerializationException) {
           return refuse(
-            "node `${node.id}`: the shared generator needs state-selection support; use a local dependency build or a release containing it"
+            "node `${node.id}`: the shared generator needs state-selection support; use a local dependency build or a release containing it",
           )
         }
       val container = node.copy(properties = node.properties - SHOW_BY_STATE)
@@ -1540,7 +1540,7 @@ object ScreenDocumentProjection {
                 receiver = ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
                 links = links,
                 typeFqn = MODIFIER,
-              )
+              ),
           )
       return ScreenNode(
         componentId = BOX_CATALOG_ID,
@@ -1548,7 +1548,7 @@ object ScreenDocumentProjection {
         slots =
           mapOf(
             parameterForSlot(BOX_CATALOG_ID, BOX_CHILDREN_SLOT) to
-              children.mapNotNull { child -> node(child, BOX_SCOPE) }
+              children.mapNotNull { child -> node(child, BOX_SCOPE) },
           ),
       )
     }
@@ -1563,7 +1563,7 @@ object ScreenDocumentProjection {
       if ((value as? BooleanValueV1)?.value == false && PROGRESS !in node.properties) {
         refuse(
           "node `${node.id}` is not indeterminate and sets no `progress`; the determinate " +
-            "indicator is chosen by passing one, and there is nothing here to pass"
+            "indicator is chosen by passing one, and there is nothing here to pass",
         )
       }
       return true
@@ -1578,7 +1578,7 @@ object ScreenDocumentProjection {
       refuse(
         "node `${node.id}`.`$property` is the span this node takes in its parent grid, which is " +
           "`item(span = { GridItemSpan(…) })` on the wrapper around it — an argument to another " +
-          "node, computed from the grid's own scope, and this vocabulary has neither"
+          "node, computed from the grid's own scope, and this vocabulary has neither",
       )
       return true
     }
@@ -1617,7 +1617,7 @@ object ScreenDocumentProjection {
           else -> {
             refuse(
               "node `${node.id}`.`$property` selects a component, so it has to be one of " +
-                choices.keys.sorted().joinToString(", ")
+                choices.keys.sorted().joinToString(", "),
             )
             return null
           }
@@ -1626,7 +1626,7 @@ object ScreenDocumentProjection {
         ?: run {
           refuse(
             "node `${node.id}`.`$property` is `$authored`, which is not one of " +
-              choices.keys.sorted().joinToString(", ")
+              choices.keys.sorted().joinToString(", "),
           )
           null
         }
@@ -1911,7 +1911,7 @@ object ScreenDocumentProjection {
                   .members
                   .keys
                   .sorted()
-                  .joinToString(", ")
+                  .joinToString(", "),
             )
         }
       // Through the same table a lone arrangement reads, so an unknown value refuses with the
@@ -2030,7 +2030,7 @@ object ScreenDocumentProjection {
         if (!visible) {
           refuse(
             "$where.`$flag` hides a pane, which means building a `ThreePaneScaffoldValue` by " +
-              "hand rather than computing it; show both panes to export the adaptive one"
+              "hand rather than computing it; show both panes to export the adaptive one",
           )
         }
       }
@@ -2058,7 +2058,7 @@ object ScreenDocumentProjection {
               ScreenValue.Construct(
                 callableFqn = "$ADAPTIVE.currentWindowAdaptiveInfo",
                 typeFqn = "$ADAPTIVE.WindowAdaptiveInfo",
-              )
+              ),
             ),
           typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
         )
@@ -2073,7 +2073,7 @@ object ScreenDocumentProjection {
                   "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.copy",
                   named = adjustments,
                   member = true,
-                )
+                ),
               ),
             typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
           )
@@ -2088,7 +2088,7 @@ object ScreenDocumentProjection {
                 1 -> "Detail"
                 2 -> if (node.slots["extraPane"].isNullOrEmpty()) "List" else "Extra"
                 else -> "List"
-              }
+              },
             ),
             typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole",
           )
@@ -2115,7 +2115,7 @@ object ScreenDocumentProjection {
                 ChainLink(
                   "kotlin.ranges.coerceIn",
                   positional = listOf(ScreenValue.Whole(0), ScreenValue.Whole(2)),
-                )
+                ),
               ),
               typeFqn = "kotlin.Int",
             )
@@ -2140,7 +2140,7 @@ object ScreenDocumentProjection {
                     listOf(
                       ScreenValue.Text("2"),
                       ScreenValue.Text(
-                        if (node.slots["extraPane"].isNullOrEmpty()) "Secondary" else "Tertiary"
+                        if (node.slots["extraPane"].isNullOrEmpty()) "Secondary" else "Tertiary",
                       ),
                     ),
                 ),
@@ -2163,7 +2163,7 @@ object ScreenDocumentProjection {
               "detail" -> "Detail"
               "extra" -> if (node.slots["extraPane"].isNullOrEmpty()) "List" else "Extra"
               else -> "List"
-            }
+            },
           ),
           typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole",
         )
@@ -2183,10 +2183,10 @@ object ScreenDocumentProjection {
                       "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.maxHorizontalPartitions",
                       property = true,
                       member = true,
-                    )
+                    ),
                   ),
                 typeFqn = "kotlin.Int",
-              )
+              ),
             ),
           // Both named: adaptive-layout 1.3 removes the defaults and splits the overload, and the
           // native lane compiles against 1.3. An explicit destination picks the overload both
@@ -2247,7 +2247,9 @@ object ScreenDocumentProjection {
               // 24dp default, is pinned on the directive below so both lanes measure this width.
               positional =
                 listOf(
-                  dp(number("fixedPaneWidthDp", 360.0).coerceAtLeast(0.0) + (spacing ?: 24.0) / 2)!!
+                  dp(
+                    number("fixedPaneWidthDp", 360.0).coerceAtLeast(0.0) + (spacing ?: 24.0) / 2,
+                  )!!,
                 ),
               typeFqn = "$ADAPTIVE_LAYOUT.PaneExpansionAnchor",
             )
@@ -2256,7 +2258,7 @@ object ScreenDocumentProjection {
               callableFqn = "$ADAPTIVE_LAYOUT.PaneExpansionAnchor.Proportion",
               positional =
                 listOf(
-                  ScreenValue.Fractional32(number("splitFraction", .5).coerceIn(.1, .9).toFloat())
+                  ScreenValue.Fractional32(number("splitFraction", .5).coerceIn(.1, .9).toFloat()),
                 ),
               typeFqn = "$ADAPTIVE_LAYOUT.PaneExpansionAnchor",
             )
@@ -2318,7 +2320,7 @@ object ScreenDocumentProjection {
           is IntegerValueV1 -> value.value.toDouble()
           else ->
             return refuse(
-              "node `${node.id}`.`$property` is a pane width in dp, which needs a number"
+              "node `${node.id}`.`$property` is a pane width in dp, which needs a number",
             )
         }
       val width =
@@ -2374,7 +2376,7 @@ object ScreenDocumentProjection {
                   callableFqn = "kotlin.collections.listOf",
                   positional = colours,
                   typeFqn = "kotlin.collections.List",
-                )
+                ),
               ),
             typeFqn = BRUSH,
           )
@@ -2429,7 +2431,7 @@ object ScreenDocumentProjection {
       refuse(
         "node `${node.id}`.`$property` is a 3dp bar drawn down the item's leading edge with " +
           "`Modifier.drawBehind { … }` — a draw lambda this vocabulary has no form for; leave it " +
-          "empty to export the item without the bar"
+          "empty to export the item without the bar",
       )
     }
 
@@ -2452,7 +2454,7 @@ object ScreenDocumentProjection {
       refuse(
         "$where is $number, which reaches `Slider` as `valueRange = valueFrom..valueTo` — a range " +
           "expression this vocabulary has no form for; only Material's default range " +
-          "(`valueFrom` 0, `valueTo` 1) exports"
+          "(`valueFrom` 0, `valueTo` 1) exports",
       )
     }
 
@@ -2486,7 +2488,7 @@ object ScreenDocumentProjection {
         refuse(
           "$where is a layout weight, which `Modifier.weight` supplies from a row's or column's " +
             "scope; this node sits " +
-            (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
+            (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver"),
         )
         return null
       }
@@ -2839,7 +2841,7 @@ object ScreenDocumentProjection {
         else ->
           refuse(
             "$where is a colour, which is written as a `#RRGGBB` literal or as a theme role and " +
-              "not as ${value::class.simpleName}"
+              "not as ${value::class.simpleName}",
           )
       }
 
@@ -3161,7 +3163,7 @@ object ScreenDocumentProjection {
         is StateEqualsValueV1 ->
           refuse(
             "$where compares the state variable `${value.variable}`, which needs a shared " +
-              "comparison expression"
+              "comparison expression",
           )
         is InsetsValueV1 ->
           refuse("$where is window insets, which are read through a composable call, not a value")
@@ -3175,7 +3177,7 @@ object ScreenDocumentProjection {
         is ExpressionValueV1,
         is SystemValueV1 ->
           refuse(
-            "$where is a value the Remote Compose player computes; export it as a Remote widget"
+            "$where is a value the Remote Compose player computes; export it as a Remote widget",
           )
         is ResourceValueV1 -> stringResource(value.resourceKey, where)
         is AssetKeyValueV1 -> refuse("$where is an asset key, which needs an artwork adapter")
@@ -3186,7 +3188,7 @@ object ScreenDocumentProjection {
             dp(value.minimumCellWidthDp)
               ?: return refuse(
                 "$where has a minimum cell width of `${value.minimumCellWidthDp}`, which is not " +
-                  "a number that survives `Dp`"
+                  "a number that survives `Dp`",
               )
           ScreenValue.Construct(
             callableFqn = "androidx.compose.foundation.lazy.grid.GridCells.Adaptive",
@@ -3210,7 +3212,7 @@ object ScreenDocumentProjection {
         structure.stringResources
           ?: return refuse(
             "$where is the resource `$key`, and this catalog declares no string resources " +
-              "(`code.stringResources`)"
+              "(`code.stringResources`)",
           )
       if (!RESOURCE_KEY.matches(key)) {
         return refuse("$where is the resource `$key`, which is not a Kotlin identifier")
@@ -3232,7 +3234,7 @@ object ScreenDocumentProjection {
                 ),
               links = listOf(ChainLink("$owner.$key", property = true)),
               typeFqn = STRING_RESOURCE_TYPE,
-            )
+            ),
           ),
         typeFqn = "kotlin.String",
       )
@@ -3255,7 +3257,7 @@ object ScreenDocumentProjection {
       ) {
         return refuse(
           "$where is the colour `$value`, which the renderer reads as a token rather than a " +
-            "literal; write it as `#$value` if a literal was meant"
+            "literal; write it as `#$value` if a literal was meant",
         )
       }
       val argb =
@@ -3285,7 +3287,7 @@ object ScreenDocumentProjection {
       val path = table[name]
       if (path == null) {
         return refuse(
-          "$where is the $kind token `$name`, which is not one this catalog's theme defines"
+          "$where is the $kind token `$name`, which is not one this catalog's theme defines",
         )
       }
       return pathValue(path, typeFqn)
@@ -3310,7 +3312,7 @@ object ScreenDocumentProjection {
         return refuse(
           "a reusable component inside the themed surface reads the theme role " +
             "`${(listOf(holder) + role).joinToString(".")}`, which this export cannot write " +
-            "inside a component yet; read it outside the component or set the role directly"
+            "inside a component yet; read it outside the component or set the role directly",
         )
       }
       val holderType = THEME_HOLDERS.getValue(holder)
@@ -3428,7 +3430,7 @@ object ScreenDocumentProjection {
       shared<ScreenNode>(
         JsonObject(
           Json.encodeToJsonElement(ScreenNode("", arguments)).jsonObject +
-            ("function" to JsonPrimitive(name))
+            ("function" to JsonPrimitive(name)),
         ),
         "the design's theme",
       )
@@ -3589,11 +3591,11 @@ object ScreenDocumentProjection {
                       "$BASE64.decode",
                       positional = listOf(ScreenValue.Text(chunks.joinToString(""))),
                       member = true,
-                    )
+                    ),
                   ),
                 typeFqn = "kotlin.ByteArray",
-              )
-            )
+              ),
+            ),
           )
         }
       return ScreenValue.Construct(
@@ -3618,7 +3620,7 @@ object ScreenDocumentProjection {
           dp(number)
             ?: refuse(
               "$where is $number, which does not survive the narrowing to `Float` that `Dp` " +
-                "performs"
+                "performs",
             )
         DimensionUnitV1.SP ->
           ScreenValue.Chain(
@@ -3626,7 +3628,7 @@ object ScreenDocumentProjection {
               unitReceiver(number)
                 ?: return refuse(
                   "$where is $number, which does not survive the narrowing to `Float` that " +
-                    "`TextUnit` performs"
+                    "`TextUnit` performs",
                 ),
             links = listOf(ChainLink("androidx.compose.ui.unit.sp", property = true)),
             typeFqn = "androidx.compose.ui.unit.TextUnit",
@@ -3655,7 +3657,7 @@ object ScreenDocumentProjection {
         return icon(entry)
           ?: refuse(
             "$where is the icon key `$entry`, which is not one of " +
-              ICON_MEMBERS.keys.sorted().joinToString(", ")
+              ICON_MEMBERS.keys.sorted().joinToString(", "),
           )
       }
       FACTORY_MEMBERS[componentId to property]?.let { factory ->
@@ -3663,7 +3665,7 @@ object ScreenDocumentProjection {
           factory.members[entry]
             ?: return refuse(
               "$where is the enum value `$entry`, which is not one of " +
-                factory.members.keys.sorted().joinToString(", ")
+                factory.members.keys.sorted().joinToString(", "),
             )
         return ScreenValue.Construct(
           callableFqn = callable,
@@ -3676,13 +3678,13 @@ object ScreenDocumentProjection {
           ?: return refuse(
             VARIANT_PROPERTIES[componentId to property]?.let { "$where is `$entry`, which $it" }
               ?: "$where is the enum value `$entry`, and nothing maps this catalog property's " +
-                "values to Kotlin members"
+                "values to Kotlin members",
           )
       val path =
         mapping.members[entry]
           ?: return refuse(
             "$where is the enum value `$entry`, which is not one of " +
-              mapping.members.keys.sorted().joinToString(", ")
+              mapping.members.keys.sorted().joinToString(", "),
           )
       return pathValue(path, mapping.typeFqn)
     }
@@ -3715,7 +3717,7 @@ object ScreenDocumentProjection {
             ChainLink(
               "$ICONS_PACKAGE.${pack.joinToString(".") { it.lowercase() }}.${path.last()}",
               property = true,
-            )
+            ),
           ),
         typeFqn = IMAGE_VECTOR,
       )
@@ -3969,7 +3971,7 @@ object ScreenDocumentProjection {
           AlignmentV1.BOTTOM_START -> "BottomStart"
           AlignmentV1.BOTTOM_CENTER -> "BottomCenter"
           AlignmentV1.BOTTOM_END -> "BottomEnd"
-        }
+        },
       ),
       typeFqn = ALIGNMENT,
     )
@@ -3982,7 +3984,7 @@ object ScreenDocumentProjection {
           HorizontalAlignmentV1.START -> "Start"
           HorizontalAlignmentV1.CENTER_HORIZONTALLY -> "CenterHorizontally"
           HorizontalAlignmentV1.END -> "End"
-        }
+        },
       ),
       typeFqn = ALIGNMENT_HORIZONTAL,
     )
@@ -3995,7 +3997,7 @@ object ScreenDocumentProjection {
           VerticalAlignmentV1.TOP -> "Top"
           VerticalAlignmentV1.CENTER_VERTICALLY -> "CenterVertically"
           VerticalAlignmentV1.BOTTOM -> "Bottom"
-        }
+        },
       ),
       typeFqn = ALIGNMENT_VERTICAL,
     )
@@ -4109,7 +4111,7 @@ object ScreenDocumentProjection {
       "layout/row" to
         mapOf(
           "horizontalSpacingDp" to
-            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL)
+            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL),
         ),
       // Both axes, because a flow row has both: along a line it arranges like a row, and down the
       // lines it arranges like a column.
@@ -4123,19 +4125,19 @@ object ScreenDocumentProjection {
       "layout/column" to
         mapOf(
           "verticalSpacingDp" to
-            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL)
+            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL),
         ),
       // Lazy layouts spell spacing like their non-lazy counterparts. `contentPadding` and
       // `reverseLayout` need no entry.
       "layout/lazy-column" to
         mapOf(
           "verticalSpacingDp" to
-            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL)
+            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL),
         ),
       "layout/lazy-row" to
         mapOf(
           "horizontalSpacingDp" to
-            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL)
+            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL),
         ),
       "layout/lazy-grid" to
         mapOf(
@@ -4283,7 +4285,7 @@ object ScreenDocumentProjection {
               "androidx.compose.material3.TimePickerLayoutType",
               "vertical" to "Vertical",
               "horizontal" to "Horizontal",
-            )
+            ),
         ),
       "m3/tri-state-checkbox" to
         mapOf(
@@ -4294,7 +4296,7 @@ object ScreenDocumentProjection {
               "on" to "On",
               "off" to "Off",
               "indeterminate" to "Indeterminate",
-            )
+            ),
         ),
       "asset/image" to
         mapOf(
@@ -4406,7 +4408,7 @@ object ScreenDocumentProjection {
               "enterAlways" to "$TOP_APP_BAR_DEFAULTS.enterAlwaysScrollBehavior",
               "exitUntilCollapsed" to "$TOP_APP_BAR_DEFAULTS.exitUntilCollapsedScrollBehavior",
             ),
-        )
+        ),
     )
 
   /**
@@ -4676,7 +4678,7 @@ object ScreenDocumentProjection {
           ScreenValue.SlotParameterRead(
             CONTENT_PADDING,
             "androidx.compose.foundation.layout.PaddingValues",
-          )
+          ),
         ),
     )
   private const val PANE_LAYOUT_MODE = "layoutMode"
@@ -4985,6 +4987,6 @@ object ScreenDocumentProjection {
       ("layout/horizontal-carousel" to "kind") to
         "names which carousel function to call rather than an argument to one, and no record " +
           "selects a carousel yet: its `items` is a `CarouselScope` DSL, which is a slot shape " +
-          "this projection cannot emit"
+          "this projection cannot emit",
     )
 }

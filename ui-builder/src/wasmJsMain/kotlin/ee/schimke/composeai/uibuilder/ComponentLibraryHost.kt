@@ -55,8 +55,8 @@ internal suspend fun loadLibrarySymbol(component: EditorLibraryComponent): Edito
         .parseToJsonElement(
           fetchText(
             "$COMPONENT_LIBRARY_PATH/${encodeUrlComponent(component.system)}/" +
-              encodeUrlComponent(component.componentId)
-          )
+              encodeUrlComponent(component.componentId),
+          ),
         )
         .jsonObject
     val nodes =
@@ -82,7 +82,7 @@ internal suspend fun loadLibrarySymbol(component: EditorLibraryComponent): Edito
  * (`409` when someone published in between or the project committed it).
  */
 internal suspend fun publishLibraryComponent(
-  publication: EditorLibraryPublication
+  publication: EditorLibraryPublication,
 ): EditorLibraryPublishResult {
   val body =
     JsonObject(
@@ -94,12 +94,12 @@ internal suspend fun publishLibraryComponent(
           "document",
           libraryJson.encodeToJsonElement(UiBuilderDocument.serializer(), publication.document),
         )
-      }
+      },
     )
   val url =
     sameOriginRequestUrl(
       "$COMPONENT_LIBRARY_PATH/${encodeUrlComponent(publication.system)}/" +
-        encodeUrlComponent(publication.componentId)
+        encodeUrlComponent(publication.componentId),
     )
   val answer = awaitLibraryText(putJsonPromise(url, body.toString()))
   val status = answer.substringBefore('\n').toIntOrNull() ?: 0
@@ -119,7 +119,7 @@ internal suspend fun publishLibraryComponent(
     else ->
       EditorLibraryPublishResult.Refused(
         field("error")?.replaceFirstChar(Char::uppercaseChar)
-          ?: "The project library refused it (HTTP $status)"
+          ?: "The project library refused it (HTTP $status)",
       )
   }
 }
@@ -146,7 +146,7 @@ private suspend fun awaitLibraryText(promise: Promise<JsString>): String =
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body,
-    }).then((response) => response.text().then((text) => response.status + '\n' + text))"""
+    }).then((response) => response.text().then((text) => response.status + '\n' + text))""",
 )
 private external fun putJsonPromise(url: String, body: String): Promise<JsString>
 

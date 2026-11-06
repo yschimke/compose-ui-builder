@@ -58,15 +58,15 @@ object McpAppNodeComment {
           buildJsonObject {
             put("type", "text")
             put("text", comment)
-          }
+          },
         )
         add(
           McpAppSelectionContext.titledText(
             "Comment on " + McpAppSelectionContext.summary(file, document, node),
             McpAppSelectionContext.title(node),
-          )
+          ),
         )
-      }
+      },
     )
   }
 
@@ -98,7 +98,7 @@ object McpAppNodeComment {
                 put("data", image.base64)
                 put("mimeType", image.mimeType)
                 putJsonObject("_meta") { put("openai/title", McpAppSelectionContext.title(node)) }
-              }
+              },
             )
           }
           add(McpAppSelectionContext.assistantText(hidden))

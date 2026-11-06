@@ -89,7 +89,7 @@ internal class BrowserGuidelineHost(
       try {
         sameOriginRequestUrl(
           "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/thumbnail.png" +
-            "?revision=${document.revision}"
+            "?revision=${document.revision}",
         )
       } catch (_: Throwable) {
         return null
@@ -111,7 +111,7 @@ internal class BrowserGuidelineHost(
       try {
         sameOriginRequestUrl(
           "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/export.compose" +
-            "?revision=${document.revision}"
+            "?revision=${document.revision}",
         )
       } catch (_: Throwable) {
         return null
@@ -159,7 +159,7 @@ internal class BrowserGuidelineHost(
               url,
               guidelineJson.encodeToString(DesignGuidelineRecord.serializer(), record),
               true,
-            )
+            ),
           ),
         )
       if (wire.status !in 200..299) null
@@ -180,12 +180,12 @@ internal class BrowserGuidelineHost(
    * the record it wrote or a reason.
    */
   override suspend fun runServerCheck(
-    document: UiBuilderDocument
+    document: UiBuilderDocument,
   ): DesignGuidelineHost.ServerCheckOutcome {
     val url =
       designUrl("/guidelines/check?revision=${document.revision}")
         ?: return DesignGuidelineHost.ServerCheckOutcome.Refused(
-          "this page is not served by a design host that runs the check"
+          "this page is not served by a design host that runs the check",
         )
     val wire =
       guidelineJson.decodeFromString(
@@ -200,7 +200,7 @@ internal class BrowserGuidelineHost(
               it.message ?: it.error
             }
           }
-            .getOrNull() ?: wire.body.take(200))
+            .getOrNull() ?: wire.body.take(200)),
       )
     }
     // The route answers with the stored record itself; a reply shaped like `GET …/guidelines`
@@ -214,7 +214,7 @@ internal class BrowserGuidelineHost(
           .getOrNull()
     return record?.let { DesignGuidelineHost.ServerCheckOutcome.Recorded(it) }
       ?: DesignGuidelineHost.ServerCheckOutcome.Refused(
-        "The server ran the check but recorded nothing."
+        "The server ran the check but recorded nothing.",
       )
   }
 
@@ -306,7 +306,7 @@ internal fun startOpenRouterSignInAtBoot(scope: CoroutineScope) {
     val result =
       withTimeoutOrNull(SIGN_IN_TIMEOUT_MS) { exchangeOpenRouterSignIn() }
         ?: DesignGuidelineHost.SignInResult.Failed(
-          "OpenRouter did not answer the sign-in in time; try Connect again or paste a key."
+          "OpenRouter did not answer the sign-in in time; try Connect again or paste a key.",
         )
     when (result) {
       DesignGuidelineHost.SignInResult.NotReturning -> Unit
@@ -315,7 +315,7 @@ internal fun startOpenRouterSignInAtBoot(scope: CoroutineScope) {
         logGuidelines(
           if (browserKeyStore.remembered)
             "OpenRouter sign-in finished; the key is remembered on this device."
-          else "OpenRouter sign-in finished; the key is kept for this tab."
+          else "OpenRouter sign-in finished; the key is kept for this tab.",
         )
       }
       is DesignGuidelineHost.SignInResult.Failed ->
@@ -366,7 +366,7 @@ internal suspend fun exchangeOpenRouterSignIn(
       DesignGuidelineHost.SignInResult.Failed(
         outcome.reason
           ?: "OpenRouter refused the sign-in (${outcome.status ?: "no answer"}); try again or " +
-            "paste a key."
+            "paste a key.",
       )
   }
 }
@@ -382,7 +382,7 @@ private external fun readGuidelineSetting(key: String): String
   try {
     if (value) localStorage.setItem(key, value); else localStorage.removeItem(key);
   } catch (_) {}
-}"""
+}""",
 )
 private external fun writeGuidelineSetting(key: String, value: String)
 
@@ -394,7 +394,7 @@ private external fun readSessionSetting(key: String): String
   try {
     if (value) sessionStorage.setItem(key, value); else sessionStorage.removeItem(key);
   } catch (_) {}
-}"""
+}""",
 )
 private external fun writeSessionSetting(key: String, value: String)
 
@@ -427,7 +427,7 @@ private external fun writeSessionSetting(key: String, value: String)
       encodeURIComponent(back.toString()) + '&code_challenge=' + b64url(digest) +
       '&code_challenge_method=S256';
   });
-}"""
+}""",
 )
 internal external fun beginOpenRouterSignIn(
   storageKey: String,
@@ -461,7 +461,7 @@ internal external fun beginOpenRouterSignIn(
       return;
     } catch (_) {}
   }
-}"""
+}""",
 )
 internal external fun restoreOpenRouterPageAtBoot()
 
@@ -496,7 +496,7 @@ internal external fun restoreOpenRouterPageAtBoot()
     status: response.status,
     body,
   }))).catch((error) => JSON.stringify({ state: 'failed', reason: String(error) }));
-}"""
+}""",
 )
 private external fun finishOpenRouterSignIn(
   storageKey: String,
@@ -521,7 +521,7 @@ private external fun finishOpenRouterSignIn(
   }).then((response) => response.text().then((text) => JSON.stringify({
     status: response.status,
     body: text,
-  })))"""
+  })))""",
 )
 private external fun openRouterComplete(url: String, body: String, key: String): Promise<JsString>
 
@@ -533,6 +533,6 @@ private external fun openRouterComplete(url: String, body: String, key: String):
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = () => resolve('');
       reader.readAsDataURL(blob);
-    }) : '')"""
+    }) : '')""",
 )
 private external fun fetchAsDataUrl(url: String): Promise<JsString>

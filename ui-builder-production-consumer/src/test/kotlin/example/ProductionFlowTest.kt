@@ -41,7 +41,7 @@ class ProductionFlowTest {
     runComposeUiTest {
       val data =
         mutableStateOf(
-          DynamicLibraryData(null, listOf(ProjectEpisode("A", "a"), ProjectEpisode("B", "b")))
+          DynamicLibraryData(null, listOf(ProjectEpisode("A", "a"), ProjectEpisode("B", "b"))),
         )
       val selected = mutableListOf<String>()
       setContent { MaterialTheme { DynamicLibraryScreen(data.value, selected::add) } }
@@ -51,7 +51,7 @@ class ProductionFlowTest {
       runOnIdle {
         data.value =
           data.value.copy(
-            episodes = listOf(ProjectEpisode("B updated", "b"), ProjectEpisode("A", "a"))
+            episodes = listOf(ProjectEpisode("B updated", "b"), ProjectEpisode("A", "a")),
           )
       }
       assertEquals(a, onNodeWithText("A").fetchSemanticsNode().id)

@@ -45,7 +45,7 @@ import kotlinx.serialization.json.buildJsonObject
 class DesignSuggestionsUiTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
 
   private val design: UiBuilderDocument = run {
@@ -146,7 +146,7 @@ class DesignSuggestionsUiTest {
       assertTrue(
         onAllNodesWithText("Suggestion: Warmer title with a subtitle")
           .fetchSemanticsNodes()
-          .isEmpty()
+          .isEmpty(),
       )
     }
 
@@ -191,7 +191,7 @@ class DesignSuggestionsUiTest {
       }
       waitForIdle()
       assertTrue(
-        onAllNodesWithText("Suggestions", substring = true).fetchSemanticsNodes().isEmpty()
+        onAllNodesWithText("Suggestions", substring = true).fetchSemanticsNodes().isEmpty(),
       )
     }
 
@@ -204,8 +204,8 @@ class DesignSuggestionsUiTest {
           {"suggestions":[{"suggestionId":"design-s1","summary":"Bigger button",
             "proposedBy":"agent:x","proposerKind":"agent","displayName":"X",
             "createdAtEpochMillis":5,"forkRevision":12,"operationIds":["a","b"],"extra":true}]}
-          """
-        )
+          """,
+        ),
       )
     val one = listed.single()
     assertEquals("design-s1", one.suggestionId)
@@ -225,7 +225,7 @@ class DesignSuggestionsUiTest {
            "skippedOperationIds":[]}
           """,
           one,
-        )
+        ),
       )
     assertEquals(2, merged.landed)
     assertEquals(14, merged.atRevision)
@@ -245,7 +245,7 @@ class DesignSuggestionsUiTest {
            "remaining":0}
           """,
           one,
-        )
+        ),
       )
     assertEquals("b", refused.operationId)
     assertEquals("edit b changes cta, which is no longer in the design.", refused.reason)

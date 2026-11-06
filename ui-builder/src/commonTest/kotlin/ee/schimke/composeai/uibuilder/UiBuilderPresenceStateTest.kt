@@ -35,7 +35,7 @@ class UiBuilderPresenceStateTest {
       fresh.expire(100 + UI_BUILDER_PRESENCE_EXPIRY_MILLIS - 1).collaborators("local").size,
     )
     assertTrue(
-      fresh.expire(100 + UI_BUILDER_PRESENCE_EXPIRY_MILLIS).collaborators("local").isEmpty()
+      fresh.expire(100 + UI_BUILDER_PRESENCE_EXPIRY_MILLIS).collaborators("local").isEmpty(),
     )
     assertTrue(UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS < UI_BUILDER_PRESENCE_EXPIRY_MILLIS)
   }

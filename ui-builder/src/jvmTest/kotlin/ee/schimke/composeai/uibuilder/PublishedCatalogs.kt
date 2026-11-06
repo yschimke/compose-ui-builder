@@ -55,7 +55,7 @@ internal fun publishedTestExportRecord(
   val root = Path.of(checkNotNull(System.getProperty("compose.uiBuilder.catalogDir")))
   fun readRecord(path: Path): ComponentRecordFile =
     Json.decodeFromString(
-      GZIPInputStream(Files.newInputStream(path)).use { it.readBytes().decodeToString() }
+      GZIPInputStream(Files.newInputStream(path)).use { it.readBytes().decodeToString() },
     )
   val record = readRecord(root.resolve("$systemId/components.json.gz"))
   val published =
@@ -69,7 +69,7 @@ internal fun publishedTestExportRecord(
   val foundationPublished =
     foundationPolicyOverride
       ?: GZIPInputStream(
-          Files.newInputStream(root.resolve("compose-foundation/ui-builder.json.gz"))
+          Files.newInputStream(root.resolve("compose-foundation/ui-builder.json.gz")),
         )
         .use { it.readBytes().decodeToString() }
   val foundationComposed =

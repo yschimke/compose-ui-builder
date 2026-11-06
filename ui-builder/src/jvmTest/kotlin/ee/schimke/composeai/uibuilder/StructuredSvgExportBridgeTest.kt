@@ -70,12 +70,12 @@ class StructuredSvgExportBridgeTest {
     assertTrue(textElements.all { it.attributes["font-style"] == "normal" })
     assertTrue(textElements.all { it.attributes["data-compose-node-id"] in document.nodes })
     assertTrue(
-      textElements.all { it.attributes["data-compose-typography-source"] == "material3-token-v1" }
+      textElements.all { it.attributes["data-compose-typography-source"] == "material3-token-v1" },
     )
     assertTrue(
       textElements.all {
         it.attributes["data-compose-typography-family-source"] == "figma-inter-adapter-v1"
-      }
+      },
     )
     assertTrue(textElements.all { it.attributes["data-compose-typography-token"] != null })
     assertEquals(
@@ -160,8 +160,8 @@ class StructuredSvgExportBridgeTest {
               if (value == null) node.properties - "fontWeight"
               else
                 node.properties +
-                  ("fontWeight" to Json.parseToJsonElement("""{"type":"enum","value":"$value"}"""))
-            )
+                  ("fontWeight" to Json.parseToJsonElement("""{"type":"enum","value":"$value"}""")),
+            ),
         )
       }
 
@@ -196,7 +196,7 @@ class StructuredSvgExportBridgeTest {
             slots =
               node.slots.mapValues { (_, children) ->
                 children.map { child -> if (child == previousId) escapedId else child }
-              }
+              },
           )
         }
         .toMutableMap()
@@ -230,7 +230,7 @@ class StructuredSvgExportBridgeTest {
               mapOf(
                 "widthDp" to Json.parseToJsonElement("24"),
                 "heightDp" to Json.parseToJsonElement("24"),
-              )
+              ),
           ),
         roots = listOf(icon.id),
         nodes = mapOf(icon.id to icon),
@@ -243,7 +243,7 @@ class StructuredSvgExportBridgeTest {
           iconDocument.job(StructuredSvgRecorderKind.JVM_SKIA_SVG_CANVAS),
           iconCatalog,
           JvmSkiaStructuredSvgRecorder,
-        )
+        ),
       )
 
     assertTrue(result.svg.contains("<path"))
@@ -309,7 +309,7 @@ class StructuredSvgExportBridgeTest {
       catalog
         .copy(
           components =
-            catalog.components.filter { it.componentId in setOf("m3/card", "asset/image") }
+            catalog.components.filter { it.componentId in setOf("m3/card", "asset/image") },
         )
         .asVectorVerified()
         .withComponentSvg("asset/image") { svg ->
@@ -326,7 +326,7 @@ class StructuredSvgExportBridgeTest {
           matchParentDocument.job(StructuredSvgRecorderKind.JVM_SKIA_SVG_CANVAS),
           matchParentCatalog,
           JvmSkiaStructuredSvgRecorder,
-        )
+        ),
       )
 
     assertEquals(1, Regex("<image\\b").findAll(result.svg).count())
@@ -334,8 +334,8 @@ class StructuredSvgExportBridgeTest {
     assertTrue(result.svg.contains("data-compose-raster-size-px=\"128x128\""))
     assertTrue(
       result.svg.contains(
-        "project-owned-artwork/v1/jetcaster.cover.android-developers-backstage/square-512/rendered-128x128"
-      )
+        "project-owned-artwork/v1/jetcaster.cover.android-developers-backstage/square-512/rendered-128x128",
+      ),
     )
   }
 
@@ -399,9 +399,9 @@ class StructuredSvgExportBridgeTest {
       checkNotNull(
         parseStrictSvg(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"2\" height=\"2\">" +
-              "<rect width=\"1\" height=\"1\"/><image width=\"1\" height=\"1\" href=\"$href\"/></svg>"
+              "<rect width=\"1\" height=\"1\"/><image width=\"1\" height=\"1\" href=\"$href\"/></svg>",
           )
-          .document
+          .document,
       )
     val blockers =
       validateRasterRecords(
@@ -415,7 +415,7 @@ class StructuredSvgExportBridgeTest {
             renderedHeightPx = 1,
             embeddedPayloadSha256 = sha256Hex(href),
             reason = "fixture",
-          )
+          ),
         ),
         listOf("asset"),
       )
@@ -433,7 +433,7 @@ class StructuredSvgExportBridgeTest {
             catalog.components.filter {
               it.componentId in
                 setOf("m3/card", "layout/row", "layout/column", "m3/text", "asset/image")
-            }
+            },
         )
         .asVectorVerified()
         .withComponentSvg("asset/image") { svg ->
@@ -450,7 +450,7 @@ class StructuredSvgExportBridgeTest {
           representative.job(StructuredSvgRecorderKind.JVM_SKIA_SVG_CANVAS),
           representativeCatalog,
           JvmSkiaStructuredSvgRecorder,
-        )
+        ),
       )
     val repeated =
       assertIs<SavedDocumentSvgExportResult.Ok>(
@@ -458,7 +458,7 @@ class StructuredSvgExportBridgeTest {
           representative.job(StructuredSvgRecorderKind.JVM_SKIA_SVG_CANVAS),
           representativeCatalog,
           JvmSkiaStructuredSvgRecorder,
-        )
+        ),
       )
 
     assertEquals(result.svg, repeated.svg)
@@ -473,8 +473,8 @@ class StructuredSvgExportBridgeTest {
     assertTrue(result.svg.contains("data-compose-node-id=\"detail-artwork\""))
     assertTrue(
       result.svg.contains(
-        "data-compose-raster-source=\"project-owned-artwork/v1/jetcaster.cover.android-developers-backstage/square-512/rendered-152x152\""
-      )
+        "data-compose-raster-source=\"project-owned-artwork/v1/jetcaster.cover.android-developers-backstage/square-512/rendered-152x152\"",
+      ),
     )
     assertTrue(result.svg.contains("data-compose-raster-size-px=\"152x152\""))
     val expectedSourceDigest = runBlocking {
@@ -485,7 +485,7 @@ class StructuredSvgExportBridgeTest {
     assertTrue(result.svg.contains("rasterSources=detail-artwork@project-owned-artwork/v1/"))
     assertTrue(result.svg.contains("data-compose-raster-reason="))
     assertTrue(
-      result.svg.contains("documentContentSha256=${sha256Hex(canonicalDocument(representative))}")
+      result.svg.contains("documentContentSha256=${sha256Hex(canonicalDocument(representative))}"),
     )
     assertFalse(Regex("(?:href|src)=\"(?:https?:|file:|/)").containsMatchIn(result.svg))
     assertSvgRasterCloseToCompose(
@@ -644,13 +644,13 @@ class StructuredSvgExportBridgeTest {
                 ),
             )
           },
-        )
+        ),
       )
 
     assertTrue(
       result.svg.contains(
-        "rasterFallbackNodeIds=detail-artwork,main-episode-image,podcast-card-android-image,podcast-card-google-image"
-      )
+        "rasterFallbackNodeIds=detail-artwork,main-episode-image,podcast-card-android-image,podcast-card-google-image",
+      ),
     )
     assertTrue(result.svg.contains("data:image/png;base64,AA=="))
     assertTrue(result.svg.contains("data-compose-node-id=\"detail-artwork\""))
@@ -675,7 +675,7 @@ class StructuredSvgExportBridgeTest {
     assertTrue(
       assertIs<SavedDocumentSvgExportResult.Rejected>(external).blockers.any {
         it.code == "SVG_EXTERNAL_REFERENCE"
-      }
+      },
     )
 
     val wrapper =
@@ -722,12 +722,12 @@ class StructuredSvgExportBridgeTest {
       executeFixtureSvg(
         "<svg width=\"1280\" height=\"800\"><rect width=\"1\" height=\"1\"/>" +
           "<image x=\"0\" y=\"0\" width=\"1280\" height=\"800\" " +
-          "href=\"data:image/png;base64,AA==\"/></svg>"
+          "href=\"data:image/png;base64,AA==\"/></svg>",
       )
     assertTrue(
       assertIs<SavedDocumentSvgExportResult.Rejected>(result).blockers.any {
         it.code == "FULL_SCREEN_RASTER_WRAPPER"
-      }
+      },
     )
   }
 
@@ -740,8 +740,8 @@ class StructuredSvgExportBridgeTest {
           JsonObject(
             document.environment.toMutableMap().apply {
               put("locale", Json.parseToJsonElement("\"fr-FR\""))
-            }
-          )
+            },
+          ),
       )
     val result =
       executeSavedDocumentSvgExport(
@@ -756,7 +756,7 @@ class StructuredSvgExportBridgeTest {
     assertTrue(
       assertIs<SavedDocumentSvgExportResult.Rejected>(result).blockers.any {
         it.code == "UNSUPPORTED_SVG_ENVIRONMENT"
-      }
+      },
     )
   }
 
@@ -797,8 +797,8 @@ class StructuredSvgExportBridgeTest {
         properties =
           JsonObject(
             card.properties +
-              ("elevationDp" to Json.parseToJsonElement("""{"type":"float","value":6.0}"""))
-          )
+              ("elevationDp" to Json.parseToJsonElement("""{"type":"float","value":6.0}""")),
+          ),
       )
     val title = nodes.getValue("detail-podcast-title")
     nodes[title.id] =
@@ -807,8 +807,10 @@ class StructuredSvgExportBridgeTest {
           JsonObject(
             title.properties +
               ("text" to
-                Json.parseToJsonElement("""{"type":"string","value":"Gate 0 structured export"}"""))
-          )
+                Json.parseToJsonElement(
+                  """{"type":"string","value":"Gate 0 structured export"}""",
+                )),
+          ),
       )
     val copy = nodes.getValue("detail-hero-copy")
     nodes[copy.id] =
@@ -830,9 +832,9 @@ class StructuredSvgExportBridgeTest {
           component.copy(
             svg =
               checkNotNull(component.svg)
-                .copy(status = "verified", fallback = "none", blocksExport = false)
+                .copy(status = "verified", fallback = "none", blocksExport = false),
           )
-        }
+        },
     )
 
   private fun assertSvgRasterCloseToCompose(
@@ -909,7 +911,7 @@ class StructuredSvgExportBridgeTest {
     componentId: String,
     transform:
       (
-        ee.schimke.composeai.uibuilder.capability.SvgCapability
+        ee.schimke.composeai.uibuilder.capability.SvgCapability,
       ) -> ee.schimke.composeai.uibuilder.capability.SvgCapability,
   ) =
     copy(
@@ -918,7 +920,7 @@ class StructuredSvgExportBridgeTest {
           if (component.componentId == componentId) {
             component.copy(svg = transform(checkNotNull(component.svg)))
           } else component
-        }
+        },
     )
 
   private fun resource(path: String): String =

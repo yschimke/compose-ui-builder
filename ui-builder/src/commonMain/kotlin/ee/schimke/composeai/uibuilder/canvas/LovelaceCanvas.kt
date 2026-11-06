@@ -185,7 +185,7 @@ private fun LovelaceGrid(
       val size =
         measurable.measure(
           if (fixedHeight == null) Constraints(maxWidth = itemWidth, minWidth = itemWidth)
-          else Constraints.fixed(itemWidth, fixedHeight)
+          else Constraints.fixed(itemWidth, fixedHeight),
         )
       val rows = fixedRows ?: ceil(size.height.toDouble() / rowHeight).toInt().coerceAtLeast(1)
       var y = 0

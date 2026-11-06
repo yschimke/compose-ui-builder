@@ -31,7 +31,7 @@ class RemoteScopedSourceExportTest {
           root,
           "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid",
         )
-        .readText()
+        .readText(),
     )
 
   private fun exported(document: UiBuilderDocument) =
@@ -41,7 +41,7 @@ class RemoteScopedSourceExportTest {
         "proof.repetition.remote",
         emptyMap(),
         WidgetAssetBytes { null },
-      )
+      ),
     )
 
   private fun edit(
@@ -60,7 +60,7 @@ class RemoteScopedSourceExportTest {
           null,
           emptyMap(),
           WidgetAssetBytes { null },
-        )
+        ),
       )
     assertTrue(result.reasons.any { reason in it }, result.reasons.toString())
   }
@@ -92,7 +92,7 @@ class RemoteScopedSourceExportTest {
       @Composable @RemoteComposable
       fun RemoteRepeatedContent() { ${result.functionName}() }
     """
-          .trimIndent()
+          .trimIndent(),
       )
   }
 
@@ -100,7 +100,7 @@ class RemoteScopedSourceExportTest {
     ignoreUnknownKeys = true
   }
     .decodeFromString<UiBuilderDocument>(
-      File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
+      File(root, "experiments/remote-state-selection/bound-actions.uid").readText(),
     )
 
   @Test
@@ -112,7 +112,7 @@ class RemoteScopedSourceExportTest {
           "proof.boundactions.remote",
           emptyMap(),
           WidgetAssetBytes { null },
-        )
+        ),
       )
     assertEquals(2, Regex("capture0: \\(kotlin.Int\\) ->").findAll(result.source).count())
     assertContains(result.source, "capture0 = capture0")
@@ -126,7 +126,7 @@ class RemoteScopedSourceExportTest {
       .writeText(
         result.source +
           "\n" +
-          "@Composable @RemoteComposable\nfun RemoteRepeatedContent() { ${result.functionName}() }\n"
+          "@Composable @RemoteComposable\nfun RemoteRepeatedContent() { ${result.functionName}() }\n",
       )
   }
 
@@ -137,8 +137,8 @@ class RemoteScopedSourceExportTest {
         it.copy(
           component =
             obj(
-              """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":"rowGap"},"destination":{"type":"string","value":"wrong"}}}"""
-            )
+              """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":"rowGap"},"destination":{"type":"string","value":"wrong"}}}""",
+            ),
         )
       },
       "expected kotlin.Int",
@@ -148,8 +148,8 @@ class RemoteScopedSourceExportTest {
         it.copy(
           eventBindings =
             obj(
-              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"missing"}}]}"""
-            )
+              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"missing"}}]}""",
+            ),
         )
       },
       "missing component argument",
@@ -159,8 +159,8 @@ class RemoteScopedSourceExportTest {
         it.copy(
           eventBindings =
             obj(
-              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"spacing"}}]}"""
-            )
+              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"spacing"}}]}""",
+            ),
         )
       },
       "used as both",
@@ -175,8 +175,8 @@ class RemoteScopedSourceExportTest {
         it.copy(
           eventBindings =
             obj(
-              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"destination"}},{"type":"set","variable":"page","value":10}]}"""
-            )
+              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"destination"}},{"type":"set","variable":"page","value":10}]}""",
+            ),
         )
       }
     assertContains(
@@ -204,8 +204,8 @@ class RemoteScopedSourceExportTest {
               it.copy(
                 eventBindings =
                   obj(
-                    """{"click":[{"type":"set","variable":"chosen","value":{"type":"binding","value":"destination"}}]}"""
-                  )
+                    """{"click":[{"type":"set","variable":"chosen","value":{"type":"binding","value":"destination"}}]}""",
+                  ),
               )
             },
             "inner-place",
@@ -213,8 +213,8 @@ class RemoteScopedSourceExportTest {
             it.copy(
               component =
                 obj(
-                  """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":"rowGap"},"destination":{"type":"$kind","value":$literal}}}"""
-                )
+                  """{"componentKey":"pair","arguments":{"spacing":{"type":"binding","value":"rowGap"},"destination":{"type":"$kind","value":$literal}}}""",
+                ),
             )
           }
           .let {
@@ -224,8 +224,8 @@ class RemoteScopedSourceExportTest {
               node.copy(
                 component =
                   obj(
-                    """{"componentKey":"forward","arguments":{"rowGap":{"type":"binding","value":"gap"}}}"""
-                  )
+                    """{"componentKey":"forward","arguments":{"rowGap":{"type":"binding","value":"gap"}}}""",
+                  ),
               )
             }
           }
@@ -236,9 +236,9 @@ class RemoteScopedSourceExportTest {
                   it.stateVariables +
                     ("chosen" to
                       obj(
-                        """{"type":"value","valueType":"$kind","initialValue":$literal,"nullable":false}"""
-                      ))
-                )
+                        """{"type":"value","valueType":"$kind","initialValue":$literal,"nullable":false}""",
+                      )),
+                ),
             )
           }
       val result =
@@ -248,7 +248,7 @@ class RemoteScopedSourceExportTest {
             "proof.boundactions.types.$kind",
             emptyMap(),
             WidgetAssetBytes { null },
-          )
+          ),
         )
       assertContains(
         result.source,
@@ -266,8 +266,8 @@ class RemoteScopedSourceExportTest {
         it.copy(
           eventBindings =
             obj(
-              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"itemId"}}]}"""
-            )
+              """{"click":[{"type":"set","variable":"page","value":{"type":"binding","value":"itemId"}}]}""",
+            ),
         )
       }
     assertContains(exported(document).source, "clickable(valueChange(page, uiRow0.argument0.ri))")
@@ -279,7 +279,7 @@ class RemoteScopedSourceExportTest {
       edit(fixture(), "loop") {
         it.copy(
           properties =
-            JsonObject(it.properties + ("data" to obj("""{"type":"list","values":[]}""")))
+            JsonObject(it.properties + ("data" to obj("""{"type":"list","values":[]}"""))),
         )
       }
     val source = exported(empty).source
@@ -319,7 +319,7 @@ class RemoteScopedSourceExportTest {
       edit(fixture(), "place") {
         it.copy(
           component =
-            obj("""{"componentKey":"pair","arguments":{"other":{"type":"float","value":3}}}""")
+            obj("""{"componentKey":"pair","arguments":{"other":{"type":"float","value":3}}}"""),
         )
       },
       "unknown component argument",
@@ -335,7 +335,7 @@ class RemoteScopedSourceExportTest {
         "design/component-instance",
         component =
           obj(
-            """{"componentKey":"inner","arguments":{"spacing":{"type":"binding","value":"spacing"}}}"""
+            """{"componentKey":"inner","arguments":{"spacing":{"type":"binding","value":"spacing"}}}""",
           ),
       )
     val nested =
@@ -361,7 +361,7 @@ class RemoteScopedSourceExportTest {
           id = "inner",
           properties =
             obj(
-              """{"data":{"type":"list","values":[{"type":"object","fields":{"gap":{"type":"binding","value":"gap"}}}]}}"""
+              """{"data":{"type":"list","values":[{"type":"object","fields":{"gap":{"type":"binding","value":"gap"}}}]}}""",
             ),
         )
     val nested =
@@ -387,14 +387,16 @@ class RemoteScopedSourceExportTest {
         exported(
             edit(fixture(), id) {
               it.copy(eventBindings = fixture().nodes.getValue("red").eventBindings)
-            }
+            },
           )
           .source
       assertContains(source, "clickable(valueChange(page, 10.ri))")
       val click = fixture().nodes.getValue("red").eventBindings.getValue("click")
       val longPress =
         exported(
-            edit(fixture(), id) { it.copy(eventBindings = JsonObject(mapOf("longClick" to click))) }
+            edit(fixture(), id) {
+              it.copy(eventBindings = JsonObject(mapOf("longClick" to click)))
+            },
           )
           .source
       assertContains(longPress, "onLongClick = valueChange(page, 10.ri)")
@@ -416,9 +418,9 @@ class RemoteScopedSourceExportTest {
         it.copy(
           modifiers =
             Json.parseToJsonElement(
-                """[{"type":"width","widthDp":{"type":"binding","value":"gap"}}]"""
+                """[{"type":"width","widthDp":{"type":"binding","value":"gap"}}]""",
               )
-              .jsonArray
+              .jsonArray,
         )
       },
       "modifier bindings",

@@ -91,13 +91,13 @@ class AdaptiveWearWidgetTest {
                       mapOf(
                         AdaptiveWearWidget.HEADLINE to listOf(taken[0]),
                         AdaptiveWearWidget.SUPPORTING to listOf(taken[1]),
-                      )
+                      ),
                 )
               else -> node
             }
           } - "adaptive-headline" - "adaptive-supporting" +
             (taken[0] to adaptive.nodes.getValue("adaptive-headline").copy(id = taken[0])) +
-            (taken[1] to adaptive.nodes.getValue("adaptive-supporting").copy(id = taken[1]))
+            (taken[1] to adaptive.nodes.getValue("adaptive-supporting").copy(id = taken[1])),
       )
 
     val large = AdaptiveWearWidget.resolve(renamed, WearWidgetScaffoldSize.Large)
@@ -107,7 +107,7 @@ class AdaptiveWearWidgetTest {
     }
     val layout =
       large.nodes.getValue(
-        large.nodes.getValue("wear-widget-adaptive").slots.getValue("content").single()
+        large.nodes.getValue("wear-widget-adaptive").slots.getValue("content").single(),
       )
     val text = large.nodes.getValue(layout.slots.getValue("children").first())
     assertEquals("layout/column", text.componentId)
@@ -171,7 +171,7 @@ class AdaptiveWearWidgetTest {
     WearWidgetScaffoldSize.entries.forEach { size ->
       val rendered =
         assertIs<WearWidgetNativePreviewExporter.Result.Emitted>(
-          WearWidgetNativePreviewExporter.export(adaptive, "preview", adaptiveSize = size)
+          WearWidgetNativePreviewExporter.export(adaptive, "preview", adaptiveSize = size),
         )
       assertEquals(
         size == WearWidgetScaffoldSize.Large,

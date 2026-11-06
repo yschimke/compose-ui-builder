@@ -40,7 +40,7 @@ class CatalogOwnedNewDesignTest {
               put("platform", JsonPrimitive(platform))
               label?.let { put("platformLabel", JsonPrimitive(it)) }
               templates?.let { put("templates", JsonArray(it.map(::JsonPrimitive))) }
-            }
+            },
           )
       }
       .build()
@@ -60,7 +60,7 @@ class CatalogOwnedNewDesignTest {
   fun `numeric template ids keep their published list order`() {
     val card =
       catalogOwnedNewDesignCatalog(
-        catalog("numbered", "mobile", null, listOf("10.json", "2.json", "1.json"))
+        catalog("numbered", "mobile", null, listOf("10.json", "2.json", "1.json")),
       )
     assertEquals(listOf("10", "2", "1"), card.templates.map { it.id })
   }
@@ -142,7 +142,7 @@ class CatalogOwnedNewDesignTest {
         it.statusSemantics =
           JsonObject(
             catalog.statusSemantics +
-              ("newDesign" to kotlinx.serialization.json.Json.parseToJsonElement(newDesign))
+              ("newDesign" to kotlinx.serialization.json.Json.parseToJsonElement(newDesign)),
           )
       }
       .build()
@@ -179,7 +179,7 @@ class CatalogOwnedNewDesignTest {
           withNewDesign(wear, """{"order": 2}"""),
           withNewDesign(m3, """{"order": 1}"""),
           a2ui,
-        )
+        ),
       )
     assertEquals(listOf("m3-catalog", "wear-m3", "a2ui-catalog"), cards.map { it.systemId })
   }
@@ -220,7 +220,7 @@ class CatalogOwnedNewDesignTest {
     assertFalse(quiet.isPrimary)
     // A built-in primary catalog can step out of the row.
     assertFalse(
-      catalogOwnedNewDesignCatalog(withNewDesign(wear, """{"primary": false}""")).isPrimary
+      catalogOwnedNewDesignCatalog(withNewDesign(wear, """{"primary": false}""")).isPrimary,
     )
   }
 }

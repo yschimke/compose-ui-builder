@@ -24,7 +24,7 @@ class WearNewDesignSeedTest {
         setOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        )
+        ),
     )
 
   private val wear =
@@ -34,7 +34,7 @@ class WearNewDesignSeedTest {
 
   private val fixture =
     Json.parseToJsonElement(
-        File("../docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json").readText()
+        File("../docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json").readText(),
       )
       .jsonObject
 
@@ -78,7 +78,7 @@ class WearNewDesignSeedTest {
           UiBuilderServiceCall(
             AuthenticatedUiBuilderActor("owner"),
             UiBuilderServiceRequest.CreateDesign(document),
-          )
+          ),
         )
       }
       assertIs<UiBuilderServiceResponse.Snapshot>(response, "$template: $response")
@@ -94,7 +94,7 @@ class WearNewDesignSeedTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }

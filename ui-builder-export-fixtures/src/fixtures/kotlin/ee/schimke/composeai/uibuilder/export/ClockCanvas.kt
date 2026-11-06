@@ -198,12 +198,12 @@ class ClockCanvas private constructor(private val sizeDp: Int) {
                     "type" to JsonPrimitive("size"),
                     "widthDp" to JsonPrimitive(sizeDp),
                     "heightDp" to JsonPrimitive(sizeDp),
-                  )
+                  ),
                 ),
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive("center"))
+                  mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive("center")),
                 ),
-              )
+              ),
             ),
           slots = mapOf(UiDrawing.OPS_SLOT to canvas.open.single()),
         )
@@ -230,7 +230,7 @@ class ClockCanvas private constructor(private val sizeDp: Int) {
                 // 10:10:30, the watch-face convention: at a fixture's noon every hand stacks on
                 // twelve, and the picture cannot show that each turns by its own formula.
                 "fixedTime" to JsonPrimitive(PREVIEW_TIME),
-              )
+              ),
           ),
         stateVariables = JsonObject(emptyMap()),
         roots = listOf(rootId),

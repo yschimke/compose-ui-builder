@@ -348,7 +348,7 @@ class CollaborationConvergenceTest {
           "browser-a",
           4,
           DesignOperation.InsertNode(
-            UiBuilderNode("second-parent", "column", slots = mapOf("content" to listOf("a")))
+            UiBuilderNode("second-parent", "column", slots = mapOf("content" to listOf("a"))),
           ),
         ),
       )
@@ -369,7 +369,7 @@ class CollaborationConvergenceTest {
           nodes =
             document().nodes +
               ("container" to
-                container.copy(slots = container.slots + ("extras" to listOf("b", "a"))))
+                container.copy(slots = container.slots + ("extras" to listOf("b", "a")))),
         )
     val initial = CollaborationState(malformedDocument)
     val application =
@@ -424,7 +424,7 @@ class CollaborationConvergenceTest {
             nodes =
               base.nodes + ("container" to container.copy(slots = container.slots - "extras")),
           )
-        }
+        },
       )
     val touched =
       CollaborationReducer.apply(
@@ -1266,9 +1266,9 @@ class CollaborationConvergenceTest {
             "tail" to UiBuilderNode("tail", "button"),
             "container" to
               container.copy(
-                slots = mapOf("items" to listOf("anchor", "a", "tail"), "extras" to listOf("b"))
+                slots = mapOf("items" to listOf("anchor", "a", "tail"), "extras" to listOf("b")),
               ),
-          )
+          ),
     )
   }
 
@@ -1304,7 +1304,7 @@ class CollaborationConvergenceTest {
             component("button", "enabled" to "boolean"),
             component("text"),
           ),
-      )
+      ),
     )
   }
 }

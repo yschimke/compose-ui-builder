@@ -15,12 +15,12 @@ val embedComponentRecord =
   tasks.register<EmbedComponentRecord>("embedComponentRecord") {
     record.set(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-components-v1.json"))
     foundation.set(
-      rootProject.file("docs/design/fixtures/ui-builder/compose-foundation-components-v1.json")
+      rootProject.file("docs/design/fixtures/ui-builder/compose-foundation-components-v1.json"),
     )
     output.set(
       layout.buildDirectory.file(
-        "generated/componentRecord/ee/schimke/composeai/uibuilder/EmbeddedComponentRecord.kt"
-      )
+        "generated/componentRecord/ee/schimke/composeai/uibuilder/EmbeddedComponentRecord.kt",
+      ),
     )
   }
 
@@ -29,8 +29,8 @@ val embedReleaseNotes =
     changelog.set(rootProject.file("CHANGELOG.md"))
     output.set(
       layout.buildDirectory.file(
-        "generated/releaseNotes/ee/schimke/composeai/uibuilder/editor/EmbeddedReleaseNotes.kt"
-      )
+        "generated/releaseNotes/ee/schimke/composeai/uibuilder/editor/EmbeddedReleaseNotes.kt",
+      ),
     )
   }
 
@@ -90,7 +90,7 @@ kotlin {
   sourceSets {
     commonMain {
       kotlin.srcDir(
-        embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") }
+        embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") },
       )
       kotlin.srcDir(embedReleaseNotes.map { layout.buildDirectory.dir("generated/releaseNotes") })
     }
@@ -222,7 +222,7 @@ tasks
           producer.name.startsWith("prepareComposeResourcesTaskFor") ||
           producer.name.startsWith("copyNonXmlValueResourcesFor") ||
           producer.name.startsWith("convertXmlValueResourcesFor")
-      }
+      },
     )
   }
 
@@ -292,10 +292,10 @@ tasks.register<JavaExec>("generateJetcasterComposeFixture") {
   args(
     rootProject.layout.projectDirectory
       .file(
-        "ui-builder-generated-jetcaster/src/wasmJsMain/kotlin/generated/uibuilder/JetcasterDiscoverExpanded.kt"
+        "ui-builder-generated-jetcaster/src/wasmJsMain/kotlin/generated/uibuilder/JetcasterDiscoverExpanded.kt",
       )
       .asFile
-      .absolutePath
+      .absolutePath,
   )
 }
 
@@ -390,8 +390,8 @@ tasks.register<VerifyGeneratedSource>("checkJetcasterComposeFixture") {
   dependsOn(formatJetcasterComposeFixtureForCheck)
   checkedIn.set(
     rootProject.layout.projectDirectory.file(
-      "ui-builder-generated-jetcaster/src/wasmJsMain/kotlin/generated/uibuilder/JetcasterDiscoverExpanded.kt"
-    )
+      "ui-builder-generated-jetcaster/src/wasmJsMain/kotlin/generated/uibuilder/JetcasterDiscoverExpanded.kt",
+    ),
   )
   expected.set(generatedJetcasterCheckFile)
 }
@@ -441,7 +441,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec>()
   binaryenArguments.set(
     defaults.subList(0, insertAt) +
       wasmNoInlinePatterns.map { "--no-inline=$it" } +
-      defaults.subList(insertAt, defaults.size)
+      defaults.subList(insertAt, defaults.size),
   )
 }
 
@@ -524,7 +524,7 @@ tasks.register<Sync>("wasmFrontendDist") {
       worker
         .readText()
         .replace("@UI_BUILDER_SW_VERSION@", version)
-        .replace("@UI_BUILDER_SW_BUNDLE@", bundle)
+        .replace("@UI_BUILDER_SW_BUNDLE@", bundle),
     )
   }
 }
@@ -546,8 +546,8 @@ afterEvaluate {
   tasks.named<ee.schimke.composeai.plugin.BundlePreviewTask>("composePreviewBundle") {
     previewIds.set(
       listOf(
-        "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
-      )
+        "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview",
+      ),
     )
   }
 }

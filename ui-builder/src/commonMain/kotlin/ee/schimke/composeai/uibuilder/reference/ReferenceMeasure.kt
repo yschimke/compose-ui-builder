@@ -101,7 +101,7 @@ internal fun DesignCapture(
       .drawWithContent {
         layer.record { this@drawWithContent.drawContent() }
         drawLayer(layer)
-      }
+      },
   ) {
     UiBuilderSurface(document = document, editorOverlay = false)
   }

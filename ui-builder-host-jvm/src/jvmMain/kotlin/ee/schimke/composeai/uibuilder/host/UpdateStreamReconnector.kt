@@ -40,7 +40,7 @@ internal class UpdateStreamReconnector(
     while (true) {
       val wait = reconnectDelay(attempt)
       onStatus(
-        "Disconnected from the server · reconnecting in ${wait.inWholeSeconds.coerceAtLeast(1)}s"
+        "Disconnected from the server · reconnecting in ${wait.inWholeSeconds.coerceAtLeast(1)}s",
       )
       sleep(wait)
       try {

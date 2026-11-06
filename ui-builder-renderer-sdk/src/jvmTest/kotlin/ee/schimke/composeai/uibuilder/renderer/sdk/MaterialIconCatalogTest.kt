@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class MaterialIconCatalogTest {
   private val inventory: List<GoogleMaterialIcon> =
     File(
-        checkNotNull(System.getProperty("materialIconInventory")) { "materialIconInventory unset" }
+        checkNotNull(System.getProperty("materialIconInventory")) { "materialIconInventory unset" },
       )
       .readLines()
       .filterNot { it.startsWith("#") || it.isBlank() }
@@ -35,7 +35,7 @@ class MaterialIconCatalogTest {
       inventory.sortedWith(
         compareByDescending(GoogleMaterialIcon::canonical)
           .thenBy(GoogleMaterialIcon::label)
-          .thenBy(GoogleMaterialIcon::key)
+          .thenBy(GoogleMaterialIcon::key),
       )
     assertEquals(ordered, GoogleMaterialIcons)
     ordered.forEachIndexed { position, icon ->

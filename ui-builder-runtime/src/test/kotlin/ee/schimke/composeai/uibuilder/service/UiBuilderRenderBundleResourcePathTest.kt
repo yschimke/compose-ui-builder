@@ -34,7 +34,7 @@ class UiBuilderRenderBundleResourcePathTest {
           }
         assertEquals(
           listOf(
-            "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
+            "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview",
           ),
           record.getValue("previews").jsonArray.map {
             it.jsonObject.getValue("id").jsonPrimitive.content

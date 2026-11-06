@@ -137,7 +137,7 @@ private val wearComponentPaletteCatalogPin: JsonObject =
         "capabilityDigest": "candidate",
         "nativeRuntimeId": "candidate"
       }
-      """
+      """,
     )
     .jsonObject
 
@@ -157,6 +157,6 @@ private val wearComponentPaletteEnvironment: JsonObject =
         "animations": "settled",
         "networkAccess": false
       }
-      """
+      """,
     )
     .jsonObject

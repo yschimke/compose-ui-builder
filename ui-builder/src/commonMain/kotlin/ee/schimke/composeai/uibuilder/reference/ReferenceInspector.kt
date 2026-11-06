@@ -380,7 +380,7 @@ private fun ReferenceMarkupControls(
           .semantics {
             contentDescription =
               role?.let { "Markup colour, $it" } ?: "Markup colour ${argb.toString(16)}"
-          }
+          },
       )
     }
   }
@@ -498,7 +498,7 @@ private fun ReferenceMarkupControls(
       // Links into the discussion right after drawing; the Talk panel opens with its pin offering
       // the last mark.
       TextButton(
-        onClick = { dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments)) }
+        onClick = { dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments)) },
       ) {
         Text("Discuss")
       }

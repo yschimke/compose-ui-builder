@@ -24,7 +24,7 @@ class UndoSnackbarMessageTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 

@@ -111,7 +111,7 @@ private fun UiBuilderDocument.onWatch(watchDp: Int?): UiBuilderDocument =
   if (watchDp == null) this
   else
     withEnvironmentOverrides(
-      mapOf("widthDp" to JsonPrimitive(watchDp), "heightDp" to JsonPrimitive(watchDp))
+      mapOf("widthDp" to JsonPrimitive(watchDp), "heightDp" to JsonPrimitive(watchDp)),
     )
 
 /**

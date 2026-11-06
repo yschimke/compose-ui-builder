@@ -60,8 +60,8 @@ class ProductionUiBuilderRuntimeTest {
                 .getValue("place")
                 .copy(
                   component =
-                    DesignComponentInstanceV1("pair", mapOf("gap" to StringValueV1("wide")))
-                ))
+                    DesignComponentInstanceV1("pair", mapOf("gap" to StringValueV1("wide"))),
+                )),
       )
     assertEquals("INVALID_PROPERTY_TYPE", catalogs.validate(wrong, catalog)?.code)
     val missing =
@@ -69,7 +69,7 @@ class ProductionUiBuilderRuntimeTest {
         nodes =
           placed.nodes +
             ("place" to
-              placed.nodes.getValue("place").copy(component = DesignComponentInstanceV1("pair")))
+              placed.nodes.getValue("place").copy(component = DesignComponentInstanceV1("pair"))),
       )
     assertEquals("INVALID_ARGUMENT_BINDING", catalogs.validate(missing, catalog)?.code)
   }
@@ -94,7 +94,7 @@ class ProductionUiBuilderRuntimeTest {
         .copy(
           nodes =
             document().nodes +
-              ("text" to document().nodes.getValue("text").copy(componentId = "m3/not-real"))
+              ("text" to document().nodes.getValue("text").copy(componentId = "m3/not-real")),
         )
     assertEquals("UNKNOWN_COMPONENT", catalogs.validate(invalid, catalog)?.code)
   }
@@ -185,8 +185,8 @@ class ProductionUiBuilderRuntimeTest {
                 .copy(
                   // `matchParentSize` is a real modifier and is not among the eighteen `m3/text`
                   // declares, so this is the exact shape the export would refuse.
-                  modifiers = listOf(MatchParentSizeModifierV1)
-                ))
+                  modifiers = listOf(MatchParentSizeModifierV1),
+                )),
       )
     val issue = catalogs.validate(modified, catalog)
     assertEquals("UNKNOWN_MODIFIER", issue?.code)
@@ -259,7 +259,7 @@ class ProductionUiBuilderRuntimeTest {
     // is simply a body that cannot be resolved.
     val cyclic =
       nested.copy(
-        components = nested.components + ("wrapper" to DesignComponentV1("Wrapper", "outer"))
+        components = nested.components + ("wrapper" to DesignComponentV1("Wrapper", "outer")),
       )
     assertEquals("UNKNOWN_COMPONENT", catalogs.validate(cyclic, catalog)?.code)
   }
@@ -285,7 +285,7 @@ class ProductionUiBuilderRuntimeTest {
     // A role the export can write but the canvas does not draw used to throw inside the renderer.
     val unknownRole =
       assertNotNull(
-        catalogs.validateWrite(catalog, coloured(ColorTokenValueV1("primaryContainer")), "color")
+        catalogs.validateWrite(catalog, coloured(ColorTokenValueV1("primaryContainer")), "color"),
       )
     assertEquals("color", unknownRole.field)
     assertTrue(unknownRole.message.contains("`primaryContainer`"), unknownRole.message)
@@ -315,7 +315,7 @@ class ProductionUiBuilderRuntimeTest {
 
     val unresolved =
       assertNotNull(
-        catalogs.validateWrite(catalog, card(StringValueV1("avatar-lain")), "containerImageKey")
+        catalogs.validateWrite(catalog, card(StringValueV1("avatar-lain")), "containerImageKey"),
       )
     assertEquals("INVALID_PROPERTY", unresolved.code)
     assertEquals("containerImageKey", unresolved.field)
@@ -324,7 +324,7 @@ class ProductionUiBuilderRuntimeTest {
         catalog,
         card(AssetKeyValueV1("jetcaster.cover.google-developers-podcast")),
         "containerImageKey",
-      )
+      ),
     )
   }
 
@@ -338,7 +338,7 @@ class ProductionUiBuilderRuntimeTest {
     // #484: the one property whose value the renderer must resolve was the one nothing checked.
     val unresolved =
       assertNotNull(
-        catalogs.validateWrite(catalog, image(StringValueV1("avatar-lain")), "assetKey")
+        catalogs.validateWrite(catalog, image(StringValueV1("avatar-lain")), "assetKey"),
       )
     assertEquals("INVALID_PROPERTY", unresolved.code)
     assertEquals("photo", unresolved.nodeId)
@@ -353,12 +353,12 @@ class ProductionUiBuilderRuntimeTest {
         catalog,
         image(AssetKeyValueV1("jetcaster.cover.google-developers-podcast")),
         "assetKey",
-      )
+      ),
     )
     // The editor's own insert placeholder is a key the canvas draws, so an insert from the palette
     // is not refused by the rule that refuses an agent's guess.
     assertNull(
-      catalogs.validateWrite(catalog, image(StringValueV1("editor.placeholder")), "assetKey")
+      catalogs.validateWrite(catalog, image(StringValueV1("editor.placeholder")), "assetKey"),
     )
 
     // The registry is also available to the catalog-owned Wear definition.
@@ -418,13 +418,13 @@ class ProductionUiBuilderRuntimeTest {
                   id = "widget",
                   componentId = "remote-m3/widget-container-small",
                   slots = mapOf("content" to emptyList()),
-                )
+                ),
             ),
         )
     val remoteCatalog = assertNotNull(catalogs.resolve(remoteDocument.catalogPin))
     assertNull(catalogs.validate(remoteDocument, remoteCatalog))
     assertTrue(
-      remoteCatalog.components.any { it.componentId == "remote-m3/widget-container-small" }
+      remoteCatalog.components.any { it.componentId == "remote-m3/widget-container-small" },
     )
     assertTrue(remoteCatalog.components.none { it.componentId == "m3/button" })
     assertEquals(
@@ -517,11 +517,11 @@ class ProductionUiBuilderRuntimeTest {
 
     val owner = AuthenticatedUiBuilderActor("owner")
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      executeProduction(service(), owner, UiBuilderServiceRequest.CreateDesign(document()))
+      executeProduction(service(), owner, UiBuilderServiceRequest.CreateDesign(document())),
     )
     val restarted = service()
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      executeProduction(restarted, owner, UiBuilderServiceRequest.OpenDesign("production-design"))
+      executeProduction(restarted, owner, UiBuilderServiceRequest.OpenDesign("production-design")),
     )
     listOf(ExportFormatV1.SVG, ExportFormatV1.PNG).forEach { format ->
       val error =
@@ -530,7 +530,7 @@ class ProductionUiBuilderRuntimeTest {
               restarted,
               owner,
               UiBuilderServiceRequest.ExportDesign("production-design", revision = 0, format),
-            )
+            ),
           )
           .error
       assertEquals(ServiceErrorCodeV1.BAD_REQUEST, error.code)
@@ -546,7 +546,7 @@ class ProductionUiBuilderRuntimeTest {
             revision = 0,
             ExportFormatV1.COMPOSE,
           ),
-        )
+        ),
       )
     assertEquals(1, exports)
     assertTrue(compose.artifact.content.contains("Hello from the saved design"))
@@ -616,7 +616,7 @@ class ProductionUiBuilderRuntimeTest {
       kotlinx.serialization.json
         .Json { ignoreUnknownKeys = true }
         .decodeFromString<ee.schimke.composeai.uibuilder.export.UiBuilderDocument>(
-          projectRendererDocument(source)
+          projectRendererDocument(source),
         )
     assertEquals(
       "body",
@@ -702,7 +702,7 @@ class ProductionUiBuilderRuntimeTest {
         Base64.getDecoder()
           .decode(editedPng.content)
           .decodeToString()
-          .contains("Exact edited document")
+          .contains("Exact edited document"),
       )
       assertTrue(editedSvg.content.contains("Exact edited document"))
       assertEquals(6, requests.size)
@@ -816,7 +816,7 @@ private fun executeProduction(
         override fun resumeWith(result: Result<UiBuilderServiceResponse>) {
           completion = result
         }
-      }
+      },
     )
   return completion?.getOrThrow() ?: error("synchronous service call suspended")
 }

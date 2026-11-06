@@ -88,8 +88,8 @@ object ProductionProjectFiles {
             "NO_ENTRY_FILES",
             "",
             message = "register at least one project .uid file",
-          )
-        )
+          ),
+        ),
       )
     }
     entryPaths.forEach(::visit)

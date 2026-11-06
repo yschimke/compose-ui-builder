@@ -52,7 +52,7 @@ class CanvasDeviceViewTest {
   private val loop = replay(loopFixture())
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
 
   @Test
@@ -219,7 +219,7 @@ class CanvasDeviceViewTest {
           Offset(
             (target.left.value + 3f) * density,
             (target.top + target.bottom).value / 2f * density,
-          )
+          ),
         )
       }
       waitForIdle()

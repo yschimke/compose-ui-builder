@@ -127,7 +127,7 @@ class UiBuilderPluginTest {
     build.writeText(
       build
         .readText()
-        .replace("entries.addAll(\"First.uid\", \"Second.uid\")", "entries.add(\"First.uid\")")
+        .replace("entries.addAll(\"First.uid\", \"Second.uid\")", "entries.add(\"First.uid\")"),
     )
     run("compileKotlin")
     assertFalse(output.resolve("example/Renamed.kt").exists())
@@ -173,7 +173,7 @@ class UiBuilderPluginTest {
     assertEquals(TaskOutcome.SUCCESS, result.task(":generateUiBuilderJvmMain")?.outcome)
     assertTrue(root.resolve("build/generated/uiBuilder/commonMain/kotlin/example/First.kt").isFile)
     assertFalse(
-      root.resolve("build/generated/uiBuilder/commonMain/kotlin/example/Second.kt").exists()
+      root.resolve("build/generated/uiBuilder/commonMain/kotlin/example/Second.kt").exists(),
     )
     assertEquals(TaskOutcome.SUCCESS, result.task(":compileKotlinWasmJs")?.outcome)
   }
@@ -182,7 +182,7 @@ class UiBuilderPluginTest {
   fun `registration mistakes fail explicitly`() {
     fixture(
       registrations =
-        "create(\"typo\") { entries.add(\"First.uid\"); records.from(\"records.json\") }"
+        "create(\"typo\") { entries.add(\"First.uid\"); records.from(\"records.json\") }",
     )
     assertContains(run("help", fail = true).output, "source set 'typo' does not exist")
     val build = root.resolve("build.gradle.kts")
@@ -190,7 +190,7 @@ class UiBuilderPluginTest {
       build
         .readText()
         .replace("create(\"typo\")", "create(\"main\")")
-        .replace("entries.add(\"First.uid\")", "entries.set(emptyList())")
+        .replace("entries.add(\"First.uid\")", "entries.set(emptyList())"),
     )
     assertContains(run("compileKotlin", fail = true).output, "NO_ENTRY_FILES")
   }
@@ -202,7 +202,7 @@ class UiBuilderPluginTest {
     val build = root.resolve("build.gradle.kts")
     build.writeText(
       build.readLines().filterNot { it.trim().startsWith("dependencies {") }.joinToString("\n") +
-        "\nuiBuilderGeneration { generatorVersion.set(\"not-a-release\") }\n"
+        "\nuiBuilderGeneration { generatorVersion.set(\"not-a-release\") }\n",
     )
     val result = run("compileKotlin", "generateUiBuilderSources")
     assertFalse(root.resolve("build/generated/uiBuilder").exists())

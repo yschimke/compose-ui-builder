@@ -28,7 +28,7 @@ class ComponentCallbackExportTest {
   private val record: ComponentRecordFile = run {
     fun read(name: String) =
       json.decodeFromString<ComponentRecordFile>(
-        File(root, "docs/design/fixtures/ui-builder/$name").readText()
+        File(root, "docs/design/fixtures/ui-builder/$name").readText(),
       )
     val m3 = read("m3-catalog-components-v1.json")
     m3
@@ -69,7 +69,7 @@ class ComponentCallbackExportTest {
             "properties": {"text": {"type": "binding", "value": "$binding"}}}
         }
       }
-      """
+      """,
     )
 
   private fun component(document: DesignDocumentV1, structure: ProjectedStructure) =
@@ -111,7 +111,7 @@ class ComponentCallbackExportTest {
                 ("go-button" to
                   it.nodes.getValue("go-button").let { b ->
                     b.copy(slots = mapOf("children" to listOf("text")))
-                  })
+                  }),
           )
         },
         emptyMap(),

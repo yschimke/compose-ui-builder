@@ -39,7 +39,7 @@ class ComponentDriftProblemsTest {
         listOf(
           finding("contribution-cell", ComponentDriftState.UNCHANGED),
           finding("streak-badge", ComponentDriftState.UNCHANGED),
-        )
+        ),
       ),
     )
   }
@@ -90,7 +90,7 @@ class ComponentDriftProblemsTest {
         listOf(
           finding("streak-badge", ComponentDriftState.WITHDRAWN),
           finding("contribution-cell", ComponentDriftState.DRIFTED),
-        )
+        ),
       )
     assertTrue(problems.all { it.nodeId == null }, problems.toString())
     assertEquals(
@@ -110,7 +110,7 @@ class ComponentDriftProblemsTest {
           finding("activity-row", ComponentDriftState.WITHDRAWN),
           finding("contribution-cell", ComponentDriftState.UNCHANGED),
           finding("badge-shelf", ComponentDriftState.UNUSABLE),
-        )
+        ),
       )
     assertEquals(
       listOf("project/activity-row", "project/badge-shelf", "project/streak-badge"),
@@ -126,8 +126,8 @@ class ComponentDriftProblemsTest {
       componentDriftProblems(
           listOf(
             finding("contribution-cell", ComponentDriftState.DRIFTED)
-              .copy(paletteId = "project-library/contribution-cell")
-          )
+              .copy(paletteId = "project-library/contribution-cell"),
+          ),
         )
         .single()
     assertEquals("project-library/contribution-cell", problem.componentId)
@@ -166,7 +166,7 @@ class ComponentDriftProblemsTest {
             }"""}
           }
         }
-        """
+        """,
       )
       .jsonObject
 
@@ -201,7 +201,7 @@ class ComponentDriftProblemsTest {
           finding("streak-badge", ComponentDriftState.DRIFTED),
           finding("activity-row", ComponentDriftState.WITHDRAWN),
           finding("badge-shelf", ComponentDriftState.UNUSABLE),
-        )
+        ),
       )
     assertTrue(problems.none { it.blocking }, problems.toString())
   }
@@ -218,7 +218,7 @@ class ComponentDriftProblemsTest {
     assertEquals(
       emptyList(),
       drifted.stillDescribing(
-        documentDeclaring(declared("sha256:imported", componentId = "contribution-tile"))
+        documentDeclaring(declared("sha256:imported", componentId = "contribution-tile")),
       ),
     )
   }

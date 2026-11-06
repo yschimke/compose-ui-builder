@@ -24,13 +24,13 @@ class WearWidgetHostFrameExportTest {
     val root = document.nodes.getValue(rootId)
     val properties = root.properties + (WearWidgetHostFrame.PROPERTY to string(hostFrame))
     return document.copy(
-      nodes = document.nodes + (rootId to root.copy(properties = JsonObject(properties)))
+      nodes = document.nodes + (rootId to root.copy(properties = JsonObject(properties))),
     )
   }
 
   private fun source(size: WearWidgetScaffoldSize, hostFrame: String?): String =
     assertIs<WearWidgetCodeExporter.Result.Emitted>(
-        WearWidgetCodeExporter.export(design(size, hostFrame), "widget")
+        WearWidgetCodeExporter.export(design(size, hostFrame), "widget"),
       )
       .source
 
@@ -74,14 +74,14 @@ class WearWidgetHostFrameExportTest {
   fun `a device-framed source warns what it depends on`() {
     val device =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-        WearWidgetCodeExporter.export(design(WearWidgetScaffoldSize.Large, "device"), "widget")
+        WearWidgetCodeExporter.export(design(WearWidgetScaffoldSize.Large, "device"), "widget"),
       )
     val warning =
       device.diagnostics.single { it.code == ExportDiagnosticCodes.WEAR_PREVIEW_RUNTIME_REQUIRED }
     assertTrue(WearWidgetHostFrame.DEVICE_ARTIFACT in warning.message, warning.message)
     val host =
       assertIs<WearWidgetCodeExporter.Result.Emitted>(
-        WearWidgetCodeExporter.export(design(WearWidgetScaffoldSize.Large, null), "widget")
+        WearWidgetCodeExporter.export(design(WearWidgetScaffoldSize.Large, null), "widget"),
       )
     assertTrue(
       host.diagnostics.none { it.code == ExportDiagnosticCodes.WEAR_PREVIEW_RUNTIME_REQUIRED },
@@ -97,7 +97,7 @@ class WearWidgetHostFrameExportTest {
             design(WearWidgetScaffoldSize.Large, "device"),
             "widget",
             WidgetAssetContents { null },
-          )
+          ),
         )
         .bundle
     assertTrue(WearWidgetHostFrame.DEVICE_ARTIFACT in bundle.readme, bundle.readme)
@@ -107,7 +107,7 @@ class WearWidgetHostFrameExportTest {
             design(WearWidgetScaffoldSize.Large, null),
             "widget",
             WidgetAssetContents { null },
-          )
+          ),
         )
         .bundle
     assertTrue(WearWidgetHostFrame.DEVICE_ARTIFACT !in host.readme, host.readme)

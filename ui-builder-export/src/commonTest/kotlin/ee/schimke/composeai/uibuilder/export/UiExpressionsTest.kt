@@ -20,7 +20,7 @@ class UiExpressionsTest {
         "progress" to UiValueKind.FLOAT,
         "on" to UiValueKind.BOOL,
         "name" to UiValueKind.STRING,
-      )
+      ),
     )
   private val states = scope.stateKinds.keys
 
@@ -148,7 +148,7 @@ class UiExpressionsTest {
         .replace("\"primary\"", "\"transparent\"")
     val expr =
       assertIs<UiExpressions.Checked.Ok>(
-          UiExpressions.check(kotlinx.serialization.json.Json.parseToJsonElement(clear), scope)
+          UiExpressions.check(kotlinx.serialization.json.Json.parseToJsonElement(clear), scope),
         )
         .expr
     assertEquals(
@@ -163,7 +163,7 @@ class UiExpressionsTest {
     val text = "lerp(theme.primary, theme.primaryDim, progress)"
     assertEquals(text, UiExpressions.format(parse(text)))
     assertIs<UiExpressions.Checked.Issue>(
-      UiExpressions.check(parse("lerp(theme.primary, 1.0, progress)"), scope)
+      UiExpressions.check(parse("lerp(theme.primary, 1.0, progress)"), scope),
     )
   }
 
@@ -203,7 +203,7 @@ class UiExpressionsTest {
   fun `a tree that does not type is refused with the operand it is about`() {
     val issue =
       assertIs<UiExpressions.Checked.Issue>(
-        UiExpressions.check(parse("name * 2"), scope, "nodes.label.text")
+        UiExpressions.check(parse("name * 2"), scope, "nodes.label.text"),
       )
     assertTrue("nodes.label.text" in issue.message, issue.message)
     assertTrue("mul" in issue.message, issue.message)
@@ -211,7 +211,7 @@ class UiExpressionsTest {
       UiExpressions.check(
         JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive("nope"))),
         scope,
-      )
+      ),
     )
   }
 
@@ -263,15 +263,15 @@ class UiExpressionsTest {
     assertNull(UiExpressions.shapeIssue(parse("count + 1")))
     assertNotNull(
       UiExpressions.shapeIssue(
-        JsonObject(mapOf("type" to JsonPrimitive("expr"), "op" to JsonPrimitive("add")))
-      )
+        JsonObject(mapOf("type" to JsonPrimitive("expr"), "op" to JsonPrimitive("add"))),
+      ),
     )
     assertNotNull(
       UiExpressions.shapeIssue(
         JsonObject(
-          mapOf("type" to JsonPrimitive("system"), "value" to JsonPrimitive("time.nanoOfSecond"))
-        )
-      )
+          mapOf("type" to JsonPrimitive("system"), "value" to JsonPrimitive("time.nanoOfSecond")),
+        ),
+      ),
     )
   }
 
@@ -280,7 +280,9 @@ class UiExpressionsTest {
     val declarations =
       mapOf(
         "count" to
-          JsonObject(mapOf("valueType" to JsonPrimitive("int"), "initialValue" to JsonPrimitive(0)))
+          JsonObject(
+            mapOf("valueType" to JsonPrimitive("int"), "initialValue" to JsonPrimitive(0)),
+          ),
       )
     val number = JsonPrimitive("number")
     val text = JsonPrimitive("string")
@@ -380,8 +382,8 @@ class UiExpressionsTest {
     val device =
       UiExpressions.Device.of(
         kotlinx.serialization.json.Json.parseToJsonElement(
-          """{"widthDp":216,"heightDp":124,"density":2.5,"fontScale":1.3}"""
-        ) as JsonObject
+          """{"widthDp":216,"heightDp":124,"density":2.5,"fontScale":1.3}""",
+        ) as JsonObject,
       )
     fun read(text: String) =
       UiExpressions.evaluate(typed(text), UiExpressions.Environment(device = device))
@@ -551,8 +553,8 @@ class UiExpressionsTest {
       mapOf(
         "on" to
           JsonObject(
-            mapOf("valueType" to JsonPrimitive("bool"), "initialValue" to JsonPrimitive(true))
-          )
+            mapOf("valueType" to JsonPrimitive("bool"), "initialValue" to JsonPrimitive(true)),
+          ),
       )
     val numberOrBinding =
       kotlinx.serialization.json.JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object")))

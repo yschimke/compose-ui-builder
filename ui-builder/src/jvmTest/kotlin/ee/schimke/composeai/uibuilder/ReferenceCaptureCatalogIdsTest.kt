@@ -38,7 +38,7 @@ class ReferenceCaptureCatalogIdsTest {
   /** The packaged catalog with one more component on it, the way a published catalog adds them. */
   private val catalog =
     CapabilityCatalogParser.parse(
-      withExtraComponent(resource("/m3-catalog-capabilities-v1.json"), UNDRAWN, DISPLAY_NAME)
+      withExtraComponent(resource("/m3-catalog-capabilities-v1.json"), UNDRAWN, DISPLAY_NAME),
     )
 
   @Test
@@ -90,7 +90,7 @@ class ReferenceCaptureCatalogIdsTest {
             "heightDp" to JsonPrimitive(1400),
             "density" to JsonPrimitive(1.0),
             "theme" to JsonPrimitive("light"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("root"),

@@ -139,7 +139,7 @@ class RemoveNodePropertyTest {
         componentId = "m3/text",
         properties =
           JsonObject(
-            mapOf("text" to typed("string", "Hello"), "color" to typed("color", "#5F6368"))
+            mapOf("text" to typed("string", "Hello"), "color" to typed("color", "#5F6368")),
           ),
       )
     return UiBuilderDocument(

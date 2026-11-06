@@ -50,7 +50,7 @@ class PublishedCatalogStoreTest {
   fun `a catalog fetched once opens again without a network`() {
     val cache = Files.createTempDirectory("cache")
     assertIs<PublishedCatalogStore.Load.Loaded>(
-      PublishedCatalogStore(cache, fromCaptures).load("remote-widgets")
+      PublishedCatalogStore(cache, fromCaptures).load("remote-widgets"),
     )
 
     val again = PublishedCatalogStore(cache, offline).load("remote-widgets")
@@ -76,7 +76,7 @@ class PublishedCatalogStoreTest {
     }
     val loaded =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, offline).load("wear-m3")
+        PublishedCatalogStore(cache, offline).load("wear-m3"),
       )
     assertTrue(loaded.fromCache)
     assertEquals(listOf("wear-screen", "wear-list"), loaded.templates.ids)
@@ -133,17 +133,17 @@ class PublishedCatalogStoreTest {
     val cache = Files.createTempDirectory("invalid-update-cache")
     val original =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, fromCaptures).load("wear-m3")
+        PublishedCatalogStore(cache, fromCaptures).load("wear-m3"),
       )
     val invalid = CatalogFileFetcher { url ->
       if (url.endsWith("/ui-builder.json")) "{" else fromCaptures.fetch(url)
     }
     assertIs<PublishedCatalogStore.Load.Unavailable>(
-      PublishedCatalogStore(cache, invalid).load("wear-m3")
+      PublishedCatalogStore(cache, invalid).load("wear-m3"),
     )
     val offlineLoad =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, offline).load("wear-m3")
+        PublishedCatalogStore(cache, offline).load("wear-m3"),
       )
     assertEquals(original.capabilityJson, offlineLoad.capabilityJson)
     assertEquals(
@@ -157,7 +157,7 @@ class PublishedCatalogStoreTest {
     val cache = Files.createTempDirectory("incomplete-update-cache")
     val original =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, fromCaptures).load("wear-m3")
+        PublishedCatalogStore(cache, fromCaptures).load("wear-m3"),
       )
     val incomplete = CatalogFileFetcher { url ->
       when {
@@ -168,12 +168,12 @@ class PublishedCatalogStoreTest {
     }
     val refused =
       assertIs<PublishedCatalogStore.Load.Unavailable>(
-        PublishedCatalogStore(cache, incomplete).load("wear-m3")
+        PublishedCatalogStore(cache, incomplete).load("wear-m3"),
       )
     assertTrue(refused.reason.contains("missing"), refused.reason)
     val offlineLoad =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, offline).load("wear-m3")
+        PublishedCatalogStore(cache, offline).load("wear-m3"),
       )
     assertEquals(original.capabilityJson, offlineLoad.capabilityJson)
     assertEquals(
@@ -186,7 +186,7 @@ class PublishedCatalogStoreTest {
   fun `a new snapshot does not retain files removed from a publication`() {
     val cache = Files.createTempDirectory("removed-template-cache")
     assertIs<PublishedCatalogStore.Load.Loaded>(
-      PublishedCatalogStore(cache, fromCaptures).load("wear-m3")
+      PublishedCatalogStore(cache, fromCaptures).load("wear-m3"),
     )
     val changed = CatalogFileFetcher { url ->
       val text = fromCaptures.fetch(url)
@@ -199,15 +199,15 @@ class PublishedCatalogStoreTest {
                 JsonObject(
                   semantics +
                     ("templates" to
-                      JsonArray(listOf((semantics.getValue("templates") as JsonArray).first())))
-                ))
+                      JsonArray(listOf((semantics.getValue("templates") as JsonArray).first()))),
+                )),
           )
           .toString()
       } else text
     }
     val updated =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, changed).load("wear-m3")
+        PublishedCatalogStore(cache, changed).load("wear-m3"),
       )
     assertEquals(listOf("wear-screen"), updated.templates.ids)
     val dir = cache.resolve("wear-m3")
@@ -215,7 +215,7 @@ class PublishedCatalogStoreTest {
     assertFalse(Files.exists(snapshot.resolve("ui-builder/designs/wear-list.json")))
     val cached =
       assertIs<PublishedCatalogStore.Load.Loaded>(
-        PublishedCatalogStore(cache, offline).load("wear-m3")
+        PublishedCatalogStore(cache, offline).load("wear-m3"),
       )
     assertEquals(updated.capabilityJson, cached.capabilityJson)
     assertEquals(
@@ -269,7 +269,7 @@ class PublishedCatalogStoreTest {
             assertFalse(
               UiBuilderEditorReducer(session.catalog).problems(reopened).any {
                 it.code == "CATALOG_PIN_MISMATCH"
-              }
+              },
             )
             if (!project) {
               val saved =
@@ -306,8 +306,8 @@ class PublishedCatalogStoreTest {
       original.copy(
         catalogPin =
           JsonObject(
-            original.catalogPin + ("catalogRevision" to JsonPrimitive("previous-publication"))
-          )
+            original.catalogPin + ("catalogRevision" to JsonPrimitive("previous-publication")),
+          ),
       )
     val saving = CompletableDeferred<Unit>()
     val release = CompletableDeferred<Unit>()
@@ -332,7 +332,7 @@ class PublishedCatalogStoreTest {
             UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 1)),
           )
         session.submit(
-          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, changed))
+          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, changed)),
         )
         assertNull(session.snapshot.value, "edits must wait for the repinned seed to be saved")
         release.complete(Unit)

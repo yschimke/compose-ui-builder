@@ -140,7 +140,7 @@ internal fun DeviceSceneHost(
             }
           }
         }
-      }
+      },
   ) {
     // Read so the canvas redraws when the scene draws something new.
     val version = holder.drawVersion

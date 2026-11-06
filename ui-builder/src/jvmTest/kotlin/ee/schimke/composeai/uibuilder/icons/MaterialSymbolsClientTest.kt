@@ -56,7 +56,7 @@ class MaterialSymbolsClientTest {
     assertEquals("/api/icons/outlined?names=search", transport.urls.single())
 
     client.prefetch(
-      listOf(MaterialSymbolsKey("search", axes = MaterialSymbolsAxes(weight = 300f, fill = 1f)))
+      listOf(MaterialSymbolsKey("search", axes = MaterialSymbolsAxes(weight = 300f, fill = 1f))),
     )
     val customised = transport.urls.last()
     assertTrue(customised.contains("FILL=1"), customised)
@@ -73,7 +73,7 @@ class MaterialSymbolsClientTest {
         MaterialSymbolsKey("search"),
         MaterialSymbolsKey("home"),
         MaterialSymbolsKey("search", axes = MaterialSymbolsAxes(weight = 700f)),
-      )
+      ),
     )
     assertEquals(
       2,
@@ -116,7 +116,7 @@ class MaterialSymbolsClientTest {
   @Test
   fun `auto-mirroring reaches the vector`() {
     assertTrue(
-      MaterialSymbolsClient.imageVector("arrow_back", square, autoMirror = true).autoMirror
+      MaterialSymbolsClient.imageVector("arrow_back", square, autoMirror = true).autoMirror,
     )
     assertTrue(!MaterialSymbolsClient.imageVector("search", square).autoMirror)
   }

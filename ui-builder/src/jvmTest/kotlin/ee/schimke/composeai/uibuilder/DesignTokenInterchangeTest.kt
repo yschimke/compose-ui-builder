@@ -192,8 +192,8 @@ class DesignTokenInterchangeTest {
         .initial(screen)
         .on(
           UiBuilderEditorEvent.ImportDesignTokens(
-            mapOf("color.primary" to "#123456", "space.list" to "999")
-          )
+            mapOf("color.primary" to "#123456", "space.list" to "999"),
+          ),
         )
     assertIs<CommandOutcome.Rejected>(refused.lastOutcome)
     assertEquals(screen, refused.document, "the half that came first was not applied")
@@ -226,9 +226,9 @@ class DesignTokenInterchangeTest {
               mapOf(
                 "text" to
                   JsonObject(
-                    mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Start"))
-                  )
-              )
+                    mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Start")),
+                  ),
+              ),
             ),
         ),
     )

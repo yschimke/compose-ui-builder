@@ -21,12 +21,12 @@ val embedRemoteMaterial3Record =
     constantName.set("EMBEDDED_REMOTE_M3_RECORD_JSON")
     sourceDescription.set(
       "docs/design/fixtures/ui-builder/remote-m3-record-v1.json\n" +
-        "// by :ui-builder-export:embedRemoteMaterial3Record"
+        "// by :ui-builder-export:embedRemoteMaterial3Record",
     )
     output.set(
       layout.buildDirectory.file(
-        "generated/remoteMaterial3Record/ee/schimke/composeai/uibuilder/EmbeddedRemoteMaterial3Record.kt"
-      )
+        "generated/remoteMaterial3Record/ee/schimke/composeai/uibuilder/EmbeddedRemoteMaterial3Record.kt",
+      ),
     )
   }
 
@@ -39,12 +39,12 @@ val embedRemoteModifierVocabulary =
     constantName.set("EMBEDDED_REMOTE_MODIFIERS_JSON")
     sourceDescription.set(
       "docs/design/fixtures/ui-builder/remote-modifiers-v1.json\n" +
-        "// by :ui-builder-export:embedRemoteModifierVocabulary"
+        "// by :ui-builder-export:embedRemoteModifierVocabulary",
     )
     output.set(
       layout.buildDirectory.file(
-        "generated/remoteModifierVocabulary/ee/schimke/composeai/uibuilder/EmbeddedRemoteModifiers.kt"
-      )
+        "generated/remoteModifierVocabulary/ee/schimke/composeai/uibuilder/EmbeddedRemoteModifiers.kt",
+      ),
     )
   }
 
@@ -56,12 +56,12 @@ val embedDesignGuidelines =
     constantName.set("EMBEDDED_ANDROID_DESIGN_GUIDELINES_JSON")
     sourceDescription.set(
       "docs/guidelines/android-design-guidelines.json\n" +
-        "// by :ui-builder-export:embedDesignGuidelines"
+        "// by :ui-builder-export:embedDesignGuidelines",
     )
     output.set(
       layout.buildDirectory.file(
-        "generated/designGuidelines/ee/schimke/composeai/uibuilder/EmbeddedDesignGuidelines.kt"
-      )
+        "generated/designGuidelines/ee/schimke/composeai/uibuilder/EmbeddedDesignGuidelines.kt",
+      ),
     )
   }
 
@@ -96,7 +96,7 @@ val extractProtocolSchemas =
         "design-document-v1.schema.json" to "compose-ui-builder-document-v1.schema.json",
         "design-mutation-v1.schema.json" to "compose-ui-builder-mutation-v1.schema.json",
         "production-uid-v1.schema.json" to "compose-ui-builder-production-v1.schema.json",
-      )
+      ),
     )
     ids.putAll(
       mapOf(
@@ -106,7 +106,7 @@ val extractProtocolSchemas =
           "https://schemas.compose-preview.dev/ui-builder/mutation/v1",
         "compose-ui-builder-production-v1.schema.json" to
           "https://schemas.compose-preview.dev/ui-builder/production/v1",
-      )
+      ),
     )
     output.set(layout.buildDirectory.dir("generated/protocolSchemas"))
   }
@@ -128,7 +128,7 @@ val generateFlexpressVersion =
         .writeText(
           "package ee.schimke.composeai.uibuilder.export\n\n" +
             "/** The flexpress release variable font text is generated for. */\n" +
-            "const val FLEXPRESS_VERSION: String = \"${version.get()}\"\n"
+            "const val FLEXPRESS_VERSION: String = \"${version.get()}\"\n",
         )
     }
   }
@@ -152,15 +152,15 @@ kotlin {
       kotlin.srcDir(
         embedRemoteMaterial3Record.map {
           layout.buildDirectory.dir("generated/remoteMaterial3Record")
-        }
+        },
       )
       kotlin.srcDir(
-        embedDesignGuidelines.map { layout.buildDirectory.dir("generated/designGuidelines") }
+        embedDesignGuidelines.map { layout.buildDirectory.dir("generated/designGuidelines") },
       )
       kotlin.srcDir(
         embedRemoteModifierVocabulary.map {
           layout.buildDirectory.dir("generated/remoteModifierVocabulary")
-        }
+        },
       )
       kotlin.srcDir(generateFlexpressVersion)
     }
@@ -252,7 +252,7 @@ tasks.named<Test>("jvmTest") {
         "-DdesktopCompose.classpath=${classpath.asPath}",
         "-DcomposeCompiler.plugin=${plugin.asPath}",
       )
-    }
+    },
   )
 }
 

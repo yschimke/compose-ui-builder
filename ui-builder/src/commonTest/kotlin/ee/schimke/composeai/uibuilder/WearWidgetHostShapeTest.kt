@@ -33,7 +33,7 @@ class WearWidgetHostShapeTest {
           "locale" to JsonPrimitive("en-US"),
           "theme" to JsonPrimitive("dark"),
           "layoutDirection" to JsonPrimitive("ltr"),
-        )
+        ),
       )
     val widget =
       wearWidgetUiBuilderDocument(
@@ -47,7 +47,7 @@ class WearWidgetHostShapeTest {
 
     val screen =
       widget.copy(
-        nodes = widget.nodes.mapValues { (_, node) -> node.copy(componentId = "m3/text") }
+        nodes = widget.nodes.mapValues { (_, node) -> node.copy(componentId = "m3/text") },
       )
     assertEquals(
       "Height must be between 180 and 3840 dp.",

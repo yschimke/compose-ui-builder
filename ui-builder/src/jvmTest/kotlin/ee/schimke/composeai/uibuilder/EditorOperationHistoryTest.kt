@@ -27,7 +27,7 @@ class EditorOperationHistoryTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -114,7 +114,7 @@ class EditorOperationHistoryTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(density = 2.0)
+          initial.document.screenEnvironmentSettings().copy(density = 2.0),
         ),
       )
 

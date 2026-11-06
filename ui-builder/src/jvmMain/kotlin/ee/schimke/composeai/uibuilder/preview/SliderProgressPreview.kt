@@ -35,7 +35,7 @@ internal val sliderProgressPreviewDocument: UiBuilderDocument by lazy {
   val reducer =
     UiBuilderEditorReducer(editorChromePreviewCatalog, actorId = "preview", clientId = "preview")
   PREVIEWED_CONTROLS.foldIndexed(
-      reducer.initial(sliderProgressPreviewBase, selectedNodeId = sliderProgressPreviewCellId(0))
+      reducer.initial(sliderProgressPreviewBase, selectedNodeId = sliderProgressPreviewCellId(0)),
     ) { index, state, (componentId, properties) ->
       val selected =
         reducer.reduce(state, UiBuilderEditorEvent.SelectNode(sliderProgressPreviewCellId(index)))
@@ -63,7 +63,7 @@ private val sliderProgressPreviewBase: UiBuilderDocument by lazy {
           "catalogRevision" to JsonPrimitive("candidate"),
           "capabilityDigest" to JsonPrimitive("candidate"),
           "nativeRuntimeId" to JsonPrimitive("candidate"),
-        )
+        ),
       ),
     environment =
       JsonObject(
@@ -81,7 +81,7 @@ private val sliderProgressPreviewBase: UiBuilderDocument by lazy {
           "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
           "animations" to JsonPrimitive("settled"),
           "networkAccess" to JsonPrimitive(false),
-        )
+        ),
       ),
     stateVariables = JsonObject(emptyMap()),
     roots = listOf(SLIDER_PROGRESS_PREVIEW_ROOT_ID),
@@ -105,13 +105,13 @@ private val sliderProgressPreviewBase: UiBuilderDocument by lazy {
                 mapOf(
                   "horizontalSpacingDp" to
                     JsonObject(
-                      mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(16))
+                      mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(16)),
                     ),
                   "verticalAlignment" to
                     JsonObject(
-                      mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive("center"))
+                      mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive("center")),
                     ),
-                )
+                ),
               ),
             modifiers = JsonArray(emptyList()),
             slots =
@@ -134,9 +134,9 @@ private val sliderProgressPreviewBase: UiBuilderDocument by lazy {
                         "type" to JsonPrimitive("size"),
                         "widthDp" to JsonPrimitive(if (index >= 2) 48 else 96),
                         "heightDp" to JsonPrimitive(48),
-                      )
-                    )
-                  )
+                      ),
+                    ),
+                  ),
                 ),
               slots = mapOf("children" to emptyList()),
             )

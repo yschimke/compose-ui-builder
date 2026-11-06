@@ -27,7 +27,7 @@ internal fun browserCanShareFiles(): Boolean = browserCanShareFile("probe.png", 
     } catch (e) {
       return false;
     }
-  }"""
+  }""",
 )
 internal external fun browserCanShareFile(filename: String, type: String): Boolean
 
@@ -65,7 +65,7 @@ internal external fun browserCanShareFile(filename: String, type: String): Boole
         return 'Could not share, so it was downloaded instead';
       },
     );
-  }"""
+  }""",
 )
 internal external fun shareOrDownloadTextPromise(
   filename: String,

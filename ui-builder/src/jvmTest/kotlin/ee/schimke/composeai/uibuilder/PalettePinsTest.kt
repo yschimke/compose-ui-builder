@@ -31,7 +31,7 @@ class PalettePinsTest {
   private val reducer = UiBuilderEditorReducer(baseCatalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -51,10 +51,10 @@ class PalettePinsTest {
             "pinnedComponents" to JsonArray(pins.map(::JsonPrimitive)),
             "recommendedSlots" to
               JsonObject(
-                recommended.mapValues { (_, names) -> JsonArray(names.map(::JsonPrimitive)) }
+                recommended.mapValues { (_, names) -> JsonArray(names.map(::JsonPrimitive)) },
               ),
           ) +
-          listOfNotNull(menu?.let { "componentMenu" to it })
+          listOfNotNull(menu?.let { "componentMenu" to it }),
       )
     return CapabilityCatalogParser.parse(JsonObject(base + ("statusSemantics" to semantics)))
   }
@@ -168,9 +168,9 @@ class PalettePinsTest {
           "groupOrder" to JsonArray(listOf(JsonPrimitive(PINNED_SHELF))),
           "components" to
             JsonObject(
-              mapOf("m3/button" to JsonObject(mapOf("group" to JsonPrimitive(PINNED_SHELF))))
+              mapOf("m3/button" to JsonObject(mapOf("group" to JsonPrimitive(PINNED_SHELF)))),
             ),
-        )
+        ),
       )
     val reducer = UiBuilderEditorReducer(catalogWith(pins = listOf("m3/text"), menu = menu))
     val state = reducer.initial(document)

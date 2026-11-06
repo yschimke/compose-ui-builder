@@ -12,7 +12,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
   """() => {
     if (!navigator.clipboard || !navigator.clipboard.readText) return Promise.resolve('');
     return navigator.clipboard.readText().then((text) => text || '', () => '');
-  }"""
+  }""",
 )
 private external fun readClipboardTextPromise(): Promise<JsString>
 

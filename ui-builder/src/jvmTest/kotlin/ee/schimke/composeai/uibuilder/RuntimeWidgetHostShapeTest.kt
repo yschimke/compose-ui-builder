@@ -32,7 +32,7 @@ class RuntimeWidgetHostShapeTest {
     runDesktopComposeUiTest(width = 1600, height = 1000) {
       val catalog =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       val widget =
         wearWidgetUiBuilderDocument(

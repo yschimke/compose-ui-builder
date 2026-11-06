@@ -96,7 +96,7 @@ private fun AxisSliders(
       onCommit = { coordinate ->
         write(
           if (current == null) set + FontSettings.Axis(axis.tag, coordinate)
-          else set.map { if (it.tag == axis.tag) it.copy(value = coordinate) else it }
+          else set.map { if (it.tag == axis.tag) it.copy(value = coordinate) else it },
         )
       },
       onReset = { write(set.filterNot { it.tag == axis.tag }) },
@@ -127,7 +127,7 @@ private fun AxisSliders(
     .forEach { (setting, axis) ->
       Note(
         "'${setting.tag}' ${FontSettings.number(setting.value)} is outside " +
-          "${FontSettings.number(axis.min)} to ${FontSettings.number(axis.max)}; the face clamps it"
+          "${FontSettings.number(axis.min)} to ${FontSettings.number(axis.max)}; the face clamps it",
       )
     }
 }

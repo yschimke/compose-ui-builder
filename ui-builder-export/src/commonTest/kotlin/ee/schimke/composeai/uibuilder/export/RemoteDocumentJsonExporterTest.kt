@@ -29,7 +29,7 @@ internal fun remoteJsonSelectionFixture(
         buildJsonObject {
           put("type", "toggle")
           put("variable", "page")
-        }
+        },
       )
     } else {
       add(
@@ -37,14 +37,14 @@ internal fun remoteJsonSelectionFixture(
           put("type", "set")
           put("variable", "page")
           put("value", values.first())
-        }
+        },
       )
       add(
         buildJsonObject {
           put("type", "set")
           put("variable", "page")
           put("value", values.last())
-        }
+        },
       )
     }
   }
@@ -60,7 +60,7 @@ internal fun remoteJsonSelectionFixture(
             buildJsonObject {
               put("type", "padding")
               listOf("startDp", "topDp", "endDp", "bottomDp").forEach { put(it, 8) }
-            }
+            },
           )
         },
       slots = mapOf("children" to ids + "fallback"),
@@ -83,7 +83,7 @@ internal fun remoteJsonSelectionFixture(
                   put("type", "color")
                   put("value", color)
                 }
-              }
+              },
             )
           },
       )
@@ -121,8 +121,8 @@ class RemoteDocumentJsonExporterTest {
         document.nodes +
           ("switch" to
             root.copy(
-              eventBindings = buildJsonObject { put("click", JsonArray(actions.toList())) }
-            ))
+              eventBindings = buildJsonObject { put("click", JsonArray(actions.toList())) },
+            )),
     )
   }
 
@@ -137,8 +137,8 @@ class RemoteDocumentJsonExporterTest {
     val emitted =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
         RemoteDocumentJsonExporter.export(
-          withClick(remoteJsonSelectionFixture(), increment(), increment(-2))
-        )
+          withClick(remoteJsonSelectionFixture(), increment(), increment(-2)),
+        ),
       )
     val text = emitted.source
     assertContains(text, "@page + 1")
@@ -149,10 +149,10 @@ class RemoteDocumentJsonExporterTest {
   fun `a decimal or fractional increment is refused`() {
     val decimal = remoteJsonSelectionFixture(listOf(JsonPrimitive(0.5f), JsonPrimitive(1.5f)))
     assertIs<RemoteDocumentJsonExporter.Result.Refused>(
-      RemoteDocumentJsonExporter.export(withClick(decimal, increment()))
+      RemoteDocumentJsonExporter.export(withClick(decimal, increment())),
     )
     assertIs<RemoteDocumentJsonExporter.Result.Refused>(
-      RemoteDocumentJsonExporter.export(withClick(remoteJsonSelectionFixture(), increment(0.5)))
+      RemoteDocumentJsonExporter.export(withClick(remoteJsonSelectionFixture(), increment(0.5))),
     )
   }
 
@@ -161,7 +161,7 @@ class RemoteDocumentJsonExporterTest {
     val values = listOf(JsonPrimitive(1f), JsonPrimitive(Float.fromBits(1f.toBits() + 1)))
     val result =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-        RemoteDocumentJsonExporter.export(remoteJsonSelectionFixture(values))
+        RemoteDocumentJsonExporter.export(remoteJsonSelectionFixture(values)),
       )
     val json = Json.parseToJsonElement(result.source).jsonObject
     assertEquals(
@@ -187,7 +187,7 @@ class RemoteDocumentJsonExporterTest {
     val document = remoteJsonSelectionFixture()
     val exported =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-        RemoteDocumentJsonExporter.export(document)
+        RemoteDocumentJsonExporter.export(document),
       )
     val json = Json.parseToJsonElement(exported.source).jsonObject
     assertEquals(
@@ -208,7 +208,7 @@ class RemoteDocumentJsonExporterTest {
   fun `dimensions and padding use the captured density`() {
     val exported =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-        RemoteDocumentJsonExporter.export(remoteJsonSelectionFixture(density = 2))
+        RemoteDocumentJsonExporter.export(remoteJsonSelectionFixture(density = 2)),
       )
     val json = Json.parseToJsonElement(exported.source).jsonObject
     assertEquals(200, json["header"]!!.jsonObject["width"]!!.jsonPrimitive.int)
@@ -229,11 +229,11 @@ class RemoteDocumentJsonExporterTest {
             put("widthDp", 101)
             put("heightDp", 100)
             put("density", 1.5)
-          }
+          },
       )
     val rounded =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-        RemoteDocumentJsonExporter.export(fractional)
+        RemoteDocumentJsonExporter.export(fractional),
       )
     assertEquals(
       152,
@@ -250,8 +250,8 @@ class RemoteDocumentJsonExporterTest {
     val exported =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
         RemoteDocumentJsonExporter.export(
-          remoteJsonSelectionFixture(listOf(JsonPrimitive(false), JsonPrimitive(true)))
-        )
+          remoteJsonSelectionFixture(listOf(JsonPrimitive(false), JsonPrimitive(true))),
+        ),
       )
     assertEquals(mapOf("page" to "bool"), exported.stateKinds)
     val json = Json.parseToJsonElement(exported.source).jsonObject
@@ -274,8 +274,8 @@ class RemoteDocumentJsonExporterTest {
     val result =
       assertIs<RemoteDocumentJsonExporter.Result.Refused>(
         RemoteDocumentJsonExporter.export(
-          original.copy(nodes = original.nodes + ("case0" to unsupported))
-        )
+          original.copy(nodes = original.nodes + ("case0" to unsupported)),
+        ),
       )
     assertTrue(result.reasons.any { "nodes.case0.componentId" in it && "recipe" in it })
     val rounded =
@@ -289,18 +289,18 @@ class RemoteDocumentJsonExporterTest {
                   put("type", "background")
                   put("color", "#FF000000")
                   put("shape", "circle")
-                }
+                },
               )
-            }
+            },
         )
     assertTrue(
       assertIs<RemoteDocumentJsonExporter.Result.Refused>(
           RemoteDocumentJsonExporter.export(
-            original.copy(nodes = original.nodes + ("case0" to rounded))
-          )
+            original.copy(nodes = original.nodes + ("case0" to rounded)),
+          ),
         )
         .reasons
-        .any { "modifiers[0].shape" in it }
+        .any { "modifiers[0].shape" in it },
     )
   }
 
@@ -311,15 +311,15 @@ class RemoteDocumentJsonExporterTest {
     val malformed = root.copy(properties = buildJsonObject { put(SHOW_BY_STATE, "bad") })
     assertIs<RemoteDocumentJsonExporter.Result.Refused>(
       RemoteDocumentJsonExporter.export(
-        original.copy(nodes = original.nodes + ("switch" to malformed))
-      )
+        original.copy(nodes = original.nodes + ("switch" to malformed)),
+      ),
     )
     val cyclic =
       root.copy(properties = JsonObject(emptyMap()), slots = mapOf("children" to listOf("switch")))
     assertIs<RemoteDocumentJsonExporter.Result.Refused>(
       RemoteDocumentJsonExporter.export(
-        original.copy(nodes = original.nodes + ("switch" to cyclic))
-      )
+        original.copy(nodes = original.nodes + ("switch" to cyclic)),
+      ),
     )
   }
 
@@ -327,7 +327,7 @@ class RemoteDocumentJsonExporterTest {
   fun `mutable strings use independent state declarations and unambiguous action literals`() {
     val result =
       assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-        RemoteDocumentJsonExporter.export(remoteJsonStringFixture("@second"))
+        RemoteDocumentJsonExporter.export(remoteJsonStringFixture("@second")),
       )
     val json = Json.parseToJsonElement(result.source).jsonObject
     assertEquals(JsonPrimitive(RemoteDocumentJsonExporter.STATE_PROFILE), json["compilerProfile"])
@@ -358,7 +358,7 @@ internal fun remoteJsonStringFixture(value: String): UiBuilderDocument {
             put("valueType", "string")
             put("initialValue", "Ready")
           }
-        }
+        },
     )
   val root = original.nodes.getValue("switch")
   val changed =
@@ -371,10 +371,10 @@ internal fun remoteJsonStringFixture(value: String): UiBuilderDocument {
                 put("type", "set")
                 put("variable", "first")
                 put("value", text)
-              }
+              },
             )
           }
-        }
+        },
     )
   return original.copy(stateVariables = declarations, nodes = original.nodes + (root.id to changed))
 }

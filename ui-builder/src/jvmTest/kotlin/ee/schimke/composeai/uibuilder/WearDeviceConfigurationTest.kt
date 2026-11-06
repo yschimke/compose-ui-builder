@@ -32,7 +32,7 @@ class WearDeviceConfigurationTest {
           buildMap {
             widthDp?.let { put("widthDp", JsonPrimitive(it)) }
             heightDp?.let { put("heightDp", JsonPrimitive(it)) }
-          }
+          },
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = emptyList(),

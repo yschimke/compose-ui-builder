@@ -28,7 +28,7 @@ class MultiLevelUndoTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -93,7 +93,7 @@ class MultiLevelUndoTest {
         reducer.reduce(
           state,
           UiBuilderEditorEvent.UpdateEnvironment(
-            state.document.screenEnvironmentSettings().withDevicePreset(preset)
+            state.document.screenEnvironmentSettings().withDevicePreset(preset),
           ),
         )
     }

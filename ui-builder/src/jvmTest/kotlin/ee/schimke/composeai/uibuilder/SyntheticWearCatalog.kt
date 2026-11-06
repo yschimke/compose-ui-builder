@@ -80,7 +80,7 @@ internal val SYNTHETIC_WEAR_JSON: String by lazy {
             "size fillMaxSize fillMaxWidth padding alpha offset rotate scale zIndex testTag width height widthIn heightIn aspectRatio fillMaxHeight align alignHorizontal alignVertical weight",
           slots =
             listOf(
-              syntheticSlot("items", max = null, roles = "Container Leaf", traits = "AnyContent")
+              syntheticSlot("items", max = null, roles = "Container Leaf", traits = "AnyContent"),
             ),
         ) {
           p("verticalSpacingDp", "number")
@@ -123,7 +123,7 @@ internal val SYNTHETIC_WEAR_JSON: String by lazy {
                 max = null,
                 roles = "Leaf Container",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p("variant", "string", allowed = "filled filled-tonal outlined child")
@@ -194,7 +194,7 @@ internal val SYNTHETIC_WEAR_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p("contentAlignment", "string")
@@ -213,7 +213,7 @@ internal val SYNTHETIC_WEAR_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p(
@@ -237,7 +237,7 @@ internal val SYNTHETIC_WEAR_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p(

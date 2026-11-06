@@ -50,9 +50,10 @@ class GeneratedLayoutClicksTest {
         File(output, "density-${density.toInt()}-${capture++}.png")
           .writeBytes(
             checkNotNull(
-                Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
+                Image.makeFromBitmap(screenshot.asSkiaBitmap())
+                  .encodeToData(EncodedImageFormat.PNG),
               )
-              .bytes
+              .bytes,
           )
         val actual = pixels[pixels.width / 2, pixels.height / 2]
         assertTrue(

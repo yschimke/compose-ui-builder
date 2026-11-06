@@ -25,7 +25,7 @@ class VariableFontTextTest {
     assertEquals(
       "VariableFontTextGoogleSansFlexHelloWorldRond",
       VariableFontText.requests(
-          listOf(spec("hello, world!", Font.GoogleSansFlex, animated = listOf("ROND")))
+          listOf(spec("hello, world!", Font.GoogleSansFlex, animated = listOf("ROND"))),
         )
         .single()
         .functionName,

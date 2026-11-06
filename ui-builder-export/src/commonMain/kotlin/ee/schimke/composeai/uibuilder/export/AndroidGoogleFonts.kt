@@ -68,11 +68,11 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
       return listOf(
         buildString {
           appendLine(
-            "// Google Play services' published font-provider certificates, inlined so this file"
+            "// Google Play services' published font-provider certificates, inlined so this file",
           )
           appendLine("// compiles without a `font_certs.xml` of its own. The `GoogleFont` API is")
           appendLine(
-            "// `androidx.compose.ui:ui-text-google-fonts`, which the module must depend on."
+            "// `androidx.compose.ui:ui-text-google-fonts`, which the module must depend on.",
           )
           appendLine("private val GoogleFontsProvider =")
           appendLine("${i}GoogleFont.Provider(")
@@ -92,7 +92,7 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
           }
           appendLine("$i$i$i),")
           append("$i)")
-        }
+        },
       ) +
         families.map { (name, identifier) ->
           val google = "GoogleFont(${name.quoted()})"

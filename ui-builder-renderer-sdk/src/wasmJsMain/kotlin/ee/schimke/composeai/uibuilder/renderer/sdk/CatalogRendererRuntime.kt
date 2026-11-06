@@ -104,8 +104,8 @@ fun startCatalogRenderer(
           is UiBuilderSemanticActionResult.Rejected ->
             postRuntimeMessage(
               endpoint.encode(
-                endpoint.actionRejected(command.requestId, result.code, result.message)
-              )
+                endpoint.actionRejected(command.requestId, result.code, result.message),
+              ),
             )
         }
       }
@@ -130,7 +130,9 @@ private fun startRuntimeViewport(
     // the backdrop the editor paints behind this frame. Clear it back to transparent first; the
     // root draws straight onto the canvas, so this reaches the frame's own pixels.
     Box(
-      Modifier.fillMaxSize().drawBehind { drawRect(Color.Transparent, blendMode = BlendMode.Clear) }
+      Modifier.fillMaxSize().drawBehind {
+        drawRect(Color.Transparent, blendMode = BlendMode.Clear)
+      },
     ) {
       val pending = state.render
       val current = pending.document
@@ -158,7 +160,7 @@ private fun startRuntimeViewport(
         }
         scheduleMeasuredResponse(
           if (snapshot.generation.measuredNodeIds.isEmpty()) UNMEASURED_SETTLE_MS
-          else MEASURED_SETTLE_MS
+          else MEASURED_SETTLE_MS,
         ) {
           if (completedRenderRequestId == request.requestId) return@scheduleMeasuredResponse
           val response = endpoint.rendered(request.requestId, snapshot)
@@ -200,7 +202,7 @@ private fun completeAction(requestId: String, action: CatalogRuntimeAction) {
       throw new Error('renderer must be loaded from an exact /ui-builder/runtime/<runtimeId>/ path');
     }
     return runtimeId;
-  }"""
+  }""",
 )
 private external fun runtimeIdFromPath(): String
 
@@ -213,7 +215,7 @@ private fun installRuntimeReceiver(handler: (String, String) -> Unit): Unit =
         if (!globalThis.__uiBuilderParentOrigin) globalThis.__uiBuilderParentOrigin = event.origin;
         handler(event.origin, event.data);
       });
-    })()"""
+    })()""",
   )
 
 private fun postRuntimeMessage(encoded: String): Unit =
@@ -236,7 +238,7 @@ private fun scheduleMeasuredResponse(delayMs: Int, callback: () -> Unit): Unit =
         if (globalThis.__uiBuilderMeasureToken !== token) return;
         callback();
       }, delayMs);
-    })()"""
+    })()""",
   )
 
 private fun scheduleRuntimeViewport(callback: () -> Unit): Unit = js("setTimeout(callback, 0)")
@@ -245,7 +247,7 @@ private fun scheduleActionCompletion(callback: () -> Unit): Unit =
   js(
     """requestAnimationFrame(function () {
       requestAnimationFrame(function () { requestAnimationFrame(callback); });
-    })"""
+    })""",
   )
 
 @JsFun("() => document.documentElement.dataset.uiBuilderRendererReady = 'true'")

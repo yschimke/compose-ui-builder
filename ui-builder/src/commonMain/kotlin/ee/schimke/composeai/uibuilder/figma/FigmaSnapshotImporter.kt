@@ -465,7 +465,7 @@ class FigmaSnapshotImporter(
               put("type", "offset")
               put("xDp", dp(node.x))
               put("yDp", dp(node.y))
-            }
+            },
           )
         }
       }
@@ -478,7 +478,7 @@ class FigmaSnapshotImporter(
           buildJsonObject {
             put("type", "weight")
             put("weight", 1)
-          }
+          },
         )
       }
       if (fillWidth && !mainIsHorizontal) add(modifier("fillMaxWidth"))
@@ -496,21 +496,21 @@ class FigmaSnapshotImporter(
               put("type", "size")
               put("widthDp", dp(node.width))
               put("heightDp", dp(node.height))
-            }
+            },
           )
         fixedWidth ->
           add(
             buildJsonObject {
               put("type", "width")
               put("widthDp", dp(node.width))
-            }
+            },
           )
         fixedHeight ->
           add(
             buildJsonObject {
               put("type", "height")
               put("heightDp", dp(node.height))
-            }
+            },
           )
       }
     }

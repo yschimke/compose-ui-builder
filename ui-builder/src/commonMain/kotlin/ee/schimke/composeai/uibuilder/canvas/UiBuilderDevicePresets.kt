@@ -34,7 +34,7 @@ data class UiBuilderDevicePreset(
  * theme and layout direction survive, since a device is a frame, not an environment.
  */
 fun ScreenEnvironmentSettings.withDevicePreset(
-  preset: UiBuilderDevicePreset
+  preset: UiBuilderDevicePreset,
 ): ScreenEnvironmentSettings =
   copy(widthDp = preset.widthDp, heightDp = preset.heightDp, density = preset.density)
 
@@ -63,7 +63,7 @@ fun ScreenEnvironmentSettings.withScreenFields(
 
 /** The preset [this] currently sits on, or null when the frame has been hand-edited. */
 fun ScreenEnvironmentSettings.matchingDevicePreset(
-  presets: List<UiBuilderDevicePreset>
+  presets: List<UiBuilderDevicePreset>,
 ): UiBuilderDevicePreset? = presets.firstOrNull {
   it.widthDp == widthDp && it.heightDp == heightDp && it.density == density
 }

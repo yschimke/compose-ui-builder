@@ -75,7 +75,7 @@ class RemoteExportDiagnosticsTest {
                   "host",
                   AdaptiveWearWidget.COMPONENT_ID,
                   slots = mapOf(AdaptiveWearWidget.HEADLINE to listOf("body")),
-                ))
+                )),
         )
       }
     val result = WearWidgetCodeExporter.export(document)
@@ -153,7 +153,7 @@ class RemoteExportDiagnosticsTest {
             "body",
             "layout/column",
             properties = buildJsonObject { put("verticalArrangement", enum("center")) },
-          )
+          ),
         )
         .source
     assertTrue("verticalArrangement = RemoteArrangement.Center" in centred, centred)
@@ -168,12 +168,12 @@ class RemoteExportDiagnosticsTest {
                 put("verticalArrangement", enum("bottom"))
                 put("verticalSpacingDp", literal("float", JsonPrimitive(8)))
               },
-          )
+          ),
         )
         .source
     assertTrue(
       Regex(
-          """verticalArrangement = RemoteArrangement\.spacedBy\([^,]+, RemoteAlignment\.Bottom\)"""
+          """verticalArrangement = RemoteArrangement\.spacedBy\([^,]+, RemoteAlignment\.Bottom\)""",
         )
         .containsMatchIn(spaced),
       spaced,
@@ -185,7 +185,7 @@ class RemoteExportDiagnosticsTest {
             "body",
             "layout/column",
             properties = buildJsonObject { put("verticalArrangement", enum("spaceBetween")) },
-          )
+          ),
         )
         .source
     assertTrue("verticalArrangement = RemoteArrangement.SpaceBetween" in distributed, distributed)
@@ -199,7 +199,7 @@ class RemoteExportDiagnosticsTest {
             "body",
             "layout/row",
             properties = buildJsonObject { put("horizontalArrangement", enum("end")) },
-          )
+          ),
         )
         .source
 
@@ -219,7 +219,7 @@ class RemoteExportDiagnosticsTest {
               put("maxLines", literal("int", JsonPrimitive(1)))
               put("overflow", enum("ellipsis"))
             },
-        )
+        ),
       )
 
     assertTrue("overflow = TextOverflow.Ellipsis" in emitted.source, emitted.source)
@@ -241,7 +241,7 @@ class RemoteExportDiagnosticsTest {
               // The value that changes nothing says nothing.
               put("fontStyle", enum("normal"))
             },
-        )
+        ),
       )
 
     val diagnostic = emitted.diagnostics.single()

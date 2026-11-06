@@ -70,9 +70,9 @@ class WearSampleDesignExportTest {
                   JsonObject(
                     settings.properties +
                       ("variant" to
-                        Json.parseToJsonElement("{\"type\":\"enum\",\"value\":\"outlined\"}"))
-                  )
-              ))
+                        Json.parseToJsonElement("{\"type\":\"enum\",\"value\":\"outlined\"}")),
+                  ),
+              )),
       )
     val result = RecordFreeExport.generate(outlined, UiBuilderCatalogPlatform.WEAR)
     assertTrue(result is RecordFreeExport.Generated.Refused, "$result")
@@ -100,10 +100,10 @@ class WearSampleDesignExportTest {
                   JsonObject(
                     mapOf(
                       "containerColor" to
-                        Json.parseToJsonElement("{\"type\":\"colorToken\",\"value\":\"tertiary\"}")
-                    )
+                        Json.parseToJsonElement("{\"type\":\"colorToken\",\"value\":\"tertiary\"}"),
+                    ),
                   ),
-              ))
+              )),
       )
     val result = RecordFreeExport.generate(legacy, UiBuilderCatalogPlatform.WEAR)
     assertTrue(result is RecordFreeExport.Generated.Emitted, "$result")
@@ -227,6 +227,6 @@ class WearSampleDesignExportTest {
   private fun designsDirectory(): File =
     File(
       System.getProperty("uiBuilderDesignFixturesDir")
-        ?: "../docs/design/fixtures/ui-builder/designs"
+        ?: "../docs/design/fixtures/ui-builder/designs",
     )
 }

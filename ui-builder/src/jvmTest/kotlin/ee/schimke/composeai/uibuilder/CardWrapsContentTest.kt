@@ -32,9 +32,10 @@ class CardWrapsContentTest {
   private val reference =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(
-            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+              .readText(),
           )
-          .jsonObject
+          .jsonObject,
       )
       .document
 
@@ -91,7 +92,7 @@ class CardWrapsContentTest {
   fun `the exporter fills the card's box only along the axes the document sized`() {
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
 
     // The screen alone: the appended compatibility helpers contain their own
@@ -162,9 +163,9 @@ class CardWrapsContentTest {
                         "topDp" to JsonPrimitive(16),
                         "endDp" to JsonPrimitive(16),
                         "bottomDp" to JsonPrimitive(16),
-                      )
+                      ),
                     ),
-                  )
+                  ),
                 ),
               slots = mapOf("children" to listOf("card-a", "card-b", "tail")),
             ),
@@ -178,14 +179,14 @@ class CardWrapsContentTest {
                     modifier("fillMaxWidth"),
                     cardHeightDp?.let {
                       JsonObject(
-                        mapOf("type" to JsonPrimitive("height"), "heightDp" to JsonPrimitive(it))
+                        mapOf("type" to JsonPrimitive("height"), "heightDp" to JsonPrimitive(it)),
                       )
                     },
-                  )
+                  ),
                 ),
               slots =
                 mapOf(
-                  "content" to listOfNotNull("text-a", "text-a2".takeIf { secondChildInCardA })
+                  "content" to listOfNotNull("text-a", "text-a2".takeIf { secondChildInCardA }),
                 ),
             ),
           "card-b" to
@@ -212,8 +213,8 @@ class CardWrapsContentTest {
         JsonObject(
           mapOf(
             "text" to
-              JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(text)))
-          )
+              JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(text))),
+          ),
         ),
     )
 
@@ -226,19 +227,19 @@ class CardWrapsContentTest {
           mapOf(
             "color" to
               JsonObject(
-                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF"))
+                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF")),
               ),
             "diameterDp" to
               JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(DOT))),
-          )
+          ),
         ),
       modifiers =
         JsonArray(
           listOf(
             JsonObject(
-              mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive(alignment))
-            )
-          )
+              mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive(alignment)),
+            ),
+          ),
         ),
     )
 

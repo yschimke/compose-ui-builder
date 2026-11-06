@@ -94,7 +94,7 @@ class ColorContrastTest {
       mapOf(
         "type" to JsonPrimitive(if (value.startsWith("#")) "color" else "colorToken"),
         "value" to JsonPrimitive(value),
-      )
+      ),
     )
 
   private fun enum(value: String) =
@@ -285,7 +285,7 @@ class ColorContrastTest {
           "type" to JsonPrimitive("background"),
           "color" to
             JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive("c"))),
-        )
+        ),
       )
     val faded = JsonObject(mapOf("type" to JsonPrimitive("alpha"), "alpha" to JsonPrimitive(0.5)))
     val doc =
@@ -334,7 +334,7 @@ class ColorContrastTest {
             "color",
             "#FF000000",
             scheme,
-          )
+          ),
         )
         .kind
     assertEquals(ContrastKind.LargeText, kind("style" to enum("headlineSmall")))

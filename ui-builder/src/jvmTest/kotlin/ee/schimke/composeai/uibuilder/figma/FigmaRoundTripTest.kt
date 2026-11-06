@@ -40,7 +40,7 @@ class FigmaRoundTripTest {
     UiBuilderReducer.replay(
         FigmaSnapshotImporter(catalog, map)
           .import(FigmaSnapshot.parse(resource("/figma/checkout-snapshot-v1.json")), "checkout")
-          .operations
+          .operations,
       )
       .document
   private val scene = FigmaSceneExporter(map).export(base)
@@ -59,8 +59,8 @@ class FigmaRoundTripTest {
           pay.copy(
             instance =
               pay.instance!!.copy(
-                properties = pay.instance!!.properties + ("Label text" to JsonPrimitive("Pay now"))
-              )
+                properties = pay.instance!!.properties + ("Label text" to JsonPrimitive("Pay now")),
+              ),
           )
         }
         .edit("figma-10-2") { it.copy(text = it.text!!.copy(characters = "Your order")) }
@@ -69,8 +69,8 @@ class FigmaRoundTripTest {
           box.copy(
             instance =
               box.instance!!.copy(
-                properties = box.instance!!.properties + ("Type" to JsonPrimitive("Unselected"))
-              )
+                properties = box.instance!!.properties + ("Type" to JsonPrimitive("Unselected")),
+              ),
           )
         }
         .let { root ->
@@ -189,20 +189,20 @@ class FigmaRoundTripTest {
                       buildJsonObject {
                         put("type", "alpha")
                         put("alpha", 0.5)
-                      }
-                  )
-              ))
+                      },
+                  ),
+              )),
       )
     val fadedScene = FigmaSceneExporter(map).export(faded)
     val edited =
       fadedScene.root.copy(
-        layout = fadedScene.root.layout!!.copy(padding = FigmaPadding(8.0, 8.0, 8.0, 8.0))
+        layout = fadedScene.root.layout!!.copy(padding = FigmaPadding(8.0, 8.0, 8.0, 8.0)),
       )
     val command =
       checkNotNull(
         roundTrip
           .reconcile(faded, fadedScene, FigmaSnapshot(root = edited), "figma", "plugin", "rt-1")
-          .command
+          .command,
       )
     val modifiers =
       command.operations.filterIsInstance<DesignOperation.SetModifiers>().single().modifiers
@@ -231,7 +231,7 @@ class FigmaRoundTripTest {
                 put("type", "string")
                 put("value", "Basket")
               },
-            )
+            ),
           ),
       )
     val first =
@@ -284,7 +284,7 @@ class FigmaRoundTripTest {
                 put("type", "string")
                 put("value", "$40.00")
               },
-            )
+            ),
           ),
       )
     val moved =
@@ -310,7 +310,7 @@ class FigmaRoundTripTest {
           "figma",
           "plugin",
           "rt-deletions",
-        )
+        ),
       )
     val done = CollaborationReducer.apply(edits.state, deletions, properties, documents)
     assertIs<CommandOutcome.Accepted>(done.outcome, done.outcome.toString())

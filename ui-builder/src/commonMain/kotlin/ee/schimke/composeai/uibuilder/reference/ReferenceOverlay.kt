@@ -86,7 +86,7 @@ internal fun ReferenceOverlayCanvas(
           onMarkDrawn(kind, points)
         },
         onPieceMoved = onPieceMoved,
-      )
+      ),
   ) {
     drawReferenceStack(
       reference = reference,

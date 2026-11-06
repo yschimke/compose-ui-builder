@@ -48,7 +48,7 @@ class McpAppCatalogs(
       } else {
         throw IllegalArgumentException(
           "the design is pinned to catalog '$systemId', which this editor does not package " +
-            "(it packages ${BUNDLED.sorted().joinToString()}) and no hosted catalog is configured"
+            "(it packages ${BUNDLED.sorted().joinToString()}) and no hosted catalog is configured",
         )
       }
     cache[systemId] = resolved

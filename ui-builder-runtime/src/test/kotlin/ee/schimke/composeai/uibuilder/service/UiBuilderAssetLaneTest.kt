@@ -86,7 +86,7 @@ class UiBuilderAssetLaneTest {
 
     val revisions =
       assertIs<UiBuilderServiceResponse.Revisions>(
-        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design"))
+        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design")),
       )
     assertEquals(owner.actorId, revisions.revisions.first { it.revision == 1L }.actorId)
   }
@@ -223,14 +223,14 @@ class UiBuilderAssetLaneTest {
             ("ghost" to
               document.assets
                 .getValue("cover")
-                .copy(source = UploadedAssetSourceV1("sha256:" + "0".repeat(64))))
+                .copy(source = UploadedAssetSourceV1("sha256:" + "0".repeat(64)))),
       )
 
     val projected =
       Json.parseToJsonElement(
           projectRendererDocument(orphan) { binding ->
             (binding.source as? UploadedAssetSourceV1)?.let { store.read(it.storageKey) }
-          }
+          },
         )
         .jsonObject
     val assets = projected.getValue("assets").jsonObject
@@ -271,7 +271,7 @@ class UiBuilderAssetLaneTest {
       UiBuilderImageBytes.sniff(WEBP_VP8X_HEADER),
     )
     assertNull(
-      UiBuilderImageBytes.sniff("<svg xmlns='http://www.w3.org/2000/svg'/>".encodeToByteArray())
+      UiBuilderImageBytes.sniff("<svg xmlns='http://www.w3.org/2000/svg'/>".encodeToByteArray()),
     )
     assertNull(UiBuilderImageBytes.sniff(ByteArray(0)))
   }
@@ -292,14 +292,14 @@ class UiBuilderAssetLaneTest {
 
   private fun create(service: PersistentUiBuilderService) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document()))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document())),
     )
   }
 
   private fun grantViewer(service: PersistentUiBuilderService) {
     val access =
       assertIs<UiBuilderServiceResponse.DesignAccess>(
-        execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design"))
+        execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design")),
       )
     assertIs<UiBuilderServiceResponse.DesignAccess>(
       execute(
@@ -313,10 +313,10 @@ class UiBuilderAssetLaneTest {
               viewer.actorId,
               DesignAccessRoleV1.VIEWER,
               listOf(DesignAccessActionV1.READ),
-            )
+            ),
           ),
         ),
-      )
+      ),
     )
   }
 
@@ -336,7 +336,7 @@ class UiBuilderAssetLaneTest {
     bytes: ByteArray,
   ) =
     assertIs<UiBuilderServiceResponse.OperationOutcome>(
-        putResponse(service, actor, assetKey, bytes)
+        putResponse(service, actor, assetKey, bytes),
       )
       .outcome
 
@@ -361,7 +361,7 @@ class UiBuilderAssetLaneTest {
 
   private fun currentDocument(service: PersistentUiBuilderService): DesignDocumentV1 =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.OpenDesign("design"))
+        execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")),
       )
       .snapshot
       .state
@@ -485,7 +485,7 @@ private fun <T> blockingSuspend(block: suspend () -> T): T {
       override fun resumeWith(result: Result<T>) {
         completion = result
       }
-    }
+    },
   )
   return completion?.getOrThrow() ?: error("synchronous service call suspended unexpectedly")
 }

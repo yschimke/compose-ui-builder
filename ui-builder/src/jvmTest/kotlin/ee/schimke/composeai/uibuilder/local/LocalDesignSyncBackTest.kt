@@ -54,7 +54,7 @@ class LocalDesignSyncBackTest {
               LocalDesignFixtures.insert("a", baseRevision = 7),
               LocalDesignFixtures.insert("b", baseRevision = 8),
               LocalDesignFixtures.insert("c", baseRevision = 9),
-            )
+            ),
         )
       val server = FakeServer(forkDocument = record.seed)
 
@@ -76,14 +76,14 @@ class LocalDesignSyncBackTest {
     runBlocking<Unit> {
       val record =
         LocalDesignFixtures.storedRecord(
-          log = listOf(LocalDesignFixtures.insert("a", baseRevision = 7))
+          log = listOf(LocalDesignFixtures.insert("a", baseRevision = 7)),
         )
       val server =
         FakeServer(
           forkDocument = record.seed,
           conflicts =
             listOf(
-              CommandConflictV1(ConflictCodeV1.STALE_PROPERTY_WRITE, "node-1", "text", 11, null)
+              CommandConflictV1(ConflictCodeV1.STALE_PROPERTY_WRITE, "node-1", "text", 11, null),
             ),
         )
 
@@ -103,7 +103,7 @@ class LocalDesignSyncBackTest {
               LocalDesignFixtures.insert("a", baseRevision = 7),
               LocalDesignFixtures.insert("b", baseRevision = 8),
               LocalDesignFixtures.insert("c", baseRevision = 9),
-            )
+            ),
         )
       val server = FakeServer(forkDocument = record.seed, rejectFrom = 1)
 
@@ -129,7 +129,7 @@ class LocalDesignSyncBackTest {
             listOf(
               LocalDesignFixtures.insert("a", baseRevision = 7),
               LocalDesignFixtures.insert("b", baseRevision = 8),
-            )
+            ),
         )
       val first = FakeServer(forkDocument = record.seed)
       sync(record, first::answer)
@@ -151,7 +151,7 @@ class LocalDesignSyncBackTest {
     runBlocking<Unit> {
       val record =
         LocalDesignFixtures.storedRecord(
-          log = listOf(LocalDesignFixtures.insert("a", baseRevision = 7))
+          log = listOf(LocalDesignFixtures.insert("a", baseRevision = 7)),
         )
       val server = FakeServer(forkDocument = record.seed, forkRetained = false)
 
@@ -187,7 +187,7 @@ class LocalDesignSyncBackTest {
             listOf(
               LocalDesignFixtures.insert("a", baseRevision = 7),
               LocalDesignFixtures.insert("b", baseRevision = 8),
-            )
+            ),
         )
       val server = FakeServer(forkDocument = record.seed, failFrom = 1)
 
@@ -202,7 +202,7 @@ class LocalDesignSyncBackTest {
     runBlocking<Unit> {
       val record =
         LocalDesignFixtures.storedRecord(
-          log = listOf(LocalDesignFixtures.insert("a", baseRevision = 7))
+          log = listOf(LocalDesignFixtures.insert("a", baseRevision = 7)),
         )
 
       val result = sync(record) { throw IllegalStateException("offline") }
@@ -248,7 +248,7 @@ class LocalDesignSyncBackTest {
                   state = DesignStateV1(lastSequence = 3, document = protocolDocument),
                   catalog = CATALOG,
                   retainedFromSequence = 0,
-                )
+                ),
               )
                 as UiBuilderResponseV1,
             )
@@ -277,7 +277,7 @@ class LocalDesignSyncBackTest {
                   currentRevision = nextRevision,
                   code = RejectionCodeV1.REVISION_MISMATCH,
                   message = "stale delete/restore requires the current revision",
-                )
+                ),
               ),
             )
           } else {
@@ -293,7 +293,7 @@ class LocalDesignSyncBackTest {
                   documentHash = "hash-$committed",
                   idempotentReplay = idempotent,
                   conflicts = conflicts,
-                )
+                ),
               ),
             )
           }
@@ -335,7 +335,7 @@ internal fun LocalDesignFixtures.storedRecord(
 
 internal fun LocalDesignFixtures.origin(
   documentDigest: String =
-    document().copy(revision = 7).toProtocolDocument().canonicalDocumentHash()
+    document().copy(revision = 7).toProtocolDocument().canonicalDocumentHash(),
 ): LocalDesignOriginV1 =
   LocalDesignOriginV1(
     server = "https://preview.example",

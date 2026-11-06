@@ -43,7 +43,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     val reopened = service(root)
     val snapshot =
       assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+        execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("checkout")),
       )
     assertEquals(1, snapshot.snapshot.state.document.revision)
     assertEquals(setOf("node-1"), snapshot.snapshot.state.document.nodes.keys)
@@ -62,7 +62,7 @@ class PersistentUiBuilderServiceFileStoreTest {
         reopened,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          UiBuilderSubmission.Undo("checkout", "undo-1", "browser", 1, "op-1")
+          UiBuilderSubmission.Undo("checkout", "undo-1", "browser", 1, "op-1"),
         ),
       )
     assertIs<UiBuilderServiceResponse.OperationOutcome>(undone)
@@ -70,7 +70,7 @@ class PersistentUiBuilderServiceFileStoreTest {
 
     val snapshot =
       assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+        execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("checkout")),
       )
     assertEquals(emptySet(), snapshot.snapshot.state.document.nodes.keys)
   }
@@ -106,7 +106,7 @@ class PersistentUiBuilderServiceFileStoreTest {
             "browser",
             1,
             listOf(SetPropertyMutationV1("node-1", "text", StringValueV1("second"))),
-          )
+          ),
         ),
       )
 
@@ -179,7 +179,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertTrue("checkout" !in reopened.adminUnusableDesigns())
     assertFalse(Files.exists(designDirectory(root, "checkout")))
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("settings"))
+      execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("settings")),
     )
   }
 
@@ -206,7 +206,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     // Retiring it is the door, and it opens.
     assertTrue(reopened.adminDeleteDesign("checkout"))
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(reopened, owner, UiBuilderServiceRequest.CreateDesign(document("checkout")))
+      execute(reopened, owner, UiBuilderServiceRequest.CreateDesign(document("checkout"))),
     )
   }
 
@@ -233,7 +233,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     // And retiring it by the name it was reported under is still the door.
     assertTrue(reopened.adminDeleteDesign(reported))
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(reopened, owner, UiBuilderServiceRequest.CreateDesign(document("checkout")))
+      execute(reopened, owner, UiBuilderServiceRequest.CreateDesign(document("checkout"))),
     )
   }
 
@@ -278,7 +278,7 @@ class PersistentUiBuilderServiceFileStoreTest {
 
     val refused =
       assertIs<UiBuilderServiceResponse.Error>(
-        execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("checkout"))
+        execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("checkout")),
       )
     assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
     assertTrue(refused.error.message.contains("cannot be read"), refused.error.message)
@@ -320,7 +320,7 @@ class PersistentUiBuilderServiceFileStoreTest {
 
     val restarted = service(root)
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(restarted, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+      execute(restarted, owner, UiBuilderServiceRequest.OpenDesign("checkout")),
     )
   }
 
@@ -340,7 +340,7 @@ class PersistentUiBuilderServiceFileStoreTest {
 
     val ownerListed =
       assertIs<UiBuilderServiceResponse.Designs>(
-        execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+        execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10)),
       )
     val row =
       ownerListed.designs.singleOrNull { it.designId == "checkout" }
@@ -350,7 +350,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       emptySet(),
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(reopened, outsider, UiBuilderServiceRequest.ListDesigns(null, 10))
+          execute(reopened, outsider, UiBuilderServiceRequest.ListDesigns(null, 10)),
         )
         .designs
         .map { it.designId }
@@ -366,7 +366,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     val agent = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
     val otherAgent = AuthenticatedUiBuilderActor("agent:def", onBehalfOfActorId = "owner")
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(first, agent, UiBuilderServiceRequest.CreateDesign(document("probe")))
+      execute(first, agent, UiBuilderServiceRequest.CreateDesign(document("probe"))),
     )
     create(first, "mine")
 
@@ -375,7 +375,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       DesignAccessRoleV1.OWNER,
       assertIs<UiBuilderServiceResponse.Designs>(
-          execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+          execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10)),
         )
         .designs
         .single { it.designId == "probe" }
@@ -386,7 +386,7 @@ class PersistentUiBuilderServiceFileStoreTest {
       assertEquals(
         ServiceErrorCodeV1.FORBIDDEN,
         assertIs<UiBuilderServiceResponse.Error>(
-            execute(reopened, actor, UiBuilderServiceRequest.DeleteDesign(designId))
+            execute(reopened, actor, UiBuilderServiceRequest.DeleteDesign(designId)),
           )
           .error
           .code,
@@ -417,7 +417,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       ServiceErrorCodeV1.NOT_FOUND,
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(first, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+          execute(first, owner, UiBuilderServiceRequest.OpenDesign("checkout")),
         )
         .error
         .code,
@@ -427,7 +427,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertTrue(Files.exists(designDirectory(root, "checkout")))
     val refused =
       assertIs<UiBuilderServiceResponse.Error>(
-        execute(first, owner, UiBuilderServiceRequest.CreateDesign(document("checkout")))
+        execute(first, owner, UiBuilderServiceRequest.CreateDesign(document("checkout"))),
       )
     assertTrue(refused.error.message.contains("trash"), refused.error.message)
     create(first, "settings")
@@ -438,16 +438,16 @@ class PersistentUiBuilderServiceFileStoreTest {
             UiBuilderBranchCall(
               owner,
               UiBuilderBranchRequest.CreateBranch("settings", "Alt", branchId = "checkout"),
-            )
+            ),
           )
-        }
+        },
       )
     assertTrue(branchRefused.error.message.contains("trash"), branchRefused.error.message)
 
     val reopened = service(root)
     val listed =
       assertIs<UiBuilderServiceResponse.Trash>(
-        execute(reopened, owner, UiBuilderServiceRequest.ListTrash)
+        execute(reopened, owner, UiBuilderServiceRequest.ListTrash),
       )
     assertEquals(
       listOf(
@@ -458,7 +458,7 @@ class PersistentUiBuilderServiceFileStoreTest {
           trashedAtEpochMillis = 1_000,
           trashedByActorId = "owner",
           restorableUntilEpochMillis = RESTORABLE_UNTIL,
-        )
+        ),
       ),
       listed.designs,
     )
@@ -466,7 +466,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       emptyList(),
       assertIs<UiBuilderServiceResponse.Trash>(
-          execute(reopened, outsider, UiBuilderServiceRequest.ListTrash)
+          execute(reopened, outsider, UiBuilderServiceRequest.ListTrash),
         )
         .designs,
       "only what an actor could have deleted is listed to it",
@@ -474,7 +474,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       ServiceErrorCodeV1.FORBIDDEN,
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(reopened, outsider, UiBuilderServiceRequest.RestoreDesign("checkout"))
+          execute(reopened, outsider, UiBuilderServiceRequest.RestoreDesign("checkout")),
         )
         .error
         .code,
@@ -482,18 +482,18 @@ class PersistentUiBuilderServiceFileStoreTest {
 
     val restored =
       assertIs<UiBuilderServiceResponse.DesignRestored>(
-        execute(reopened, owner, UiBuilderServiceRequest.RestoreDesign("checkout"))
+        execute(reopened, owner, UiBuilderServiceRequest.RestoreDesign("checkout")),
       )
     assertEquals(1, restored.design.revision)
     val snapshot =
       assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service(root), owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+        execute(service(root), owner, UiBuilderServiceRequest.OpenDesign("checkout")),
       )
     assertEquals(setOf("node-1"), snapshot.snapshot.state.document.nodes.keys)
     assertEquals(
       emptyList(),
       assertIs<UiBuilderServiceResponse.Trash>(
-          execute(reopened, owner, UiBuilderServiceRequest.ListTrash)
+          execute(reopened, owner, UiBuilderServiceRequest.ListTrash),
         )
         .designs,
     )
@@ -517,7 +517,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       ServiceErrorCodeV1.NOT_FOUND,
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old"))
+          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old")),
         )
         .error
         .code,
@@ -528,7 +528,7 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertEquals(
       ServiceErrorCodeV1.NOT_FOUND,
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old"))
+          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old")),
         )
         .error
         .code,
@@ -549,27 +549,27 @@ class PersistentUiBuilderServiceFileStoreTest {
     val agent = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
     val otherAgent = AuthenticatedUiBuilderActor("agent:def", onBehalfOfActorId = "owner")
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, agent, UiBuilderServiceRequest.CreateDesign(document("probe")))
+      execute(service, agent, UiBuilderServiceRequest.CreateDesign(document("probe"))),
     )
     execute(service, agent, UiBuilderServiceRequest.DeleteDesign("probe"))
     assertEquals(
       emptyList(),
       assertIs<UiBuilderServiceResponse.Trash>(
-          execute(service, otherAgent, UiBuilderServiceRequest.ListTrash)
+          execute(service, otherAgent, UiBuilderServiceRequest.ListTrash),
         )
         .designs,
     )
     assertEquals(
       "agent:abc",
       assertIs<UiBuilderServiceResponse.Trash>(
-          execute(service, owner, UiBuilderServiceRequest.ListTrash)
+          execute(service, owner, UiBuilderServiceRequest.ListTrash),
         )
         .designs
         .single()
         .trashedByActorId,
     )
     assertIs<UiBuilderServiceResponse.DesignRestored>(
-      execute(service, agent, UiBuilderServiceRequest.RestoreDesign("probe"))
+      execute(service, agent, UiBuilderServiceRequest.RestoreDesign("probe")),
     )
   }
 
@@ -612,7 +612,7 @@ class PersistentUiBuilderServiceFileStoreTest {
 
   private fun create(service: PersistentUiBuilderService, designId: String) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document(designId)))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document(designId))),
     )
   }
 
@@ -634,7 +634,7 @@ class PersistentUiBuilderServiceFileStoreTest {
             "browser",
             baseRevision,
             mutations.toList(),
-          )
+          ),
         ),
       )
     val outcome = assertIs<UiBuilderServiceResponse.OperationOutcome>(response)
@@ -679,7 +679,7 @@ class PersistentUiBuilderServiceFileStoreTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }
@@ -720,7 +720,7 @@ class PersistentUiBuilderServiceFileStoreTest {
                   .build(),
               )
               .also { it.properties = emptyList() }
-              .build()
+              .build(),
           ),
         )
         .also {

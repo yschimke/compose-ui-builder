@@ -13,7 +13,7 @@ class StateBindingTypesTest {
     "count":{"valueType":"int","initialValue":1},
     "fraction":{"valueType":"float","initialValue":1},
     "optional":{"valueType":"string","nullable":true,"initialValue":"Present"}
-  }"""
+  }""",
       )
       .jsonObject
 

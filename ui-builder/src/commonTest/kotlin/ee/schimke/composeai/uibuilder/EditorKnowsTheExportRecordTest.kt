@@ -28,10 +28,10 @@ class EditorKnowsTheExportRecordTest {
     // A copy on either side is a copy that can be widened without the other's review.
     assertTrue(
       "androidx.compose" in
-        ee.schimke.composeai.uibuilder.export.ScreenExportGate.EXPRESSION_PACKAGES
+        ee.schimke.composeai.uibuilder.export.ScreenExportGate.EXPRESSION_PACKAGES,
     )
     assertTrue(
-      ee.schimke.composeai.uibuilder.export.ScreenExportGate.PACKAGE_NAME == "generated.uibuilder"
+      ee.schimke.composeai.uibuilder.export.ScreenExportGate.PACKAGE_NAME == "generated.uibuilder",
     )
   }
 }

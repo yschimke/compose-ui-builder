@@ -26,7 +26,7 @@ class LauncherWidgetTemplatesTest {
         "catalogRevision" to JsonPrimitive("candidate"),
         "capabilityDigest" to JsonPrimitive("candidate"),
         "nativeRuntimeId" to JsonPrimitive("candidate"),
-      )
+      ),
     )
 
   private fun hello(): UiBuilderDocument =
@@ -81,7 +81,7 @@ class LauncherWidgetTemplatesTest {
         .first { File(it, "docs/design/fixtures/ui-builder").isDirectory }
     Json.parseToJsonElement(
         File(root, "docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
-          .readText()
+          .readText(),
       )
       .jsonObject
   }

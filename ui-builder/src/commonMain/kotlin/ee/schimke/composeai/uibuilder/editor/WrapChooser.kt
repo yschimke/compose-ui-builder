@@ -173,7 +173,7 @@ internal fun WrapChooserPanel(
           Modifier.fillMaxWidth()
             .then(
               if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
-              else Modifier
+              else Modifier,
             )
             .clickable(role = Role.Button) { onPick(choice) }
             .padding(horizontal = 16.dp, vertical = 10.dp),

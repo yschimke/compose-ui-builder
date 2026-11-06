@@ -79,7 +79,7 @@ fun inspectUiBuilderArgumentBindings(document: UiBuilderDocument): UiBuilderArgu
       val node = document.nodes[id] ?: return
       val properties =
         JsonObject(
-          node.properties.mapValues { (name, value) -> resolve(value, arguments, id, name) }
+          node.properties.mapValues { (name, value) -> resolve(value, arguments, id, name) },
         )
       if (
         node.properties.values.any { (it as? JsonObject)?.get("type") == JsonPrimitive("binding") }
@@ -94,7 +94,7 @@ fun inspectUiBuilderArgumentBindings(document: UiBuilderDocument): UiBuilderArgu
           JsonObject(
             (placement["arguments"] as? JsonObject).orEmpty().mapValues { (name, value) ->
               resolve(value, arguments, id, "component.arguments.$name")
-            }
+            },
           )
         if (root != null) visit(root, supplied)
       } else if (node.componentId == "layout/for-each") {
@@ -116,7 +116,7 @@ fun inspectUiBuilderArgumentBindings(document: UiBuilderDocument): UiBuilderArgu
         val index =
           JsonObject(
             arguments +
-              (name to JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to first)))
+              (name to JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to first))),
           )
         for (child in node.slots[UiDrawing.OPS_SLOT].orEmpty()) {
           if (count > 10_000) break

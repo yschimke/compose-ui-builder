@@ -32,7 +32,7 @@ class SyncStalenessBaseTest {
 
     // A live edit lands on the server after the run started.
     assertTrue(
-      accepted(service, setText("live-title", LIVE, base = 1, "Server")).conflicts.isEmpty()
+      accepted(service, setText("live-title", LIVE, base = 1, "Server")).conflicts.isEmpty(),
     )
 
     val c1 = accepted(service, setText("c1", SYNC, base = 1, "Sub", nodeId = "subtitle"))
@@ -184,7 +184,7 @@ class SyncStalenessBaseTest {
 
   private fun seed(service: PersistentUiBuilderService) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, UiBuilderServiceRequest.CreateDesign(designDocument()))
+      execute(service, UiBuilderServiceRequest.CreateDesign(designDocument())),
     )
     accepted(
       service,
@@ -224,7 +224,7 @@ class SyncStalenessBaseTest {
   ): AcceptedOutcomeV1 {
     val outcome =
       assertIs<UiBuilderServiceResponse.OperationOutcome>(
-          execute(service, UiBuilderServiceRequest.ApplyOperation(submission))
+          execute(service, UiBuilderServiceRequest.ApplyOperation(submission)),
         )
         .outcome
     return assertIs<AcceptedOutcomeV1>(outcome, "${submission.operationId}: $outcome")
@@ -236,9 +236,9 @@ class SyncStalenessBaseTest {
   ): RejectedOutcomeV1 =
     assertIs<RejectedOutcomeV1>(
       assertIs<UiBuilderServiceResponse.OperationOutcome>(
-          execute(service, UiBuilderServiceRequest.ApplyOperation(submission))
+          execute(service, UiBuilderServiceRequest.ApplyOperation(submission)),
         )
-        .outcome
+        .outcome,
     )
 
   private fun service(
@@ -268,7 +268,7 @@ class SyncStalenessBaseTest {
         override fun resumeWith(result: Result<UiBuilderServiceResponse>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }
@@ -350,10 +350,10 @@ class SyncStalenessBaseTest {
                   listOf(
                     PropertyCapabilityV1.Builder("text", JsonPrimitive("string"))
                       .also { it.required = false }
-                      .build()
+                      .build(),
                   )
               }
-              .build()
+              .build(),
           ),
         )
         .build()

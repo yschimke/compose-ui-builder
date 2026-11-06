@@ -98,7 +98,7 @@ class AgentToolbarTest {
       assertTrue(
         onAllNodesWithText("Claude Sonnet (reported)", substring = true)
           .fetchSemanticsNodes()
-          .isNotEmpty()
+          .isNotEmpty(),
       )
       assertEquals(0, provider.requests)
     }
@@ -156,7 +156,7 @@ class AgentToolbarTest {
         )
       val catalog =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       setContent {
         MaterialTheme {
@@ -209,7 +209,7 @@ class AgentToolbarTest {
         )
       }
       onNodeWithContentDescription("More editor actions").performSemanticsAction(
-        SemanticsActions.OnClick
+        SemanticsActions.OnClick,
       ) {
         it()
       }
@@ -233,7 +233,7 @@ class AgentToolbarTest {
           .assertDoesNotExist()
         onNodeWithText("Viewers · 2").assertDoesNotExist()
         onNodeWithContentDescription("More editor actions").performSemanticsAction(
-          SemanticsActions.OnClick
+          SemanticsActions.OnClick,
         ) {
           it()
         }
@@ -245,7 +245,7 @@ class AgentToolbarTest {
         onNodeWithText("Fork this design").performSemanticsAction(SemanticsActions.OnClick) { it() }
         assertEquals(1, forked)
         onNodeWithContentDescription("More editor actions").performSemanticsAction(
-          SemanticsActions.OnClick
+          SemanticsActions.OnClick,
         ) {
           it()
         }
@@ -315,7 +315,7 @@ class AgentToolbarTest {
         )
       val catalog =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       val exportHost =
         object : UiBuilderExportHost {

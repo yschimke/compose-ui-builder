@@ -31,7 +31,7 @@ fun wearWidgetUiBuilderDocument(
             properties = JsonObject(emptyMap()),
             modifiers = JsonArray(emptyList()),
             slots = mapOf("content" to emptyList()),
-          )
+          ),
       ),
   )
 }
@@ -123,15 +123,15 @@ fun helloWidgetUiBuilderDocument(
                 "text" to literal("string", JsonPrimitive("Hello, World!")),
                 "color" to colorToken("onPrimary"),
                 "fontSize" to literal("float", JsonPrimitive(20)),
-              )
+              ),
             ),
           modifiers =
             JsonArray(
               listOf(
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive("center"))
-                )
-              )
+                  mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive("center")),
+                ),
+              ),
             ),
           slots = emptyMap(),
         ),
@@ -177,7 +177,7 @@ fun weatherWidgetUiBuilderDocument(
                 // `RemoteBox(contentAlignment = Center)` in the sample. `layout/box` aligns each
                 // child by that child's own `alignment`, so this is where centring lives.
                 "alignment" to literal("enum", JsonPrimitive("center")),
-              )
+              ),
             ),
           modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
           slots = mapOf("children" to listOf("weather-location", "weather-reading")),
@@ -192,7 +192,7 @@ fun weatherWidgetUiBuilderDocument(
                 "color" to literal("color", JsonPrimitive(WEATHER_ON_SUNNY_ARGB)),
                 "fontSize" to literal("float", JsonPrimitive(14)),
                 "textAlign" to literal("enum", JsonPrimitive("center")),
-              )
+              ),
             ),
           modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
           slots = emptyMap(),
@@ -207,7 +207,7 @@ fun weatherWidgetUiBuilderDocument(
                 "color" to literal("color", JsonPrimitive(WEATHER_ON_SUNNY_ARGB)),
                 "fontSize" to literal("float", JsonPrimitive(36)),
                 "textAlign" to literal("enum", JsonPrimitive("center")),
-              )
+              ),
             ),
           modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
           slots = emptyMap(),
@@ -246,7 +246,7 @@ private fun wearWidgetSampleDocument(
         properties = JsonObject(mapOf("background" to background)),
         modifiers = JsonArray(emptyList()),
         slots = mapOf("content" to listOf(contentId)),
-      )
+      ),
     ) + content
   return UiBuilderDocument(
     schema = "compose-ui-builder-document/v1-candidate",

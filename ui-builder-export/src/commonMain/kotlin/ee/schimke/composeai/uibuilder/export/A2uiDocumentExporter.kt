@@ -55,7 +55,7 @@ object A2uiDocumentExporter {
           put("title", titles?.getOrNull(index) ?: JsonPrimitive("Tab ${index + 1}"))
           put("child", id)
         }
-      }
+      },
     )
 
   sealed interface Result {
@@ -139,7 +139,7 @@ object A2uiDocumentExporter {
                 put(slot, JsonArray(ids.map(::JsonPrimitive)))
               }
             }
-          }
+          },
         )
       }
     }
@@ -165,7 +165,7 @@ object A2uiDocumentExporter {
             put("surfaceId", surfaceId)
             put("catalogId", catalogId)
           },
-        )
+        ),
       )
       if (lowered.data.isNotEmpty()) {
         add(
@@ -176,7 +176,7 @@ object A2uiDocumentExporter {
               put("path", "/")
               put("value", lowered.data)
             },
-          )
+          ),
         )
       }
       add(
@@ -186,7 +186,7 @@ object A2uiDocumentExporter {
             put("surfaceId", surfaceId)
             put("components", JsonArray(lowered.components))
           },
-        )
+        ),
       )
     }
     return Result.Emitted(messages, messages.joinToString("\n") { canonicalJson(it) } + "\n")
@@ -250,7 +250,7 @@ object A2uiDocumentExporter {
           JsonArray(
             values.mapIndexedNotNull { i, element ->
               lowerValue(element, "$where.values[$i]", document, reasons)
-            }
+            },
           )
         }
       }

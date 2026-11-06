@@ -37,13 +37,13 @@ class CanvasStructuralNodesTest {
                                           "type" to JsonPrimitive("object"),
                                           "fields" to
                                             JsonObject(mapOf("shade" to wrapper("string", "Blue"))),
-                                        )
-                                      )
-                                    )
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                              )
-                            )
-                        )
+                              ),
+                            ),
+                        ),
                       ),
                     slots = mapOf("template" to listOf("placement")),
                   ),
@@ -56,7 +56,7 @@ class CanvasStructuralNodesTest {
                         mapOf(
                           "componentKey" to JsonPrimitive("label"),
                           "arguments" to JsonObject(mapOf("tone" to wrapper("binding", "shade"))),
-                        )
+                        ),
                       ),
                   ),
                 "body" to
@@ -71,9 +71,9 @@ class CanvasStructuralNodesTest {
                 mapOf(
                   "label" to
                     JsonObject(
-                      mapOf("name" to JsonPrimitive("Label"), "root" to JsonPrimitive("body"))
-                    )
-                )
+                      mapOf("name" to JsonPrimitive("Label"), "root" to JsonPrimitive("body")),
+                    ),
+                ),
               ),
           ),
         state = emptyMap(),
@@ -110,9 +110,9 @@ class CanvasStructuralNodesTest {
                               mapOf(
                                 "type" to JsonPrimitive("list"),
                                 "values" to JsonArray(listOf(JsonPrimitive("bad"))),
-                              )
-                            )
-                        )
+                              ),
+                            ),
+                        ),
                       ),
                     slots = mapOf("template" to listOf("placement")),
                   ),
@@ -122,7 +122,7 @@ class CanvasStructuralNodesTest {
                     componentId = "design/component-instance",
                     component = JsonObject(mapOf("componentKey" to JsonPrimitive("missing"))),
                   ),
-              )
+              ),
           ),
         state = emptyMap(),
         adapterIds = emptyMap(),

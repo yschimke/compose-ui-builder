@@ -59,7 +59,7 @@ internal object WearWidgetNativePreviewExporter {
       WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == root.componentId }
         ?: return refuse(
           "the root is `${root.componentId}`, not a Wear widget container — this lane renders " +
-            "widgets, and a screen reaches it through the Compose generator"
+            "widgets, and a screen reaches it through the Compose generator",
         )
 
     val contentIds = root.slots["content"].orEmpty()
@@ -129,7 +129,7 @@ internal object WearWidgetNativePreviewExporter {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
           appendLine(
             "// Native preview of design ${document.id.escapeComment()} revision " +
-              "${document.revision}, in the ${shape.label.lowercase()} host container."
+              "${document.revision}, in the ${shape.label.lowercase()} host container.",
           )
           appendLine("@file:Suppress(\"RestrictedApi\")")
           appendLine()
@@ -168,7 +168,7 @@ internal object WearWidgetNativePreviewExporter {
           appendLine("fun ${name}Params(): WearWidgetParams =")
           appendLine("${INDENT}WearWidgetParams(")
           appendLine(
-            "$INDENT${INDENT}instanceId = WidgetInstanceId(\"tiles\", ${size.instanceId}),"
+            "$INDENT${INDENT}instanceId = WidgetInstanceId(\"tiles\", ${size.instanceId}),",
           )
           appendLine("$INDENT${INDENT}containerType = ContainerInfo.${size.containerType},")
           appendLine("$INDENT${INDENT}widthDp = ${spec.contentWidthDp.dpLiteral()},")

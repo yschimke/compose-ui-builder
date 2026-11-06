@@ -51,7 +51,7 @@ class ReferenceMatchingTest {
     val report = diffRasters(design, reference, cellPx = 8)
     assertEquals(2, report.regions.size)
     assertTrue(
-      report.regions.any { it.rect.left <= 20 && it.rect.right >= 60 && it.rect.top <= 20 }
+      report.regions.any { it.rect.left <= 20 && it.rect.right >= 60 && it.rect.top <= 20 },
     )
     assertTrue(report.regions.any { it.rect.left <= 120 && it.rect.bottom >= 90 })
   }
@@ -95,7 +95,7 @@ class ReferenceMatchingTest {
     val reference = picture { label(it, 46, 43, 16) }
     val match =
       assertNotNull(
-        matchPatch(design, reference, RasterRect(40, 40, 40 + 4 * 18, 56), searchPx = 12)
+        matchPatch(design, reference, RasterRect(40, 40, 40 + 4 * 18, 56), searchPx = 12),
       )
     assertEquals(6, match.dx)
     assertEquals(3, match.dy)
@@ -122,7 +122,7 @@ class ReferenceMatchingTest {
           ReferenceLayer("title", ReferenceBox(16f, 26f, 120f, 50f), text = true),
           boxMarks = emptyList(),
           layoutBoxes = emptyList(),
-        )
+        ),
       )
     assertEquals(ReferenceMatchSource.Pixels, match.source)
     assertTrue(match.scale in 1.2f..1.3f, "scale ${match.scale}")
@@ -145,7 +145,7 @@ class ReferenceMatchingTest {
           // A generous box round the label in the reference, overlapping the layer.
           boxMarks = listOf(ReferenceBox(26f, 40f, 110f, 70f)),
           layoutBoxes = emptyList(),
-        )
+        ),
       )
     assertEquals(ReferenceMatchSource.BoxMark, match.source)
     val alignment = alignmentFor(match, currentFontSizeSp = 14f)
@@ -164,7 +164,7 @@ class ReferenceMatchingTest {
           ReferenceLayer("card", ReferenceBox(10f, 10f, 110f, 60f), text = false),
           boxMarks = emptyList(),
           layoutBoxes = listOf(ReferenceBox(14f, 10f, 124f, 62f)),
-        )
+        ),
       )
     assertEquals(ReferenceMatchSource.LayoutBox, match.source)
     val alignment = alignmentFor(match, currentFontSizeSp = null)
@@ -185,7 +185,7 @@ class ReferenceMatchingTest {
         boxMarks = emptyList(),
         layoutBoxes = emptyList(),
         pixelSearch = false,
-      )
+      ),
     )
   }
 

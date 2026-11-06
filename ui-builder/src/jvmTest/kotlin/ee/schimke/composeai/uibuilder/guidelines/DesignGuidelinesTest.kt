@@ -89,7 +89,7 @@ class DesignGuidelinesTest {
             {"ruleId":"glasses.lists.one-per-view","verdict":"fail","confidence":0.9,"nodeIds":[],"reason":"!"},
             {"ruleId":"wear.layout.time-text-shown","verdict":"pass","confidence":0.9,"nodeIds":[],"reason":""}
           ]}
-          """
+          """,
         ),
         asked,
         setOf("screen", "stop"),
@@ -110,7 +110,7 @@ class DesignGuidelinesTest {
         200,
         completion(
           """{"verdicts":[{"ruleId":"wear.layout.time-text-shown","verdict":"pass",""" +
-            """"confidence":0.9,"nodeIds":[],"reason":""}]}"""
+            """"confidence":0.9,"nodeIds":[],"reason":""}]}""",
         ),
       )
     }
@@ -157,7 +157,7 @@ class DesignGuidelinesTest {
                 "properties": {"text": {"type": "binding", "value": "title"}}}
             }
           }
-          """
+          """,
         )
         .jsonObject
     val outline = DesignGuidelinePrompt.outline(document)
@@ -197,7 +197,7 @@ class DesignGuidelinesTest {
         200,
         completion(
           """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"pass",""" +
-            """"confidence":0.9,"nodeIds":[],"reason":""}]}"""
+            """"confidence":0.9,"nodeIds":[],"reason":""}]}""",
         ),
       )
     }
@@ -275,7 +275,7 @@ class DesignGuidelinesTest {
               192,
               768,
               "data:image/png;base64,BBBB",
-            )
+            ),
       )
     var sent = ""
     host.respond = { body ->
@@ -284,7 +284,7 @@ class DesignGuidelinesTest {
         200,
         completion(
           """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
-            """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}"""
+            """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}""",
         ),
       )
     }
@@ -321,7 +321,7 @@ class DesignGuidelinesTest {
               {"ruleId":"wear.from-a-newer-set","verdict":"fail","confidence":0.9,
                 "nodeIds":[],"reason":"Kept."}
             ]}
-            """
+            """,
           ),
         ranBy = "agent:review-bot",
       )
@@ -354,11 +354,11 @@ class DesignGuidelinesTest {
             verdicts =
               DesignGuidelinePrompt.parseVerdicts(
                 """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
-                  """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}"""
+                  """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}""",
               ),
             ranBy = "github:yschimke",
             servedModel = "deepseek/deepseek-v4.1-flash",
-          )
+          ),
         )
       val controller = DesignGuidelineController(host)
       assertIs<DesignGuidelineState.NeedsKey>(controller.state.value)
@@ -400,7 +400,7 @@ class DesignGuidelinesTest {
         verdicts =
           DesignGuidelinePrompt.parseVerdicts(
             """{"verdicts":[{"ruleId":"wear.containers-have-actions","verdict":"fail",""" +
-              """"confidence":0.9,"nodeIds":["stop"],"reason":"No action."}]}"""
+              """"confidence":0.9,"nodeIds":["stop"],"reason":"No action."}]}""",
           ),
       )
     val finding = record.toResult(DesignGuidelineRuleSet.Bundled).findings.single()
@@ -477,7 +477,7 @@ class DesignGuidelinesTest {
                 put("content", content)
               },
             )
-          }
+          },
         )
       },
     )

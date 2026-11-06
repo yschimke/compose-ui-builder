@@ -36,7 +36,7 @@ class MutatedDocumentTest {
   private val generator = UiBuilderTreeGenerator(catalog, reducer)
   private val jetcaster =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val blank = blankUiBuilderDocument("mutated", jetcaster.catalogPin, jetcaster.environment)
@@ -61,7 +61,7 @@ class MutatedDocumentTest {
         nodes =
           valid.nodes +
             (grid.id to grid) +
-            (scaffold.id to scaffold.copy(slots = scaffold.slots + ("topBar" to listOf(grid.id))))
+            (scaffold.id to scaffold.copy(slots = scaffold.slots + ("topBar" to listOf(grid.id)))),
       )
 
     assertRefused(mutated, CapabilityIssueCode.INCOMPATIBLE_SLOT_CHILD, scaffold.id)
@@ -74,7 +74,7 @@ class MutatedDocumentTest {
       valid.copy(
         nodes =
           valid.nodes +
-            (scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to emptyList())))
+            (scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to emptyList()))),
       )
 
     // The children it lost are now unreachable, which is a second, true finding — the assertion is
@@ -93,7 +93,7 @@ class MutatedDocumentTest {
           valid.nodes +
             (extra.id to extra) +
             (scaffold.id to
-              scaffold.copy(slots = scaffold.slots + ("content" to content + extra.id)))
+              scaffold.copy(slots = scaffold.slots + ("content" to content + extra.id))),
       )
 
     assertRefused(mutated, CapabilityIssueCode.SLOT_CARDINALITY, scaffold.id)
@@ -108,8 +108,8 @@ class MutatedDocumentTest {
           valid.nodes +
             (box.id to
               box.copy(
-                slots = box.slots + ("children" to box.slots["children"].orEmpty() + "gone")
-              ))
+                slots = box.slots + ("children" to box.slots["children"].orEmpty() + "gone"),
+              )),
       )
 
     assertRefused(mutated, CapabilityIssueCode.UNKNOWN_CHILD, box.id)
@@ -128,14 +128,14 @@ class MutatedDocumentTest {
         nodes =
           valid.nodes +
             (stray.id to stray) +
-            (box.id to box.copy(slots = box.slots + ("nope" to listOf(stray.id))))
+            (box.id to box.copy(slots = box.slots + ("nope" to listOf(stray.id)))),
       )
 
     assertRefused(mutated, CapabilityIssueCode.UNKNOWN_SLOT, box.id)
 
     val empty =
       valid.copy(
-        nodes = valid.nodes + (box.id to box.copy(slots = box.slots + ("nope" to emptyList())))
+        nodes = valid.nodes + (box.id to box.copy(slots = box.slots + ("nope" to emptyList()))),
       )
     assertEquals(emptyList(), validator.validate(empty).issues)
   }
@@ -155,7 +155,7 @@ class MutatedDocumentTest {
     val mutated =
       valid.copy(
         nodes =
-          valid.nodes + (text.id to text.copy(properties = JsonObject(text.properties - "text")))
+          valid.nodes + (text.id to text.copy(properties = JsonObject(text.properties - "text"))),
       )
 
     assertRefused(mutated, CapabilityIssueCode.MISSING_REQUIRED_PROPERTY, text.id)
@@ -177,9 +177,9 @@ class MutatedDocumentTest {
                         buildJsonObject {
                           put("type", "enum")
                           put("value", "notATypeScaleToken")
-                        })
-                  )
-              ))
+                        }),
+                  ),
+              )),
       )
 
     assertRefused(mutated, CapabilityIssueCode.INVALID_PROPERTY_VALUE, text.id)
@@ -195,8 +195,8 @@ class MutatedDocumentTest {
             (text.id to
               text.copy(
                 modifiers =
-                  JsonArray(listOf(buildJsonObject { put("type", "notAModifierAnyoneDeclares") }))
-              ))
+                  JsonArray(listOf(buildJsonObject { put("type", "notAModifierAnyoneDeclares") })),
+              )),
       )
 
     assertRefused(mutated, CapabilityIssueCode.UNKNOWN_MODIFIER, text.id)
@@ -215,7 +215,8 @@ class MutatedDocumentTest {
         nodes =
           valid.nodes +
             (second.id to second.copy(slots = mapOf("children" to listOf(stolen)))) +
-            (scaffold.id to scaffold.copy(slots = scaffold.slots + ("topBar" to listOf(second.id))))
+            (scaffold.id to
+              scaffold.copy(slots = scaffold.slots + ("topBar" to listOf(second.id)))),
       )
 
     assertGraphRefused(mutated, "DUPLICATE_NODE_REFERENCE")
@@ -227,7 +228,8 @@ class MutatedDocumentTest {
     val scaffold = valid.nodes.values.first { it.componentId == "layout/scaffold" }
     val mutated =
       valid.copy(
-        nodes = valid.nodes + (box.id to box.copy(slots = mapOf("children" to listOf(scaffold.id))))
+        nodes =
+          valid.nodes + (box.id to box.copy(slots = mapOf("children" to listOf(scaffold.id)))),
       )
 
     assertGraphRefused(mutated, "GRAPH_CYCLE")

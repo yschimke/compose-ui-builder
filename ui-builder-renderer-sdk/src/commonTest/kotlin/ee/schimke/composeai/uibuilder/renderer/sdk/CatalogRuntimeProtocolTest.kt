@@ -84,7 +84,7 @@ class CatalogRuntimeProtocolTest {
           ORIGIN,
           true,
           host.request("action-1", "dispatchAction", action("design", 1, "root", "activate")),
-        )
+        ),
       )
     assertEquals("root", command.action.nodeId)
     assertEquals("editor", render.surface?.surfaceId)
@@ -106,7 +106,7 @@ class CatalogRuntimeProtocolTest {
             "renderDocument",
             buildJsonObject { put("document", documentElement(document())) },
           ),
-        )
+        ),
       )
     assertEquals("INVALID_SURFACE", missing.message.code())
 
@@ -117,7 +117,7 @@ class CatalogRuntimeProtocolTest {
           ORIGIN,
           true,
           host.request("invalid-surface", "renderDocument", invalidPayload),
-        )
+        ),
       )
     assertEquals("INVALID_SURFACE", invalid.message.code())
   }
@@ -138,7 +138,7 @@ class CatalogRuntimeProtocolTest {
             "renderDocument",
             buildJsonObject { put("document", documentElement(document())) },
           ),
-        )
+        ),
       )
 
     assertNull(render.surface)
@@ -187,11 +187,11 @@ class CatalogRuntimeProtocolTest {
             ORIGIN,
             true,
             CatalogRuntimeHostSession(RUNTIME).request("initialize", "initialize"),
-          )
+          ),
       )
     assertTrue(
       CATALOG_RUNTIME_CAPABILITY_INSPECTION_UPDATES in
-        reply.message.payload.getValue("capabilities").toString()
+        reply.message.payload.getValue("capabilities").toString(),
     )
   }
 
@@ -225,14 +225,14 @@ class CatalogRuntimeProtocolTest {
         "null",
         true,
         encode(response("render-1", taller.copy(documentId = "other"), INSPECTION_UPDATED)),
-      )
+      ),
     )
     assertNull(
       host.accept(
         "https://elsewhere",
         true,
         encode(response("render-1", taller, INSPECTION_UPDATED)),
-      )
+      ),
     )
 
     // Once a newer render is in flight the old one's layout is not the picture on screen.
@@ -295,7 +295,7 @@ class CatalogRuntimeProtocolTest {
           ORIGIN,
           true,
           host.request("action-1", "dispatchAction", action("design", 1, "root", "activate")),
-        )
+        ),
       )
     requestRender(endpoint, host, "render-2", document(2))
     assertEquals(
@@ -317,7 +317,7 @@ class CatalogRuntimeProtocolTest {
             true,
             if (id == "bad") encodedRequest(id, "dispatchAction", payload)
             else host.request(id, "dispatchAction", payload),
-          )
+          ),
         )
         .message
         .code()
@@ -343,7 +343,7 @@ class CatalogRuntimeProtocolTest {
 
     val recent =
       assertIs<CatalogRuntimeCommand.Reply>(
-        endpoint.receive(ORIGIN, true, replay.request(ids.last(), "initialize"))
+        endpoint.receive(ORIGIN, true, replay.request(ids.last(), "initialize")),
       )
     assertEquals("DUPLICATE_REQUEST", recent.message.code(), "a recent replay is still refused")
     val forgotten = endpoint.receive(ORIGIN, true, replay.request(ids.first(), "initialize"))
@@ -385,26 +385,27 @@ class CatalogRuntimeProtocolTest {
         "null",
         true,
         encode(response("render-1", snapshot(document()).copy(nodes = emptyList()))),
-      )
+      ),
     )
     assertNull(
       host.accept(
         "null",
         true,
         encode(response("render-1", snapshot(document()).copy(documentId = "other"))),
-      )
+      ),
     )
     val malformed =
       snapshot(document()).let { value ->
         value.copy(
-          nodes = value.nodes.map { it.copy(bounds = UiBuilderPixelBounds(2_000_000f, 0f, 1f, 1f)) }
+          nodes =
+            value.nodes.map { it.copy(bounds = UiBuilderPixelBounds(2_000_000f, 0f, 1f, 1f)) },
         )
       }
     assertNull(host.accept("null", true, encode(response("render-1", malformed))))
     val oversized =
       snapshot(document()).let { value ->
         value.copy(
-          generation = value.generation.copy(expectedAuthoredNodeIds = List(10_001) { "node-$it" })
+          generation = value.generation.copy(expectedAuthoredNodeIds = List(10_001) { "node-$it" }),
         )
       }
     assertNull(host.accept("null", true, encode(response("render-1", oversized))))
@@ -468,7 +469,7 @@ class CatalogRuntimeProtocolTest {
           "renderDocument",
           renderPayload(document),
         ),
-      )
+      ),
     )
 
   private fun document(revision: Int = 1) =
@@ -565,7 +566,7 @@ class CatalogRuntimeProtocolTest {
         requestId = requestId,
         type = type,
         payload = payload,
-      )
+      ),
     )
 
   private fun CatalogRuntimeMessage.code() = payload.getValue("code").toString().trim('"')

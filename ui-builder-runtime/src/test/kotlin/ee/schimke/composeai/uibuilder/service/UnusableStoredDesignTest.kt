@@ -43,7 +43,7 @@ class UnusableStoredDesignTest {
     // Still listed. A design nobody can open is bad; one nobody can even see is worse.
     val listed =
       assertIs<UiBuilderServiceResponse.Designs>(
-        execute(reopened, OWNER, UiBuilderServiceRequest.ListDesigns(cursor = null, limit = 10))
+        execute(reopened, OWNER, UiBuilderServiceRequest.ListDesigns(cursor = null, limit = 10)),
       )
     assertEquals(listOf("kept", "orphaned"), listed.designs.map { it.designId }.sorted())
   }
@@ -113,9 +113,9 @@ class UnusableStoredDesignTest {
               InsertNodeMutationV1(
                 DesignNodeV1(id = "n", componentId = "m3.Text"),
                 NodeLocationV1(),
-              )
+              ),
             ),
-          )
+          ),
         ),
       )
 
@@ -150,7 +150,7 @@ class UnusableStoredDesignTest {
     // it would leave every unusable design called what it was called before it broke.
     val renamed =
       assertIs<UiBuilderServiceResponse.DesignRenamed>(
-        execute(reopened, OWNER, UiBuilderServiceRequest.RenameDesign("orphaned", "broken"))
+        execute(reopened, OWNER, UiBuilderServiceRequest.RenameDesign("orphaned", "broken")),
       )
     assertEquals("broken", renamed.design.title)
 
@@ -158,7 +158,7 @@ class UnusableStoredDesignTest {
     // nothing about why the design cannot be served.
     val listed =
       assertIs<UiBuilderServiceResponse.Designs>(
-        execute(reopened, OWNER, UiBuilderServiceRequest.ListDesigns(null, 10))
+        execute(reopened, OWNER, UiBuilderServiceRequest.ListDesigns(null, 10)),
       )
     assertEquals("broken", listed.designs.single().title)
     assertEquals(1, reopened.diagnostics().unusableDesigns)
@@ -204,7 +204,7 @@ class UnusableStoredDesignTest {
     val outsider = AuthenticatedUiBuilderActor("outsider")
     val forbidden =
       assertIs<UiBuilderServiceResponse.Error>(
-        execute(reopened, outsider, UiBuilderServiceRequest.DeleteDesign("orphaned"))
+        execute(reopened, outsider, UiBuilderServiceRequest.DeleteDesign("orphaned")),
       )
     assertEquals(ServiceErrorCodeV1.FORBIDDEN, forbidden.error.code)
 
@@ -270,10 +270,10 @@ class UnusableStoredDesignTest {
             stored.copy(
               nodes =
                 stored.nodes.filterKeys { it in kept } +
-                  (root.id to root.copy(slots = mapOf("content" to keptChildren)))
-            )
+                  (root.id to root.copy(slots = mapOf("content" to keptChildren))),
+            ),
           ),
-        )
+        ),
       )
     assertEquals(stored.revision + 1, repaired.revision)
     assertTrue(repaired.previousReason.contains("node count"), repaired.previousReason)
@@ -305,7 +305,7 @@ class UnusableStoredDesignTest {
     // only open because that one is closed to a design the host will not load.
     val refused =
       assertIs<UiBuilderAdminRepair.Rejected>(
-        stocked.adminRepairDesign("served", assertNotNull(stocked.adminDesignDocument("served")))
+        stocked.adminRepairDesign("served", assertNotNull(stocked.adminDesignDocument("served"))),
       )
     assertTrue(refused.reason.contains("served normally"), refused.reason)
 
@@ -321,9 +321,9 @@ class UnusableStoredDesignTest {
                 DesignDocumentV1.serializer(),
                 assertNotNull(reopened.adminDesignDocument("served")),
               )
-              .copy(id = "somebody-else")
+              .copy(id = "somebody-else"),
           ),
-        )
+        ),
       )
     assertTrue(wrongDesign.reason.contains("somebody-else"), wrongDesign.reason)
     assertEquals(setOf("served"), reopened.adminUnusableDesigns().keys, "still held back")
@@ -370,7 +370,7 @@ class UnusableStoredDesignTest {
                       componentId = "m3.Text",
                       slots = mapOf("content" to ids.drop(1)),
                     )),
-            )
+            ),
         ),
       )
     assertIs<UiBuilderServiceResponse.Snapshot>(response, "creating $designId")
@@ -467,7 +467,7 @@ class UnusableStoredDesignTest {
             override fun resumeWith(result: Result<UiBuilderServiceResponse>) {
               completion = result
             }
-          }
+          },
         )
       return checkNotNull(completion) { "service did not complete synchronously" }.getOrThrow()
     }

@@ -37,7 +37,7 @@ class RemoteExpressionExportTest {
               mapOf(
                 "count" to state("int", JsonPrimitive(3)),
                 "on" to state("bool", JsonPrimitive(true)),
-              )
+              ),
             ),
           roots = listOf("label"),
           nodes =
@@ -48,7 +48,7 @@ class RemoteExpressionExportTest {
                   REMOTE_TEXT_COMPONENT_ID,
                   properties = JsonObject(properties),
                   modifiers = JsonArray(modifiers),
-                )
+                ),
             ),
         ),
         refusals,
@@ -67,7 +67,7 @@ class RemoteExpressionExportTest {
         "type" to JsonPrimitive("value"),
         "valueType" to JsonPrimitive(type),
         "initialValue" to initial,
-      )
+      ),
     )
 
   @Test
@@ -90,7 +90,7 @@ class RemoteExpressionExportTest {
       emit(
         mapOf(
           "text" to
-            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|")))
+            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|"))),
         ),
         modifiers =
           listOf(
@@ -98,10 +98,10 @@ class RemoteExpressionExportTest {
               mapOf(
                 "type" to JsonPrimitive("rotate"),
                 "degrees" to formula("time.secondOfHour % 60 * 6"),
-              )
+              ),
             ),
             JsonObject(
-              mapOf("type" to JsonPrimitive("alpha"), "alpha" to formula("select(on, 1.0, 0.5)"))
+              mapOf("type" to JsonPrimitive("alpha"), "alpha" to formula("select(on, 1.0, 0.5)")),
             ),
           ),
       )
@@ -118,7 +118,7 @@ class RemoteExpressionExportTest {
       emit(
         mapOf(
           "text" to
-            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|")))
+            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|"))),
         ),
         modifiers =
           listOf(
@@ -126,8 +126,8 @@ class RemoteExpressionExportTest {
               mapOf(
                 "type" to JsonPrimitive("rotate"),
                 "degrees" to formula("time.animation * 90"),
-              )
-            )
+              ),
+            ),
           ),
       )
 
@@ -144,7 +144,7 @@ class RemoteExpressionExportTest {
       emit(
         mapOf(
           "text" to
-            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|")))
+            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|"))),
         ),
         modifiers =
           listOf(
@@ -152,13 +152,13 @@ class RemoteExpressionExportTest {
               mapOf(
                 "type" to JsonPrimitive("alpha"),
                 "alpha" to formula("tween(select(on, 1.0, 0.25), 300, \"overshoot\")"),
-              )
+              ),
             ),
             JsonObject(
               mapOf(
                 "type" to JsonPrimitive("rotate"),
                 "degrees" to formula("spring(select(on, 90, 0), 200, 0.5)"),
-              )
+              ),
             ),
           ),
       )
@@ -199,9 +199,9 @@ class RemoteExpressionExportTest {
           "text" to
             formula(
               "toString(degrees(atan2(asin(0.5), acos(0.5))) + radians(exp(ln(log10(sign(" +
-                "time.animation))))))"
-            )
-        )
+                "time.animation))))))",
+            ),
+        ),
       )
 
     assertTrue(refusals.isEmpty(), refusals.toString())
@@ -223,9 +223,9 @@ class RemoteExpressionExportTest {
           "text" to
             formula(
               "toString(fract(time.animation) + step(0.5, time.animation) + " +
-                "smoothstep(1.0, 3.0, time.animation) + hypot(count, 4))"
-            )
-        )
+                "smoothstep(1.0, 3.0, time.animation) + hypot(count, 4))",
+            ),
+        ),
       )
 
     assertTrue(refusals.isEmpty(), refusals.toString())
@@ -271,9 +271,9 @@ class RemoteExpressionExportTest {
           "text" to
             formula(
               "toString(time.year + time.month + time.dayOfYear + time.animationDelta + " +
-                "device.density + device.fontScale + device.windowWidth + device.windowHeight)"
-            )
-        )
+                "device.density + device.fontScale + device.windowWidth + device.windowHeight)",
+            ),
+        ),
       )
 
     assertTrue(refusals.isEmpty(), refusals.toString())
@@ -305,8 +305,8 @@ class RemoteExpressionExportTest {
           "text" to
             formula(
               "concat(uppercase(substring(trim(lowercase(\"Ab\")), 0, count)), " +
-                "toString(rand() + randRange(1, 2) + pingPong(time.animation, 3)))"
-            )
+                "toString(rand() + randRange(1, 2) + pingPong(time.animation, 3)))",
+            ),
         ),
         modifiers =
           listOf(
@@ -314,8 +314,8 @@ class RemoteExpressionExportTest {
               mapOf(
                 "type" to JsonPrimitive("background"),
                 "color" to formula("hsv(0.5, 1, rand())"),
-              )
-            )
+              ),
+            ),
           ),
       )
 
@@ -342,7 +342,7 @@ class RemoteExpressionExportTest {
           "text" to
             JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|"))),
           "color" to formula("rgb(1, 0.5, 0, select(on, 1.0, 0.5))"),
-        )
+        ),
       )
 
     assertTrue(refusals.isEmpty(), refusals.toString())
@@ -357,9 +357,9 @@ class RemoteExpressionExportTest {
         mapOf(
           "text" to
             formula(
-              "toString(touch.x + touch.velocityY + touch.time + sensor.light + sensor.rotationZ)"
-            )
-        )
+              "toString(touch.x + touch.velocityY + touch.time + sensor.light + sensor.rotationZ)",
+            ),
+        ),
       )
 
     assertTrue(refusals.isEmpty(), refusals.toString())
@@ -396,9 +396,9 @@ class RemoteExpressionExportTest {
             formula(
               "toString(spline(time.animation, 0, 1.5, 0) + splineLoop(time.animation, 0, 1) + " +
                 "cbrt(count) + copySign(2, time.animation) + " +
-                "secondsUntil(\"2026-12-25T00:00:00Z\") + hoursUntil(\"2026-12-25T00:00:00Z\"))"
-            )
-        )
+                "secondsUntil(\"2026-12-25T00:00:00Z\") + hoursUntil(\"2026-12-25T00:00:00Z\"))",
+            ),
+        ),
       )
 
     assertTrue(refusals.isEmpty(), refusals.toString())

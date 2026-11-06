@@ -197,7 +197,7 @@ class UiBuilderInspectionCollector(
             }
           }
           .sortedWith(
-            compareBy(UiBuilderSlotInspection::parentNodeId, UiBuilderSlotInspection::slotName)
+            compareBy(UiBuilderSlotInspection::parentNodeId, UiBuilderSlotInspection::slotName),
           ),
     )
 
@@ -217,7 +217,7 @@ private fun initialState(document: UiBuilderDocument): Map<String, String?> =
   }
 
 private fun UiBuilderNode.inspectionSemantics(
-  state: Map<String, String?>
+  state: Map<String, String?>,
 ): UiBuilderSemanticsInspection {
   val directSelected = propertyBoolean("selected")
   val selectedProperty = properties["selected"]?.jsonObject

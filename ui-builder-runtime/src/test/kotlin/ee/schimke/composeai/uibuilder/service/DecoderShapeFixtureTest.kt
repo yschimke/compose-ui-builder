@@ -75,7 +75,7 @@ class DecoderShapeFixtureTest {
             serializer<PublishedUiBuilderCatalog.UiBuilderComponentPolicy>().descriptor,
             mutableSetOf(),
           ),
-      )
+      ),
     )
 
   /**
@@ -98,7 +98,7 @@ class DecoderShapeFixtureTest {
     }
     seen.remove(descriptor.serialName)
     return JsonObject(
-      mapOf("kind" to JsonPrimitive("object"), "members" to JsonObject(members.toSortedMap()))
+      mapOf("kind" to JsonPrimitive("object"), "members" to JsonObject(members.toSortedMap())),
     )
   }
 
@@ -117,7 +117,7 @@ class DecoderShapeFixtureTest {
             JsonArray(
               (0 until descriptor.elementsCount).map {
                 JsonPrimitive(descriptor.getElementName(it))
-              }
+              },
             ),
         )
       StructureKind.LIST -> {
@@ -151,7 +151,7 @@ class DecoderShapeFixtureTest {
             "kind" to JsonPrimitive("object"),
             "values" to
               JsonObject(
-                if (value.isNullable) spec + ("nullable" to JsonPrimitive(true)) else spec
+                if (value.isNullable) spec + ("nullable" to JsonPrimitive(true)) else spec,
               ),
           )
       }

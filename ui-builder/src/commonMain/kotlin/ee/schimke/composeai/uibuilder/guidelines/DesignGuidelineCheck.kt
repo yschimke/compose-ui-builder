@@ -161,7 +161,7 @@ class DesignGuidelineController(
   private val _state =
     MutableStateFlow(
       host.storedKey()?.let { DesignGuidelineState.Ready(currentModel()) }
-        ?: DesignGuidelineState.NeedsKey()
+        ?: DesignGuidelineState.NeedsKey(),
     )
   val state: StateFlow<DesignGuidelineState> = _state.asStateFlow()
 
@@ -451,7 +451,7 @@ class DesignGuidelineController(
           costUsd = served.costUsd,
           generationId = served.generationId,
           routing = served.routing,
-        )
+        ),
       )
     }
       .getOrNull()

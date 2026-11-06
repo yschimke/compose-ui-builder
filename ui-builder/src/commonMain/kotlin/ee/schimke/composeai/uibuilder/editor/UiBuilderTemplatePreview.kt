@@ -61,7 +61,7 @@ internal fun UiBuilderNewDesignCatalog.withTemplatePreviews(
                 published = published,
               )
             }
-              .getOrNull()
+              .getOrNull(),
         )
       },
   )
@@ -86,11 +86,11 @@ internal fun TemplateThumbnail(
   val rendered =
     remember(document, hostDensity) {
       document.copy(
-        environment = JsonObject(document.environment + ("density" to JsonPrimitive(hostDensity)))
+        environment = JsonObject(document.environment + ("density" to JsonPrimitive(hostDensity))),
       )
     }
   DesignThumbnailFrame(
-    Modifier.requiredSize(80.dp, 104.dp).testTag("template-preview-${template.id}")
+    Modifier.requiredSize(80.dp, 104.dp).testTag("template-preview-${template.id}"),
   ) {
     Box(
       Modifier.wrapContentSize(Alignment.Center, unbounded = true)
@@ -100,7 +100,7 @@ internal fun TemplateThumbnail(
           scaleX = scale
           scaleY = scale
         }
-        .clearAndSetSemantics {}
+        .clearAndSetSemantics {},
     ) {
       CompositionLocalProvider(
         LocalReduceMotion provides true,

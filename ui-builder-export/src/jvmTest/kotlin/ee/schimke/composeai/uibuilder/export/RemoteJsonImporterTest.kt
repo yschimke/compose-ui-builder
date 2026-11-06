@@ -90,11 +90,11 @@ class RemoteJsonImporterTest {
             {"paint":{"color":"@colors.accent","style":"fill"}},
             {"loop":{"from":0.0,"until":"@n","index":"i","commands":[
               {"drawRect":{"left":"20 + i * @gap","top":"200 - arrayGet(@data, i)","right":"52 + i * @gap","bottom":200.0}}]}}
-          ]}}]}]}"""
+          ]}}]}]}""",
       )
     assertEquals(
       listOf(
-        "root[0].global[0].resources.colors.themed: a colour with light and dark values has no builder equivalent"
+        "root[0].global[0].resources.colors.themed: a colour with light and dark values has no builder equivalent",
       ),
       result.gaps,
     )
@@ -120,7 +120,7 @@ class RemoteJsonImporterTest {
           {"resources":{
             "colors":{"ink":"#FF42A5F5"},
             "variables":[{"name":"cx","value":"12 * 2"}],
-            "floatArrays":[{"name":"data","value":[5,7]}]}}]}"""
+            "floatArrays":[{"name":"data","value":[5,7]}]}}]}""",
       )
     assertEquals(emptyList(), result.gaps)
     val dot = result.document.nodes.values.single { it.componentId == "draw/circle" }
@@ -140,7 +140,7 @@ class RemoteJsonImporterTest {
             {"type":"text","value":"Hello","fontSize":20.0,"color":"#FFDCE4F2","modifiers":[]},
             {"type":"spacer","modifiers":[{"height":4}]},
             {"type":"text","value":"World","fontSize":11.0,"color":"#FF000000","modifiers":[{"width":120}]}
-          ]}}]}"""
+          ]}}]}""",
       )
     assertEquals(emptyList(), result.gaps)
     val document = result.document
@@ -175,7 +175,7 @@ class RemoteJsonImporterTest {
           {"touchExpression":{"name":"lift","defaultValue":4.0,"min":1.0,"max":10.0,
             "expression":"1 - touchY() / 400 * 11"}},
           {"drawCircle":{"cx":"@stage * 360","cy":"@lift * 10","radius":4}}
-        ]}]}"""
+        ]}]}""",
       )
     assertEquals(emptyList(), result.gaps)
     val dot = result.document.nodes.values.single { it.componentId == "draw/circle" }
@@ -193,7 +193,7 @@ class RemoteJsonImporterTest {
         imported(
           """{"header":{"width":360,"height":100},"root":[{"type":"canvas","commands":[
             {"touchExpression":{"name":"snap","min":0.0,"max":1.0,$mode,"expression":"touchX()"}}
-          ]}]}"""
+          ]}]}""",
         )
       assertTrue(refused.gaps.single().contains("stops other than gently"), refused.gaps.toString())
     }
@@ -205,7 +205,7 @@ class RemoteJsonImporterTest {
       imported(
         """{"header":{"width":360,"height":360},"root":[{"type":"canvas",
           "modifiers":[{"width":120},{"height":48}],
-          "commands":[{"drawRect":{"left":0,"top":0,"right":120,"bottom":48}}]}]}"""
+          "commands":[{"drawRect":{"left":0,"top":0,"right":120,"bottom":48}}]}]}""",
       )
     val canvas = result.document.nodes.values.single { it.componentId == UiDrawing.CANVAS }
     fun viewport(name: String) =
@@ -221,7 +221,7 @@ class RemoteJsonImporterTest {
         """{"header":{"width":100,"height":100},"root":[{"type":"canvas","commands":[
           {"loop":{"index":"i","from":0,"commands":[{"drawCircle":{"cx":"i * 10","cy":50,"radius":4}}]}},
           {"drawRect":{"left":0,"top":0,"right":10,"bottom":10}}
-        ]}]}"""
+        ]}]}""",
       )
     assertTrue(result.gaps.any { "until" in it }, result.gaps.toString())
     val document = result.document
@@ -248,7 +248,7 @@ class RemoteJsonImporterTest {
           {"drawCircle":{"cx":"56.0 + @walk * 248.0","cy":180,"radius":12}},
           {"paint":{"ops":[{"textSize":34}]}},
           {"drawTextAnchored":{"text":"Hi","x":180,"y":40,"panX":-1.0,"panY":1.0}}
-        ]}]}"""
+        ]}]}""",
       )
     assertEquals(emptyList(), result.gaps)
     val document = result.document
@@ -314,7 +314,7 @@ class RemoteJsonImporterTest {
           {"drawOval":{"left":70,"top":90,"right":290,"bottom":220}},{"restore":{}},
           {"conditionalOperations":{"condition":"lt","v1":"continuousSec()","v2":0.5,"commands":[
             {"drawRect":{"left":0,"top":0,"right":10,"bottom":10}}]}}
-        ]}]}"""
+        ]}]}""",
       )
     assertEquals(emptyList(), result.gaps)
     val nodes = result.document.nodes
@@ -363,7 +363,7 @@ class RemoteJsonImporterTest {
           {"drawPath":{"path":"curve"}},
           {"drawPath":{"path":"ring"}},
           {"drawPath":{"path":"smooth"}}
-        ]}]}"""
+        ]}]}""",
       )
     val nodes = result.document.nodes
     val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
@@ -421,7 +421,7 @@ class RemoteJsonImporterTest {
             {"variable":{"name":"v","value":"i * 2"}},
             {"pathAppendLineTo":{"path":"mixed","x":"@v","y":"i"}}]}},
           {"drawPath":{"path":"mixed"}}
-        ]}]}"""
+        ]}]}""",
       )
     val nodes = result.document.nodes
     val canvas = nodes.values.single { it.componentId == UiDrawing.CANVAS }
@@ -469,7 +469,7 @@ class RemoteJsonImporterTest {
           {"drawRect":{"left":0,"top":0,"right":10,"bottom":10}},
           {"matrix3D":{"m":[1,0,0,1]}},
           {"drawCircle":{"cx":"arrayGet(@data, 0)","cy":5,"radius":2}}
-        ]}]}"""
+        ]}]}""",
       )
     val ops =
       result.document.nodes.values.filter {
@@ -536,7 +536,7 @@ class RemoteJsonImporterTest {
       appendLine("# RemoteCompose-Examples import")
       appendLine()
       appendLine(
-        "${documents.size} documents: $clean import with no gaps, $refused have no layout tree."
+        "${documents.size} documents: $clean import with no gaps, $refused have no layout tree.",
       )
       appendLine()
       appendLine("| Documents | Gap |")

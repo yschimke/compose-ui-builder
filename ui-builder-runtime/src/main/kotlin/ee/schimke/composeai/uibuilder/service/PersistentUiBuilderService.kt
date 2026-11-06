@@ -393,7 +393,7 @@ public class PersistentUiBuilderService(
           // Filled first: `rePinned` validates before it moves a pin, and a newly required property
           // the design lacks is exactly what would make it refuse.
           design.withNewlyRequiredFilled().rePinned()
-        }
+        },
     )
   private val rePin: RePinOutcome = persistRePins()
 
@@ -499,7 +499,7 @@ public class PersistentUiBuilderService(
             "stored design cannot be read: ${record.reason}",
             storeQuarantine = true,
           )
-        }
+        },
     )
 
   /**
@@ -675,7 +675,7 @@ public class PersistentUiBuilderService(
           call.request is UiBuilderServiceRequest.ReplaceDesignDocument && !unusable.storeQuarantine
         if (!previewing && !recovering && !deleting && !renaming && !replacing) {
           return UiBuilderServiceResponse.Error(
-            UiBuilderServiceError(unusable.code, unusable.reason)
+            UiBuilderServiceError(unusable.code, unusable.reason),
           )
         }
       }
@@ -773,8 +773,8 @@ public class PersistentUiBuilderService(
             documentHash(current),
             idempotentReplay = true,
             documentUpdatedAtEpochMillis = current.updatedAtEpochMillis,
-          )
-        )
+          ),
+        ),
       )
     }
     if (write.assetKey !in current.assets && current.assets.size >= limits.maximumAssetsPerDesign) {
@@ -867,7 +867,7 @@ public class PersistentUiBuilderService(
           UiBuilderServiceError(
             ServiceErrorCodeV1.NOT_FOUND,
             "design ${read.designId} has no asset '${read.assetKey}'",
-          )
+          ),
         )
     }
     val bytes =
@@ -885,7 +885,7 @@ public class PersistentUiBuilderService(
           UiBuilderServiceError(
             ServiceErrorCodeV1.NOT_FOUND,
             "the bytes behind asset '${read.assetKey}' are not on this host",
-          )
+          ),
         )
     return UiBuilderAssetReadResult.Found(binding, bytes)
   }
@@ -912,7 +912,7 @@ public class PersistentUiBuilderService(
       ) {
         rejectedSubscriberLimit.incrementAndGet()
         throw UiBuilderSubscriptionRejectedException(
-          UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, "subscriber limit reached")
+          UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, "subscriber limit reached"),
         )
       }
       mailbox = SubscriberMailbox(limits.subscriberQueueCapacity, listener)
@@ -950,7 +950,7 @@ public class PersistentUiBuilderService(
                   catalogs.reference(catalog)?.let { catalog.benchmark.catalogSystemId to it }
                 }
                 .toMap(),
-          )
+          ),
         )
       }
       is UiBuilderServiceRequest.CreateDesign -> create(call.actor, request.document)
@@ -1006,7 +1006,7 @@ public class PersistentUiBuilderService(
               actorId = authors[state.sequence],
             )
           },
-      )
+      ),
     )
   }
 
@@ -1038,8 +1038,8 @@ public class PersistentUiBuilderService(
               design.document.revision,
               RejectionCodeV1.OPERATION_ID_REUSED,
               "operation id was already used by a different submission",
-            )
-          )
+            ),
+          ),
         )
       }
       val outcome =
@@ -1057,7 +1057,7 @@ public class PersistentUiBuilderService(
             message = "revision ${request.revision} is no longer retained for ${request.designId}",
             currentRevision = design.document.revision,
             retainedFromSequence = design.retainedSnapshotFromSequence(),
-          )
+          ),
         )
     return apply(
       actor,
@@ -1074,7 +1074,7 @@ public class PersistentUiBuilderService(
               sourceDocumentHash = documentHash(design.document),
               targetDocumentHash = documentHash(target),
               previewDigest = RESTORE_DIGEST_PREFIX + request.revision,
-            )
+            ),
           ),
       ),
     )
@@ -1117,7 +1117,7 @@ public class PersistentUiBuilderService(
           WholeDocumentCandidate.Refused("design home no longer matches the stated source home")
         request.targetHome is DesignHomeV1.Server && request.targetHome.designId != current.id ->
           WholeDocumentCandidate.Refused(
-            "target server home design id does not match the stored design"
+            "target server home design id does not match the stored design",
           )
         request.targetHome is DesignHomeV1.Server && request.targetHome.url.isBlank() ->
           WholeDocumentCandidate.Refused("target server home URL is blank")
@@ -1155,11 +1155,11 @@ public class PersistentUiBuilderService(
       when {
         request.document.id != request.designId ->
           WholeDocumentCandidate.Refused(
-            "replacement document id does not match the requested design"
+            "replacement document id does not match the requested design",
           )
         request.document.home != current.home ->
           WholeDocumentCandidate.Refused(
-            "replacement document home does not match the stored design"
+            "replacement document home does not match the stored design",
           )
         else -> WholeDocumentCandidate.Ready(request.document)
       }
@@ -1200,8 +1200,8 @@ public class PersistentUiBuilderService(
               design.document.revision,
               RejectionCodeV1.OPERATION_ID_REUSED,
               "operation id was already used by a different submission",
-            )
-          )
+            ),
+          ),
         )
       }
       val replay =
@@ -1222,8 +1222,8 @@ public class PersistentUiBuilderService(
             design.document.revision,
             RejectionCodeV1.INVALID_COMMAND,
             "mutation rate limit exceeded",
-          )
-        )
+          ),
+        ),
       )
     }
     if (baseRevision != design.document.revision) {
@@ -1478,7 +1478,7 @@ public class PersistentUiBuilderService(
         put("designId", designId)
         put("baseRevision", baseRevision)
         put("payload", payload)
-      }
+      },
     )
 
   /**
@@ -1545,7 +1545,7 @@ public class PersistentUiBuilderService(
         UiBuilderServiceResponse.DesignDeleted(
           designId,
           restorableUntilEpochMillis = trashed.trashedAtEpochMillis!! + limits.trashRetentionMillis,
-        )
+        ),
       )
     }
     val quarantined = quarantinedDesigns[designId]
@@ -1556,7 +1556,7 @@ public class PersistentUiBuilderService(
             UiBuilderServiceError(
               ServiceErrorCodeV1.INTERNAL,
               "stored design cannot be read: ${quarantined.reason}",
-            )
+            ),
           )
       if (!header.access.deletableBy(actor, header.createdByDelegateActorId)) {
         return serviceError(forbidden("delete", designId))
@@ -1656,7 +1656,7 @@ public class PersistentUiBuilderService(
     commitDesign(document.id, design)
     runtime[document.id] = RuntimeDesign()
     return LockedExecution(
-      UiBuilderServiceResponse.Snapshot(snapshot(design, actor, catalog, emptyList()))
+      UiBuilderServiceResponse.Snapshot(snapshot(design, actor, catalog, emptyList())),
     )
   }
 
@@ -1719,7 +1719,7 @@ public class PersistentUiBuilderService(
               message = "revision $revision is no longer retained for $designId",
               currentRevision = design.document.revision,
               retainedFromSequence = design.retainedSnapshotFromSequence(),
-            )
+            ),
           )
     val catalog =
       catalogs.resolve(state.document.catalogPin)
@@ -1738,8 +1738,8 @@ public class PersistentUiBuilderService(
           actor,
           catalog,
           activePresence(designId),
-        )
-      )
+        ),
+      ),
     )
   }
 
@@ -1749,7 +1749,7 @@ public class PersistentUiBuilderService(
       return serviceError(forbidden("manage access for", designId))
     }
     return LockedExecution(
-      UiBuilderServiceResponse.DesignAccess(designId, design.access.collapsed())
+      UiBuilderServiceResponse.DesignAccess(designId, design.access.collapsed()),
     )
   }
 
@@ -1811,8 +1811,8 @@ public class PersistentUiBuilderService(
         )
     return LockedExecution(
       UiBuilderServiceResponse.CatalogUpgradePreview(
-        catalogUpgradePreview(design.document, target, request.targetCatalogPin)
-      )
+        catalogUpgradePreview(design.document, target, request.targetCatalogPin),
+      ),
     )
   }
 
@@ -1843,8 +1843,8 @@ public class PersistentUiBuilderService(
     }
     return LockedExecution(
       UiBuilderServiceResponse.CatalogUpgradePreview(
-        catalogUpgradePreview(design.document, target, targetPin)
-      )
+        catalogUpgradePreview(design.document, target, targetPin),
+      ),
     )
   }
 
@@ -1889,7 +1889,7 @@ public class PersistentUiBuilderService(
               issues.joinToString(",") { "${it.severity}:${it.code}@${it.path}" },
             )
             .joinToString("\n")
-            .encodeToByteArray()
+            .encodeToByteArray(),
         ),
       candidateDocument = outcome.candidate,
       candidateDocumentHash = candidateHash,
@@ -1913,7 +1913,7 @@ public class PersistentUiBuilderService(
           code = ServiceErrorCodeV1.ACCESS_REVISION_MISMATCH,
           message = "access revision changed for ${request.designId}",
           currentAccessRevision = design.access.accessRevision,
-        )
+        ),
       )
     }
     if (request.mutations.isEmpty()) {
@@ -1958,7 +1958,7 @@ public class PersistentUiBuilderService(
             )
           access =
             access.copy(
-              actorGrants = access.actorGrants.filterNot { sameActor(it.actorId, target) } + grant
+              actorGrants = access.actorGrants.filterNot { sameActor(it.actorId, target) } + grant,
             )
         }
         is RevokeActorAccessMutationV1 -> {
@@ -1967,7 +1967,8 @@ public class PersistentUiBuilderService(
           }
           access =
             access.copy(
-              actorGrants = access.actorGrants.filterNot { sameActor(it.actorId, mutation.actorId) }
+              actorGrants =
+                access.actorGrants.filterNot { sameActor(it.actorId, mutation.actorId) },
             )
         }
         is TransferDesignOwnershipMutationV1 -> {
@@ -2074,8 +2075,8 @@ public class PersistentUiBuilderService(
             design.document.revision,
             RejectionCodeV1.INVALID_COMMAND,
             "atomic batch exceeds ${limits.maximumOperationsPerBatch} operations",
-          )
-        )
+          ),
+        ),
       )
     }
     val wire = submission.toProtocol(actor)
@@ -2089,8 +2090,8 @@ public class PersistentUiBuilderService(
               design.document.revision,
               RejectionCodeV1.INVALID_COMMAND,
               message,
-            )
-          )
+            ),
+          ),
         )
       }
     }
@@ -2103,8 +2104,8 @@ public class PersistentUiBuilderService(
               design.document.revision,
               RejectionCodeV1.OPERATION_ID_REUSED,
               "operation id was already used by a different submission",
-            )
-          )
+            ),
+          ),
         )
       }
       val outcome =
@@ -2126,8 +2127,8 @@ public class PersistentUiBuilderService(
             design.document.revision,
             RejectionCodeV1.INVALID_COMMAND,
             "mutation rate limit exceeded",
-          )
-        )
+          ),
+        ),
       )
     }
     val reduction =
@@ -2189,7 +2190,7 @@ public class PersistentUiBuilderService(
     if (reduction.outcome is AcceptedOutcomeV1) {
       documentQuotaIssue(reduction.design.document, countRejection = true)?.let {
         return Reduced.Unrecorded(
-          rejected(operationId, design.document.revision, RejectionCodeV1.INVALID_COMMAND, it)
+          rejected(operationId, design.document.revision, RejectionCodeV1.INVALID_COMMAND, it),
         )
       }
     }
@@ -2312,7 +2313,7 @@ public class PersistentUiBuilderService(
           message = "revision $revision of ${request.designId} is not retained to branch from",
           currentRevision = parent.document.revision,
           retainedFromSequence = parent.retainedSnapshotFromSequence(),
-        )
+        ),
       )
     }
     val branchId = request.branchId?.trim() ?: mintBranchId(request.designId)
@@ -2419,7 +2420,7 @@ public class PersistentUiBuilderService(
         }
         .sortedWith(
           compareByDescending<PersistedDesignV1> { it.branch?.createdAtEpochMillis }
-            .thenBy { it.document.id }
+            .thenBy { it.document.id },
         )
         .map { it.branchView() }
     return BranchExecution(UiBuilderBranchResponse.Branches(request.designId, branches))
@@ -2460,7 +2461,7 @@ public class PersistentUiBuilderService(
             status = DesignBranchStatusV1.ARCHIVED,
             closedAtEpochMillis = now,
             closedByActorId = actor.actorId,
-          )
+          ),
       )
     commitDesign(branchId, archived)
     return BranchExecution(UiBuilderBranchResponse.Branch(archived.branchView()))
@@ -2511,7 +2512,7 @@ public class PersistentUiBuilderService(
           ServiceErrorCodeV1.BAD_REQUEST,
           "mutation rate limit exceeded",
           retryable = true,
-        )
+        ),
       )
     }
 
@@ -2614,7 +2615,7 @@ public class PersistentUiBuilderService(
               nodeId = stop.nodeId,
               field = stop.field,
             )
-          }
+          },
         )
     val report =
       UiBuilderBranchMergeReport(
@@ -2645,7 +2646,7 @@ public class PersistentUiBuilderService(
             closedAtEpochMillis = now,
             closedByActorId = actor.actorId,
             mergedAtParentRevision = working.document.revision,
-          )
+          ),
       ),
     )
     siblings.forEach { siblingId ->
@@ -2660,7 +2661,7 @@ public class PersistentUiBuilderService(
                 closedAtEpochMillis = now,
                 closedByActorId = actor.actorId,
                 supersededByBranchId = request.branchId,
-              )
+              ),
         ),
       )
     }
@@ -2678,7 +2679,7 @@ public class PersistentUiBuilderService(
                 currentRevision = working.document.revision,
                 retainedFromSequence = working.retainedFromSequence(),
                 operations = committed,
-              )
+              ),
             ),
             working,
           )
@@ -2687,7 +2688,7 @@ public class PersistentUiBuilderService(
             enqueue(
               parentId,
               UiBuilderServiceUpdate.Snapshot(
-                snapshot(working, actor, catalog, activePresence(parentId)).copy(access = null)
+                snapshot(working, actor, catalog, activePresence(parentId)).copy(access = null),
               ),
               working,
             )
@@ -2727,7 +2728,7 @@ public class PersistentUiBuilderService(
         val source = asset.source
         if (source is EmbeddedAssetSourceV1) {
           (total + conservativeDecodedBase64Bytes(source.base64)).coerceAtMost(
-            Int.MAX_VALUE.toLong()
+            Int.MAX_VALUE.toLong(),
           )
         } else {
           total
@@ -2768,11 +2769,11 @@ public class PersistentUiBuilderService(
           message = "requested sequence is not retained",
           currentRevision = design.document.revision,
           retainedFromSequence = design.retainedFromSequence(),
-        )
+        ),
       )
     }
     return LockedExecution(
-      UiBuilderServiceResponse.Delta(design.deltaAfter(request.afterSequence, request.limit))
+      UiBuilderServiceResponse.Delta(design.deltaAfter(request.afterSequence, request.limit)),
     )
   }
 
@@ -2827,7 +2828,7 @@ public class PersistentUiBuilderService(
           ServiceErrorCodeV1.BAD_REQUEST,
           "concurrent export limit reached",
           retryable = true,
-        )
+        ),
       )
     }
     val currentExports = activeExports.incrementAndGet()
@@ -2862,7 +2863,7 @@ public class PersistentUiBuilderService(
               "export revision $revision is not retained",
               currentRevision = design.document.revision,
               retainedFromSequence = design.retainedSnapshotFromSequence(),
-            )
+            ),
           )
       val catalog =
         catalogs.resolve(state.document.catalogPin)
@@ -2870,19 +2871,19 @@ public class PersistentUiBuilderService(
             UiBuilderServiceError(
               ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
               "catalog pin is unavailable",
-            )
+            ),
           )
       if (!catalog.supports(request.format)) {
         return UiBuilderServiceResponse.Error(
           UiBuilderServiceError(
             ServiceErrorCodeV1.BAD_REQUEST,
             "catalog does not support ${request.format} export",
-          )
+          ),
         )
       }
       documentQuotaIssue(state.document, countRejection = true)?.let {
         return UiBuilderServiceResponse.Error(
-          UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, it)
+          UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, it),
         )
       }
       pinned =
@@ -2932,7 +2933,7 @@ public class PersistentUiBuilderService(
             ServiceErrorCodeV1.INTERNAL,
             "export timed out",
             retryable = true,
-          )
+          ),
         )
       } catch (_: RejectedExecutionException) {
         rejectedExportLimit.incrementAndGet()
@@ -2941,14 +2942,14 @@ public class PersistentUiBuilderService(
             ServiceErrorCodeV1.BAD_REQUEST,
             "concurrent export worker limit reached",
             retryable = true,
-          )
+          ),
         )
       } catch (failure: Exception) {
         return UiBuilderServiceResponse.Error(
           UiBuilderServiceError(
             ServiceErrorCodeV1.INTERNAL,
             "export failed: ${failure.clientMessage()}",
-          )
+          ),
         )
       }
     val validDigest =
@@ -2962,7 +2963,7 @@ public class PersistentUiBuilderService(
         UiBuilderServiceError(
           ServiceErrorCodeV1.INTERNAL,
           "export executor returned a mismatched format or content digest",
-        )
+        ),
       )
     }
     return UiBuilderServiceResponse.Export(artifact)
@@ -2983,7 +2984,7 @@ public class PersistentUiBuilderService(
         request.format !in RemoteDocumentExportSupport.formats
     ) {
       return invalid(
-        "supplied documents support only Compose source, PNG, Remote JSON and RC export"
+        "supplied documents support only Compose source, PNG, Remote JSON and RC export",
       )
     }
     if (document.id.isBlank() || document.revision < 0)
@@ -3005,7 +3006,7 @@ public class PersistentUiBuilderService(
           UiBuilderServiceError(
             ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
             "catalog pin is unavailable",
-          )
+          ),
         )
     if (!catalog.supports(request.format))
       return invalid("catalog does not support ${request.format} export")
@@ -3026,7 +3027,7 @@ public class PersistentUiBuilderService(
         document = exported,
         catalog = catalog,
         format = request.format,
-      )
+      ),
     )
   }
 
@@ -3292,7 +3293,7 @@ public class PersistentUiBuilderService(
           targetCatalogPin = mutation.targetCatalogPin,
           sourceDocumentHash = mutation.sourceDocumentHash,
           targetDocumentHash = mutation.targetDocumentHash,
-        )
+        ),
       ),
       emptyList(),
       targetOperationId = compensationTarget,
@@ -3357,7 +3358,7 @@ public class PersistentUiBuilderService(
           targetCatalogPin = mutation.targetCatalogPin,
           sourceDocumentHash = mutation.sourceDocumentHash,
           targetDocumentHash = mutation.targetDocumentHash,
-        )
+        ),
       ),
       emptyList(),
       targetOperationId = null,
@@ -3658,7 +3659,7 @@ public class PersistentUiBuilderService(
           val positions = working.positions + (mutation.node.id to position)
           val withNode =
             working.document.copy(
-              nodes = working.document.nodes + (mutation.node.id to mutation.node)
+              nodes = working.document.nodes + (mutation.node.id to mutation.node),
             )
           val document = withNode.rebuildLocation(positions, mutation.location.parent)
           MutationResult(
@@ -3701,7 +3702,7 @@ public class PersistentUiBuilderService(
                   ConflictCodeV1.STALE_MOVE,
                   mutation.nodeId,
                   overwrittenRevision = staleness.through,
-                )
+                ),
               )
             else emptyList()
           MutationResult(
@@ -3848,7 +3849,7 @@ public class PersistentUiBuilderService(
           val document =
             working.document.copy(
               nodes =
-                working.document.nodes + (node.id to node.copy(modifiers = mutation.modifiers))
+                working.document.nodes + (node.id to node.copy(modifiers = mutation.modifiers)),
             )
           // Another actor rewriting this node's chain since the base revision is a conflict, not a
           // refusal: the chain is a value and the last writer wins.
@@ -3861,7 +3862,7 @@ public class PersistentUiBuilderService(
                   mutation.nodeId,
                   MODIFIERS_FIELD,
                   staleness.through,
-                )
+                ),
               )
             else emptyList()
           MutationResult(
@@ -3890,7 +3891,8 @@ public class PersistentUiBuilderService(
             working.document.copy(
               nodes =
                 working.document.nodes +
-                  (node.id to node.copy(component = placement.copy(arguments = mutation.arguments)))
+                  (node.id to
+                    node.copy(component = placement.copy(arguments = mutation.arguments))),
             )
           // The same staleness question the modifier lane asks: the map is one value, and the last
           // writer wins with a conflict rather than a refusal.
@@ -3902,7 +3904,7 @@ public class PersistentUiBuilderService(
                   mutation.nodeId,
                   COMPONENT_ARGUMENTS_FIELD,
                   staleness.through,
-                )
+                ),
               )
             else emptyList()
           MutationResult(
@@ -4043,7 +4045,7 @@ public class PersistentUiBuilderService(
             else node.eventBindings + (mutation.event to after)
           val document =
             working.document.copy(
-              nodes = working.document.nodes + (node.id to node.copy(eventBindings = bindings))
+              nodes = working.document.nodes + (node.id to node.copy(eventBindings = bindings)),
             )
           document.stateUsageIssue(document.stateVariables)?.let { issue ->
             fail(
@@ -4083,7 +4085,7 @@ public class PersistentUiBuilderService(
                   mutation.nodeId,
                   eventBindingField(mutation.event),
                   staleness.through,
-                )
+                ),
               )
             else emptyList()
           MutationResult(
@@ -4146,7 +4148,7 @@ public class PersistentUiBuilderService(
             nodeId,
             property,
             staleness.through,
-          )
+          ),
         )
       else emptyList()
     return MutationResult(
@@ -4203,8 +4205,9 @@ public class PersistentUiBuilderService(
               working.copy(
                 document =
                   working.document.copy(
-                    nodes = working.document.nodes + (node.id to node.copy(properties = properties))
-                  )
+                    nodes =
+                      working.document.nodes + (node.id to node.copy(properties = properties)),
+                  ),
               )
           }
           is ComponentArgumentsChangeV1 -> {
@@ -4238,8 +4241,8 @@ public class PersistentUiBuilderService(
                   working.document.copy(
                     nodes =
                       working.document.nodes +
-                        (node.id to node.copy(component = placement.copy(arguments = target)))
-                  )
+                        (node.id to node.copy(component = placement.copy(arguments = target))),
+                  ),
               )
           }
           is ModifierChangeV1 -> {
@@ -4266,8 +4269,8 @@ public class PersistentUiBuilderService(
                     nodes =
                       working.document.nodes +
                         (node.id to
-                          node.copy(modifiers = if (undo) change.before else change.after))
-                  )
+                          node.copy(modifiers = if (undo) change.before else change.after)),
+                  ),
               )
           }
           is StateVariableChangeV1 -> {
@@ -4318,7 +4321,7 @@ public class PersistentUiBuilderService(
               else node.eventBindings + (change.event to target)
             val document =
               working.document.copy(
-                nodes = working.document.nodes + (node.id to node.copy(eventBindings = bindings))
+                nodes = working.document.nodes + (node.id to node.copy(eventBindings = bindings)),
               )
             // Restoring a binding whose variable has since been removed would put back exactly the
             // reference `removeStateVariable` refuses to leave behind.
@@ -4399,7 +4402,9 @@ public class PersistentUiBuilderService(
             working =
               working.copy(
                 document =
-                  working.document.copy(environment = current.copyFieldsFrom(target, change.fields))
+                  working.document.copy(
+                    environment = current.copyFieldsFrom(target, change.fields),
+                  ),
               )
           }
           is CatalogUpgradeChangeRecordV1 ->
@@ -4511,7 +4516,7 @@ public class PersistentUiBuilderService(
             UiBuilderServiceError(
               ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
               "catalog pin is unavailable",
-            )
+            ),
           )
       UiBuilderServiceUpdate.Snapshot(
         snapshot(
@@ -4519,11 +4524,11 @@ public class PersistentUiBuilderService(
           actor,
           catalog,
           activePresence(design.document.id),
-        )
+        ),
       )
     } else {
       UiBuilderServiceUpdate.Delta(
-        design.deltaAfter(afterSequence, limits.retainedCommittedOperations)
+        design.deltaAfter(afterSequence, limits.retainedCommittedOperations),
       )
     }
   }
@@ -4652,7 +4657,7 @@ public class PersistentUiBuilderService(
       val unusable =
         unusableDesigns[designId]
           ?: return UiBuilderAdminRepair.Rejected(
-            "design $designId is served normally; repair is only for a design this host cannot serve"
+            "design $designId is served normally; repair is only for a design this host cannot serve",
           )
       val candidate =
         try {
@@ -4662,7 +4667,7 @@ public class PersistentUiBuilderService(
           )
         } catch (failure: Exception) {
           return UiBuilderAdminRepair.Rejected(
-            "repaired document is not a readable design: ${failure.message}"
+            "repaired document is not a readable design: ${failure.message}",
           )
         }
       if (candidate.id != designId) {
@@ -4793,8 +4798,8 @@ public class PersistentUiBuilderService(
   private fun listTrash(actor: AuthenticatedUiBuilderActor): LockedExecution =
     LockedExecution(
       UiBuilderServiceResponse.Trash(
-        trash.values.filter { it.deletableBy(actor) }.map(::trashedDesignOf).sortedTrash()
-      )
+        trash.values.filter { it.deletableBy(actor) }.map(::trashedDesignOf).sortedTrash(),
+      ),
     )
 
   private fun trashedDesignOf(design: PersistedDesignV1): UiBuilderTrashedDesign {
@@ -4811,7 +4816,8 @@ public class PersistentUiBuilderService(
 
   private fun List<UiBuilderTrashedDesign>.sortedTrash(): List<UiBuilderTrashedDesign> =
     sortedWith(
-      compareByDescending<UiBuilderTrashedDesign> { it.trashedAtEpochMillis }.thenBy { it.designId }
+      compareByDescending<UiBuilderTrashedDesign> { it.trashedAtEpochMillis }
+        .thenBy { it.designId },
     )
 
   override fun adminListTrash(): List<UiBuilderTrashedDesign> = lock.withLock {
@@ -4986,7 +4992,7 @@ internal fun fail(
   environmentField: EnvironmentFieldV1? = null,
 ): Nothing =
   throw ReductionFailure(
-    rejected("", 0, code, message, operationIndex, nodeId, field, environmentField)
+    rejected("", 0, code, message, operationIndex, nodeId, field, environmentField),
   )
 
 internal fun rejected(

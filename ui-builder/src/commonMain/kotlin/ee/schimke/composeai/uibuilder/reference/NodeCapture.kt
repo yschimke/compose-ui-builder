@@ -48,7 +48,7 @@ internal fun NodeCapture(
       .drawWithContent {
         layer.record { this@drawWithContent.drawContent() }
         drawLayer(layer)
-      }
+      },
   ) {
     UiBuilderSurface(document = specimen, editorOverlay = false)
   }

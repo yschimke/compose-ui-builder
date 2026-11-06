@@ -146,7 +146,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       composeExportFor = composeExportFor,
       packs = packs,
       published = published,
-    )
+    ),
   )
 
   /** JVM compatibility for callers compiled against the all-default primary constructor. */
@@ -187,7 +187,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           published = published,
           nativeRuntimeIds = nativeRuntimeIds,
           unlistedCatalogIds = unlistedCatalogIds,
-        )
+        ),
       )
   }
 
@@ -264,12 +264,12 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         val merged =
           JsonArray(
             ownKeys +
-              donorKeys.filterNot { key -> (key as? JsonPrimitive)?.contentOrNull in ownNames }
+              donorKeys.filterNot { key -> (key as? JsonPrimitive)?.contentOrNull in ownNames },
           )
         semantics =
           JsonObject(
             semantics +
-              (registryKey to JsonObject((own ?: JsonObject(emptyMap())) + ("keys" to merged)))
+              (registryKey to JsonObject((own ?: JsonObject(emptyMap())) + ("keys" to merged))),
           )
       }
     }
@@ -283,7 +283,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       semantics =
         JsonObject(
           semantics +
-            ("componentMenu" to semantics.withMenuEntry(component.componentId, group, donorOrder))
+            ("componentMenu" to semantics.withMenuEntry(component.componentId, group, donorOrder)),
         )
     }
     return catalog
@@ -1003,7 +1003,7 @@ internal val CatalogCapabilityV1.declaredPlatform: String?
  * merged. The catalog pin is unchanged, so existing designs keep resolving.
  */
 private fun CatalogCapabilityV1.withPacks(
-  packs: List<UiBuilderComponentPackSource>
+  packs: List<UiBuilderComponentPackSource>,
 ): CatalogCapabilityV1 {
   if (packs.isEmpty()) return this
   val own = components.map { it.componentId }.toSet()
@@ -1029,8 +1029,8 @@ private fun CatalogCapabilityV1.withPacks(
                 pack.components.map { component ->
                   component.componentId to buildJsonObject { put("group", pack.label) }
                 }
-              }
-          ))
+              },
+          )),
     )
   val declaredPacks =
     JsonArray(
@@ -1043,7 +1043,7 @@ private fun CatalogCapabilityV1.withPacks(
           put("components", JsonArray(pack.components.map { JsonPrimitive(it.componentId) }))
           if (pack.notes.isNotEmpty()) put("notes", pack.notes)
         }
-      }
+      },
     )
   return newBuilder()
     .also {
@@ -1051,7 +1051,7 @@ private fun CatalogCapabilityV1.withPacks(
         JsonObject(
           statusSemantics +
             ("componentMenu" to menu) +
-            (CurrentM3UiBuilderCatalogExecutor.COMPONENT_PACKS_KEY to declaredPacks)
+            (CurrentM3UiBuilderCatalogExecutor.COMPONENT_PACKS_KEY to declaredPacks),
         )
       it.components = components + packs.flatMap { it.components }
     }
@@ -1105,7 +1105,7 @@ internal fun JsonObject.withMenuEntry(
     menu +
       ("groupOrder" to JsonArray(placed.map(::JsonPrimitive))) +
       ("components" to
-        JsonObject(entries + (componentId to buildJsonObject { put("group", group) })))
+        JsonObject(entries + (componentId to buildJsonObject { put("group", group) }))),
   )
 }
 
@@ -1141,7 +1141,7 @@ internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
             "widget per host shape (0 rectangular, 26 squircle, 999 round), so the outermost box " +
             "never authors a radius."
       }
-      .build()
+      .build(),
   ) +
     // The widget's typefaces, one per group of `RemoteTypography` roles; the generated widget
     // sets them on `RemoteMaterialTheme`'s typography.
@@ -1258,18 +1258,18 @@ public class ProductionUiBuilderExportExecutor(
       // here.
       ExportFormatV1.BUNDLE ->
         throw UnsupportedOperationException(
-          "bundle export is not implemented; ExportCapabilitiesV1.bundle is false for this executor"
+          "bundle export is not implemented; ExportCapabilitiesV1.bundle is false for this executor",
         )
       // Likewise for the formats contracts 2.17.0 added (`remoteJson`, `remoteDocument`).
       ExportFormatV1.JSON ->
         throw UnsupportedOperationException(
           "remote JSON export is not implemented; ExportCapabilitiesV1.remoteJson is false for " +
-            "this executor"
+            "this executor",
         )
       ExportFormatV1.RC ->
         throw UnsupportedOperationException(
           "remote document export is not implemented; ExportCapabilitiesV1.remoteDocument is " +
-            "false for this executor"
+            "false for this executor",
         )
     }
 
@@ -1319,7 +1319,7 @@ public class ProductionUiBuilderExportExecutor(
         code = "REVISION_PINNED_DAEMON_RENDER",
         message =
           "Rendered design $designId revision $revision ($documentHash) through the packaged Compose UI-builder preview.",
-      )
+      ),
     )
 }
 
@@ -1454,9 +1454,9 @@ public fun projectRendererDocument(
                 "modifiers" to (node["modifiers"] ?: JsonArray(emptyList())),
                 "slots" to (node["slots"] ?: JsonObject(emptyMap())),
                 "eventBindings" to (node["eventBindings"] ?: JsonObject(emptyMap())),
-              ) + node.filterKeys { it == "component" }
+              ) + node.filterKeys { it == "component" },
             )
-        }
+        },
     )
   val projected =
     JsonObject(
@@ -1470,7 +1470,7 @@ public fun projectRendererDocument(
         "stateVariables" to (source["stateVariables"] ?: JsonObject(emptyMap())),
         "roots" to source.getValue("roots"),
         "nodes" to projectedNodes,
-      ) + source.filterKeys { it == "components" } + projectedAssets(document, resolveAsset)
+      ) + source.filterKeys { it == "components" } + projectedAssets(document, resolveAsset),
     )
   return canonicalJson(projected)
 }

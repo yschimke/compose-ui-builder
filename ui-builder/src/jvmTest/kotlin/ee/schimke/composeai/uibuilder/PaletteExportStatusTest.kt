@@ -24,7 +24,7 @@ class PaletteExportStatusTest {
   private val state =
     reducer.initial(
       UiBuilderReducer.replay(
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
         )
         .document,
       selectedNodeId = "discover-grid",

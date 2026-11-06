@@ -31,8 +31,8 @@ class RemoteCombinedClickExportTest {
               "eventBindings":{
                 "click":[{"type":"set","variable":"count","value":1}],
                 "longClick":[{"type":"set","variable":"count","value":0}]}}}}
-          """
-        ) as JsonObject
+          """,
+        ) as JsonObject,
       )
 
     val source =
@@ -67,8 +67,8 @@ class RemoteCombinedClickExportTest {
                 "touchUp":[{"type":"set","variable":"pressed","value":false}],
                 "touchDown":[{"type":"set","variable":"pressed","value":true}],
                 "touchCancel":[{"type":"set","variable":"pressed","value":false}]}}}}
-          """
-        ) as JsonObject
+          """,
+        ) as JsonObject,
       )
 
     val source =

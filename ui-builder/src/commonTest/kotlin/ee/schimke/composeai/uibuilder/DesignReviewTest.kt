@@ -19,7 +19,7 @@ class DesignReviewTest {
           decision(3, DesignReviewVerdict.Reject),
           decision(3, DesignReviewVerdict.Approve, who = "bob"),
           decision(4, DesignReviewVerdict.Reject),
-        )
+        ),
       )
     assertEquals("bob", review.latestFor(3)?.decidedBy)
     assertEquals(DesignReviewVerdict.Reject, review.latestFor(4)?.verdict)

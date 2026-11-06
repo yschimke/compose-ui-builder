@@ -26,9 +26,9 @@ class RemoteMotionModifierExportTest {
             "host":{"id":"host","componentId":"remote-m3/widget-container-small",
               "slots":{"content":["box"]}},
             "box":{"id":"box","componentId":"layout/box","modifiers":$modifiers}}}
-          """
-        ) as JsonObject
-      )
+          """,
+        ) as JsonObject,
+      ),
     )
 
   private fun source(modifiers: String): String =
@@ -47,7 +47,7 @@ class RemoteMotionModifierExportTest {
     val source =
       source(
         """[{"type":"sharedElement","key":1,"durationMs":450,"easing":"overshoot",
-             "enter":"slideInBottom","exit":"fadeOut"}]"""
+             "enter":"slideInBottom","exit":"fadeOut"}]""",
       )
 
     assertContains(
@@ -84,7 +84,7 @@ class RemoteMotionModifierExportTest {
   fun `a transition the creation API has not got is refused where it is`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        export("""[{"type":"animateEnterExit","enter":"spin"}]""")
+        export("""[{"type":"animateEnterExit","enter":"spin"}]"""),
       )
 
     assertTrue(refused.reasons.any { "box" in it && "`spin`" in it }, refused.reasons.toString())

@@ -58,7 +58,7 @@ class CapabilityComposeCodeExporterTest {
     val source = assertNotNull(result.source)
 
     assertTrue(
-      source.contains("// Generated from design ${document.id} revision ${document.revision}.")
+      source.contains("// Generated from design ${document.id} revision ${document.revision}."),
     )
     assertTrue(source.contains("// Canonical home: repository ui-builder/designs/jetcaster.uid."))
     assertEquals("repository ui-builder/designs/jetcaster.uid", result.provenance.home)
@@ -111,7 +111,7 @@ class CapabilityComposeCodeExporterTest {
     assertFalse(first.diagnostics.any { it.code == "ADAPTIVE_COMPATIBILITY_HELPER" })
     assertTrue(source.contains("SupportingPaneScaffold(directive = directive"))
     assertTrue(
-      source.contains("import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold")
+      source.contains("import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"),
     )
     // The directive comes from the scaffold's own bounds, not the window's, so a constrained
     // scaffold matches the preview pane.
@@ -124,7 +124,7 @@ class CapabilityComposeCodeExporterTest {
     )
     assertTrue(source.contains("private fun BuilderAssetImage"))
     assertTrue(
-      source.contains("modifier.semantics { this.contentDescription = contentDescription }")
+      source.contains("modifier.semantics { this.contentDescription = contentDescription }"),
     )
     assertEquals(0, first.diagnostics.count { it.code == "UNEMITTED_PROPERTY" })
     assertFalse(source.contains("assetKey.contains"))
@@ -168,9 +168,9 @@ class CapabilityComposeCodeExporterTest {
                     mapOf(
                       "themeTextStyle" to
                         JsonObject(
-                          mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive(role))
-                        )
-                    )
+                          mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive(role)),
+                        ),
+                    ),
                   ),
                 slots = mapOf("content" to listOf("solo")),
               ),
@@ -183,9 +183,9 @@ class CapabilityComposeCodeExporterTest {
                     mapOf(
                       "text" to
                         JsonObject(
-                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi"))
-                        )
-                    )
+                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi")),
+                        ),
+                    ),
                   ),
               ),
           ),
@@ -219,7 +219,7 @@ class CapabilityComposeCodeExporterTest {
                     mapOf(
                       "themeHeadlineTypeface" to string("Unbounded"),
                       "themeBodyTypeface" to string("Syne"),
-                    )
+                    ),
                   ),
                 slots = mapOf("content" to listOf("solo")),
               ),
@@ -271,11 +271,11 @@ class CapabilityComposeCodeExporterTest {
                           mapOf(
                             "type" to JsonPrimitive("string"),
                             "value" to JsonPrimitive("Hello"),
-                          )
-                        )
-                    )
+                          ),
+                        ),
+                    ),
                   ),
-              )
+              ),
           ),
       )
     val source = assertNotNull(CapabilityComposeCodeExporter.export(plain, catalog).source)
@@ -449,10 +449,10 @@ class CapabilityComposeCodeExporterTest {
                           mapOf(
                             "type" to JsonPrimitive("enum"),
                             "value" to JsonPrimitive("twoTone/palette"),
-                          )
-                        ))
-                  )
-              ))
+                          ),
+                        )),
+                  ),
+              )),
       )
 
     val source =
@@ -478,9 +478,9 @@ class CapabilityComposeCodeExporterTest {
                     mapOf(
                       "type" to JsonPrimitive("string"),
                       "value" to JsonPrimitive("Second root"),
-                    )
-                  )
-              )
+                    ),
+                  ),
+              ),
             ),
         )
     val multiRoot =
@@ -495,7 +495,7 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(
       result.diagnostics.any {
         it.severity == ComposeExportSeverity.ERROR && it.code == "ROOT_CARDINALITY"
-      }
+      },
     )
   }
 
@@ -518,7 +518,7 @@ class CapabilityComposeCodeExporterTest {
             "textAlign" to property("enum", JsonPrimitive("end")),
             "textDecoration" to property("enum", JsonPrimitive("underline")),
             "alignment" to property("enum", JsonPrimitive("topCenter")),
-          )
+          ),
       )
     val edited =
       document.copy(nodes = document.nodes + (title.id to title.copy(properties = properties)))
@@ -549,7 +549,7 @@ class CapabilityComposeCodeExporterTest {
           mapOf(
             FontSettings.VARIATION_PROPERTY to property("string", JsonPrimitive("wdth 90")),
             FontSettings.FEATURE_PROPERTY to property("string", JsonPrimitive("'tnum', 'zero'")),
-          )
+          ),
       )
     val edited =
       document.copy(nodes = document.nodes + (title.id to title.copy(properties = properties)))
@@ -561,7 +561,7 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(
       source.contains(
         "fontFamily = FontFamily(Font(DeviceFontFamilyName(\"sans-serif\"), variationSettings = " +
-          "FontVariation.Settings(FontVariation.Setting(\"wdth\", 90f))))"
+          "FontVariation.Settings(FontVariation.Setting(\"wdth\", 90f))))",
       ),
       source,
     )
@@ -585,7 +585,7 @@ class CapabilityComposeCodeExporterTest {
                       mapOf(
                         "alignment" to property("enum", JsonPrimitive("topCenter")),
                         "weight" to property("float", JsonPrimitive(3.0)),
-                      )
+                      ),
                   ),
                 modifiers =
                   JsonArray(
@@ -597,9 +597,9 @@ class CapabilityComposeCodeExporterTest {
                           "weight" to JsonPrimitive(2.0),
                           "fill" to JsonPrimitive(false),
                         ),
-                      )
+                      ),
                   ),
-              ))
+              )),
       )
 
     val source =
@@ -645,7 +645,7 @@ class CapabilityComposeCodeExporterTest {
         bindings =
           artworkAdapter.bindings +
             ("jetcaster.cover.android-developers-backstage" to
-              ComposeAssetBinding(listOf("not-kotlin")))
+              ComposeAssetBinding(listOf("not-kotlin"))),
       )
 
     val result = CapabilityComposeCodeExporter.export(document, catalog, invalid)
@@ -655,7 +655,7 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(
       result.diagnostics.any {
         it.code == "INVALID_ASSET_BINDING" && it.nodeId == "podcast-card-android-image"
-      }
+      },
     )
   }
 
@@ -677,7 +677,7 @@ class CapabilityComposeCodeExporterTest {
       CapabilityComposeCodeExporter.export(document, catalog, rendererAdapter).requireSource()
 
     assertTrue(
-      source.contains("import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork")
+      source.contains("import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork"),
     )
     assertTrue(source.contains("ProjectOwnedJetcasterArtwork(assetKey = assetKey"))
     assertFalse(source.contains("Color(0xFF0B57D0)"))
@@ -721,7 +721,7 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(
       malformedResult.diagnostics.any {
         it.code == "MALFORMED_MODIFIER" && it.nodeId == malformed.id
-      }
+      },
     )
   }
 
@@ -729,7 +729,8 @@ class CapabilityComposeCodeExporterTest {
   fun `catalog pin and graph violations block Compose source`() {
     val wrongPin =
       document.copy(
-        catalogPin = JsonObject(document.catalogPin + ("nativeRuntimeId" to JsonPrimitive("other")))
+        catalogPin =
+          JsonObject(document.catalogPin + ("nativeRuntimeId" to JsonPrimitive("other"))),
       )
     assertBlocked(wrongPin, "CATALOG_PIN_MISMATCH")
 
@@ -810,9 +811,9 @@ class CapabilityComposeCodeExporterTest {
                     status = "verified",
                     fallback = "none",
                     blocksExport = false,
-                  )
+                  ),
             )
-          }
+          },
       )
 
     val readiness =
@@ -832,7 +833,7 @@ class CapabilityComposeCodeExporterTest {
   fun `SVG rejects pin mismatch unknown vocabulary and full-screen raster fallback`() {
     val wrongPin =
       document.copy(
-        catalogPin = JsonObject(document.catalogPin + ("capabilityDigest" to JsonPrimitive("bad")))
+        catalogPin = JsonObject(document.catalogPin + ("capabilityDigest" to JsonPrimitive("bad"))),
       )
     val pinReadiness =
       inspectDocumentSvgExport(wrongPin, catalog, DocumentSvgExecutionBridge.WASM_SCENE_RECORDING)
@@ -866,7 +867,7 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(
       rasterReadiness.blockers.any {
         it.code == "FULL_SCREEN_RASTER_FALLBACK" && it.nodeId == document.roots.single()
-      }
+      },
     )
   }
 
@@ -904,34 +905,34 @@ class CapabilityComposeCodeExporterTest {
                         mapOf(
                           "verticalSpacingDp" to property("float", JsonPrimitive(12)),
                           "horizontalSpacingDp" to property("float", JsonPrimitive(10)),
-                        )
-                    )
+                        ),
+                    ),
                 )
               "m3/card" ->
                 node.copy(
                   properties =
                     JsonObject(
-                      node.properties + mapOf("elevationDp" to property("float", JsonPrimitive(6)))
-                    )
+                      node.properties + mapOf("elevationDp" to property("float", JsonPrimitive(6))),
+                    ),
                 )
               "m3/horizontal-divider" ->
                 node.copy(
                   properties =
                     JsonObject(
-                      node.properties + mapOf("thicknessDp" to property("float", JsonPrimitive(3)))
-                    )
+                      node.properties + mapOf("thicknessDp" to property("float", JsonPrimitive(3))),
+                    ),
                 )
               "m3/surface" ->
                 node.copy(
                   properties =
                     JsonObject(
                       node.properties +
-                        mapOf("tonalElevationDp" to property("float", JsonPrimitive(4)))
-                    )
+                        mapOf("tonalElevationDp" to property("float", JsonPrimitive(4))),
+                    ),
                 )
               else -> node
             }
-          }
+          },
       )
 
     val source =
@@ -982,12 +983,12 @@ class CapabilityComposeCodeExporterTest {
                                 "topDp" to JsonPrimitive(4),
                                 "endDp" to JsonPrimitive(12),
                                 "bottomDp" to JsonPrimitive(4),
-                              )
-                            )
-                        )
-                    )
-                )
-            )
+                              ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
       )
 
     val source =
@@ -995,7 +996,7 @@ class CapabilityComposeCodeExporterTest {
 
     assertTrue(
       source.contains(
-        "contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 4.dp)"
+        "contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 4.dp)",
       ),
       source,
     )
@@ -1023,7 +1024,7 @@ class CapabilityComposeCodeExporterTest {
     componentId: String,
     transform:
       (
-        ee.schimke.composeai.uibuilder.capability.SvgCapability
+        ee.schimke.composeai.uibuilder.capability.SvgCapability,
       ) -> ee.schimke.composeai.uibuilder.capability.SvgCapability,
   ) =
     copy(
@@ -1032,7 +1033,7 @@ class CapabilityComposeCodeExporterTest {
           if (component.componentId == componentId) {
             component.copy(svg = transform(checkNotNull(component.svg)))
           } else component
-        }
+        },
     )
 
   private fun assertBalancedKotlinDelimiters(source: String) {
@@ -1082,7 +1083,7 @@ class CapabilityComposeCodeExporterTest {
             }
           JsonObject(root + ("components" to JsonArray(components)))
         },
-      )
+      ),
     )
 
   private fun resource(path: String): String =

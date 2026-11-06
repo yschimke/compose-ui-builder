@@ -879,8 +879,8 @@ internal class RemoteContentEmitter(
             record +
               (UiDrawing.LOOP_INDEX to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive(wrapper), "value" to JsonPrimitive(index))
-                ))
+                  mapOf("type" to JsonPrimitive(wrapper), "value" to JsonPrimitive(index)),
+                )),
           )
         }
     fields.forEach { record ->
@@ -2655,7 +2655,7 @@ internal class RemoteContentEmitter(
           return block(
             "withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / " +
               "$viewportHeight); clipPath(remotePathOf(\"${clipPath.escaped()}\")$op); " +
-              "scale($viewportWidth / ${extent.width}, $viewportHeight / ${extent.height}) })"
+              "scale($viewportWidth / ${extent.width}, $viewportHeight / ${extent.height}) })",
           )
         }
         val op =
@@ -3307,7 +3307,7 @@ internal class RemoteContentEmitter(
     val children = node.slots["children"].orEmpty()
     if (children.isEmpty()) {
       return (pad + if (arguments.isEmpty()) "$symbol()" else call(symbol, arguments, pad)).split(
-        "\n"
+        "\n",
       )
     }
     val head =
@@ -3735,7 +3735,9 @@ internal class RemoteContentEmitter(
     // feature parameter, and `RemoteTextStyle.merge` writes either into the document.
     val features =
       FontSettings.formatFeatures(
-          FontSettings.parseFeatures(node.properties[FontSettings.FEATURE_PROPERTY]?.stringOrNull())
+          FontSettings.parseFeatures(
+            node.properties[FontSettings.FEATURE_PROPERTY]?.stringOrNull(),
+          ),
         )
         .ifEmpty { null }
     // Spacing rides on the style too: `RemoteText` has no argument for either. Zero is the
@@ -4474,8 +4476,8 @@ internal class RemoteContentEmitter(
         val bottom = modifier["bottomDp"]?.numberValue() ?: 0f
         listOf(
           modifierCall(
-            "padding(${start.dpLiteral()}, ${top.dpLiteral()}, ${end.dpLiteral()}, ${bottom.dpLiteral()})"
-          )
+            "padding(${start.dpLiteral()}, ${top.dpLiteral()}, ${end.dpLiteral()}, ${bottom.dpLiteral()})",
+          ),
         )
       }
       // `size(width, height)` is `width(width).height(height)` upstream, and both halves are
@@ -4490,7 +4492,7 @@ internal class RemoteContentEmitter(
       "rotate" -> listOf(modifierCall("rotate(${modifier.float("degrees")})"))
       "scale" ->
         listOf(
-          modifierCall("scale(${modifier.float("scaleX", 1f)}, ${modifier.float("scaleY", 1f)})")
+          modifierCall("scale(${modifier.float("scaleX", 1f)}, ${modifier.float("scaleY", 1f)})"),
         )
       "zIndex" -> listOf(modifierCall("zIndex(${modifier.float("zIndex")})"))
       "clip" -> listOf(modifierCall("clip(${modifier.shapeExpression()})"))
@@ -4506,8 +4508,8 @@ internal class RemoteContentEmitter(
           modifierCall(
             "border(${modifier.dp("widthDp", 1f)}, ${modifier.colorExpression()}" +
               (modifier["shape"]?.stringValue()?.let { ", ${modifier.shapeExpression()}" } ?: "") +
-              ")"
-          )
+              ")",
+          ),
         )
       // The scroll state is remembered at the call site, as in the Compose exporter.
       "verticalScroll",
@@ -4787,7 +4789,7 @@ internal class RemoteContentEmitter(
     }
     val priority = modifier["priority"]?.numberValue() ?: 0f
     return listOf(
-      "collapsiblePriority(${if (priority % 1f == 0f) priority.toInt() else priority}f)"
+      "collapsiblePriority(${if (priority % 1f == 0f) priority.toInt() else priority}f)",
     )
   }
 
@@ -5249,7 +5251,7 @@ private fun String.remoteIdentifier(): String = buildString {
         character.isLetter() || character == '_' -> character
         character.isDigit() && index > 0 -> character
         else -> '_'
-      }
+      },
     )
   }
 }

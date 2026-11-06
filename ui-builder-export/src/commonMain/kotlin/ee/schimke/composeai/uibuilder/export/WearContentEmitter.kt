@@ -261,7 +261,7 @@ internal class WearContentEmitter(
           if (lines == null || lines.size < 2) {
             return refused(
               "`${node.componentId}` (node `$nodeId`) is an `app` card, and `AppCard` needs an " +
-                "app name and a title: give it a column of at least two texts, the app name first"
+                "app name and a title: give it a column of at least two texts, the app name first",
             )
           }
           usesPlainCard += "AppCard"
@@ -359,7 +359,7 @@ internal class WearContentEmitter(
         if (key.isEmpty()) {
           return refused(
             "`asset/image` (node `$nodeId`) names no `assetKey`; the property is required, and " +
-              "without it there is no picture to stand in for"
+              "without it there is no picture to stand in for",
           )
         }
         val scaleValue = node.stringOrNull("contentScale")
@@ -368,7 +368,7 @@ internal class WearContentEmitter(
             ?: return refused(
               "`asset/image` (node `$nodeId`) names the content scale `$it`, which is not one " +
                 "of " +
-                ScreenDocumentProjection.CONTENT_SCALE_MEMBERS.keys.sorted().joinToString(", ")
+                ScreenDocumentProjection.CONTENT_SCALE_MEMBERS.keys.sorted().joinToString(", "),
             )
         }
         val alignmentValue = node.stringOrNull("alignment")
@@ -376,7 +376,7 @@ internal class WearContentEmitter(
           ScreenDocumentProjection.ALIGNMENT_MEMBERS[it]
             ?: return refused(
               "`asset/image` (node `$nodeId`) names the alignment `$it`, which is not one of " +
-                ScreenDocumentProjection.ALIGNMENT_MEMBERS.keys.sorted().joinToString(", ")
+                ScreenDocumentProjection.ALIGNMENT_MEMBERS.keys.sorted().joinToString(", "),
             )
         }
         usesImage = true
@@ -407,7 +407,7 @@ internal class WearContentEmitter(
             ?: return refused(
               "`${WearScreenCodeExporter.ICON}` (node `$nodeId`) names the icon key `$key`, " +
                 "which is not one of " +
-                ScreenDocumentProjection.ICON_MEMBERS.keys.sorted().joinToString(", ")
+                ScreenDocumentProjection.ICON_MEMBERS.keys.sorted().joinToString(", "),
             )
         MaterialIconArtifacts.diagnostic(nodeId, node.componentId, "iconKey", key)?.let {
           collectedDiagnostics += it
@@ -581,13 +581,13 @@ internal class WearContentEmitter(
           "`${node.componentId}` (node `$nodeId`) is a dialog, and a dialog is a screen state " +
             "rather than a row of one — Wear draws it over everything when its `visible` flag is " +
             "set. Move it to the screen scaffold's `overlays` slot, which is where this generator " +
-            "writes it as a sibling of the `ScreenScaffold`"
+            "writes it as a sibling of the `ScreenScaffold`",
         )
       WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN ->
         refused(
           "`${node.componentId}` (node `$nodeId`) is nested inside another node; a screen has one " +
             "list, directly in the scaffold's content slot — a Wear screen with two scrolling " +
-            "columns has no scroll state the scaffold can follow"
+            "columns has no scroll state the scaffold can follow",
         )
       else ->
         refused(
@@ -595,7 +595,7 @@ internal class WearContentEmitter(
             "generator can write. `wear-m3` publishes Wear's own components under `wear-m3/…` and " +
             "borrows only foundation — `layout/box`, `layout/column`, `layout/row`, " +
             "`asset/image` — from m3-catalog; a Material 3 component is not a Wear one, and there " +
-            "is nothing on a watch to write it as"
+            "is nothing on a watch to write it as",
         )
     }
   }
@@ -660,7 +660,7 @@ internal class WearContentEmitter(
                   ?: return refused(
                     "`${node.componentId}` (node `${node.id}`) needs a value for " +
                       "`$argument: ${parameter.type}`, and its catalog's record proved no " +
-                      "placeholder for one; set it in the design or give the parameter a default"
+                      "placeholder for one; set it in the design or give the parameter a default",
                   )
               arguments += "${pad}${INDENT}$argument = $placeholder,"
             }
@@ -753,7 +753,7 @@ internal class WearContentEmitter(
     ) {
       return refused(
         "`${node.componentId}` (node `$nodeId`) is in the scaffold's edgeButton slot; that slot " +
-          "generates an `EdgeButton`, which only a button can be"
+          "generates an `EdgeButton`, which only a button can be",
       )
     }
     usesEdgeButton = true
@@ -922,7 +922,7 @@ internal class WearContentEmitter(
             ?.let {
               usesAlignment = true
               "contentAlignment = Alignment.$it"
-            }
+            },
         )
     }
 
@@ -1025,7 +1025,7 @@ internal class WearContentEmitter(
               else ->
                 "padding(start = ${dp(start)}, top = ${dp(top)}, end = ${dp(end)}, " +
                   "bottom = ${dp(bottom)})"
-            }
+            },
           )
         }
         "size" -> {
@@ -1050,7 +1050,7 @@ internal class WearContentEmitter(
                   number("maxDp")?.let { "max = ${dp(it)}" },
                 )
                 .joinToString() +
-              ")"
+              ")",
           )
         "aspectRatio" -> layout("aspectRatio(${(number("ratio") ?: 1f).dp()}f)")
         "offset" -> layout("offset(${dp(number("xDp"))}, ${dp(number("yDp"))})")
@@ -1317,7 +1317,7 @@ internal class WearContentEmitter(
     if (container != null && symbol in NO_CONTAINER_BUTTON_SYMBOLS) {
       refused(
         "`${node.componentId}` (node `$nodeId`) sets `containerColor` on `$symbol`, which draws " +
-          "no container — Wear's `$defaults.$function` takes only content colours"
+          "no container — Wear's `$defaults.$function` takes only content colours",
       )
       return null
     }
@@ -1346,7 +1346,7 @@ internal class WearContentEmitter(
     if (symbol == "OutlinedCard" && container != null) {
       return refused(
         "`${node.componentId}` (node `$nodeId`) sets `containerColor` on `OutlinedCard`, which " +
-          "draws no container — Wear's `CardDefaults.outlinedCardColors` takes only content colours"
+          "draws no container — Wear's `CardDefaults.outlinedCardColors` takes only content colours",
       )
     }
     val function = if (symbol == "OutlinedCard") "outlinedCardColors" else "cardColors"
@@ -1403,7 +1403,7 @@ internal class WearContentEmitter(
     if (bound.isNotEmpty()) {
       return refused(
         "$label binds ${bound.joinToString { "`$it`" }}: a Wear screen exports a variable font " +
-          "text's axes as literals until its generator declares the design's state"
+          "text's axes as literals until its generator declares the design's state",
       )
     }
     val location =
@@ -1488,7 +1488,7 @@ internal class WearContentEmitter(
           return refused(
             "`${node.componentId}` (node `$nodeId`) has a dismiss button and no confirm button, " +
               "and Wear's `AlertDialog` has no such shape: `dismissButton` is a parameter of the " +
-              "two-button overload only, which also takes the confirm"
+              "two-button overload only, which also takes the confirm",
           )
         }
         listOf("${pad}AlertDialog(") +
@@ -1505,13 +1505,13 @@ internal class WearContentEmitter(
           (confirm?.let {
             usesAlertDialogDefaults = true
             listOf(
-              "${pad}${INDENT}confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { $visible = false }) },"
+              "${pad}${INDENT}confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { $visible = false }) },",
             )
           } ?: emptyList()) +
           (dismissButton?.let {
             usesAlertDialogDefaults = true
             listOf(
-              "${pad}${INDENT}dismissButton = { AlertDialogDefaults.DismissButton(onClick = { $visible = false }) },"
+              "${pad}${INDENT}dismissButton = { AlertDialogDefaults.DismissButton(onClick = { $visible = false }) },",
             )
           } ?: emptyList()) +
           (modifierChain(nodeId)?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
@@ -1547,7 +1547,7 @@ internal class WearContentEmitter(
           (if (text.isEmpty()) emptyList()
           else
             listOf(
-              "${pad}${INDENT}curvedText = { openOnPhoneDialogCurvedText(${text.quoted()}) },"
+              "${pad}${INDENT}curvedText = { openOnPhoneDialogCurvedText(${text.quoted()}) },",
             )) +
           (modifierChain(nodeId)?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
           listOf("${pad})")
@@ -1555,7 +1555,7 @@ internal class WearContentEmitter(
       else ->
         refused(
           "`${node.componentId}` (node `$nodeId`) is in the screen scaffold's `overlays` slot, " +
-            "which holds Wear's full-screen dialogs — an alert, a confirmation or an open-on-phone"
+            "which holds Wear's full-screen dialogs — an alert, a confirmation or an open-on-phone",
         )
     }
   }
@@ -1676,7 +1676,7 @@ internal class WearContentEmitter(
     val (name, valueType) =
       documentVariable(variable)
         ?: return refuse(
-          "writes `$variable`, which is not a declared non-null bool, int or string state variable"
+          "writes `$variable`, which is not a declared non-null bool, int or string state variable",
         )
     return when (type) {
       "toggle" -> if (valueType == "bool") "$name = !$name" else refuse("needs a bool variable")
@@ -1806,7 +1806,7 @@ internal class WearContentEmitter(
           "TextAlign" -> "androidx.compose.ui.text.style.TextAlign"
           "Color" -> "androidx.compose.ui.graphics.Color"
           else -> "androidx.compose.ui.unit.sp"
-        }
+        },
       )
     }
     fontImports.forEach(::add)
@@ -1889,7 +1889,7 @@ internal class WearContentEmitter(
               "semiBold" -> "SemiBold"
               "bold" -> "Bold"
               else -> "Normal"
-            }
+            },
         )
       }
     node.stringOrNull("fontStyle")?.let {
@@ -1920,7 +1920,8 @@ internal class WearContentEmitter(
       ?.let {
         textImports += "TextDecoration"
         add(
-          "textDecoration = TextDecoration." + if (it == "underline") "Underline" else "LineThrough"
+          "textDecoration = TextDecoration." +
+            if (it == "underline") "Underline" else "LineThrough",
         )
       }
     node.stringOrNull("textAlign")?.let {
@@ -2005,7 +2006,7 @@ internal class WearContentEmitter(
             "visible" -> "Visible"
             "ellipsis" -> "Ellipsis"
             else -> "Clip"
-          }
+          },
       )
     }
   }

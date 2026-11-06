@@ -45,8 +45,8 @@ class UsabilityPassTest {
     assertEquals("Wear widget", catalogFormFactorLabel(widget))
     assertNull(
       catalogFormFactorLabel(
-        widget.copy(catalogPin = JsonObject(mapOf("systemId" to JsonPrimitive("unknown"))))
-      )
+        widget.copy(catalogPin = JsonObject(mapOf("systemId" to JsonPrimitive("unknown")))),
+      ),
     )
   }
 }

@@ -27,7 +27,7 @@ import kotlinx.serialization.json.jsonObject
 class LocalComponentsPublishTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
 
@@ -106,10 +106,10 @@ class LocalComponentsPublishTest {
                           "system" to JsonPrimitive("m3-catalog"),
                           "componentId" to JsonPrimitive("shared-row"),
                           "digest" to JsonPrimitive("sha256:shared"),
-                        )
-                      ))
-                )
-            )
+                        ),
+                      )),
+                ),
+            ),
           ),
         nodes =
           made.document.nodes.mapValues { (_, node) ->
@@ -117,7 +117,7 @@ class LocalComponentsPublishTest {
             else
               node.copy(
                 component =
-                  JsonObject(node.component!! + ("componentKey" to JsonPrimitive("my-row")))
+                  JsonObject(node.component!! + ("componentKey" to JsonPrimitive("my-row"))),
               )
           },
       )
@@ -206,7 +206,7 @@ class LocalComponentsPublishTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -218,7 +218,7 @@ class LocalComponentsPublishTest {
               "fixedTime": "2024-05-16T12:00:00Z", "animations": "settled",
               "networkAccess": false
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),

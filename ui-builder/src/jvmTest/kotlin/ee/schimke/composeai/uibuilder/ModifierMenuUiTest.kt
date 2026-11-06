@@ -173,13 +173,13 @@ class ModifierMenuUiTest {
       }
       val parent = onNodeWithText("Modifiers")
       parent.assert(
-        SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed submenu")
+        SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed submenu"),
       )
       parent.performSemanticsAction(SemanticsActions.RequestFocus) { it() }
       parent.performKeyInput { pressKey(Key.DirectionLeft) }
       onNodeWithText("Future 1").assertIsFocused()
       parent.assert(
-        SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded submenu")
+        SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded submenu"),
       )
       onNodeWithText("Future 1").performKeyInput { pressKey(Key.DirectionRight) }
       parent.assertIsFocused()

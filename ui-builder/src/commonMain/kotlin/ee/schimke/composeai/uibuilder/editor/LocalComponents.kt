@@ -161,7 +161,7 @@ internal fun binding(key: String): JsonObject =
 
 /** The components this design defines, in name order, with what the catalog now ships of them. */
 internal fun UiBuilderDocument.localComponents(
-  catalog: CapabilityCatalog
+  catalog: CapabilityCatalog,
 ): List<EditorLocalComponent> {
   val placementCounts = nodes.values.mapNotNull { it.placementKey() }.groupingBy { it }.eachCount()
   return components.entries
@@ -228,7 +228,7 @@ internal fun UiBuilderDocument.suggestedComponentName(
   val taken = components.values.mapNotNull(::componentDeclarationName).toSet()
   val base =
     componentFunctionName(
-      "My " + (catalog.componentsById[root.componentId]?.displayName ?: "Component")
+      "My " + (catalog.componentsById[root.componentId]?.displayName ?: "Component"),
     ) ?: "MyComponent"
   if (base !in taken) return base
   var suffix = 2
@@ -360,8 +360,8 @@ internal fun withLibrarySource(declaration: JsonObject, source: EditorLibrarySou
             "system" to JsonPrimitive(source.system),
             "componentId" to JsonPrimitive(source.componentId),
             "digest" to JsonPrimitive(source.digest),
-          )
-        ))
+          ),
+        )),
   )
 
 private fun UiBuilderDocument.catalogSystem(): String? =

@@ -32,7 +32,7 @@ class CanvasRenderTree(
   val clock: UiExpressions.Clock =
     liveClock
       ?: UiExpressions.Clock.of(
-        (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
+        (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull,
       )
 
   /** The document's state kinds, which a formula is typed against. */

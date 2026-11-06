@@ -111,7 +111,7 @@ class UiBuilderInspectionTest {
   private fun jetcasterFixture() =
     json
       .parseToJsonElement(
-        checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText(),
       )
       .jsonObject
 

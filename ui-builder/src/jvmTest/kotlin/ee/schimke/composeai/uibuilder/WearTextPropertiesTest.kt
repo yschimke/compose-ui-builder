@@ -100,7 +100,7 @@ class WearTextPropertiesTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),
@@ -125,7 +125,7 @@ class WearTextPropertiesTest {
                     "style" to literal("bodySmall"),
                     "fontSizeSp" to literal(fontSizeSp.toString()),
                     "maxLines" to literal(maxLines.toString()),
-                  )
+                  ),
                 ),
               modifiers = JsonArray(listOf(fillMaxWidth())),
               slots = emptyMap(),

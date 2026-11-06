@@ -27,8 +27,8 @@ class RemoteTimeTextExportTest {
           "time":{"id":"time","componentId":"remote-m3/remote-time-text",
             "modifiers":[{"type":"fillMaxSize"}],
             "properties":$properties}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(document: UiBuilderDocument): String =
@@ -58,8 +58,8 @@ class RemoteTimeTextExportTest {
             "trailingText":{"type":"string","value":"Wed"},
             "separator":{"type":"string","value":" | "},
             "textSizeSp":{"type":"float","value":12},
-            "color":{"type":"colorToken","value":"primary"}}"""
-        )
+            "color":{"type":"colorToken","value":"primary"}}""",
+        ),
       )
     File("build/draw-proof").apply { mkdirs() }.resolve("TimeTextWidget.kt").writeText(source)
 
@@ -77,9 +77,9 @@ class RemoteTimeTextExportTest {
         WearWidgetCodeExporter.export(
           document(
             """{"textSizeSp":{"type":"expr","op":"mul","args":[
-              {"type":"int","value":2},{"type":"int","value":7}]}}"""
-          )
-        )
+              {"type":"int","value":2},{"type":"int","value":7}]}}""",
+          ),
+        ),
       )
 
     assertTrue(refused.reasons.any { "time.textSizeSp" in it }, refused.reasons.toString())

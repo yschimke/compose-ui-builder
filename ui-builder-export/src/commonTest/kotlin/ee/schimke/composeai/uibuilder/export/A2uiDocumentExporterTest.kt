@@ -119,7 +119,7 @@ class A2uiDocumentExporterTest {
   fun `a design lowers to createSurface, updateDataModel and updateComponents`() {
     val emitted =
       assertIs<A2uiDocumentExporter.Result.Emitted>(
-        A2uiDocumentExporter.export(document(card, state = state))
+        A2uiDocumentExporter.export(document(card, state = state)),
       )
     assertEquals(
       listOf("createSurface", "updateDataModel", "updateComponents"),
@@ -140,7 +140,7 @@ class A2uiDocumentExporterTest {
   fun `components are flat, the root is renamed and references follow`() {
     val emitted =
       assertIs<A2uiDocumentExporter.Result.Emitted>(
-        A2uiDocumentExporter.export(document(card, state = state))
+        A2uiDocumentExporter.export(document(card, state = state)),
       )
     val components =
       emitted.messages.last()["updateComponents"]!!.jsonObject["components"] as JsonArray
@@ -157,19 +157,19 @@ class A2uiDocumentExporterTest {
     )
     assertEquals(
       Json.parseToJsonElement(
-        """{"id":"column","component":"Column","align":"stretch","children":["title","name","book"]}"""
+        """{"id":"column","component":"Column","align":"stretch","children":["title","name","book"]}""",
       ),
       byId.getValue("column"),
     )
     assertEquals(
       Json.parseToJsonElement(
-        """{"id":"name","component":"TextField","label":"Full name","value":{"path":"/fullName"}}"""
+        """{"id":"name","component":"TextField","label":"Full name","value":{"path":"/fullName"}}""",
       ),
       byId.getValue("name"),
     )
     assertEquals(
       Json.parseToJsonElement(
-        """{"id":"book","component":"Button","variant":"primary","action":{"event":{"name":"book"}},"child":"book_label"}"""
+        """{"id":"book","component":"Button","variant":"primary","action":{"event":{"name":"book"}},"child":"book_label"}""",
       ),
       byId.getValue("book"),
     )
@@ -179,7 +179,7 @@ class A2uiDocumentExporterTest {
   fun `the source is JSON Lines, one message per line`() {
     val emitted =
       assertIs<A2uiDocumentExporter.Result.Emitted>(
-        A2uiDocumentExporter.export(document(card, state = state))
+        A2uiDocumentExporter.export(document(card, state = state)),
       )
     val lines = emitted.source.trimEnd().lines()
     assertEquals(3, lines.size)
@@ -226,8 +226,8 @@ class A2uiDocumentExporterTest {
           document(
             listOf(UiBuilderNode("a", "a2ui/Divider"), UiBuilderNode("b", "a2ui/Divider")),
             roots = listOf("a", "b"),
-          )
-        )
+          ),
+        ),
       )
     assertTrue(refused.reasons.single().startsWith("roots:"))
   }
@@ -273,7 +273,7 @@ class A2uiDocumentExporterTest {
     assertEquals(
       Json.parseToJsonElement(
         """{"id":"root","component":"Tabs","tabs":[""" +
-          """{"title":"Flights","child":"flights"},{"title":"Tab 2","child":"hotels"}]}"""
+          """{"title":"Flights","child":"flights"},{"title":"Tab 2","child":"hotels"}]}""",
       ),
       components[0],
     )
@@ -289,9 +289,9 @@ class A2uiDocumentExporterTest {
       assertIs<A2uiDocumentExporter.Result.Refused>(
         A2uiDocumentExporter.export(
           document(
-            listOf(UiBuilderNode("card", "a2ui/Card", slots = mapOf("child" to listOf("gone"))))
-          )
-        )
+            listOf(UiBuilderNode("card", "a2ui/Card", slots = mapOf("child" to listOf("gone")))),
+          ),
+        ),
       )
     assertEquals(
       listOf("nodes.card.slots.child: references `gone`, which is not a node of this design"),

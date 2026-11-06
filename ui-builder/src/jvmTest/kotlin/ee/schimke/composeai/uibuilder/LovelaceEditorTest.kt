@@ -41,11 +41,13 @@ class LovelaceEditorTest {
                 JsonObject(
                   p +
                     ("allowedValues" to
-                      JsonArray(listOf(JsonPrimitive(6), JsonPrimitive(12), JsonPrimitive("full"))))
+                      JsonArray(
+                        listOf(JsonPrimitive(6), JsonPrimitive(12), JsonPrimitive("full")),
+                      )),
                 )
               else p
-            }
-          ))
+            },
+          )),
     )
 
   private val catalog =
@@ -61,7 +63,7 @@ class LovelaceEditorTest {
           numericGridChoices(component("card/tile", "LovelaceCard")),
           numericGridChoices(component("card/custom", "LovelaceCard")),
         ),
-      )
+      ),
     )
   private val reducer = UiBuilderEditorReducer(catalog)
   private val source =
@@ -73,7 +75,7 @@ class LovelaceEditorTest {
           {"type":"custom:unknown","opaque":{"nested":[null,1],"large":9007199254740993}}]},
         {"title":"Other","cards":[]}]},
       {"type":"panel","cards":[{"type":"map","entities":["person.ada"]}]}]}
-  """
+  """,
       )
       .jsonObject
 
@@ -88,7 +90,7 @@ class LovelaceEditorTest {
           put("capabilityDigest", "candidate")
           put("nativeRuntimeId", catalog.benchmark.nativeRuntimeId)
         },
-      )
+      ),
     )
 
   private fun exported(state: UiBuilderEditorState) =

@@ -38,13 +38,13 @@ class RuntimeCanvasPunchThroughTest {
       val root = File(System.getProperty("uiBuilderProjectDir"), "..")
       val catalog =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       val document = Json {
         ignoreUnknownKeys = true
       }
         .decodeFromString<UiBuilderDocument>(
-          File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
+          File(root, "experiments/remote-state-selection/bound-actions.uid").readText(),
         )
       var hole: Rect? = null
       setContent {
@@ -60,7 +60,7 @@ class RuntimeCanvasPunchThroughTest {
                     drawRect(Color.Transparent, blendMode = BlendMode.Clear)
                     drawContent()
                   }
-                  .onGloballyPositioned { hole = it.boundsInWindow() }
+                  .onGloballyPositioned { hole = it.boundsInWindow() },
               )
             },
           )

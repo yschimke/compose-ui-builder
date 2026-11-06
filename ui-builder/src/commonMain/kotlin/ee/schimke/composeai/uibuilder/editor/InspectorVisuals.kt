@@ -128,7 +128,7 @@ internal fun ColorSwatch(
     modifier
       .size(size)
       .border(if (selected) 2.dp else 1.dp, ring, CircleShape)
-      .background(color?.takeIf { it.alpha > 0f } ?: Color.Transparent, CircleShape)
+      .background(color?.takeIf { it.alpha > 0f } ?: Color.Transparent, CircleShape),
   ) {
     if (color == null || color.alpha == 0f) {
       drawLine(

@@ -15,7 +15,7 @@ class RemoteJsonRepetitionProofTest {
       val expanded = expand(document)
       val result =
         assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
-          RemoteDocumentJsonExporter.export(expanded)
+          RemoteDocumentJsonExporter.export(expanded),
         )
       // Production emission must match the independently proven test-only expansion exactly.
       assertEquals(result, RemoteDocumentJsonExporter.export(document))
@@ -49,8 +49,9 @@ class RemoteJsonRepetitionProofTest {
           document.nodes +
             ("row" to
               row.copy(
-                properties = obj("""{"horizontalSpacingDp":{"type":"binding","value":"missing"}}""")
-              ))
+                properties =
+                  obj("""{"horizontalSpacingDp":{"type":"binding","value":"missing"}}"""),
+              )),
       )
     assertContains(
       assertFailsWith<IllegalArgumentException> { expand(missing) }.message!!,
@@ -103,7 +104,7 @@ class RemoteJsonRepetitionProofTest {
           }
           node.componentId == "layout/for-each" -> {
             require(
-              node.slots.keys == setOf("template") && node.slots.getValue("template").size == 1
+              node.slots.keys == setOf("template") && node.slots.getValue("template").size == 1,
             )
             val data = properties.getValue("data").jsonObject
             require(data["type"] == JsonPrimitive("list"))
@@ -139,7 +140,7 @@ class RemoteJsonRepetitionProofTest {
                           cases = selection.cases.mapKeys { mapped.getValue(it.key) },
                           fallback = selection.fallback?.let { mapped.getValue(it) },
                         )
-                        .encode())
+                        .encode()),
                 )
             node.copy(
               properties = remappedProperties,

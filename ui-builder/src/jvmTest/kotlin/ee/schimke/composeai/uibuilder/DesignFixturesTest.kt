@@ -48,7 +48,7 @@ class DesignFixturesTest {
           ?.get("systemId")
           ?.jsonPrimitive
           ?.content
-      } ?: "m3-catalog"
+      } ?: "m3-catalog",
     )
 
   private val fixtures: List<File> =
@@ -127,7 +127,7 @@ class DesignFixturesTest {
       // The device spec immediately above the call, which is where the frame is declared.
       val spec =
         Regex(
-            "@Preview\\(device = \"([^\"]+)\"\\)\\s*\\n@Composable\\s*\\nfun \\w+\\(\\) = ${Regex.escape(call)}"
+            "@Preview\\(device = \"([^\"]+)\"\\)\\s*\\n@Composable\\s*\\nfun \\w+\\(\\) = ${Regex.escape(call)}",
           )
           .find(previews)
           ?.groupValues
@@ -167,7 +167,7 @@ class DesignFixturesTest {
   private fun designsDirectory(): File =
     File(
       System.getProperty("uiBuilderDesignFixturesDir")
-        ?: "../docs/design/fixtures/ui-builder/designs"
+        ?: "../docs/design/fixtures/ui-builder/designs",
     )
 
   private fun resource(path: String): String =

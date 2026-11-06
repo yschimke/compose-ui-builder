@@ -67,7 +67,7 @@ class LocalDesignStore(
         }
       }
       .sortedWith(
-        compareByDescending<LocalDesignSummary> { it.updatedAtEpochMillis }.thenBy { it.designId }
+        compareByDescending<LocalDesignSummary> { it.updatedAtEpochMillis }.thenBy { it.designId },
       )
 
   fun read(designId: String): LocalDesignRecordV1? =

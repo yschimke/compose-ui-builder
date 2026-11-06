@@ -55,8 +55,8 @@ class ForEachRowsTest {
                   .getValue("loop")
                   .copy(
                     properties =
-                      JsonObject(mapOf("data" to JsonObject(mapOf("value" to JsonPrimitive(7)))))
-                  ))
+                      JsonObject(mapOf("data" to JsonObject(mapOf("value" to JsonPrimitive(7))))),
+                  )),
         )
       }
 
@@ -113,15 +113,15 @@ class ForEachRowsTest {
                                       mapOf(
                                         "type" to JsonPrimitive("object"),
                                         "fields" to JsonObject(emptyMap()),
-                                      )
-                                    )
-                                  ) + values
+                                      ),
+                                    ),
+                                  ) + values,
                                 ),
-                            )
-                          )
-                      )
-                    )
-                ))
+                            ),
+                          ),
+                      ),
+                    ),
+                )),
         )
       }
 
@@ -153,8 +153,8 @@ class ForEachRowsTest {
                     JsonObject(
                       mapOf(
                         "scrollStateKey" to
-                          JsonObject(mapOf("value" to JsonPrimitive("list-scroll")))
-                      )
+                          JsonObject(mapOf("value" to JsonPrimitive("list-scroll"))),
+                      ),
                     ),
                   slots = mapOf("items" to listOf("loop")),
                 )),
@@ -171,7 +171,7 @@ class ForEachRowsTest {
 
   private fun catalog() =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
 
   private fun exportSource(document: UiBuilderDocument): String {
@@ -189,7 +189,7 @@ class ForEachRowsTest {
   fun `an svg export of a design holding a loop refuses by name`() {
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
 
     val readiness =
@@ -246,7 +246,7 @@ class ForEachRowsTest {
                   base.nodes
                     .getValue("loop")
                     .copy(id = "inner", slots = mapOf("template" to listOf("cell"))),
-              )
+              ),
         )
       }
 
@@ -278,7 +278,7 @@ class ForEachRowsTest {
                     properties =
                       JsonObject(
                         cell.properties +
-                          ("stableKey" to JsonObject(mapOf("value" to JsonPrimitive("cell"))))
+                          ("stableKey" to JsonObject(mapOf("value" to JsonPrimitive("cell")))),
                       ),
                     slots = mapOf("content" to listOf("cell-label")),
                   )
@@ -289,7 +289,7 @@ class ForEachRowsTest {
                   componentId = "m3/text",
                   properties =
                     JsonObject(mapOf("text" to JsonObject(mapOf("value" to JsonPrimitive(""))))),
-                ))
+                )),
         )
       }
 
@@ -317,10 +317,10 @@ class ForEachRowsTest {
                         mapOf(
                           "containerColor" to binding("cell shade"),
                           "shape" to binding("cell-shade"),
-                        )
-                      )
+                        ),
+                      ),
                   )
-                })
+                }),
         )
       }
 
@@ -378,10 +378,10 @@ class ForEachRowsTest {
                     properties =
                       JsonObject(
                         cell.properties +
-                          ("stableKey" to JsonObject(mapOf("value" to JsonObject(emptyMap()))))
-                      )
+                          ("stableKey" to JsonObject(mapOf("value" to JsonObject(emptyMap())))),
+                      ),
                   )
-                })
+                }),
         )
       }
 
@@ -435,7 +435,7 @@ class ForEachRowsTest {
                     properties =
                       JsonObject(
                         cell.properties +
-                          ("stableKey" to JsonObject(mapOf("value" to JsonPrimitive("cell"))))
+                          ("stableKey" to JsonObject(mapOf("value" to JsonPrimitive("cell")))),
                       ),
                     slots = mapOf("content" to listOf("cell-label")),
                   )
@@ -446,7 +446,7 @@ class ForEachRowsTest {
                   componentId = "m3/text",
                   properties =
                     JsonObject(mapOf("text" to JsonObject(mapOf("value" to JsonPrimitive(""))))),
-                ))
+                )),
         )
       }
 
@@ -475,7 +475,7 @@ class ForEachRowsTest {
                     componentId = "design/component-instance",
                     component = JsonObject(mapOf("componentKey" to JsonPrimitive("panel"))),
                   ),
-              )
+              ),
         )
       }
 
@@ -510,11 +510,11 @@ class ForEachRowsTest {
                               mapOf(
                                 "type" to JsonPrimitive("state"),
                                 "variable" to JsonPrimitive("tint"),
-                              )
-                            )
-                        )
-                      )
-                  ))
+                              ),
+                            ),
+                        ),
+                      ),
+                  )),
         )
       }
 
@@ -557,7 +557,7 @@ class ForEachRowsTest {
                     componentId = "m3/card",
                     properties =
                       JsonObject(
-                        mapOf("stableKey" to JsonObject(mapOf("value" to JsonPrimitive("inner"))))
+                        mapOf("stableKey" to JsonObject(mapOf("value" to JsonPrimitive("inner")))),
                       ),
                   ),
               ),
@@ -566,8 +566,8 @@ class ForEachRowsTest {
               base.components +
                 ("inner" to
                   JsonObject(
-                    mapOf("name" to JsonPrimitive("Inner"), "root" to JsonPrimitive("inner"))
-                  ))
+                    mapOf("name" to JsonPrimitive("Inner"), "root" to JsonPrimitive("inner")),
+                  )),
             ),
         )
       }
@@ -628,25 +628,25 @@ class ForEachRowsTest {
                                                     JsonObject(
                                                       mapOf(
                                                         "value" to
-                                                          JsonPrimitive(shade.toDesignHex())
-                                                      )
-                                                    )
-                                                )
+                                                          JsonPrimitive(shade.toDesignHex()),
+                                                      ),
+                                                    ),
+                                                ),
                                               ),
-                                          )
+                                          ),
                                         )
-                                      }
+                                      },
                                     ),
-                                )
-                              )
-                          )
-                        )
+                                ),
+                              ),
+                          ),
+                        ),
                     ),
                 "cell" to
                   base.nodes
                     .getValue("cell")
                     .copy(properties = JsonObject(mapOf("containerColor" to binding("class")))),
-              )
+              ),
         )
       }
 
@@ -695,11 +695,11 @@ class ForEachRowsTest {
                               mapOf(
                                 "containerColor" to binding("shade"),
                                 "notAParameter" to binding("shade"),
-                              )
+                              ),
                             ),
-                        )
-                      )
-                  ))
+                        ),
+                      ),
+                  )),
         )
       }
 
@@ -735,14 +735,14 @@ class ForEachRowsTest {
                         mapOf(
                           "componentKey" to JsonPrimitive("cell"),
                           "arguments" to JsonObject(mapOf("containerColor" to binding("class"))),
-                        )
+                        ),
                       ),
                   ),
                 "cell" to
                   base.nodes
                     .getValue("cell")
                     .copy(
-                      properties = JsonObject(mapOf("containerColor" to binding("containerColor")))
+                      properties = JsonObject(mapOf("containerColor" to binding("containerColor"))),
                     ),
               ),
           components =
@@ -750,8 +750,8 @@ class ForEachRowsTest {
               base.components +
                 ("cell" to
                   JsonObject(
-                    mapOf("name" to JsonPrimitive("Cell"), "root" to JsonPrimitive("cell"))
-                  ))
+                    mapOf("name" to JsonPrimitive("Cell"), "root" to JsonPrimitive("cell")),
+                  )),
             ),
         )
       }
@@ -790,9 +790,9 @@ class ForEachRowsTest {
             mapOf(
               "panel" to
                 JsonObject(
-                  mapOf("name" to JsonPrimitive("Panel"), "root" to JsonPrimitive("panel"))
-                )
-            )
+                  mapOf("name" to JsonPrimitive("Panel"), "root" to JsonPrimitive("panel")),
+                ),
+            ),
           ),
       )
     }
@@ -813,10 +813,10 @@ class ForEachRowsTest {
                     JsonObject(
                       mapOf(
                         "data" to
-                          JsonObject(mapOf("type" to JsonPrimitive("list"), "values" to values))
-                      )
-                    )
-                ))
+                          JsonObject(mapOf("type" to JsonPrimitive("list"), "values" to values)),
+                      ),
+                    ),
+                )),
       )
     }
 
@@ -838,14 +838,14 @@ class ForEachRowsTest {
                       mapOf(
                         "componentKey" to JsonPrimitive(placedKey),
                         "arguments" to JsonObject(mapOf("containerColor" to binding("shade"))),
-                      )
+                      ),
                     ),
                 ),
               "cell" to
                 base.nodes
                   .getValue("cell")
                   .copy(
-                    properties = JsonObject(mapOf("containerColor" to binding("containerColor")))
+                    properties = JsonObject(mapOf("containerColor" to binding("containerColor"))),
                   ),
             ),
         components =
@@ -856,9 +856,9 @@ class ForEachRowsTest {
                   mapOf(
                     "name" to JsonPrimitive("Cell"),
                     "root" to JsonPrimitive("cell"),
-                  )
-                )
-            )
+                  ),
+                ),
+            ),
           ),
       )
     }
@@ -885,13 +885,13 @@ class ForEachRowsTest {
                                   mapOf(
                                     "type" to JsonPrimitive("binding"),
                                     "value" to JsonObject(emptyMap()),
-                                  )
-                                )
-                            )
+                                  ),
+                                ),
+                            ),
                           ),
-                      )
-                    )
-                ))
+                      ),
+                    ),
+                )),
       )
     }
 
@@ -907,11 +907,13 @@ class ForEachRowsTest {
               "type" to JsonPrimitive("object"),
               "fields" to
                 JsonObject(
-                  mapOf("shade" to JsonObject(mapOf("value" to JsonPrimitive(shade.toDesignHex()))))
+                  mapOf(
+                    "shade" to JsonObject(mapOf("value" to JsonPrimitive(shade.toDesignHex()))),
+                  ),
                 ),
-            )
+            ),
           )
-        }
+        },
       )
     return UiBuilderDocument(
       schema = "compose-ui-builder-document/v1-candidate",
@@ -925,7 +927,7 @@ class ForEachRowsTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -935,7 +937,7 @@ class ForEachRowsTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),
@@ -949,8 +951,8 @@ class ForEachRowsTest {
               properties =
                 JsonObject(
                   mapOf(
-                    "data" to JsonObject(mapOf("type" to JsonPrimitive("list"), "values" to rows))
-                  )
+                    "data" to JsonObject(mapOf("type" to JsonPrimitive("list"), "values" to rows)),
+                  ),
                 ),
               slots = mapOf("template" to listOf("cell")),
             ),
@@ -966,9 +968,9 @@ class ForEachRowsTest {
                         mapOf(
                           "type" to JsonPrimitive("binding"),
                           "value" to JsonPrimitive("shade"),
-                        )
-                      )
-                  )
+                        ),
+                      ),
+                  ),
                 ),
               modifiers =
                 JsonArray(
@@ -978,9 +980,9 @@ class ForEachRowsTest {
                         "type" to JsonPrimitive("size"),
                         "widthDp" to JsonPrimitive(CELL_PX),
                         "heightDp" to JsonPrimitive(CELL_PX),
-                      )
-                    )
-                  )
+                      ),
+                    ),
+                  ),
                 ),
               slots = mapOf("content" to emptyList()),
             ),

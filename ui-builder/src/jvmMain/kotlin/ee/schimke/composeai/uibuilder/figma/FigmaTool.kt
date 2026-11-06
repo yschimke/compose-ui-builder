@@ -29,11 +29,11 @@ object FigmaTool {
     val loader = FigmaTool::class.java
     val map =
       FigmaComponentMap.parse(
-        checkNotNull(loader.getResource("/m3-catalog-figma-map-v1.json")).readText()
+        checkNotNull(loader.getResource("/m3-catalog-figma-map-v1.json")).readText(),
       )
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(loader.getResource("/${map.catalog}-capabilities-v1.json")).readText()
+        checkNotNull(loader.getResource("/${map.catalog}-capabilities-v1.json")).readText(),
       )
     fun design(path: String) =
       UiBuilderReducer.replay(Json.parseToJsonElement(File(path).readText()).jsonObject).document
@@ -72,13 +72,13 @@ object FigmaTool {
             )
         File(args[4])
           .write(
-            result.command?.let { json.encodeToString(DesignCommand.serializer(), it) } ?: "null"
+            result.command?.let { json.encodeToString(DesignCommand.serializer(), it) } ?: "null",
           )
         result.diagnostics.forEach { println("${it.code} ${it.figmaNodeId}: ${it.message}") }
         println("${result.command?.operations?.size ?: 0} operations")
         result.deletions.forEach {
           println(
-            "held back (the design moved on; submit at its current revision): delete ${it.nodeId}"
+            "held back (the design moved on; submit at its current revision): delete ${it.nodeId}",
           )
         }
       }

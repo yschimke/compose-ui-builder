@@ -45,8 +45,8 @@ class ProblemsInspectorTriageTest {
             EditorProblem(
               code = "COMPOSE_EXPORT_REFUSED",
               message = "Widget padding must be 20dp",
-            )
-          )
+            ),
+          ),
         )
         .single()
 
@@ -70,7 +70,7 @@ class ProblemsInspectorTriageTest {
             componentId = "m3/text",
             blocking = false,
           ),
-        )
+        ),
       )
 
     assertEquals(listOf("m3/card", "m3/text"), groups.mapNotNull { it.componentId }.sorted())

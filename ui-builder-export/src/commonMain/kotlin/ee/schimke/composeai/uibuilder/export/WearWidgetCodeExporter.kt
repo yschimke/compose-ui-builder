@@ -94,7 +94,7 @@ object WearWidgetCodeExporter {
             source = outcome.source,
             readme = readme(outcome),
             files = outcome.files,
-          )
+          ),
         )
     }
 
@@ -142,8 +142,8 @@ object WearWidgetCodeExporter {
           WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == root.componentId }
             ?: return refuse(
               "the root is `${root.componentId}`, not a Wear widget container — this generator " +
-                "writes widgets, and a screen belongs to the Compose exporter"
-            )
+                "writes widgets, and a screen belongs to the Compose exporter",
+            ),
         )
 
     val refusals = mutableListOf<String>()
@@ -156,7 +156,7 @@ object WearWidgetCodeExporter {
         ?: return refuse(
           "the container's `${WearWidgetHostFrame.PROPERTY}` is " +
             "`${root.properties[WearWidgetHostFrame.PROPERTY]?.stringOrNull()}`, not one of " +
-            WearWidgetHostFrame.entries.joinToString { "`${it.id}`" }
+            WearWidgetHostFrame.entries.joinToString { "`${it.id}`" },
         )
 
     val resolved = sizes.map { AdaptiveWearWidget.resolve(document, it) }
@@ -358,7 +358,7 @@ object WearWidgetCodeExporter {
           listOfNotNull(
             WearWidgetHostFrame.dependencyDiagnostic(rootId).takeIf {
               hostFrame == WearWidgetHostFrame.Device
-            }
+            },
           ),
       hostFrame = hostFrame,
     )
@@ -408,7 +408,7 @@ object WearWidgetCodeExporter {
     if (outcome.files.isNotEmpty()) {
       appendLine(
         "- everything under `$ASSET_SOURCE_DIRECTORY/` — into the module's " +
-          "`src/main/$ASSET_SOURCE_DIRECTORY/`, keeping the paths."
+          "`src/main/$ASSET_SOURCE_DIRECTORY/`, keeping the paths.",
       )
       appendLine()
       appendLine("The widget opens each picture through `AssetManager`, by the path written in the")
@@ -437,10 +437,10 @@ object WearWidgetCodeExporter {
       appendLine()
       appendLine("`${WearWidgetHostFrame.DEVICE_ARTIFACT}`, for `${outcome.hostFrame.simpleName}`:")
       appendLine(
-        "the widget leaves its host frame (padding, corner radius) as named values, so the"
+        "the widget leaves its host frame (padding, corner radius) as named values, so the",
       )
       appendLine(
-        "device playing it writes in its own host's. Played as it is, it keeps the frame of"
+        "device playing it writes in its own host's. Played as it is, it keeps the frame of",
       )
       appendLine("the host it was captured for.")
     }
@@ -477,7 +477,7 @@ object WearWidgetCodeExporter {
           appendLine("${INDENT}private val ${it.identifier}: RemoteImageBitmap? = null,")
         } else {
           appendLine(
-            "${INDENT}private val ${it.identifier}: RemoteImageBitmap = ImageBitmap(1, 1).rb,"
+            "${INDENT}private val ${it.identifier}: RemoteImageBitmap = ImageBitmap(1, 1).rb,",
           )
         }
       }

@@ -120,7 +120,7 @@ private class NewDesignFormState(
    */
   var selectedGroup by
     mutableStateOf(
-      initialCatalog.takeIf { catalogs.size == 1 }?.let(::newDesignTargetGroups)?.firstOrNull()
+      initialCatalog.takeIf { catalogs.size == 1 }?.let(::newDesignTargetGroups)?.firstOrNull(),
     )
   var selectedTemplateId by
     mutableStateOf(templatesForTarget(initialCatalog, selectedGroup).firstOrNull()?.id.orEmpty())
@@ -385,7 +385,7 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
             "Letters, numbers, dots, underscores, and hyphens"
           } else {
             "Start with a letter or number and use only path-safe characters"
-          }
+          },
         )
       },
       isError = form.designId.isNotEmpty() && !form.designIdValid,
@@ -465,7 +465,7 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
                     NewDesignStateType.Flag -> "Use true or false"
                     NewDesignStateType.Number -> "Use a whole number"
                     NewDesignStateType.Text -> ""
-                  }
+                  },
                 )
               }
             } else null,
@@ -700,7 +700,7 @@ internal fun CatalogUpgradePreviewV1.catalogRecoveryCommand(
             sourceDocumentHash = sourceDocumentHash,
             targetDocumentHash = targetHash,
             previewDigest = previewDigest,
-          )
+          ),
         ),
     )
     .build()
@@ -1132,7 +1132,7 @@ internal fun ExistingDesignsPanel(
           Icon(Icons.Filled.FolderOpen, contentDescription = null, Modifier.size(18.dp))
           Spacer(Modifier.width(8.dp))
           Text(
-            if (designs.size > HOME_DESIGN_LIMIT) "All ${designs.size} designs" else "All designs"
+            if (designs.size > HOME_DESIGN_LIMIT) "All ${designs.size} designs" else "All designs",
           )
         }
       }
@@ -1320,7 +1320,8 @@ private fun BrowserDesignsPanel(
         Text(
           "This design is kept only in this browser, so deleting it cannot be undone. Download it " +
             "first to keep a copy." +
-            (pending.copiedFrom?.let { " The original ($it) on the server is not affected." } ?: "")
+            (pending.copiedFrom?.let { " The original ($it) on the server is not affected." }
+              ?: ""),
         )
       },
       confirmButton = {
@@ -1328,7 +1329,7 @@ private fun BrowserDesignsPanel(
           onClick = {
             confirmingDelete = null
             onDelete(pending.designId)
-          }
+          },
         ) {
           Text("Delete")
         }
@@ -1365,7 +1366,7 @@ private fun DesignThumbnail(
           Modifier.clickable(
             onClickLabel = "Open ${design.title.ifBlank { design.designId }}",
             onClick = { onOpenDesign(design.designId) },
-          )
+          ),
       )
   DesignThumbnailFrame(previewModifier) {
     val image = picture
@@ -1507,14 +1508,14 @@ private const val HOME_DESIGN_LIMIT = 6
  * (newest-first) order within each.
  */
 internal fun homeDesignFolders(
-  designs: List<UiBuilderHomeDesign>
+  designs: List<UiBuilderHomeDesign>,
 ): List<Pair<String?, List<UiBuilderHomeDesign>>> =
   designs
     .groupBy { it.folder }
     .toList()
     .sortedWith(
       compareBy<Pair<String?, List<UiBuilderHomeDesign>>> { it.first == null }
-        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.first.orEmpty() }
+        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.first.orEmpty() },
     )
 
 private const val TYPE_CARDS_PER_ROW = 3

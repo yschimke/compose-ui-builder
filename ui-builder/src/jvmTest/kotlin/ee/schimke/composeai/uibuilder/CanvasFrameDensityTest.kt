@@ -119,7 +119,7 @@ class CanvasFrameDensityTest {
           "widthDp": 240, "heightDp": 240, "density": $density, "theme": "dark",
           "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr", "animations": "settled"
         }
-        """
+        """,
       )
       .jsonObject
 
@@ -130,7 +130,7 @@ class CanvasFrameDensityTest {
           "systemId": "remote-m3", "catalogRevision": "wear-widget-scaffolds-v1",
           "capabilityDigest": "candidate", "nativeRuntimeId": "candidate"
         }
-        """
+        """,
       )
       .jsonObject
 

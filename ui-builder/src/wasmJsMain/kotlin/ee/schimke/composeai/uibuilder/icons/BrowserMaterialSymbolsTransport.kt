@@ -41,7 +41,7 @@ private fun fetchIcons(url: String): Promise<JsString> =
       return response.text().then(function (responseBody) {
         return JSON.stringify({ statusCode: response.status, body: responseBody });
       });
-    })"""
+    })""",
   )
 
 private suspend fun awaitIconPromise(promise: Promise<JsString>): String =

@@ -145,7 +145,7 @@ class DeviceSceneRotaryTest {
             }
             .focusRequester(requester)
             .onFocusChanged { focused = it.isFocused }
-            .focusable()
+            .focusable(),
         )
       }
       settle()

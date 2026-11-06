@@ -91,7 +91,7 @@ class SpacingMeasurementTest {
   @Test
   fun `touching boxes have no gap to label`() {
     assertTrue(
-      spacingMeasurement(Rect(0f, 0f, 10f, 10f), Rect(10f, 0f, 20f, 10f)).segments.isEmpty()
+      spacingMeasurement(Rect(0f, 0f, 10f, 10f), Rect(10f, 0f, 20f, 10f)).segments.isEmpty(),
     )
   }
 

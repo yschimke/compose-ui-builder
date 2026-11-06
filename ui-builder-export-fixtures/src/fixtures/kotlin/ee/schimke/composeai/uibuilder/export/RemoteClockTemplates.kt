@@ -135,7 +135,7 @@ private fun digital(designId: String, catalogPin: JsonObject, environment: JsonO
       "digital-utc",
       formula(
         "concat(select(time.utcOffset >= 0, \"+\", \"-\"), " +
-          "toString(toInt(abs(time.utcOffset) / 3600)))"
+          "toString(toInt(abs(time.utcOffset) / 3600)))",
       ),
       68,
       153,

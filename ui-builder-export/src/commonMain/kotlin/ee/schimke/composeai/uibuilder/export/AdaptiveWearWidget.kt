@@ -73,8 +73,8 @@ object AdaptiveWearWidget {
         modifiers =
           JsonArray(
             listOf(
-              JsonObject(mapOf("type" to JsonPrimitive("weight"), "weight" to JsonPrimitive(1)))
-            )
+              JsonObject(mapOf("type" to JsonPrimitive("weight"), "weight" to JsonPrimitive(1))),
+            ),
           ),
         slots = mapOf("children" to (visible - ACTION).flatMap { root.slots[it].orEmpty() }),
       )
@@ -89,7 +89,7 @@ object AdaptiveWearWidget {
               mapOf(
                 "horizontalSpacingDp" to number(ACTION_SPACING_DP),
                 "verticalAlignment" to enum("center"),
-              )
+              ),
           ),
         modifiers = JsonArray(listOf(JsonObject(mapOf("type" to JsonPrimitive("fillMaxSize"))))),
         slots = mapOf("children" to listOf(textId) + root.slots[ACTION].orEmpty()),
@@ -106,7 +106,7 @@ object AdaptiveWearWidget {
         .flatMapTo(mutableSetOf()) { document.subtree(it) }
     return document.copy(
       nodes =
-        document.nodes - hidden + (rootId to container) + (layoutId to layout) + (textId to text)
+        document.nodes - hidden + (rootId to container) + (layoutId to layout) + (textId to text),
     )
   }
 

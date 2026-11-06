@@ -35,7 +35,7 @@ class UiBuilderModifierPlanTest {
     assertEquals(
       UiBuilderModifierPlan.Padding(16f, 8f, 16f, 8f),
       uiBuilderModifier(
-        modifier("""{"type":"padding","startDp":16,"topDp":8,"endDp":16,"bottomDp":8}""")
+        modifier("""{"type":"padding","startDp":16,"topDp":8,"endDp":16,"bottomDp":8}"""),
       ),
     )
     assertEquals(
@@ -141,14 +141,14 @@ class UiBuilderModifierPlanTest {
       UiBuilderModifierPlan.Background("surfaceContainerHigh", "medium"),
       uiBuilderModifier(
         modifier(
-          """{"type":"background","color":{"type":"colorToken","value":"surfaceContainerHigh"},"shape":"medium"}"""
-        )
+          """{"type":"background","color":{"type":"colorToken","value":"surfaceContainerHigh"},"shape":"medium"}""",
+        ),
       ),
     )
     assertEquals(
       UiBuilderModifierPlan.Border(1f, "#FF335577", null),
       uiBuilderModifier(
-        modifier("""{"type":"border","widthDp":1,"color":{"type":"color","value":"#FF335577"}}""")
+        modifier("""{"type":"border","widthDp":1,"color":{"type":"color","value":"#FF335577"}}"""),
       ),
     )
     assertEquals(
@@ -158,7 +158,7 @@ class UiBuilderModifierPlanTest {
     assertEquals(
       UiBuilderModifierPlan.Shadow(6f, "large", true),
       uiBuilderModifier(
-        modifier("""{"type":"shadow","elevationDp":6,"shape":"large","clip":true}""")
+        modifier("""{"type":"shadow","elevationDp":6,"shape":"large","clip":true}"""),
       ),
     )
     assertEquals(
@@ -200,7 +200,7 @@ class UiBuilderModifierPlanTest {
     // A box's nine and an axis's three are different vocabularies, and the wire is one string for
     // all three modifiers. `Alignment.CenterEnd` is not an `Alignment.Horizontal`.
     assertNull(
-      uiBuilderModifier(modifier("""{"type":"alignHorizontal","alignment":"centerEnd"}"""))
+      uiBuilderModifier(modifier("""{"type":"alignHorizontal","alignment":"centerEnd"}""")),
     )
     assertNull(uiBuilderModifier(modifier("""{"type":"alignVertical","alignment":"start"}""")))
     assertNull(uiBuilderModifier(modifier("""{"type":"align","alignment":"sideways"}""")))
@@ -234,13 +234,13 @@ class UiBuilderModifierPlanTest {
     // A colour the theme cannot resolve, which used to be an `error()` inside the composition.
     assertNull(
       uiBuilderModifier(
-        modifier("""{"type":"background","color":{"type":"colorToken","value":"chartreuse"}}""")
-      )
+        modifier("""{"type":"background","color":{"type":"colorToken","value":"chartreuse"}}"""),
+      ),
     )
     assertNull(
       uiBuilderModifier(
-        modifier("""{"type":"border","color":{"type":"color","value":"#FF000000"}}""")
-      )
+        modifier("""{"type":"border","color":{"type":"color","value":"#FF000000"}}"""),
+      ),
     )
   }
 }
@@ -261,9 +261,9 @@ class RemoteCallModifierPlanTest {
               """{"type":"remoteCall","name":"defaultMinSize","args":{
                 "minWidth":{"type":"expr","op":"mul","args":[
                   {"type":"state","variable":"size"},{"type":"int","value":2}]},
-                "minHeight":{"type":"state","variable":"size"}}}"""
-            )
-          )
+                "minHeight":{"type":"state","variable":"size"}}}""",
+            ),
+          ),
         ),
     )
 
@@ -297,8 +297,8 @@ class RemoteCallModifierPlanTest {
   fun `a call the released API does not have is not a plan`() {
     assertNull(
       uiBuilderModifier(
-        Json.parseToJsonElement("""{"type":"remoteCall","name":"blur","args":{}}""").jsonObject
-      )
+        Json.parseToJsonElement("""{"type":"remoteCall","name":"blur","args":{}}""").jsonObject,
+      ),
     )
   }
 }

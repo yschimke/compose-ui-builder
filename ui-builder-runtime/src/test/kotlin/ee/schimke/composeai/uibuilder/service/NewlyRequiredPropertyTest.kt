@@ -38,7 +38,7 @@ class NewlyRequiredPropertyTest {
     assertEquals(
       IntegerValueV1(0),
       requiredPlaceholder(
-        property(JsonArray(listOf(JsonPrimitive("object"), JsonPrimitive("integer"))))
+        property(JsonArray(listOf(JsonPrimitive("object"), JsonPrimitive("integer")))),
       ),
       "a union takes its scalar alternative, not the object",
     )
@@ -49,7 +49,7 @@ class NewlyRequiredPropertyTest {
     assertEquals(
       EnumValueV1("start"),
       requiredPlaceholder(
-        property("string", allowed = listOf(JsonPrimitive("start"), JsonPrimitive("end")))
+        property("string", allowed = listOf(JsonPrimitive("start"), JsonPrimitive("end"))),
       ),
     )
   }
@@ -62,7 +62,7 @@ class NewlyRequiredPropertyTest {
       assertEquals(ColorTokenValueV1("onSurface"), placeholder, name)
       assertTrue(
         (placeholder as ColorTokenValueV1).value in
-          CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS
+          CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS,
       )
     }
     assertNull(
@@ -80,7 +80,7 @@ class NewlyRequiredPropertyTest {
           "string",
           name = "containerColor",
           allowed = listOf(JsonPrimitive("primary"), JsonPrimitive("secondary")),
-        )
+        ),
       ),
     )
   }
@@ -186,7 +186,7 @@ class NewlyRequiredPropertyTest {
 
     val refused =
       assertIs<UiBuilderServiceResponse.Error>(
-        execute(gone, owner, UiBuilderServiceRequest.OpenDesign("tablet"))
+        execute(gone, owner, UiBuilderServiceRequest.OpenDesign("tablet")),
       )
     assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
     val stored = checkNotNull(UiBuilderDesignStateStore.open(root).store.load().designs["tablet"])
@@ -232,10 +232,10 @@ class NewlyRequiredPropertyTest {
                 listOf(
                   PropertyCapabilityV1.Builder("selectedTabIndex", JsonPrimitive("integer"))
                     .also { it.required = required }
-                    .build()
+                    .build(),
                 )
             }
-            .build()
+            .build(),
         ) +
           listOfNotNull(
             if (!withWidget) null
@@ -247,7 +247,7 @@ class NewlyRequiredPropertyTest {
                   WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
                     .build(),
                 )
-                .build()
+                .build(),
           ),
       )
       .build()
@@ -325,7 +325,7 @@ class NewlyRequiredPropertyTest {
 
   private fun openedDocument(service: PersistentUiBuilderService, designId: String) =
     assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId))
+        execute(service, owner, UiBuilderServiceRequest.OpenDesign(designId)),
       )
       .snapshot
       .state
@@ -373,7 +373,7 @@ class NewlyRequiredPropertyTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return checkNotNull(completion).getOrThrow()
   }

@@ -100,6 +100,6 @@ class CommentAuthorLabelTest {
         displayName = displayName,
         kind = kind,
         body = "",
-      )
+      ),
     )
 }

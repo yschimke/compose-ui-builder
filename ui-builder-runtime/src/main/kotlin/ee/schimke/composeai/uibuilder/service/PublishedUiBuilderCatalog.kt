@@ -94,7 +94,7 @@ public object PublishedUiBuilderCatalog {
       // An unknown major is refused rather than read optimistically; the fallback keeps the catalog
       // served.
       return Result.Unusable(
-        "ui-builder.json declares schema ${file.schema}; this server reads $UI_BUILDER_CATALOG_SCHEMA"
+        "ui-builder.json declares schema ${file.schema}; this server reads $UI_BUILDER_CATALOG_SCHEMA",
       )
     }
     val semantics = file.statusSemantics
@@ -178,7 +178,7 @@ public object PublishedUiBuilderCatalog {
       return Result.Unusable(
         "${unreadable.size} declaration(s) the builder cannot serve: " +
           unreadable.sorted().take(8).joinToString(", ") +
-          (if (unreadable.size > 8) ", …" else "")
+          (if (unreadable.size > 8) ", …" else ""),
       )
     }
 
@@ -240,7 +240,7 @@ public object PublishedUiBuilderCatalog {
 
     if (taken.isEmpty()) {
       return Result.Unusable(
-        "composing ui-builder.json with the component record yielded no components"
+        "composing ui-builder.json with the component record yielded no components",
       )
     }
     // One collision is a catalog bug and is skipped; collisions in bulk mean the ids are not
@@ -251,7 +251,7 @@ public object PublishedUiBuilderCatalog {
       return Result.Unusable(
         "$collisions of $eligible eligible record components collided on an already-taken " +
           "component id, leaving ${taken.size} — the published file is not naming components " +
-          "distinctly, so which one survives is an accident of record order"
+          "distinctly, so which one survives is an accident of record order",
       )
     }
     // The file expected an inventory and none arrived; refuse rather than serve a builtins-only
@@ -260,7 +260,7 @@ public object PublishedUiBuilderCatalog {
     if (expected > 0 && record == null) {
       return Result.Unusable(
         "ui-builder.json was generated against a $expected-component record and none is available " +
-          "here, so it would compose to its builtins alone"
+          "here, so it would compose to its builtins alone",
       )
     }
     // A record arrived for a different catalog: no policy joined, so every component would be
@@ -274,7 +274,7 @@ public object PublishedUiBuilderCatalog {
           "${inventory.size}-component record supplied here — the file joins on " +
           "`${policyByRecordId.keys.filterNotNull().min()}` and the record canonicalises its " +
           "components as `${inventory.minOf { it.canonicalId }}`, so the two are not a pair and " +
-          "every component would be served its call site's vocabulary rather than this catalog's"
+          "every component would be served its call site's vocabulary rather than this catalog's",
       )
     }
 

@@ -30,7 +30,8 @@ class CatalogRecoveryCommandTest {
   @Test
   fun `a blocked or incomplete preview cannot become a write`() {
     assertNull(
-      preview(CatalogUpgradePreviewStatusV1.BLOCKED, "target-hash").catalogRecoveryCommand("a", "c")
+      preview(CatalogUpgradePreviewStatusV1.BLOCKED, "target-hash")
+        .catalogRecoveryCommand("a", "c"),
     )
     assertNull(preview(CatalogUpgradePreviewStatusV1.READY, null).catalogRecoveryCommand("a", "c"))
   }

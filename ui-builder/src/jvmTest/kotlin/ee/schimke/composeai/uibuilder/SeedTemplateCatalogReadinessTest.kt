@@ -209,7 +209,7 @@ class SeedTemplateCatalogReadinessTest {
           catalog.exportRecord(
             if (catalog.benchmark.catalogSystemId in setOf("m3-catalog", "wear-m3", "remote-m3"))
               publishedTestExportRecord(catalog.benchmark.catalogSystemId)
-            else embeddedComponentRecord()
+            else embeddedComponentRecord(),
           ),
         )
     ) {

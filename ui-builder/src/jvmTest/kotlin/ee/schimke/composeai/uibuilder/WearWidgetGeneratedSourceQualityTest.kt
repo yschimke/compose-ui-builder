@@ -154,9 +154,12 @@ class WearWidgetGeneratedSourceQualityTest {
                     root.properties +
                       ("themeTitleTypeface" to
                         JsonObject(
-                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Syne"))
-                        ))
-                  )
+                          mapOf(
+                            "type" to JsonPrimitive("string"),
+                            "value" to JsonPrimitive("Syne"),
+                          ),
+                        )),
+                  ),
               )),
       )
     val source = generate(themed)
@@ -196,9 +199,9 @@ class WearWidgetGeneratedSourceQualityTest {
                           mapOf(
                             "type" to JsonPrimitive("enum"),
                             "value" to JsonPrimitive("headlineSmall"),
-                          )
-                        ))
-                  )
+                          ),
+                        )),
+                  ),
               )),
       )
     val source = generate(themed)
@@ -279,7 +282,7 @@ class WearWidgetGeneratedSourceQualityTest {
           componentId = "layout/row",
           properties =
             JsonObject(
-              buildMap { alignment?.let { put("verticalAlignment", literal("enum", it)) } }
+              buildMap { alignment?.let { put("verticalAlignment", literal("enum", it)) } },
             ),
           modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
           slots = mapOf("children" to listOf("label")),
@@ -316,7 +319,7 @@ class WearWidgetGeneratedSourceQualityTest {
                 "startColor" to literal("color", "#FF00363D"),
                 "endColor" to literal("color", "#FF004F58"),
                 "direction" to literal("enum", "topToBottom"),
-              )
+              ),
             ),
         ),
         UiBuilderNode(
@@ -333,7 +336,7 @@ class WearWidgetGeneratedSourceQualityTest {
               mapOf(
                 "verticalSpacingDp" to literal("float", 2),
                 "alignment" to literal("enum", "center"),
-              )
+              ),
             ),
           modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
           slots = mapOf("children" to listOf("day", "reading-row", "goal")),
@@ -385,7 +388,7 @@ class WearWidgetGeneratedSourceQualityTest {
               put("textAlign", literal("enum", "center"))
               put("maxLines", literal("int", 1))
             }
-          }
+          },
         ),
       modifiers =
         if (fullWidth) JsonArray(listOf(modifier("fillMaxWidth"))) else JsonArray(emptyList()),

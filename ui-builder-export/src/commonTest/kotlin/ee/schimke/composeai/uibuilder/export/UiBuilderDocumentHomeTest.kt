@@ -48,8 +48,8 @@ class UiBuilderDocumentHomeTest {
     val replayed =
       UiBuilderReducer.replay(
         fixture(
-          """{"kind":"server","url":"https://preview.coo.ee","designId":"login-v2","region":"eu"}"""
-        )
+          """{"kind":"server","url":"https://preview.coo.ee","designId":"login-v2","region":"eu"}""",
+        ),
       )
 
     assertEquals(
@@ -96,7 +96,7 @@ class UiBuilderDocumentHomeTest {
           }]
         }
         """
-          .trimIndent()
+          .trimIndent(),
       )
       .jsonObject
 

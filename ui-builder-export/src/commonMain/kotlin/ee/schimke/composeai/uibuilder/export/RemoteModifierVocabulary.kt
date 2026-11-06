@@ -68,10 +68,10 @@ public object RemoteModifierVocabulary {
               Parameter("enabled", "Boolean", "bool", optional = true),
               Parameter("mergeDescendants", "Boolean", "bool", optional = true),
               Parameter("clear", "Boolean", "bool", optional = true),
-            )
-          )
+            ),
+          ),
         ),
-      )
+      ),
     )
 
   public val modifiers: Map<String, Modifier> by lazy {
@@ -96,6 +96,6 @@ public object RemoteModifierVocabulary {
           { it.parameters.size },
           { overload -> overload.parameters.count { it.kind == "float" || it.kind == "int" } },
           { overload -> overload.parameters.count { !it.type.startsWith("Remote") } },
-        )
+        ),
       )
 }

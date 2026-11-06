@@ -31,7 +31,7 @@ class CatalogMenuTest {
   private val menu = catalog.componentMenu
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val state = reducer.initial(document, selectedNodeId = "discover-grid")
@@ -88,8 +88,8 @@ class CatalogMenuTest {
       UiBuilderEditorReducer(
           catalog.copy(
             components =
-              catalog.components.map { it.copy(componentId = "unknown/${it.componentId}") }
-          )
+              catalog.components.map { it.copy(componentId = "unknown/${it.componentId}") },
+          ),
         )
         .catalogRows(state)
         .filterIsInstance<EditorCatalogRow.Group>()
@@ -310,9 +310,9 @@ class CatalogMenuTest {
                       }
                     }
                     """
-                      .trimIndent()
+                      .trimIndent(),
                   )
-                  .jsonObject)
+                  .jsonObject),
           ),
         components =
           listOf("wear-m3/screen-scaffold", "wear-m3/transforming-lazy-column", "wear-m3/text")

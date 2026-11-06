@@ -57,7 +57,7 @@ class GuidelineFindingsOverlayTest {
         verdicts =
           DesignGuidelinePrompt.parseVerdicts(
             """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
-              """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}"""
+              """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}""",
           ),
       )
   }
@@ -111,7 +111,7 @@ class GuidelineFindingsOverlayTest {
             "wear-m3/button",
             UiBuilderPixelBounds(x = 20f, y = 30f, width = 80f, height = 40f),
             semantics = UiBuilderSemanticsInspection(role = "button", actions = emptyList()),
-          )
+          ),
         ),
       slots = emptyList(),
     )

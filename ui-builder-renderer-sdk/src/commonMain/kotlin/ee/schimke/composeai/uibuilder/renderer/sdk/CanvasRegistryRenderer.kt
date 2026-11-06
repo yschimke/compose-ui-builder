@@ -136,6 +136,6 @@ fun CanvasDocumentScope.RenderCanvasNode(
     return
   }
   fallback(
-    CanvasNodeFallbackScope(entry, prepared, state, renderChild, ::recordUndrawn, ::forgetUndrawn)
+    CanvasNodeFallbackScope(entry, prepared, state, renderChild, ::recordUndrawn, ::forgetUndrawn),
   )
 }

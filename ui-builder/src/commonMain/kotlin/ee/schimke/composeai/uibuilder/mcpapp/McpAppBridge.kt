@@ -200,7 +200,7 @@ class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge
       "conflict" -> McpAppWriteOutcome.Conflict(result.string("etag").orEmpty())
       "too-large" ->
         McpAppWriteOutcome.TooLarge(
-          (result["maxBytes"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toLong() ?: -1
+          (result["maxBytes"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toLong() ?: -1,
         )
       else -> error("the host answered a write with an unknown outcome '$outcome'")
     }

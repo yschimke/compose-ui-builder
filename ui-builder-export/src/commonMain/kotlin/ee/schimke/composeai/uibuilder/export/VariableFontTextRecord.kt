@@ -91,7 +91,7 @@ internal object VariableFontTextRecord {
         put("type", type)
         put("hasDefault", JsonPrimitive(default))
         put("typeFqn", typeFqn)
-      }
+      },
     )
   }
 

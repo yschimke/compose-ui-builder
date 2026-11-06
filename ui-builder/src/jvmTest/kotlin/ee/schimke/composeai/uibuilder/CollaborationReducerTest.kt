@@ -33,7 +33,7 @@ class CollaborationReducerTest {
     assertEquals(
       canonicalDocument(document),
       canonicalDocument(
-        document.copy(home = UiBuilderDocumentHome.Server("https://preview.coo.ee", document.id))
+        document.copy(home = UiBuilderDocumentHome.Server("https://preview.coo.ee", document.id)),
       ),
     )
   }
@@ -75,7 +75,7 @@ class CollaborationReducerTest {
     assertEquals(placed.nodes.getValue("body"), application.state.document.nodes.getValue("body"))
     val cyclic =
       placed.copy(
-        nodes = placed.nodes + ("body" to placed.nodes.getValue("place").copy(id = "body"))
+        nodes = placed.nodes + ("body" to placed.nodes.getValue("place").copy(id = "body")),
       )
     val refused =
       CollaborationReducer.apply(CollaborationState(cyclic), command, catalogPropertyValidator())
@@ -148,7 +148,7 @@ class CollaborationReducerTest {
         base.copy(
           roots = listOf("container"),
           nodes = mapOf("container" to emptyContainer, "b" to base.nodes.getValue("b")),
-        )
+        ),
       )
     val application =
       CollaborationReducer.apply(
@@ -633,7 +633,7 @@ class CollaborationReducerTest {
             "tail" to UiBuilderNode(id = "tail", componentId = "button"),
             "container" to
               container.copy(slots = container.slots + ("items" to listOf("anchor", "a", "tail"))),
-          )
+          ),
     )
   }
 

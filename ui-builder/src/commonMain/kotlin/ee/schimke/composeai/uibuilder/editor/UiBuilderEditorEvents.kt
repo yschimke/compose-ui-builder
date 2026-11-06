@@ -660,7 +660,7 @@ internal fun EditorStateAction.encoded(
   return when (this) {
     is EditorStateAction.Navigate ->
       JsonObject(
-        mapOf("type" to JsonPrimitive("navigatePage"), "pageKey" to JsonPrimitive(pageKey))
+        mapOf("type" to JsonPrimitive("navigatePage"), "pageKey" to JsonPrimitive(pageKey)),
       )
     is EditorStateAction.Toggle ->
       JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive(variable)))
@@ -670,7 +670,7 @@ internal fun EditorStateAction.encoded(
           "type" to JsonPrimitive("set"),
           "variable" to JsonPrimitive(variable),
           "value" to typed(value),
-        )
+        ),
       )
     is EditorStateAction.SelectOrClear ->
       JsonObject(
@@ -678,7 +678,7 @@ internal fun EditorStateAction.encoded(
           "type" to JsonPrimitive("selectOrClear"),
           "variable" to JsonPrimitive(variable),
           "value" to typed(value),
-        )
+        ),
       )
     is EditorStateAction.Increment ->
       JsonObject(
@@ -686,7 +686,7 @@ internal fun EditorStateAction.encoded(
           "type" to JsonPrimitive("increment"),
           "variable" to JsonPrimitive(variable),
           "amount" to typed(amount),
-        )
+        ),
       )
   }
 }

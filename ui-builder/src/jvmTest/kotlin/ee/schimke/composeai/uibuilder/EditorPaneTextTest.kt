@@ -66,7 +66,7 @@ class EditorPaneTextTest {
           UiBuilderPreviewSurfaces.SurfaceClaim(
             UiBuilderPreviewSurfaces.Fidelity.NONE,
             reason = "No compile lane is configured for this project.",
-          )
+          ),
       )
     assertEquals(
       "Unavailable: No compile lane is configured for this project.",

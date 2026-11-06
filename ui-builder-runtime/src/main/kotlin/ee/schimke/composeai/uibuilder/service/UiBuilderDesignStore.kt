@@ -477,7 +477,7 @@ internal class FileUiBuilderDesignStore(
         if (bytes > limits.maximumDesignBytes) {
           discardUncommitted(designDirectory, current, written, journalUndo)
           throw UiBuilderPersistenceException(
-            "UI-builder design $designId is $bytes bytes; limit is ${limits.maximumDesignBytes}"
+            "UI-builder design $designId is $bytes bytes; limit is ${limits.maximumDesignBytes}",
           )
         }
         writeHeader(designDirectory, encodedHeader)
@@ -717,13 +717,13 @@ internal class FileUiBuilderDesignStore(
     if (header.journalBytes > limits.maximumDesignBytes) {
       throw UiBuilderPersistenceException(
         "UI-builder journal $file commits to ${header.journalBytes} bytes; the per-design limit " +
-          "is ${limits.maximumDesignBytes}"
+          "is ${limits.maximumDesignBytes}",
       )
     }
     val size = Files.size(path)
     if (size < header.journalBytes) {
       throw UiBuilderPersistenceException(
-        "UI-builder journal $file is $size bytes; the header commits to ${header.journalBytes}"
+        "UI-builder journal $file is $size bytes; the header commits to ${header.journalBytes}",
       )
     }
     val committed = readPrefix(path, header.journalBytes).decodeToString()
@@ -748,7 +748,7 @@ internal class FileUiBuilderDesignStore(
           }
         if (sha256(canonicalJson(stored.entry).encodeToByteArray()) != stored.checksumSha256) {
           throw UiBuilderPersistenceException(
-            "UI-builder journal record checksum mismatch in $file"
+            "UI-builder journal record checksum mismatch in $file",
           )
         }
         val entry =
@@ -1075,7 +1075,7 @@ internal class FileUiBuilderDesignStore(
     if (markerBytes > MAXIMUM_MARKER_BYTES) {
       throw UiBuilderPersistenceException(
         "UI-builder store marker at $markerFile is $markerBytes bytes; the limit is " +
-          "$MAXIMUM_MARKER_BYTES"
+          "$MAXIMUM_MARKER_BYTES",
       )
     }
     val marker =
@@ -1092,7 +1092,7 @@ internal class FileUiBuilderDesignStore(
       }
     if (marker.format != STORE_FORMAT) {
       throw UiBuilderPersistenceException(
-        "unsupported UI-builder store format ${marker.format} at $markerFile"
+        "unsupported UI-builder store format ${marker.format} at $markerFile",
       )
     }
   }
@@ -1161,7 +1161,7 @@ internal class FileUiBuilderDesignStore(
       ?: runCatching {
         json
           .parseToJsonElement(
-            readBounded(designDirectory.resolve(HEADER_FILE), "header").decodeToString()
+            readBounded(designDirectory.resolve(HEADER_FILE), "header").decodeToString(),
           )
           .jsonObject[PAYLOAD_FIELD]
           ?.jsonObject
@@ -1212,7 +1212,7 @@ internal class FileUiBuilderDesignStore(
     if (legacyBytes > limits.maximumMigrationBytes) {
       throw UiBuilderPersistenceException(
         "UI-builder state at $legacyFile is $legacyBytes bytes; the migration limit is " +
-          "${limits.maximumMigrationBytes}"
+          "${limits.maximumMigrationBytes}",
       )
     }
     val decoded = LegacyUiBuilderState.decode(Files.readAllBytes(legacyFile))
@@ -1324,7 +1324,7 @@ internal class FileUiBuilderDesignStore(
     if (size > limits.maximumDesignBytes) {
       throw UiBuilderPersistenceException(
         "UI-builder $description at $path is $size bytes; the per-design limit is " +
-          "${limits.maximumDesignBytes}"
+          "${limits.maximumDesignBytes}",
       )
     }
     return Files.readAllBytes(path)

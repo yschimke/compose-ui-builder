@@ -35,7 +35,7 @@ class CatalogListingTest {
     assertFalse(CatalogListing.isUnlisted(catalog("wear-m3")))
     assertFalse(
       CatalogListing.isUnlisted(
-        catalog("wear-m3", mapOf(CatalogListing.UNLISTED_KEY to JsonPrimitive("true")))
+        catalog("wear-m3", mapOf(CatalogListing.UNLISTED_KEY to JsonPrimitive("true"))),
       ),
       "only a JSON true unlists",
     )

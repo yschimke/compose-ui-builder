@@ -133,7 +133,7 @@ fun DesignGuidelinePrompt.body(request: DesignGuidelineRequest, model: String): 
         buildJsonObject {
           put("role", "system")
           put("content", request.systemPrompt)
-        }
+        },
       )
       add(
         buildJsonObject {
@@ -143,7 +143,7 @@ fun DesignGuidelinePrompt.body(request: DesignGuidelineRequest, model: String): 
               buildJsonObject {
                 put("type", "text")
                 put("text", request.userText)
-              }
+              },
             )
             request.pictures.forEach { picture ->
               val url = picture.dataUrl ?: return@forEach
@@ -151,11 +151,11 @@ fun DesignGuidelinePrompt.body(request: DesignGuidelineRequest, model: String): 
                 buildJsonObject {
                   put("type", "image_url")
                   putJsonObject("image_url") { put("url", url) }
-                }
+                },
               )
             }
           }
-        }
+        },
       )
     }
     putJsonObject("response_format") {
@@ -200,7 +200,7 @@ fun DesignGuidelinePrompt.prepare(
     listOfNotNull(
       devicePicture?.let {
         DesignGuidelinePicture.device(dim("widthDp"), dim("heightDp"), it, platform = platform)
-      }
+      },
     ),
     source,
   )
@@ -308,7 +308,7 @@ fun DesignGuidelinePrompt.prepare(
           "version ${guidelines.version}): ${applicable.size} for this kind of design" +
           (profile?.let { " targeting $it" } ?: "") +
           ", ${asked.size} asked here. Each quotes the design guidance it comes from and links " +
-          "its source."
+          "its source.",
       ) +
         provenance(guidelines.version, applicable.size, asked.size, pictures, source != null)
           .drop(1),
@@ -327,25 +327,25 @@ fun DesignGuidelinePrompt.provenance(
     "The rules are compose-ui-builder's design-guideline set (version $rulesVersion): " +
       "$forPlatform for this platform and kind of design, $asked asked here. Each quotes the Android design guidance " +
       "it comes from (developer.android.com design guides: Wear OS, adaptive and large-screen " +
-      "layouts, Jetpack Compose Glimmer) and links its source."
+      "layouts, Jetpack Compose Glimmer) and links its source.",
   )
   add(
     "The system prompt is fixed: it tells the model to answer each rule's yes/no question from " +
-      "the evidence given, and to reply as JSON held to the response schema."
+      "the evidence given, and to reply as JSON held to the response schema.",
   )
   add(
     "The design tree is generated from this revision of the design: each node's id, component, " +
-      "properties, modifiers and slots, without asset bytes."
+      "properties, modifiers and slots, without asset bytes.",
   )
   add(
     if (sourceAttached)
       "The Jetpack Compose source is what this design exports to, from the same generator as Export."
-    else "No Compose source is attached: the design did not export, or this host cannot export it."
+    else "No Compose source is attached: the design did not export, or this host cannot export it.",
   )
   when {
     pictures.isEmpty() ->
       add(
-        "No picture is attached, so the visual rules are left out and the tree is all the model sees."
+        "No picture is attached, so the visual rules are left out and the tree is all the model sees.",
       )
     else ->
       pictures.forEach { picture ->
@@ -378,7 +378,7 @@ fun DesignGuidelinePrompt.provenance(
               "The Pixel Watch picture renders the widget in the rounded-rectangle container the " +
                 "Pixel Watch launcher gives it (${picture.widthDp}×${picture.heightDp}dp)."
             else -> "A picture of the design is attached."
-          }
+          },
         )
       }
   }

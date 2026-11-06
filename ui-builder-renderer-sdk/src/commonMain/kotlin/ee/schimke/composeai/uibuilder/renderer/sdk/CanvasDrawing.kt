@@ -112,11 +112,13 @@ private fun DrawCanvas(
     val offsetX = transform.x * density
     val offsetY = transform.y * density
     val inner = Size(viewport.width * density, viewport.height * density)
-    withTransform({
-      if (viewport.mode == "fill") clipRect(0f, 0f, extent.width, extent.height)
-      translate(offsetX, offsetY)
-      scale(transform.scaleX, transform.scaleY, pivot = Offset.Zero)
-    }) {
+    withTransform(
+      {
+        if (viewport.mode == "fill") clipRect(0f, 0f, extent.width, extent.height)
+        translate(offsetX, offsetY)
+        scale(transform.scaleX, transform.scaleY, pivot = Offset.Zero)
+      },
+    ) {
       steps.forEach { it.draw(this, measurer, inner) }
     }
   }
@@ -269,7 +271,7 @@ private fun iterations(repeat: CanvasRenderNode): List<CanvasRenderNode> {
         JsonObject(
           repeat.bindingArguments +
             (name to
-              JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(index))))
+              JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(index)))),
         )
       children.forEach { child -> repeat.occurrenceChild(child, pass, arguments)?.let(::add) }
       pass++
@@ -294,9 +296,9 @@ private fun polylinePoints(polyline: CanvasRenderNode): List<Offset>? {
             polyline.bindingArguments +
               (name to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(point))
-                ))
-          )
+                  mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(point)),
+                )),
+          ),
         )
         .node
     Offset(node.number("pointXDp") ?: return null, node.number("pointYDp") ?: return null)
@@ -403,17 +405,19 @@ private sealed interface DrawStep {
             node.number("pivotXDp")?.dp(this) ?: extent.width / 2f,
             node.number("pivotYDp")?.dp(this) ?: extent.height / 2f,
           )
-        withTransform({
-          translate(
-            node.number("translateXDp")?.dp(this@with) ?: 0f,
-            node.number("translateYDp")?.dp(this@with) ?: 0f,
-          )
-          node.number("rotate")?.let { rotate(it, pivot) }
-          val both = node.number("scale")
-          val scaleX = node.number("scaleX") ?: both
-          val scaleY = node.number("scaleY") ?: both
-          if (scaleX != null || scaleY != null) scale(scaleX ?: 1f, scaleY ?: 1f, pivot)
-        }) {
+        withTransform(
+          {
+            translate(
+              node.number("translateXDp")?.dp(this@with) ?: 0f,
+              node.number("translateYDp")?.dp(this@with) ?: 0f,
+            )
+            node.number("rotate")?.let { rotate(it, pivot) }
+            val both = node.number("scale")
+            val scaleX = node.number("scaleX") ?: both
+            val scaleY = node.number("scaleY") ?: both
+            if (scaleX != null || scaleY != null) scale(scaleX ?: 1f, scaleY ?: 1f, pivot)
+          },
+        ) {
           children.forEach { it.draw(this, measurer, extent) }
         }
       }
@@ -434,11 +438,13 @@ private sealed interface DrawStep {
           // As the export does: scale into the viewport, clip, scale back out.
           val sx = extent.width / (node.number("viewportWidth")?.takeIf { it > 0f } ?: 24f)
           val sy = extent.height / (node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f)
-          withTransform({
-            scale(sx, sy, Offset.Zero)
-            clipPath(outline, clipOp)
-            scale(1f / sx, 1f / sy, Offset.Zero)
-          }) {
+          withTransform(
+            {
+              scale(sx, sy, Offset.Zero)
+              clipPath(outline, clipOp)
+              scale(1f / sx, 1f / sy, Offset.Zero)
+            },
+          ) {
             children.forEach { it.draw(this, measurer, extent) }
           }
           return@with

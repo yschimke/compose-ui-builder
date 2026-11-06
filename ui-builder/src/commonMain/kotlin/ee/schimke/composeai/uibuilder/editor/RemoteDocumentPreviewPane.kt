@@ -89,7 +89,7 @@ internal fun RemoteDocumentDesignPreviewPane(
         try {
           latestRequest(variantDocument).also {
             require(
-              it !is UiBuilderDocumentPreview.Ready || it.revision == variantDocument.revision
+              it !is UiBuilderDocumentPreview.Ready || it.revision == variantDocument.revision,
             ) {
               "Preview returned a different revision"
             }
@@ -247,7 +247,7 @@ private fun PlayedRemoteDocumentVariant(
         scaleX = scale / densityRatio
         scaleY = scale / densityRatio
         transformOrigin = TransformOrigin(0f, 0f)
-      }
+      },
   ) {
     val widgetSize = pane.document.wearWidgetScaffoldSize()
     val hostShape = pane.wearWidgetHostShape
@@ -267,7 +267,7 @@ private fun PlayedRemoteDocumentVariant(
     } else {
       val host = pane.wearHostFrame
       Box(
-        if (host != null) Modifier.fillMaxSize().wearHostFrame(host, densityRatio) else Modifier
+        if (host != null) Modifier.fillMaxSize().wearHostFrame(host, densityRatio) else Modifier,
       ) {
         ProvidePreviewPlayerTime(pane.document, timeRunning) {
           RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
@@ -350,7 +350,7 @@ internal fun RemoteDocumentPreviewPane(
                 Box(
                   Modifier.size((width * scale).dp, (height * scale).dp).semantics {
                     contentDescription = "Interactive document preview"
-                  }
+                  },
                 ) {
                   RcComposePlayer(
                     document = target,

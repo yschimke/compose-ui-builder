@@ -105,8 +105,8 @@ fun executeSavedDocumentSvgExport(
         DocumentSvgExportBlocker(
           code = "SAVED_REVISION_PIN_MISMATCH",
           message = "job identity does not match its immutable document snapshot",
-        )
-      )
+        ),
+      ),
     )
   }
   if (recorder.kind != job.recorderKind) {
@@ -115,8 +115,8 @@ fun executeSavedDocumentSvgExport(
         DocumentSvgExportBlocker(
           code = "SVG_RECORDER_KIND_MISMATCH",
           message = "job requests ${job.recorderKind} but recorder provides ${recorder.kind}",
-        )
-      )
+        ),
+      ),
     )
   }
   val bridge =
@@ -151,7 +151,7 @@ fun executeSavedDocumentSvgExport(
         StructuredSvgRecordingRequest(
           document = document,
           declaredRasterFallbackNodeIds = readiness.declaredRasterFallbackNodeIds.sorted(),
-        )
+        ),
       )
     } catch (failure: Throwable) {
       return SavedDocumentSvgExportResult.Failed(
@@ -219,7 +219,7 @@ private data class SvgExportMetadata(
       .append(
         rasterRecords.joinToString(",") {
           "${it.nodeId}@${it.sourceIdentity}#${it.sourceIdentitySha256}:${it.renderedWidthPx}x${it.renderedHeightPx}"
-        }
+        },
       )
       .append(';')
     append("producer=").append(producer).append(';')

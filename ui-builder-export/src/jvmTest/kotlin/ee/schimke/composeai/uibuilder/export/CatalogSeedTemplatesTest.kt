@@ -36,7 +36,7 @@ class CatalogSeedTemplatesTest {
   fun `templates are read in the catalog's order, named by file`() {
     val read =
       assertIs<CatalogSeedTemplates.Result.Read>(
-        read(listOf("ui-builder/designs/list.json", "ui-builder/designs/screen.json"))
+        read(listOf("ui-builder/designs/list.json", "ui-builder/designs/screen.json")),
       )
     assertEquals(listOf("list", "screen"), read.templates.ids)
     assertEquals("Title of list", read.templates["list"]?.title)
@@ -46,13 +46,13 @@ class CatalogSeedTemplatesTest {
   fun `a missing, foreign or malformed template refuses the whole set`() {
     assertIs<CatalogSeedTemplates.Result.Unusable>(read(listOf("ui-builder/designs/gone.json")))
     assertIs<CatalogSeedTemplates.Result.Unusable>(
-      read(listOf("ui-builder/designs/screen.json"), systemId = "another-catalog")
+      read(listOf("ui-builder/designs/screen.json"), systemId = "another-catalog"),
     )
     assertIs<CatalogSeedTemplates.Result.Unusable>(
-      CatalogSeedTemplates.read("watch-kit", listOf("a.json")) { "{" }
+      CatalogSeedTemplates.read("watch-kit", listOf("a.json")) { "{" },
     )
     assertIs<CatalogSeedTemplates.Result.Unusable>(
-      CatalogSeedTemplates.read("watch-kit", listOf("ui-builder/designs/screen.txt")) { "" }
+      CatalogSeedTemplates.read("watch-kit", listOf("ui-builder/designs/screen.txt")) { "" },
     )
   }
 

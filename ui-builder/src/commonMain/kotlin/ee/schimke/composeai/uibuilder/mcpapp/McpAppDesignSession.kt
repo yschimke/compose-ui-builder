@@ -248,7 +248,7 @@ class McpAppDesignSession(
       .getOrElse {
         state =
           state.copy(
-            notice = McpAppNotice.Error("Could not read an external change: ${it.message}")
+            notice = McpAppNotice.Error("Could not read an external change: ${it.message}"),
           )
         return@withLock
       }

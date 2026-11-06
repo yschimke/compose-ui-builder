@@ -163,7 +163,7 @@ private fun RevisionThumbnail(
             (if (entry.document == null) ", no picture" else "")
         selected = peeked
       }
-      .padding(2.dp)
+      .padding(2.dp),
   ) {
     Box(
       Modifier.size(width, height)
@@ -252,7 +252,7 @@ internal fun RevisionPicture(document: UiBuilderDocument, modifier: Modifier = M
           scaleX = scale / densityRatio
           scaleY = scale / densityRatio
         }
-        .clearAndSetSemantics {}
+        .clearAndSetSemantics {},
     ) {
       UiBuilderSurface(document = document, editorOverlay = false)
     }

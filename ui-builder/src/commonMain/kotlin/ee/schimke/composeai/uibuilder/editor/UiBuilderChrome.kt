@@ -459,7 +459,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
             icon = UiBuilderChromeIcon.Close,
             enabled = true,
             onClick = onClose,
-          )
+          ),
         )
       }
     }
@@ -661,7 +661,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
           .background(
             if (expanded) MaterialTheme.colorScheme.primary else Color.Transparent,
             RoundedCornerShape(2.dp),
-          )
+          ),
       )
       Icon(
         Icons.Filled.ArrowDropDown,
@@ -714,7 +714,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
             // alternatives rather than as more components.
             model.variant -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)
             else -> Color.Transparent
-          }
+          },
         )
         .padding(horizontal = 2.dp, vertical = 4.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
@@ -1067,7 +1067,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
                 UiBuilderInspectorValueFieldStyle.Theme ->
                   Modifier.padding(top = 4.dp, bottom = 10.dp)
                 UiBuilderInspectorValueFieldStyle.Screen -> Modifier.padding(top = 3.dp)
-              }
+              },
             )
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             .revealAboveKeyboard()
@@ -1079,7 +1079,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
                   Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
                 UiBuilderInspectorValueFieldStyle.Screen ->
                   Modifier.padding(horizontal = 8.dp, vertical = 7.dp)
-              }
+              },
             ),
         singleLine = true,
         textStyle =
@@ -1229,7 +1229,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
           label = "Unbind",
           contentDescription = "Unbind $variable",
           onClick = onUnbind,
-        )
+        ),
       )
     }
   }
@@ -1330,7 +1330,7 @@ private fun MaterialPinnedStar(
       // Sits on the component's picture, so it carries its own ground to stay legible over one.
       .background(
         if (grounded) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)
-        else Color.Transparent
+        else Color.Transparent,
       )
       .clickable(onClick = onToggle)
       .semantics(mergeDescendants = true) {
@@ -1505,13 +1505,13 @@ private fun MaterialMenuAction(
                     inputModeManager.requestInputMode(InputMode.Keyboard)
                     submenuFocusManager.moveFocus(
                       if (it.key == Key.DirectionDown) FocusDirection.Next
-                      else FocusDirection.Previous
+                      else FocusDirection.Previous,
                     )
                     true
                   }
                   else -> false
                 }
-            }
+            },
         ) {
           val firstEnabled = entry.children.indexOfFirst { it.enabled }
           entry.children.forEachIndexed { index, child ->

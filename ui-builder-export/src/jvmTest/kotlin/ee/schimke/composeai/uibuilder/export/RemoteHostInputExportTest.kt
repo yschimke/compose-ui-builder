@@ -51,9 +51,9 @@ class RemoteHostInputExportTest {
             "switch":{"id":"switch","componentId":"remote-m3/remote-switch-button",
               "properties":{"checked":{"type":"state","variable":"light.s0.is_on"}},
               "slots":{"label":[]}}}}
-          """
-        ) as JsonObject
-      )
+          """,
+        ) as JsonObject,
+      ),
     )
   }
 
@@ -100,7 +100,7 @@ class RemoteHostInputExportTest {
   fun `writing a host input is refused where it is`() {
     val refused =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
-        export("""[{"type":"setText","variable":"light.s0.name","value":"Hall"}]""")
+        export("""[{"type":"setText","variable":"light.s0.name","value":"Hall"}]"""),
       )
 
     assertTrue(

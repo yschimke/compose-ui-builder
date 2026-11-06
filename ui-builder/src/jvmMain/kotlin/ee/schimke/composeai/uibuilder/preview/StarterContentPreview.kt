@@ -60,7 +60,7 @@ private val starterContentPreviewBase: UiBuilderDocument by lazy {
           "catalogRevision" to JsonPrimitive("candidate"),
           "capabilityDigest" to JsonPrimitive("candidate"),
           "nativeRuntimeId" to JsonPrimitive("candidate"),
-        )
+        ),
       ),
     environment =
       JsonObject(
@@ -78,7 +78,7 @@ private val starterContentPreviewBase: UiBuilderDocument by lazy {
           "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
           "animations" to JsonPrimitive("settled"),
           "networkAccess" to JsonPrimitive(false),
-        )
+        ),
       ),
     stateVariables = JsonObject(emptyMap()),
     roots = listOf(STARTER_PREVIEW_ROOT_ID),
@@ -102,7 +102,7 @@ private val starterContentPreviewBase: UiBuilderDocument by lazy {
                 mapOf(
                   "horizontalSpacingDp" to starterPreviewNumber(16),
                   "verticalAlignment" to starterPreviewEnum("top"),
-                )
+                ),
               ),
             modifiers = JsonArray(listOf(starterPreviewPadding(24))),
             slots =
@@ -124,9 +124,9 @@ private val starterContentPreviewBase: UiBuilderDocument by lazy {
                         "type" to JsonPrimitive("size"),
                         "widthDp" to JsonPrimitive(STARTER_PREVIEW_CELL_WIDTH_DP),
                         "heightDp" to JsonPrimitive(STARTER_PREVIEW_CELL_HEIGHT_DP),
-                      )
-                    )
-                  )
+                      ),
+                    ),
+                  ),
                 ),
               slots = mapOf("children" to emptyList()),
             )
@@ -148,7 +148,7 @@ private fun starterPreviewPadding(dp: Int): JsonObject =
       "topDp" to JsonPrimitive(dp),
       "endDp" to JsonPrimitive(dp),
       "bottomDp" to JsonPrimitive(dp),
-    )
+    ),
   )
 
 private fun starterPreviewCellId(index: Int): String = "starter-preview-cell-${index + 1}"

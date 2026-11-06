@@ -66,7 +66,7 @@ internal val dialogAndPickerPreviewDocument: UiBuilderDocument by lazy {
   // One editor state across every cell: a fresh state per cell restarts the operation sequence and
   // reuses node ids, which the reducer rejects.
   PREVIEWED_CELLS.foldIndexed(
-      reducer.initial(dialogAndPickerPreviewBase, selectedNodeId = pickerPreviewCellId(0))
+      reducer.initial(dialogAndPickerPreviewBase, selectedNodeId = pickerPreviewCellId(0)),
     ) { index, state, cell ->
       val selected =
         reducer.reduce(state, UiBuilderEditorEvent.SelectNode(pickerPreviewCellId(index)))
@@ -94,7 +94,7 @@ private val dialogAndPickerPreviewBase: UiBuilderDocument by lazy {
           "catalogRevision" to JsonPrimitive("candidate"),
           "capabilityDigest" to JsonPrimitive("candidate"),
           "nativeRuntimeId" to JsonPrimitive("candidate"),
-        )
+        ),
       ),
     environment =
       JsonObject(
@@ -112,7 +112,7 @@ private val dialogAndPickerPreviewBase: UiBuilderDocument by lazy {
           "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
           "animations" to JsonPrimitive("settled"),
           "networkAccess" to JsonPrimitive(false),
-        )
+        ),
       ),
     stateVariables = JsonObject(emptyMap()),
     roots = listOf(PICKER_PREVIEW_ROOT_ID),
@@ -136,7 +136,7 @@ private val dialogAndPickerPreviewBase: UiBuilderDocument by lazy {
             slots =
               mapOf(
                 "children" to
-                  PREVIEWED_CELLS.map(PreviewCell::row).distinct().map(::pickerPreviewRowId)
+                  PREVIEWED_CELLS.map(PreviewCell::row).distinct().map(::pickerPreviewRowId),
               ),
           ),
       ) +
@@ -150,7 +150,7 @@ private val dialogAndPickerPreviewBase: UiBuilderDocument by lazy {
                   mapOf(
                     "horizontalSpacingDp" to pickerPreviewNumber(16),
                     "verticalAlignment" to pickerPreviewEnum("top"),
-                  )
+                  ),
                 ),
               modifiers = JsonArray(emptyList()),
               slots =
@@ -158,7 +158,7 @@ private val dialogAndPickerPreviewBase: UiBuilderDocument by lazy {
                   "children" to
                     PREVIEWED_CELLS.indices
                       .filter { PREVIEWED_CELLS[it].row == row }
-                      .map(::pickerPreviewCellId)
+                      .map(::pickerPreviewCellId),
                 ),
             )
         } +
@@ -177,9 +177,9 @@ private val dialogAndPickerPreviewBase: UiBuilderDocument by lazy {
                           "type" to JsonPrimitive("size"),
                           "widthDp" to JsonPrimitive(cell.widthDp),
                           "heightDp" to JsonPrimitive(cell.heightDp),
-                        )
-                      )
-                    )
+                        ),
+                      ),
+                    ),
                   ),
                 slots = mapOf("children" to emptyList()),
               )

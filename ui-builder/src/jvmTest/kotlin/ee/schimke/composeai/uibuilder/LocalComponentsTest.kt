@@ -174,8 +174,8 @@ class LocalComponentsTest {
                   .getValue("email-1")
                   .copy(
                     eventBindings =
-                      JsonObject(mapOf("click" to JsonArray(listOf(JsonObject(mapOf())))))
-                  ))
+                      JsonObject(mapOf("click" to JsonArray(listOf(JsonObject(mapOf()))))),
+                  )),
         )
       }
     val state = reducer.initial(clickable, "email-1")
@@ -286,7 +286,7 @@ class LocalComponentsTest {
             "catalogRevision" to JsonPrimitive("candidate"),
             "capabilityDigest" to JsonPrimitive("candidate"),
             "nativeRuntimeId" to JsonPrimitive("candidate"),
-          )
+          ),
         ),
       environment =
         Json.parseToJsonElement(
@@ -296,7 +296,7 @@ class LocalComponentsTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),

@@ -92,8 +92,8 @@ object RemoteDocumentJsonExporter {
         return Result.Refused(
           listOf(
             "nodes.${document.roots.joinToString(",")}: expanded document exceeds " +
-              "$MAX_EXPANDED_NODES nodes"
-          )
+              "$MAX_EXPANDED_NODES nodes",
+          ),
         )
       val roots = document.roots.mapNotNull { node(it, JsonObject(emptyMap())) }
       val source = buildJsonObject {
@@ -111,7 +111,7 @@ object RemoteDocumentJsonExporter {
               put("type", "resources")
               put("integers", JsonObject(integers))
               put("variables", JsonObject(floats))
-            }
+            },
           )
           textLiterals.forEach(::add)
           strings.forEach { (name, value) ->
@@ -120,7 +120,7 @@ object RemoteDocumentJsonExporter {
                 put("type", "mutableString")
                 put("name", name)
                 put("value", value)
-              }
+              },
             )
           }
           roots.forEach(::add)
@@ -253,7 +253,7 @@ object RemoteDocumentJsonExporter {
                   ?.content
               val supplied =
                 JsonObject(
-                  (placement["arguments"] as? JsonObject).orEmpty().mapValues { quiet(it.value) }
+                  (placement["arguments"] as? JsonObject).orEmpty().mapValues { quiet(it.value) },
                 )
               root?.let { expandedSize(it, supplied).toLong() } ?: 0L
             }
@@ -309,8 +309,8 @@ object RemoteDocumentJsonExporter {
               JsonObject(
                 raw.properties.mapValues { (name, value) ->
                   resolve(value, arguments, "$path.properties.$name")
-                }
-              )
+                },
+              ),
           )
         val placement = node.component
         if (placement != null) {
@@ -331,7 +331,7 @@ object RemoteDocumentJsonExporter {
             JsonObject(
               (declared as? JsonObject).orEmpty().mapValues { (name, value) ->
                 resolve(value, arguments, "$path.component.arguments.$name")
-              }
+              },
             )
           val root = componentRoot(placement, "$path.component") ?: return null
           val body = node(root, supplied)
@@ -480,7 +480,7 @@ object RemoteDocumentJsonExporter {
                 JsonArray(
                   actions.mapIndexedNotNull { index, action ->
                     action(action as? JsonObject, "$path.eventBindings.$event[$index]")
-                  }
+                  },
                 ),
               )
             }
@@ -596,7 +596,7 @@ object RemoteDocumentJsonExporter {
                 put("type", "box")
                 put("horizontalAlignment", "start")
                 put("verticalAlignment", "top")
-              }
+              },
           )
         }
       }

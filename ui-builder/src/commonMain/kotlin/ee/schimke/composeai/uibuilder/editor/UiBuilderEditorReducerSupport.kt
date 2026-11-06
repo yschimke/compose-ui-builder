@@ -69,7 +69,7 @@ internal val COMPUTED_VALUE_TYPES = setOf(UiExpressions.EXPR, UiExpressions.SYST
 internal val FORMULA_PROBES: List<JsonObject> =
   listOf(
     JsonObject(
-      mapOf("type" to JsonPrimitive(UiExpressions.SYSTEM), "value" to JsonPrimitive("time.hour"))
+      mapOf("type" to JsonPrimitive(UiExpressions.SYSTEM), "value" to JsonPrimitive("time.hour")),
     ),
     JsonObject(
       mapOf(
@@ -78,10 +78,10 @@ internal val FORMULA_PROBES: List<JsonObject> =
         "args" to
           kotlinx.serialization.json.JsonArray(
             listOf(
-              JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(false)))
-            )
+              JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(false))),
+            ),
           ),
-      )
+      ),
     ),
     JsonObject(
       mapOf(
@@ -92,14 +92,14 @@ internal val FORMULA_PROBES: List<JsonObject> =
             listOf(
               JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true))),
               JsonObject(
-                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF"))
+                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF")),
               ),
               JsonObject(
-                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF000000"))
+                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF000000")),
               ),
-            )
+            ),
           ),
-      )
+      ),
     ),
   )
 
@@ -155,7 +155,7 @@ const val EDITOR_ACTOR_ID = "wasm-editor"
 const val EDITOR_CLIENT_ID = "interactive-canvas"
 
 internal fun UiBuilderEditorState.undoTargetOperationId(
-  actorId: String = EDITOR_ACTOR_ID
+  actorId: String = EDITOR_ACTOR_ID,
 ): String? =
   collaboration.acceptedCommands.values
     .asSequence()
@@ -342,7 +342,7 @@ internal fun UiBuilderDocument.inPreviewFrame(frame: PreviewFrameSize): UiBuilde
         "type" to JsonPrimitive("size"),
         "widthDp" to JsonPrimitive(frame.widthDp),
         "heightDp" to JsonPrimitive(frame.heightDp),
-      )
+      ),
     )
   return copy(
     environment =
@@ -351,7 +351,7 @@ internal fun UiBuilderDocument.inPreviewFrame(frame: PreviewFrameSize): UiBuilde
           mapOf(
             "widthDp" to JsonPrimitive(frame.widthDp),
             "heightDp" to JsonPrimitive(frame.heightDp),
-          )
+          ),
       ),
     nodes =
       nodes +
@@ -361,8 +361,8 @@ internal fun UiBuilderDocument.inPreviewFrame(frame: PreviewFrameSize): UiBuilde
               JsonArray(
                 cell.modifiers.map {
                   if ((it as? JsonObject)?.get("type") == JsonPrimitive("size")) size else it
-                }
-              )
+                },
+              ),
           )),
   )
 }
@@ -381,7 +381,7 @@ private fun ComponentCapability.defaultNode(
       JsonObject(
         properties.filter(PropertyCapability::required).associate { property ->
           property.name to property.defaultEncodedValue(componentId, nodeId, document)
-        }
+        },
       ),
     modifiers = JsonArray(emptyList()),
     slots = slots.associate { it.name to emptyList() },
@@ -424,11 +424,11 @@ private fun starterRows(): JsonObject =
               mapOf(
                 "type" to JsonPrimitive("object"),
                 "fields" to JsonObject(mapOf("label" to literal("string", JsonPrimitive(label)))),
-              )
+              ),
             )
-          }
+          },
         ),
-    )
+    ),
   )
 
 private fun PropertyCapability.defaultEncodedValue(
@@ -453,7 +453,7 @@ private fun PropertyCapability.defaultEncodedValue(
         mapOf(
           "type" to JsonPrimitive("adaptiveGrid"),
           "minimumCellWidthDp" to JsonPrimitive(362),
-        )
+        ),
       )
     "scrollStateKey" -> literal("string", JsonPrimitive("$nodeId-scroll"))
     // Three one-key rows so an inserted loop draws something; the key is what the starter template
@@ -479,7 +479,7 @@ private fun PropertyCapability.defaultEncodedValue(
           mapOf(
             "type" to JsonPrimitive("state"),
             "variable" to JsonPrimitive(document.stateVariables.keys.firstOrNull() ?: "value"),
-          )
+          ),
         )
     "selectedIndex" -> literal("int", JsonPrimitive(0))
     "startColor" -> literal("color", JsonPrimitive("#00000000"))
@@ -864,7 +864,7 @@ internal fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
           properties =
             JsonObject(
               source.properties.withFreshInstanceIdentity(copyNodeId) -
-                (if (selection != null) setOf(SHOW_BY_STATE) else emptySet())
+                (if (selection != null) setOf(SHOW_BY_STATE) else emptySet()),
             ),
           slots = source.slots.mapValues { emptyList() },
         ),
@@ -914,7 +914,7 @@ private fun JsonObject.withFreshInstanceIdentity(copyNodeId: String): JsonObject
           existing?.get("type")?.primitiveOrNull()?.contentOrNull ?: "string",
           JsonPrimitive(copyNodeId),
         )
-      }
+      },
   )
 }
 
@@ -974,7 +974,7 @@ internal val EDITOR_OBJECT_VALUE_EDGES: Map<String, List<EditorObjectEdge>> =
       ),
     "adaptiveGrid" to
       listOf(
-        EditorObjectEdge("minimumCellWidthDp", "minimum cell width", 1.0, MAXIMUM_AUTHORED_EDGE_DP)
+        EditorObjectEdge("minimumCellWidthDp", "minimum cell width", 1.0, MAXIMUM_AUTHORED_EDGE_DP),
       ),
   )
 
@@ -1003,7 +1003,7 @@ internal fun objectValueWithEdge(
           else carried?.get(edge.field) ?: JsonPrimitive(edge.minimum),
         )
       }
-    }
+    },
   )
 }
 
@@ -1031,7 +1031,7 @@ internal fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
           PropertyDraft.Invalid("$label must be a whole number")
         number < bounds.minimum || number > bounds.maximum ->
           PropertyDraft.Invalid(
-            "$label must be ${bounds.minimum.format()}..${bounds.maximum.format()}"
+            "$label must be ${bounds.minimum.format()}..${bounds.maximum.format()}",
           )
         bounds.integer -> PropertyDraft.Valid(JsonPrimitive(number.toLong()))
         else -> PropertyDraft.Valid(JsonPrimitive(number))
@@ -1171,8 +1171,8 @@ internal fun UiBuilderDocument.subtreeDocument(nodeId: String): UiBuilderDocumen
           root.modifiers.filterNot {
             (it as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull in
               PARENT_SCOPED_MODIFIERS
-          }
-        )
+          },
+        ),
     )
   return copy(
     roots = listOf(nodeId),

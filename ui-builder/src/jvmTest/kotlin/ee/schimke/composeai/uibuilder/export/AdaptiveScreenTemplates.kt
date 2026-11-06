@@ -30,7 +30,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/list-detail-pane-scaffold",
                 properties =
                   properties(
-                    """{"layoutMode":{"type":"enum","value":"adaptive"},"listPaneVisible":{"type":"bool","value":true},"detailPaneVisible":{"type":"bool","value":true},"paneSizing":{"type":"enum","value":"fixedStart"},"fixedPaneWidthDp":{"type":"float","value":360},"activePaneIndex":{"type":"state","variable":"pane"}}"""
+                    """{"layoutMode":{"type":"enum","value":"adaptive"},"listPaneVisible":{"type":"bool","value":true},"detailPaneVisible":{"type":"bool","value":true},"paneSizing":{"type":"enum","value":"fixedStart"},"fixedPaneWidthDp":{"type":"float","value":360},"activePaneIndex":{"type":"state","variable":"pane"}}""",
                   ),
                 modifiers = modifiers("""[{"type":"fillMaxSize"}]"""),
                 slots =
@@ -46,7 +46,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("main-title", "main-copy", "open-item")),
               ),
@@ -56,7 +56,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"List"},"style":{"type":"enum","value":"headlineMedium"}}"""
+                    """{"text":{"type":"string","value":"List"},"style":{"type":"enum","value":"headlineMedium"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -66,7 +66,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Select an item to open its details."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Select an item to open its details."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -76,7 +76,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots =
                   mapOf("children" to listOf("support-title", "support-copy", "back-to-list")),
@@ -87,7 +87,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Detail"},"style":{"type":"enum","value":"titleLarge"}}"""
+                    """{"text":{"type":"string","value":"Detail"},"style":{"type":"enum","value":"titleLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -97,7 +97,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"The selected item appears here. Return to the list to choose another."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"The selected item appears here. Return to the list to choose another."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -146,7 +146,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/supporting-pane-scaffold",
                 properties =
                   properties(
-                    """{"layoutMode":{"type":"enum","value":"adaptive"},"mainPaneVisible":{"type":"bool","value":true},"supportingPaneVisible":{"type":"bool","value":true},"paneSizing":{"type":"enum","value":"fixedEnd"},"fixedPaneWidthDp":{"type":"float","value":360},"supportingPanePreferredWidthDp":{"type":"float","value":360},"paneSpacingDp":{"type":"float","value":16}}"""
+                    """{"layoutMode":{"type":"enum","value":"adaptive"},"mainPaneVisible":{"type":"bool","value":true},"supportingPaneVisible":{"type":"bool","value":true},"paneSizing":{"type":"enum","value":"fixedEnd"},"fixedPaneWidthDp":{"type":"float","value":360},"supportingPanePreferredWidthDp":{"type":"float","value":360},"paneSpacingDp":{"type":"float","value":16}}""",
                   ),
                 modifiers = modifiers("""[{"type":"fillMaxSize"}]"""),
                 slots = mapOf("mainPane" to listOf("main"), "supportingPane" to listOf("support")),
@@ -157,7 +157,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("main-title", "main-copy")),
               ),
@@ -167,7 +167,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Main content"},"style":{"type":"enum","value":"headlineMedium"}}"""
+                    """{"text":{"type":"string","value":"Main content"},"style":{"type":"enum","value":"headlineMedium"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -177,7 +177,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Replace this with your primary content."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Replace this with your primary content."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -187,7 +187,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("support-title", "support-copy")),
               ),
@@ -197,7 +197,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Related content"},"style":{"type":"enum","value":"titleLarge"}}"""
+                    """{"text":{"type":"string","value":"Related content"},"style":{"type":"enum","value":"titleLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -207,7 +207,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Add context or tools for the main content here."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Add context or tools for the main content here."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -232,11 +232,11 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/lazy-grid",
                 properties =
                   properties(
-                    """{"columns":{"type":"adaptiveGrid","minimumCellWidthDp":280},"scrollStateKey":{"type":"string","value":"feed-scroll"},"horizontalSpacingDp":{"type":"float","value":16},"verticalSpacingDp":{"type":"float","value":16}}"""
+                    """{"columns":{"type":"adaptiveGrid","minimumCellWidthDp":280},"scrollStateKey":{"type":"string","value":"feed-scroll"},"horizontalSpacingDp":{"type":"float","value":16},"verticalSpacingDp":{"type":"float","value":16}}""",
                   ),
                 modifiers =
                   modifiers(
-                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("items" to listOf("card-1", "card-2", "card-3")),
               ),
@@ -252,7 +252,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("card-title-1", "card-copy-1")),
               ),
@@ -262,7 +262,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Item 1"},"style":{"type":"enum","value":"titleLarge"}}"""
+                    """{"text":{"type":"string","value":"Item 1"},"style":{"type":"enum","value":"titleLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -272,7 +272,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Replace this with feed content."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Replace this with feed content."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -288,7 +288,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("card-title-2", "card-copy-2")),
               ),
@@ -298,7 +298,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Item 2"},"style":{"type":"enum","value":"titleLarge"}}"""
+                    """{"text":{"type":"string","value":"Item 2"},"style":{"type":"enum","value":"titleLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -308,7 +308,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Replace this with feed content."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Replace this with feed content."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -324,7 +324,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("card-title-3", "card-copy-3")),
               ),
@@ -334,7 +334,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Item 3"},"style":{"type":"enum","value":"titleLarge"}}"""
+                    """{"text":{"type":"string","value":"Item 3"},"style":{"type":"enum","value":"titleLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -344,7 +344,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Replace this with feed content."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Replace this with feed content."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -365,7 +365,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "layout/column",
                 modifiers =
                   modifiers(
-                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]"""
+                    """[{"type":"fillMaxSize"},{"type":"padding","startDp":24,"topDp":24,"endDp":24,"bottomDp":24}]""",
                   ),
                 slots = mapOf("children" to listOf("title", "copy")),
               ),
@@ -375,7 +375,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Your app"},"style":{"type":"enum","value":"headlineMedium"}}"""
+                    """{"text":{"type":"string","value":"Your app"},"style":{"type":"enum","value":"headlineMedium"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -385,7 +385,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Add destination content here."},"style":{"type":"enum","value":"bodyLarge"}}"""
+                    """{"text":{"type":"string","value":"Add destination content here."},"style":{"type":"enum","value":"bodyLarge"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -402,7 +402,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/icon",
                 properties =
                   properties(
-                    """{"iconKey":{"type":"string","value":"home"},"contentDescription":{"type":"string","value":"Home"}}"""
+                    """{"iconKey":{"type":"string","value":"home"},"contentDescription":{"type":"string","value":"Home"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -412,7 +412,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Home"},"style":{"type":"enum","value":"labelMedium"}}"""
+                    """{"text":{"type":"string","value":"Home"},"style":{"type":"enum","value":"labelMedium"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -429,7 +429,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/icon",
                 properties =
                   properties(
-                    """{"iconKey":{"type":"string","value":"star"},"contentDescription":{"type":"string","value":"Saved"}}"""
+                    """{"iconKey":{"type":"string","value":"star"},"contentDescription":{"type":"string","value":"Saved"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -439,7 +439,7 @@ internal object AdaptiveScreenTemplates {
                 componentId = "m3/text",
                 properties =
                   properties(
-                    """{"text":{"type":"string","value":"Saved"},"style":{"type":"enum","value":"labelMedium"}}"""
+                    """{"text":{"type":"string","value":"Saved"},"style":{"type":"enum","value":"labelMedium"}}""",
                   ),
                 slots = mapOf(),
               ),
@@ -461,7 +461,7 @@ internal object AdaptiveScreenTemplates {
         stateVariables =
           if (templateId == "list-detail" && UiBuilderBuildFeatures.remoteCompose)
             properties(
-              """{"pane":{"type":"selection","valueType":"int","nullable":false,"initialValue":0,"persistence":"preview"}}"""
+              """{"pane":{"type":"selection","valueType":"int","nullable":false,"initialValue":0,"persistence":"preview"}}""",
             )
           else JsonObject(emptyMap()),
         roots = listOf(root),
@@ -484,7 +484,7 @@ internal object AdaptiveScreenTemplates {
                     if ("activePaneIndex" in node.properties)
                       JsonObject(
                         node.properties +
-                          ("activePaneIndex" to properties("""{"type":"int","value":0}"""))
+                          ("activePaneIndex" to properties("""{"type":"int","value":0}""")),
                       )
                     else node.properties,
                 )

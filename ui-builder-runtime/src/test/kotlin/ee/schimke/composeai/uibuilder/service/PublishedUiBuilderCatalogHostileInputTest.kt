@@ -68,7 +68,7 @@ class PublishedUiBuilderCatalogHostileInputTest {
         ]
       }
       """
-        .trimIndent()
+        .trimIndent(),
     )
 
   /**

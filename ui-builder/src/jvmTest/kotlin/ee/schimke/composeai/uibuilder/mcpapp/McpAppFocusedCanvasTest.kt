@@ -67,12 +67,12 @@ class McpAppFocusedCanvasTest {
                           mapOf(
                             "type" to JsonPrimitive("string"),
                             "value" to JsonPrimitive("Ready"),
-                          )
-                        )
-                    )
-                  )
-              ))
-      )
+                          ),
+                        ),
+                    ),
+                  ),
+              )),
+      ),
     )
   }
 

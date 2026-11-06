@@ -31,7 +31,7 @@ fun UiBuilderAgentPromptPreview() {
             emptyList(),
             UiBuilderParticipantKind.Agent,
             "Reported model",
-          )
+          ),
         )
 
       override fun prompt(includeSetup: Boolean, instructions: String) =

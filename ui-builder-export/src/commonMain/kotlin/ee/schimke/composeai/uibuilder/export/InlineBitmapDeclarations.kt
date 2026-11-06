@@ -10,7 +10,7 @@ package ee.schimke.composeai.uibuilder.export
  * because the encoder emits no line breaks.
  */
 internal fun inlineBitmapDeclarations(
-  assets: List<RemoteContentEmitter.InlineAsset>
+  assets: List<RemoteContentEmitter.InlineAsset>,
 ): List<String> {
   if (assets.isEmpty()) return emptyList()
   val blocks = mutableListOf<String>()

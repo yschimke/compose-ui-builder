@@ -185,7 +185,7 @@ class DesignTokensTest {
     // A column appears inside the first button: the token binds `layout/column` too.
     state =
       state.on(
-        UiBuilderEditorEvent.InsertComponent("layout/column", ParentSlot("cell-0", "content"))
+        UiBuilderEditorEvent.InsertComponent("layout/column", ParentSlot("cell-0", "content")),
       )
     assertIs<CommandOutcome.Accepted>(state.lastOutcome, "${state.lastOutcome}")
     val column = state.document.nodes.values.single { it.componentId == "layout/column" }
@@ -226,9 +226,9 @@ class DesignTokensTest {
               {"id": "backwards", "kind": "number", "minimum": 4, "maximum": 0,
                "components": [{"component": "a", "property": "b"}]}
             ]}}
-            """
+            """,
           )
-          .jsonObject
+          .jsonObject,
       )
     assertEquals(listOf("ok"), parsed.map { it.id }, "first id wins; the rest are not tokens")
     assertEquals(DesignTokenKind.Number, parsed.single().kind)
@@ -261,9 +261,9 @@ class DesignTokensTest {
               mapOf(
                 "text" to
                   JsonObject(
-                    mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Start"))
-                  )
-              )
+                    mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Start")),
+                  ),
+              ),
             ),
         ),
     )

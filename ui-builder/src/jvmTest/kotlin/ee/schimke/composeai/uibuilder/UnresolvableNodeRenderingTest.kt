@@ -29,7 +29,7 @@ class UnresolvableNodeRenderingTest {
           "asset/image",
           "assetKey" to literal("string", "avatar-lain"),
           "contentDescription" to literal("string", "lain"),
-        )
+        ),
       )
 
     // Asserts something is drawn where the node is (distinct colours across the frame), not
@@ -49,7 +49,7 @@ class UnresolvableNodeRenderingTest {
           "m3/text",
           "text" to literal("string", "Hello"),
           "color" to literal("colorToken", "primaryContainer"),
-        )
+        ),
       )
 
     // Any frame at all is the property under test; the text is drawn in the theme's default.

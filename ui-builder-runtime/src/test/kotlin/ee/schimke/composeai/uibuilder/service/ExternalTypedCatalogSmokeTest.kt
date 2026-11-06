@@ -31,7 +31,7 @@ class ExternalTypedCatalogSmokeTest {
           published,
           records,
           ExportCapabilitiesV1.Builder().build(),
-        )
+        ),
       )
     assertEquals(records.components.size, result.catalog.components.size)
     for (component in result.catalog.components) {

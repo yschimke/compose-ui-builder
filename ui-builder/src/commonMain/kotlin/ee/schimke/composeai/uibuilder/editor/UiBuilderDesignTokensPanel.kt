@@ -253,7 +253,7 @@ private fun DesignTokenRow(
         placeholder = {
           if (token.kind == DesignTokenKind.Number)
             Text(
-              "${formatTunableValue(token.minimum ?: 0.0)}–${formatTunableValue(token.maximum ?: 0.0)}"
+              "${formatTunableValue(token.minimum ?: 0.0)}–${formatTunableValue(token.maximum ?: 0.0)}",
             )
         },
       )
@@ -296,7 +296,7 @@ private fun TokenSwatch(value: String?) {
   Box(
     Modifier.size(16.dp)
       .then(if (colour != null) Modifier.background(colour, CircleShape) else Modifier)
-      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+      .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
   )
 }
 

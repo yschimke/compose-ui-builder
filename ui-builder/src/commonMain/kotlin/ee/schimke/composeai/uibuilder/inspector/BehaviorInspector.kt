@@ -180,7 +180,7 @@ internal fun StateVariablesInspector(
                   "nullable" to JsonPrimitive(nullable),
                   "initialValue" to requireNotNull(parsed),
                   "persistence" to (previous["persistence"] ?: JsonPrimitive("preview")),
-                )
+                ),
             )
           dispatch(UiBuilderEditorEvent.SetStateVariable(name, declaration))
         },
@@ -276,7 +276,7 @@ internal fun EventActionsInspector(
                 "touchUp" -> "On touch up"
                 "touchCancel" -> "On touch cancel"
                 else -> candidate
-              }
+              },
             )
           },
         )
@@ -317,11 +317,11 @@ internal fun EventActionsInspector(
                 variable = actionVariable
                 value =
                   actionOperandText(
-                      action?.get(if (actionKind == "increment") "amount" else "value")
+                      action?.get(if (actionKind == "increment") "amount" else "value"),
                     )
                     .ifEmpty { if (actionKind == "increment") "1" else "" }
               }
-            }
+            },
           ) {
             Text("Edit")
           }
@@ -355,7 +355,7 @@ internal fun EventActionsInspector(
         style = MaterialTheme.typography.bodySmall,
       )
       TextButton(
-        onClick = { dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Screen)) }
+        onClick = { dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Screen)) },
       ) {
         Text("Open Screen")
       }
@@ -373,7 +373,7 @@ internal fun EventActionsInspector(
         OutlinedButton(onClick = { showOperands = true }) {
           Text(
             if (navigating) pages.firstOrNull { it.designId == value }?.title ?: "Choose screen"
-            else variable.ifBlank { "Choose state" }
+            else variable.ifBlank { "Choose state" },
           )
         }
         TrackEditorOverlay(showOperands)
@@ -541,7 +541,7 @@ internal fun StateSelectionInspector(
       else
         stateSelectionIssue(
           node.copy(
-            properties = JsonObject(node.properties + (SHOW_BY_STATE to selection.encode()))
+            properties = JsonObject(node.properties + (SHOW_BY_STATE to selection.encode())),
           ),
           document.stateVariables,
         )

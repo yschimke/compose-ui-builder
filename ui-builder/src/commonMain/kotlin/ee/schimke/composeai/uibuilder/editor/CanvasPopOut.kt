@@ -167,11 +167,11 @@ internal fun UnrolledContainerPopOut(
           // along, which is the whole difference between this and the frame beside it.
           .then(
             if (container.horizontal) Modifier.requiredHeight((crossDp * densityRatio).dp)
-            else Modifier.requiredWidth((crossDp * densityRatio).dp)
+            else Modifier.requiredWidth((crossDp * densityRatio).dp),
           )
           .onSizeChanged { size ->
             onExtentMeasured(
-              (if (container.horizontal) size.width else size.height) / designDensity
+              (if (container.horizontal) size.width else size.height) / designDensity,
             )
           }
           .graphicsLayer {
@@ -287,7 +287,7 @@ internal fun RuntimeContainerPopOut(
                 )
                 ?.let(onNodeSelected)
             }
-          }
+          },
       ) {
         key(container.nodeId) {
           canvasRenderer(
@@ -323,7 +323,7 @@ internal fun RuntimeContainerPopOut(
               } else {
                 trimmedTo = drawnDp
                 drawnDp
-              }
+              },
             )
           }
         }
@@ -339,7 +339,7 @@ internal fun UiBuilderDocument.detachedAt(container: ScrollingContainer): UiBuil
   else
     rooted.copy(
       environment =
-        JsonObject(environment + (UI_BUILDER_UNROLLED_AXIS_KEY to JsonPrimitive("horizontal")))
+        JsonObject(environment + (UI_BUILDER_UNROLLED_AXIS_KEY to JsonPrimitive("horizontal"))),
     )
 }
 

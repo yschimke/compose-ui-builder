@@ -29,7 +29,7 @@ class WearWidgetPredefinedHostTest {
           "cornerRadiusDp" to float(999f),
         )
     return document.copy(
-      nodes = document.nodes + (rootId to root.copy(properties = JsonObject(properties)))
+      nodes = document.nodes + (rootId to root.copy(properties = JsonObject(properties))),
     )
   }
 
@@ -40,7 +40,7 @@ class WearWidgetPredefinedHostTest {
         val spec = size.hostSpec(shape)
         val emitted =
           assertIs<WearWidgetNativePreviewExporter.Result.Emitted>(
-            WearWidgetNativePreviewExporter.export(overridden(size), "preview", shape = shape)
+            WearWidgetNativePreviewExporter.export(overridden(size), "preview", shape = shape),
           )
         assertEquals(spec.frameWidthDp, emitted.widthDp, "$size $shape width")
         assertEquals(spec.frameHeightDp, emitted.heightDp, "$size $shape height")

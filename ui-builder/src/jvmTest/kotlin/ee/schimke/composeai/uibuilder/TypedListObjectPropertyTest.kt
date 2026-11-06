@@ -58,7 +58,7 @@ class TypedListObjectPropertyTest {
               componentId = "acme/inbox",
               properties =
                 JsonObject(properties.associate { (name, value) -> name to json(value) }),
-            )
+            ),
         ),
     )
 
@@ -234,7 +234,7 @@ class TypedListObjectPropertyTest {
               "tags": {"type": "list", "values": [{"type": "string", "value": "vip"}]}}},
             {"type": "object", "fields": {
               "name": {"type": "string", "value": "Grace Hopper"},
-              "unread": {"type": "int", "value": 2}}}]}"""
+              "unread": {"type": "int", "value": 2}}}]}""",
         )
         .jsonObject
     assertEquals(expected, edited.contacts())
@@ -310,7 +310,7 @@ class TypedListObjectPropertyTest {
           "name": {"type": "string", "value": ""},
           "unread": {"type": "int", "value": 0},
           "role": {"type": "string", "value": "member"},
-          "tags": {"type": "list", "values": []}}}"""
+          "tags": {"type": "list", "values": []}}}""",
         )
         .jsonObject,
       PropertyValueShapes.read(shape("contacts"), added.contacts(), listOf(Index(2)))?.wrapper,
@@ -381,7 +381,7 @@ class TypedListObjectPropertyTest {
           "name": {"type": "string", "value": "Linus"},
           "unread": {"type": "int", "value": 0},
           "role": {"type": "string", "value": "member"},
-          "tags": {"type": "list", "values": []}}}"""
+          "tags": {"type": "list", "values": []}}}""",
       ),
       edited.document.nodes.getValue("inbox").properties["pinned"],
     )
@@ -426,7 +426,7 @@ class TypedListObjectPropertyTest {
         .propertiesByName
         .getValue(property)
         .editor
-        ?.valueShape
+        ?.valueShape,
     )
 
   private companion object {

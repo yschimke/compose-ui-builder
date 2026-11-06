@@ -454,7 +454,7 @@ internal fun PinnedDesignCanvas(
     // shifted, and scrolling does not re-fire position callbacks.
     LaunchedEffect(horizontalScrollState.value, verticalScrollState.value) {
       onCanvasScroll(
-        Offset(horizontalScrollState.value.toFloat(), verticalScrollState.value.toFloat())
+        Offset(horizontalScrollState.value.toFloat(), verticalScrollState.value.toFloat()),
       )
     }
     LaunchedEffect(dragPosition) {
@@ -553,7 +553,7 @@ internal fun PinnedDesignCanvas(
           },
         )
         .horizontalScroll(horizontalScrollState)
-        .verticalScroll(verticalScrollState)
+        .verticalScroll(verticalScrollState),
     ) {
       // The scaled frame takes its drawn size (graphicsLayer scales painting, not layout), so
       // zooming past the workspace scrolls rather than clips.
@@ -577,7 +577,7 @@ internal fun PinnedDesignCanvas(
                 .requiredWidth((sourceWidth * densityRatio).dp)
                 .then(
                   if (deviceView) Modifier.requiredHeight((sourceHeight * densityRatio).dp)
-                  else Modifier.requiredHeightIn(min = (sourceHeight * densityRatio).dp)
+                  else Modifier.requiredHeightIn(min = (sourceHeight * densityRatio).dp),
                 )
                 // Back into the design's own dp — the unit the environment states the frame in and
                 // the one the extent is compared against above — rather than the workspace's.
@@ -607,7 +607,7 @@ internal fun PinnedDesignCanvas(
                 }
                 .then(
                   if (dropHovered) Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
-                  else Modifier
+                  else Modifier,
                 ),
               shape = if (roundFrame) CircleShape else RoundedCornerShape(0.dp),
               color =
@@ -690,7 +690,7 @@ internal fun PinnedDesignCanvas(
                             ?.let(onNodeSelected)
                         }
                       }
-                    } else Modifier
+                    } else Modifier,
                   )
                   .onSecondaryClick(document.id) { position ->
                     // Convert from frame pixels via [drawScale] from the unclipped origin.
@@ -698,7 +698,7 @@ internal fun PinnedDesignCanvas(
                       Offset(
                         frameOrigin.x + position.x * drawScale,
                         frameOrigin.y + position.y * drawScale,
-                      )
+                      ),
                     )
                   },
                 // A runtime surface is as tall as its last measurement; the extent follows it.
@@ -788,8 +788,8 @@ internal fun PinnedDesignCanvas(
                                   )
                               }
                             }
-                          }
-                      )
+                          },
+                      ),
                   ) {
                     canvasRenderer(
                       document.withWearWidgetHostShape(LocalWearWidgetHostShape.current),
@@ -998,7 +998,7 @@ internal fun PinnedDesignCanvas(
                       (from.y + drag.y.toDp()).coerceIn(0.dp, maxY),
                     )
                 }
-              }
+              },
             )
           }
         }
@@ -1145,7 +1145,7 @@ internal fun PinnedDesignCanvas(
       deviceView = if (deviceViewOffered && onCanvasViewChanged != null) deviceView else null,
       onDeviceViewChanged = { device ->
         onCanvasViewChanged?.invoke(
-          if (device) EditorCanvasView.Device else EditorCanvasView.Extent
+          if (device) EditorCanvasView.Device else EditorCanvasView.Extent,
         )
       },
       modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
@@ -1241,7 +1241,7 @@ private fun SlotPlaceholderOverlay(
           .clip(RoundedCornerShape(6.dp))
           .background(color.copy(alpha = 0.16f))
           .padding(horizontal = 6.dp, vertical = 2.dp)
-          .semantics { contentDescription = "Drop into ${placeholder.target.slot}" }
+          .semantics { contentDescription = "Drop into ${placeholder.target.slot}" },
       ) {
         Text(
           placeholder.target.slot,
@@ -1418,7 +1418,7 @@ private fun DragLivePreviewGhost(
           transformOrigin = TransformOrigin(0f, 0f)
         }
         // A picture of a Switch is not a Switch — the same rule the palette row keeps.
-        .clearAndSetSemantics {}
+        .clearAndSetSemantics {},
     ) {
       val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
         onContentBounds(snapshot.nodes.firstOrNull { it.nodeId == rootId }?.bounds)
@@ -1643,7 +1643,7 @@ internal fun VariantPane(
     if (host != null) {
       Box(
         Modifier.size((frameWidthDp * scale).dp, (frameHeightDp * scale).dp)
-          .wearHostFrame(host, scale)
+          .wearHostFrame(host, scale),
       ) {
         ConstrainedFramePane(
           document = pane.document,

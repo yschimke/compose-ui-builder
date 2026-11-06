@@ -258,7 +258,7 @@ private fun LiveSessionApp(
               .decodeFromString(
                 DesignVisibilityPayload.serializer(),
                 fetchText(
-                  "/api/ui-builder/v1/designs/${encodeUriComponent(config.designId)}/visibility"
+                  "/api/ui-builder/v1/designs/${encodeUriComponent(config.designId)}/visibility",
                 ),
               )
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -511,7 +511,7 @@ private fun LiveSessionApp(
                 actorId = config.actorId,
                 clientId = config.clientId,
                 authoritativeRevision = expectedRevision,
-              )
+              ),
             )
           when (val result = http.execute(request)) {
             is UiBuilderHttpResult.Response -> {
@@ -571,7 +571,7 @@ private fun LiveSessionApp(
     carriedApplied = true
     val request =
       ApplyOperationRequestV1(
-        carried.copy(designId = config.designId, baseRevision = base.toLong())
+        carried.copy(designId = config.designId, baseRevision = base.toLong()),
       )
     when (val result = http.execute(request)) {
       is UiBuilderHttpResult.Response -> syncSnapshot("Editing a copy in this browser")
@@ -697,7 +697,7 @@ private fun LiveSessionApp(
   val commentNotifications =
     remember(config.localStorage) {
       CommentNotificationsController(
-        BrowserCommentNotificationHost(hostedByServer = !config.localStorage)
+        BrowserCommentNotificationHost(hostedByServer = !config.localStorage),
       )
     }
   val commentNotificationsState by commentNotifications.state.collectAsState()
@@ -716,7 +716,7 @@ private fun LiveSessionApp(
         CommentNotificationsState.InstallFirst -> "install-first"
         is CommentNotificationsState.Blocked -> "blocked"
         is CommentNotificationsState.Toggle -> if (state.on) "on" else "off"
-      }
+      },
     )
   }
 
@@ -890,7 +890,7 @@ private fun LiveSessionApp(
       wearScreenPanes = readWearScreenPanes(activeCatalogSystemId)
       catalog =
         CapabilityCatalogParser.parse(
-          Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
+          Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability),
         )
       val a2ui =
         UiBuilderCatalogPlatform.from(capability.statusSemantics) == UiBuilderCatalogPlatform.A2UI
@@ -1160,7 +1160,7 @@ private fun LiveSessionApp(
                 selectedNodeIds = listOfNotNull(selectedNodeId),
                 observedRevision = currentDocument.revision.toLong(),
               ),
-          )
+          ),
         )
       }
       delay(UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS)
@@ -1237,7 +1237,7 @@ private fun LiveSessionApp(
               designId = designId,
               startWithNewDesign = false,
               localStorage = true,
-            )
+            ),
           )
         }
       }
@@ -1280,7 +1280,7 @@ private fun LiveSessionApp(
             carriedCommand = carried,
             copiedFromDesignId = config.designId,
             copiedBecause = because,
-          )
+          ),
         )
       }
     }
@@ -1430,7 +1430,7 @@ private fun LiveSessionApp(
             val encoded =
               fetchBase64(
                 "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/thumbnail.png" +
-                  "?revision=$revision"
+                  "?revision=$revision",
               )
             Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
           }
@@ -1571,7 +1571,7 @@ private fun LiveSessionApp(
     val guidelines =
       remember(config.designId, config.localStorage) {
         DesignGuidelineController(
-          BrowserGuidelineHost(config.designId, hostedByServer = !config.localStorage)
+          BrowserGuidelineHost(config.designId, hostedByServer = !config.localStorage),
         )
       }
     LaunchedEffect(guidelines) { guidelines.completeSignIn() }
@@ -1759,7 +1759,7 @@ private fun LiveSessionApp(
                   designUrl =
                     shareableUrl(designUrlPath(config.designId, basePath = uiBuilderBasePath)),
                   designId = config.designId,
-                )
+                ),
               )
             }
           },
@@ -1786,7 +1786,7 @@ private fun LiveSessionApp(
                   revision = expected.revision,
                   documentBase64 =
                     fetchBase64(
-                      "$UI_BUILDER_LIVE_EXPORT_PATH/${encodeUriComponent(expected.id)}/export.rc?revision=${expected.revision}"
+                      "$UI_BUILDER_LIVE_EXPORT_PATH/${encodeUriComponent(expected.id)}/export.rc?revision=${expected.revision}",
                     ),
                 )
               }
@@ -1970,7 +1970,7 @@ private fun LiveSessionApp(
         // The design's own uploaded pictures, same-origin and read as this page's actor.
         resolveDesignAsset = { assetKey ->
           Base64.decode(
-            fetchBase64("/api/ui-builder/v1/designs/${config.designId}/assets/$assetKey")
+            fetchBase64("/api/ui-builder/v1/designs/${config.designId}/assets/$assetKey"),
           )
         },
         // Same-origin, ingested-document route only ([designReferenceUrl]), so a design can't fetch

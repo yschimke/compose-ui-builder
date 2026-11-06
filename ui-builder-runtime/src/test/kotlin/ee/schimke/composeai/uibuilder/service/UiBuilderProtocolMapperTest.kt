@@ -28,7 +28,7 @@ class UiBuilderProtocolMapperTest {
             SetLocaleEnvironmentChangeV1("ar-EG"),
             SetFontScaleEnvironmentChangeV1(1.4),
             SetLayoutDirectionEnvironmentChangeV1(LayoutDirectionV1.RTL),
-          )
+          ),
         ),
       )
     val requests =
@@ -66,13 +66,13 @@ class UiBuilderProtocolMapperTest {
         ),
         ApplyOperationRequestV1(
           DesignCommandV1.Builder("design", "batch", trusted.actorId, "browser", 4, mutations)
-            .build()
+            .build(),
         ),
         ApplyOperationRequestV1(
-          UndoCommandV1("design", "undo", trusted.actorId, "browser", 5, "batch")
+          UndoCommandV1("design", "undo", trusted.actorId, "browser", 5, "batch"),
         ),
         ApplyOperationRequestV1(
-          RedoCommandV1("design", "redo", trusted.actorId, "browser", 6, "undo")
+          RedoCommandV1("design", "redo", trusted.actorId, "browser", 6, "undo"),
         ),
         GetSnapshotRequestV1("design", revision = 4),
         GetDeltaRequestV1("design", afterSequence = 9, limit = 31),
@@ -83,7 +83,7 @@ class UiBuilderProtocolMapperTest {
     requests.forEach { request ->
       val mapped =
         assertIs<ProtocolRequestMapping.Mapped>(
-          UiBuilderProtocolMapper.toServiceCall(trusted, request)
+          UiBuilderProtocolMapper.toServiceCall(trusted, request),
         )
       assertEquals(trusted, mapped.call.actor)
       assertEquals(request, UiBuilderProtocolMapper.toProtocolRequest(mapped.call))
@@ -104,21 +104,21 @@ class UiBuilderProtocolMapperTest {
             listOf(mutation),
           )
           .also { it.stalenessBaseRevision = 4 }
-          .build()
+          .build(),
       )
     val live =
       ApplyOperationRequestV1(
         DesignCommandV1.Builder("design", "live", trusted.actorId, "browser", 9, listOf(mutation))
-          .build()
+          .build(),
       )
 
     val replayedCall =
       assertIs<ProtocolRequestMapping.Mapped>(
-        UiBuilderProtocolMapper.toServiceCall(trusted, replayed)
+        UiBuilderProtocolMapper.toServiceCall(trusted, replayed),
       )
     val replayedBatch =
       assertIs<UiBuilderSubmission.Batch>(
-        assertIs<UiBuilderServiceRequest.ApplyOperation>(replayedCall.call.request).submission
+        assertIs<UiBuilderServiceRequest.ApplyOperation>(replayedCall.call.request).submission,
       )
     assertEquals(4L, replayedBatch.stalenessBaseRevision)
     assertEquals(9L, replayedBatch.baseRevision, "positions still resolve against the base")
@@ -128,7 +128,7 @@ class UiBuilderProtocolMapperTest {
       assertIs<ProtocolRequestMapping.Mapped>(UiBuilderProtocolMapper.toServiceCall(trusted, live))
     val liveBatch =
       assertIs<UiBuilderSubmission.Batch>(
-        assertIs<UiBuilderServiceRequest.ApplyOperation>(liveCall.call.request).submission
+        assertIs<UiBuilderServiceRequest.ApplyOperation>(liveCall.call.request).submission,
       )
     assertEquals(null, liveBatch.stalenessBaseRevision, "a live edit carries none")
     assertEquals(live, UiBuilderProtocolMapper.toProtocolRequest(liveCall.call))
@@ -152,7 +152,7 @@ class UiBuilderProtocolMapperTest {
             sourceDocumentHash = "source-hash",
             status = CatalogUpgradePreviewStatusV1.BLOCKED,
             previewDigest = "preview-digest",
-          )
+          ),
         ),
         SnapshotResponseV1(snapshot),
         OperationOutcomeResponseV1(accepted),
@@ -165,7 +165,7 @@ class UiBuilderProtocolMapperTest {
             operationIndex = 2,
             nodeId = "node",
             field = "beforeNodeId",
-          )
+          ),
         ),
         DeltaResponseV1(
           ServiceDeltaV1(
@@ -176,7 +176,7 @@ class UiBuilderProtocolMapperTest {
             retainedFromSequence = 2,
             operations = emptyList(),
             hasMore = true,
-          )
+          ),
         ),
         PresenceAcceptedResponseV1("design", trusted.actorId),
         ExportResponseV1(
@@ -193,9 +193,9 @@ class UiBuilderProtocolMapperTest {
                   "RASTER_FALLBACK",
                   "embedded image",
                   "node",
-                )
+                ),
               ),
-          )
+          ),
         ),
         ErrorResponseV1(
           ServiceErrorV1(
@@ -205,7 +205,7 @@ class UiBuilderProtocolMapperTest {
             currentRevision = 4,
             currentAccessRevision = 3,
             retainedFromSequence = 2,
-          )
+          ),
         ),
       )
 
@@ -213,7 +213,7 @@ class UiBuilderProtocolMapperTest {
       assertEquals(
         response,
         UiBuilderProtocolMapper.toProtocolResponse(
-          UiBuilderProtocolMapper.toServiceResponse(response)
+          UiBuilderProtocolMapper.toServiceResponse(response),
         ),
       )
     }
@@ -232,7 +232,7 @@ class UiBuilderProtocolMapperTest {
             currentRevision = 4,
             retainedFromSequence = 1,
             operations = emptyList<CommittedOperationV1>(),
-          )
+          ),
         ),
         PresenceDesignUpdateV1(PresenceUpsertV1(presence())),
         PresenceDesignUpdateV1(PresenceLeaveV1(trusted.actorId)),
@@ -268,7 +268,7 @@ class UiBuilderProtocolMapperTest {
     listOf(forgedHttp.request, forgedMcp.request).forEach { request ->
       val mapped =
         assertIs<ProtocolRequestMapping.Mapped>(
-          UiBuilderProtocolMapper.toServiceCall(trusted, request)
+          UiBuilderProtocolMapper.toServiceCall(trusted, request),
         )
       assertEquals(trusted, mapped.call.actor)
     }
@@ -278,14 +278,14 @@ class UiBuilderProtocolMapperTest {
   fun `nested requester actor is checked then removed from collaboration requests`() {
     val forgedSubmission =
       ApplyOperationRequestV1(
-        DesignCommandV1.Builder("design", "op", "forged", "browser", 3, emptyList()).build()
+        DesignCommandV1.Builder("design", "op", "forged", "browser", 3, emptyList()).build(),
       )
     val forgedPresence = UpdatePresenceRequestV1("design", presence().copy(actorId = "forged"))
 
     listOf(forgedSubmission, forgedPresence).forEach { request ->
       val rejected =
         assertIs<ProtocolRequestMapping.Rejected>(
-          UiBuilderProtocolMapper.toServiceCall(trusted, request)
+          UiBuilderProtocolMapper.toServiceCall(trusted, request),
         )
       assertEquals(ServiceErrorCodeV1.UNAUTHORIZED, rejected.error.code)
     }
@@ -295,9 +295,9 @@ class UiBuilderProtocolMapperTest {
           UiBuilderProtocolMapper.toServiceCall(
             trusted,
             ApplyOperationRequestV1(
-              UndoCommandV1("design", "undo", trusted.actorId, "browser", 4, "target")
+              UndoCommandV1("design", "undo", trusted.actorId, "browser", 4, "target"),
             ),
-          )
+          ),
         )
         .call
     val request = assertIs<UiBuilderServiceRequest.ApplyOperation>(mapped.request)

@@ -38,7 +38,7 @@ fun agentChatContext(
                       }
                   },
                 )
-              }
+              },
             )
           }
         },
@@ -60,17 +60,17 @@ fun agentChatContext(
                         buildJsonObject {
                           put("kind", comment.kind.wireValue)
                           put("body", comment.body.take(1500))
-                        }
+                        },
                       )
                     }
                   },
                 )
-              }
+              },
             )
           }
         },
       )
-    }
+    },
   )
 }
 

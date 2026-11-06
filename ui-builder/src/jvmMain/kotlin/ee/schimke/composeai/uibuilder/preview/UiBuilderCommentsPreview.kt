@@ -56,8 +56,8 @@ private val reviewPreview =
           displayName = "Design reviewer",
           kind = DesignCommentAuthorKind.Agent,
           note = "The play icon reads as a cross at 24dp",
-        )
-      )
+        ),
+      ),
   )
 
 /**
@@ -132,7 +132,7 @@ private val commentsPreviewBoard =
                 displayName = "sam-designs",
                 body = "Two columns on a phone is tight. Can we drop to one under 400dp?",
                 createdAtEpochMillis = 300,
-              )
+              ),
             ),
         ),
         DesignCommentThread(
@@ -147,7 +147,7 @@ private val commentsPreviewBoard =
                 displayName = "Yuri",
                 body = "Nothing lives in this gap. Is it meant to?",
                 createdAtEpochMillis = 200,
-              )
+              ),
             ),
         ),
         DesignCommentThread(
@@ -165,7 +165,7 @@ private val commentsPreviewBoard =
                 kind = DesignCommentAuthorKind.Agent,
                 body = "The header is 8dp short of the mock. Fixed at revision 41.",
                 createdAtEpochMillis = 150,
-              )
+              ),
             ),
         ),
       ),

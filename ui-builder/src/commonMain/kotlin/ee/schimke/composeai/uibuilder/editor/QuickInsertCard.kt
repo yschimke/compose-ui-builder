@@ -105,7 +105,7 @@ internal fun QuickInsertCard(
       Box(
         Modifier.fillMaxWidth()
           .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-          .padding(horizontal = 8.dp, vertical = 6.dp)
+          .padding(horizontal = 8.dp, vertical = 6.dp),
       ) {
         if (query.isEmpty()) {
           Text(

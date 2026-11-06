@@ -142,7 +142,7 @@ class PinnedRendererScopeTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

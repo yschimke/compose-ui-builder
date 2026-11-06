@@ -77,7 +77,7 @@ private fun browserViewportInsets(): EditorViewportInsets {
     } catch (e) {
       return '0,0,0,0,0';
     }
-  }"""
+  }""",
 )
 private external fun measureViewportInsets(): String
 
@@ -106,7 +106,7 @@ private external fun measureViewportInsets(): String
       globalThis.removeEventListener('orientationchange', schedule);
       globalThis.removeEventListener('scroll', unscroll);
     };
-  }"""
+  }""",
 )
 private external fun watchViewportInsets(onChange: () -> Unit): JsAny
 

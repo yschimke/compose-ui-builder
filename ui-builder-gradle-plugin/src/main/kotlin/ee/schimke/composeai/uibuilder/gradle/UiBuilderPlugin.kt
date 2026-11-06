@@ -59,8 +59,8 @@ class UiBuilderPlugin : Plugin<Project> {
     generator.defaultDependencies { dependencies ->
       dependencies.add(
         project.dependencies.create(
-          "ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm:${extension.generatorVersion.get()}"
-        )
+          "ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm:${extension.generatorVersion.get()}",
+        ),
       )
     }
     project.pluginManager.apply("jvm-toolchains")
@@ -84,11 +84,11 @@ class UiBuilderPlugin : Plugin<Project> {
           it.projectDirectory.set(project.layout.projectDirectory)
           it.outputDirectory.set(
             project.layout.projectDirectory.dir(
-              "build/generated/uiBuilder/${registration.name}/kotlin"
-            )
+              "build/generated/uiBuilder/${registration.name}/kotlin",
+            ),
           )
           it.javaLauncher.set(
-            toolchains.launcherFor { spec -> spec.languageVersion.set(JavaLanguageVersion.of(17)) }
+            toolchains.launcherFor { spec -> spec.languageVersion.set(JavaLanguageVersion.of(17)) },
           )
         }
       aggregate.configure { it.dependsOn(task) }
@@ -102,7 +102,7 @@ class UiBuilderPlugin : Plugin<Project> {
               it.kotlin.srcDir(
                 project
                   .files(task.flatMap { generation -> generation.outputDirectory })
-                  .builtBy(task)
+                  .builtBy(task),
               )
             }
         }

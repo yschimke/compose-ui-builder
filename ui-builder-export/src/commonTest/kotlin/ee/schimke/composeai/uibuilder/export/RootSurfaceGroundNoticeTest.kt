@@ -20,7 +20,7 @@ class RootSurfaceGroundNoticeTest {
   @Test
   fun `a theme token is a colour too`() {
     assertNotNull(
-      RootSurfaceGround.diagnose(document(root("surfaceContainer", type = "colorToken")))
+      RootSurfaceGround.diagnose(document(root("surfaceContainer", type = "colorToken"))),
     )
   }
 
@@ -29,7 +29,7 @@ class RootSurfaceGroundNoticeTest {
     assertNull(RootSurfaceGround.diagnose(document(root("#313338", "fillMaxSize"))))
     assertNull(RootSurfaceGround.diagnose(document(root("#313338", "matchParentSize"))))
     assertNull(
-      RootSurfaceGround.diagnose(document(root("#313338", "fillMaxWidth", "fillMaxHeight")))
+      RootSurfaceGround.diagnose(document(root("#313338", "fillMaxWidth", "fillMaxHeight"))),
     )
   }
 
@@ -60,7 +60,7 @@ class RootSurfaceGroundNoticeTest {
           id = "root",
           componentId = "layout/column",
           properties = JsonObject(mapOf("containerColor" to value("#313338", "color"))),
-        )
+        ),
       )
     assertNull(RootSurfaceGround.diagnose(column))
   }

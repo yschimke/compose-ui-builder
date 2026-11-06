@@ -27,7 +27,7 @@ class RevealNodeActionTest {
     val endpoint = CatalogRuntimeProtocolEndpoint(RUNTIME, capabilities = setOf("horizontalUnroll"))
     val reply =
       assertIs<CatalogRuntimeCommand.Reply>(
-        endpoint.receive(ORIGIN, true, host().request("initialize", "initialize"))
+        endpoint.receive(ORIGIN, true, host().request("initialize", "initialize")),
       )
 
     assertEquals(
@@ -48,7 +48,7 @@ class RevealNodeActionTest {
     endpoint.receive(ORIGIN, true, host.request("initialize", "initialize"))
     val render =
       assertIs<CatalogRuntimeCommand.Render>(
-        endpoint.receive(ORIGIN, true, host.request("render", "renderDocument", render(list())))
+        endpoint.receive(ORIGIN, true, host.request("render", "renderDocument", render(list()))),
       )
     endpoint.rendered(render.requestId, UiBuilderInspectionCollector(list()).snapshot())
 
@@ -113,8 +113,8 @@ class RevealNodeActionTest {
       document.copy(
         environment =
           JsonObject(
-            document.environment + (UI_BUILDER_UNROLLED_AXIS_KEY to JsonPrimitive("horizontal"))
-          )
+            document.environment + (UI_BUILDER_UNROLLED_AXIS_KEY to JsonPrimitive("horizontal")),
+          ),
       )
     assertTrue(marked.unrolledHorizontally)
   }

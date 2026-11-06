@@ -103,8 +103,8 @@ class LauncherWidgetExportTest {
               document.nodes
                 .getValue(first)
                 .copy(
-                  predicate = ee.schimke.composeai.uibuilder.protocol.StateTruthyPredicateV1("on")
-                ))
+                  predicate = ee.schimke.composeai.uibuilder.protocol.StateTruthyPredicateV1("on"),
+                )),
       )
     val refused =
       assertIs<RecordFreeExport.Generated.Refused>(
@@ -113,7 +113,7 @@ class LauncherWidgetExportTest {
           route,
           launcherRoots = setOf(LauncherWidgetCodeExporter.ROOT),
           packComponents = records,
-        )
+        ),
       )
     assertTrue(refused.reasons.any { "predicate" in it }, refused.reasons.toString())
     assertIs<RecordFreeExport.Generated.Emitted>(
@@ -122,7 +122,7 @@ class LauncherWidgetExportTest {
         route,
         launcherRoots = setOf(LauncherWidgetCodeExporter.ROOT),
         packComponents = records,
-      )
+      ),
     )
   }
 
@@ -158,7 +158,7 @@ class LauncherWidgetExportTest {
             builder_.slots = emptyList()
             builder_.signatureKnown = true
           }
-          .build()
+          .build(),
     )
 
   private companion object {

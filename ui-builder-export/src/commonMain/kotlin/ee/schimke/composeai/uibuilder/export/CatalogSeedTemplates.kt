@@ -79,13 +79,13 @@ public class CatalogSeedTemplates(
         }
           .getOrElse {
             return Result.Unusable(
-              "$catalogSystemId template `$path` is not a design document: ${it.message}"
+              "$catalogSystemId template `$path` is not a design document: ${it.message}",
             )
           }
         val pinned = document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull
         if (pinned != catalogSystemId) {
           return Result.Unusable(
-            "$catalogSystemId template `$path` is pinned to `$pinned`, not `$catalogSystemId`"
+            "$catalogSystemId template `$path` is pinned to `$pinned`, not `$catalogSystemId`",
           )
         }
         if (document.roots.isEmpty() || document.roots.any { it !in document.nodes }) {

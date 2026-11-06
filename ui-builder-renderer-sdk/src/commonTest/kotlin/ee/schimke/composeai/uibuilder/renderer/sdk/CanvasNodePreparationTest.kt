@@ -26,12 +26,12 @@ class CanvasNodePreparationTest {
                       mapOf(
                         "type" to JsonPrimitive("navigatePage"),
                         "pageKey" to JsonPrimitive("details"),
-                      )
+                      ),
                     ),
                     action("toggle", "expanded"),
-                  )
-                )
-            )
+                  ),
+                ),
+            ),
           ),
       )
     val writes = mutableListOf<Pair<String, String?>>()
@@ -60,7 +60,7 @@ class CanvasNodePreparationTest {
         componentId = "catalog/button",
         eventBindings =
           JsonObject(
-            mapOf("click" to JsonArray(listOf(JsonPrimitive("bad"), JsonObject(emptyMap()))))
+            mapOf("click" to JsonArray(listOf(JsonPrimitive("bad"), JsonObject(emptyMap())))),
           ),
       )
     val writes = mutableListOf<Pair<String, String?>>()
@@ -90,11 +90,11 @@ class CanvasNodePreparationTest {
                         mapOf(
                           "type" to literal("toggle"),
                           "variable" to literal("running"),
-                        )
+                        ),
                       ),
-                  )
-                )
-            )
+                  ),
+                ),
+            ),
           ),
         eventBindings =
           JsonObject(mapOf("click" to JsonArray(listOf(action("set", "label", "Stop"))))),
@@ -127,15 +127,15 @@ class CanvasNodePreparationTest {
                     "type" to JsonPrimitive("object"),
                     "fields" to
                       JsonObject(mapOf("type" to literal("toggle"), "variable" to literal("open"))),
-                  )
-                )
-            )
+                  ),
+                ),
+            ),
           ),
       )
     val cleared =
       toggle.copy(
         properties =
-          JsonObject(mapOf("onClickAction" to JsonObject(mapOf("type" to JsonPrimitive("null")))))
+          JsonObject(mapOf("onClickAction" to JsonObject(mapOf("type" to JsonPrimitive("null"))))),
       )
     val writes = mutableListOf<Pair<String, String?>>()
 
@@ -160,6 +160,6 @@ class CanvasNodePreparationTest {
         put("type", JsonPrimitive(type))
         put("variable", JsonPrimitive(variable))
         if (value != null) put("value", JsonPrimitive(value))
-      }
+      },
     )
 }

@@ -111,7 +111,7 @@ class ComponentPackCatalogTest {
                 id = "text",
                 componentId = "confetti-mobile/session-card",
                 properties = mapOf("title" to StringValueV1("Compose everywhere")),
-              ))
+              )),
       )
 
     assertEquals(catalog, executor.resolve(withPack.catalogPin))
@@ -123,7 +123,7 @@ class ComponentPackCatalogTest {
           withPack.copy(
             nodes =
               withPack.nodes +
-                ("text" to withPack.nodes.getValue("text").copy(properties = emptyMap()))
+                ("text" to withPack.nodes.getValue("text").copy(properties = emptyMap())),
           ),
           catalog,
         )
@@ -169,7 +169,7 @@ class ComponentPackCatalogTest {
         catalogSystemIds = setOf("m3-catalog"),
         packs =
           listOf(
-            confetti().copy(id = "confetti-wear", platform = "wear", components = emptyList())
+            confetti().copy(id = "confetti-wear", platform = "wear", components = emptyList()),
           ),
       )
     val catalog = executor.listCatalogs().single()
@@ -194,7 +194,7 @@ class ComponentPackCatalogTest {
               listOf(
                 PropertyCapabilityV1.Builder("title", JsonPrimitive("string"))
                   .also { it.required = true }
-                  .build()
+                  .build(),
               ),
           ),
           component(
@@ -202,7 +202,7 @@ class ComponentPackCatalogTest {
             slots =
               listOf(
                 SlotCapabilityV1.Builder("content", SlotCardinalityV1.Builder().build(), true)
-                  .build()
+                  .build(),
               ),
           ),
         ),

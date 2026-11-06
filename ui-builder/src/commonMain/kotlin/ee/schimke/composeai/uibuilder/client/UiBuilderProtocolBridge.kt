@@ -137,7 +137,7 @@ internal fun DesignDocumentV1.preparePropertyDelta(
             protocolNode.copy(
               properties =
                 if (value == null) protocolNode.properties - write.property
-                else protocolNode.properties + (write.property to value)
+                else protocolNode.properties + (write.property to value),
             ))
       rendererNodes =
         rendererNodes +
@@ -149,8 +149,8 @@ internal fun DesignDocumentV1.preparePropertyDelta(
                   else
                     rendererNode.properties +
                       (write.property to
-                        bridgeJson.encodeToJsonElement(UiValueV1.serializer(), value))
-                )
+                        bridgeJson.encodeToJsonElement(UiValueV1.serializer(), value)),
+                ),
             ))
     }
     val revision = committed.outcome.committedRevision
@@ -301,7 +301,7 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
               SetThemeEnvironmentChangeV1(ThemeV1.valueOf(value.jsonPrimitive.content.uppercase()))
             "layoutDirection" ->
               SetLayoutDirectionEnvironmentChangeV1(
-                LayoutDirectionV1.valueOf(value.jsonPrimitive.content.uppercase())
+                LayoutDirectionV1.valueOf(value.jsonPrimitive.content.uppercase()),
               )
             // Reset rather than an empty Set (the protocol distinguishes them), so clearing the
             // picker returns to the document default.
@@ -316,8 +316,8 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
               if (value is JsonNull) ResetTypefaceEnvironmentChangeV1
               else SetTypefaceEnvironmentChangeV1(value.jsonPrimitive.content)
             else -> error("unsupported editor environment field: $field")
-          }
-        )
+          },
+        ),
       )
   }
 

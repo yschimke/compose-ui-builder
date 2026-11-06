@@ -30,8 +30,8 @@ class ReferenceImportTest {
   fun `a plain SVG is accepted`() {
     assertNull(
       referenceSvgRefusal(
-        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>"""
-      )
+        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>""",
+      ),
     )
   }
 
@@ -41,12 +41,12 @@ class ReferenceImportTest {
     assertNotNull(script)
     val handler =
       referenceSvgRefusal(
-        """<svg viewBox="0 0 1 1"><rect onclick="x()" width="1" height="1"/></svg>"""
+        """<svg viewBox="0 0 1 1"><rect onclick="x()" width="1" height="1"/></svg>""",
       )
     assertNotNull(handler)
     val external =
       referenceSvgRefusal(
-        """<svg viewBox="0 0 1 1"><image href="https://example.test/a.png" width="1" height="1"/></svg>"""
+        """<svg viewBox="0 0 1 1"><image href="https://example.test/a.png" width="1" height="1"/></svg>""",
       )
     assertNotNull(external)
   }
@@ -55,8 +55,8 @@ class ReferenceImportTest {
   fun `a fragment reference and an embedded picture stay inside the file`() {
     assertNull(
       referenceSvgRefusal(
-        """<svg viewBox="0 0 1 1"><use href="#a"/><image href="data:image/png;base64,AA" width="1" height="1"/></svg>"""
-      )
+        """<svg viewBox="0 0 1 1"><use href="#a"/><image href="data:image/png;base64,AA" width="1" height="1"/></svg>""",
+      ),
     )
   }
 

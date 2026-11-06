@@ -74,7 +74,7 @@ private val HOME_FOLDER_JSON = Json { ignoreUnknownKeys = true }
   }).then((response) => response.text().then((text) => JSON.stringify({
     status: response.status,
     body: text,
-  })))"""
+  })))""",
 )
 private external fun homeFolderFetch(
   method: String,

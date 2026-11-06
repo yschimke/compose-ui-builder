@@ -306,7 +306,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.SetEnabledPacks ->
         state.copy(
           enabledPacks =
-            event.packIds.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null }
+            event.packIds.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
         )
       // Filtered against the current document on the way in: the host does not track edits since
       // its fetch.
@@ -315,7 +315,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.ResolveUndeclaredProperty -> resolveUndeclaredProperty(state, event)
       is UiBuilderEditorEvent.ToggleCatalogComponent ->
         state.copy(
-          expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId)
+          expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId),
         )
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
       is UiBuilderEditorEvent.TogglePane ->
@@ -324,7 +324,7 @@ class UiBuilderEditorReducer(
             if (event.pane !in state.panes) state.panes + event.pane
             // The last pane standing stays: the alternative is an empty workspace, which is not a
             // view of the design and not a state anything on screen could get you out of.
-            else if (state.panes.size > 1) state.panes - event.pane else state.panes
+            else if (state.panes.size > 1) state.panes - event.pane else state.panes,
         )
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
       is UiBuilderEditorEvent.ToggleQuickEditor ->
@@ -373,7 +373,7 @@ class UiBuilderEditorReducer(
         state.copy(
           variantAxes =
             if (event.axis in state.variantAxes) state.variantAxes - event.axis
-            else state.variantAxes + event.axis
+            else state.variantAxes + event.axis,
         )
       UiBuilderEditorEvent.ToggleWearScreenPanes ->
         state.copy(wearScreenPanes = !state.wearScreenPanes)
@@ -421,7 +421,7 @@ class UiBuilderEditorReducer(
           tunables =
             state.tunables.map {
               if (it.name == event.name) it.copy(targets = it.targets - event.target) else it
-            }
+            },
         )
       is UiBuilderEditorEvent.EditTunable -> editTunable(state, event.name, event.tunable)
       is UiBuilderEditorEvent.RemoveTunable ->
@@ -466,7 +466,7 @@ class UiBuilderEditorReducer(
           listOf(
             event.selection?.let {
               DesignOperation.SetProperty(event.nodeId, SHOW_BY_STATE, it.encode())
-            } ?: DesignOperation.RemoveNodeProperty(event.nodeId, SHOW_BY_STATE)
+            } ?: DesignOperation.RemoveNodeProperty(event.nodeId, SHOW_BY_STATE),
           ),
           selectionAfter = event.nodeId,
         )
@@ -525,8 +525,8 @@ class UiBuilderEditorReducer(
         else
           state.withReference(
             state.reference.copy(
-              settings = state.reference.settings.copy(visible = !state.reference.settings.visible)
-            )
+              settings = state.reference.settings.copy(visible = !state.reference.settings.visible),
+            ),
           )
       is UiBuilderEditorEvent.SelectReferenceTool ->
         state.withReference(state.reference.copy(tool = event.tool))
@@ -537,7 +537,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.AddReferenceMark -> addMark(state, event.kind, event.points)
       is UiBuilderEditorEvent.RemoveReferenceMark ->
         state.withReference(
-          state.reference.copy(marks = state.reference.marks.filterNot { it.id == event.markId })
+          state.reference.copy(marks = state.reference.marks.filterNot { it.id == event.markId }),
         )
       UiBuilderEditorEvent.UndoReferenceMark ->
         state.withReference(state.reference.copy(marks = state.reference.marks.dropLast(1)))
@@ -549,7 +549,7 @@ class UiBuilderEditorReducer(
         state.withReference(state.reference.copy(selectedPieceId = event.pieceId))
       is UiBuilderEditorEvent.MoveReferencePiece ->
         state.withReference(
-          state.reference.mapPiece(event.pieceId) { it.movedBy(event.dx, event.dy) }
+          state.reference.mapPiece(event.pieceId) { it.movedBy(event.dx, event.dy) },
         )
       is UiBuilderEditorEvent.ScaleReferencePiece ->
         state.withReference(state.reference.mapPiece(event.pieceId) { it.scaledBy(event.factor) })
@@ -560,7 +560,7 @@ class UiBuilderEditorReducer(
           state.reference.copy(
             pieces = state.reference.pieces.filterNot { it.id == event.pieceId },
             selectedPieceId = state.reference.selectedPieceId.takeIf { it != event.pieceId },
-          )
+          ),
         )
       is UiBuilderEditorEvent.FlattenReference ->
         state.withReference(
@@ -572,7 +572,7 @@ class UiBuilderEditorReducer(
               marks = emptyList(),
               selectedPieceId = null,
               tool = ReferenceTool.None,
-            )
+            ),
         )
     }
 
@@ -813,7 +813,7 @@ class UiBuilderEditorReducer(
               "type" to JsonPrimitive("stateEquals"),
               "variable" to JsonPrimitive(variable),
               "value" to JsonPrimitive("probe"),
-            )
+            ),
           )
         else
           JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive(variable)))
@@ -891,10 +891,10 @@ class UiBuilderEditorReducer(
                 mapOf(
                   "type" to JsonPrimitive("align"),
                   "alignment" to JsonPrimitive("center"),
-                )
-              )
-            ) + child.modifiers
-          )
+                ),
+              ),
+            ) + child.modifiers,
+          ),
       )
     return copy(nodes = nodes + (childId to centered))
   }
@@ -940,7 +940,7 @@ class UiBuilderEditorReducer(
               "catalogRevision" to JsonPrimitive(benchmark.catalogRevision),
               "capabilityDigest" to JsonPrimitive(benchmark.catalogRevision),
               "nativeRuntimeId" to JsonPrimitive(benchmark.nativeRuntimeId),
-            )
+            ),
           )
         },
       environment =
@@ -960,7 +960,7 @@ class UiBuilderEditorReducer(
             "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
             "animations" to JsonPrimitive("settled"),
             "networkAccess" to JsonPrimitive(false),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf(PREVIEW_FRAME_CELL_ID),
@@ -985,12 +985,12 @@ class UiBuilderEditorReducer(
                           "type" to JsonPrimitive("size"),
                           "widthDp" to JsonPrimitive(PREVIEW_FRAME_WIDTH_DP),
                           "heightDp" to JsonPrimitive(PREVIEW_FRAME_HEIGHT_DP),
-                        )
-                      )
-                    )
+                        ),
+                      ),
+                    ),
                 ),
               slots = mapOf(FRAME_SLOT to emptyList()),
-            )
+            ),
         ),
     )
   }
@@ -1065,7 +1065,7 @@ class UiBuilderEditorReducer(
                 properties = JsonObject(emptyMap()),
                 modifiers = JsonArray(emptyList()),
                 slots = mapOf(FRAME_SLOT to emptyList()),
-              )
+              ),
           ),
       )
     }
@@ -1168,7 +1168,7 @@ class UiBuilderEditorReducer(
           compareBy({ (_, groupItems) -> groupItems.minOf { it.searchRank(needle) } }, { it.key })
         } else {
           compareBy({ order[it.key] ?: Int.MAX_VALUE }, { it.key })
-        }
+        },
       )
       .forEach { (group, groupItems) ->
         val expanded = filtering || group !in state.collapsedCatalogGroups
@@ -1627,7 +1627,7 @@ class UiBuilderEditorReducer(
       chain =
         movedModifierChain(chain, event.moveXDp, event.moveYDp, declared)
           ?: return refuse(
-            "${node.componentId} declares neither padding nor offset, so it cannot be moved"
+            "${node.componentId} declares neither padding nor offset, so it cannot be moved",
           )
     }
     val scope = state.document.scopeOf(nodeId)
@@ -1687,7 +1687,7 @@ class UiBuilderEditorReducer(
           (node.properties[REFERENCE_FONT_SIZE_PROPERTY] as? JsonObject)
             ?.get("type")
             ?.primitiveOrNull()
-            ?.contentOrNull
+            ?.contentOrNull,
         )
       val encoded =
         literal(existingType ?: field.defaultEncodedType(), (parsed as PropertyDraft.Valid).value)
@@ -1940,11 +1940,11 @@ class UiBuilderEditorReducer(
                   JsonObject(
                     args +
                       (field to
-                        JsonObject(mapOf("type" to JsonPrimitive(wrapper), "value" to typed)))
-                  ))
+                        JsonObject(mapOf("type" to JsonPrimitive(wrapper), "value" to typed))),
+                  )),
             )
           } else JsonObject(modifier + (field to value))
-        }
+        },
       )
     if (!written) return state
     return state.apply(
@@ -1977,7 +1977,7 @@ class UiBuilderEditorReducer(
             return@mapIndexed modifier
           written = true
           JsonObject(modifier + (field to element))
-        }
+        },
       )
     if (!written) return state
     return state.apply(
@@ -2072,7 +2072,7 @@ class UiBuilderEditorReducer(
               // A notice, not a blocking error.
               blocking = false,
             )
-          }
+          },
         ))
       .distinctBy { it.code to it.message }
   }
@@ -2198,7 +2198,7 @@ class UiBuilderEditorReducer(
    * `A2uiDocumentExporter.lower`.
    */
   private fun EditorGeneratedCode.withA2uiMessages(
-    document: UiBuilderDocument
+    document: UiBuilderDocument,
   ): EditorGeneratedCode {
     if (catalog.platform != UiBuilderCatalogPlatform.A2UI || this !is EditorGeneratedCode.Source) {
       return this
@@ -2209,7 +2209,7 @@ class UiBuilderEditorReducer(
     val messages =
       exported.messages.joinToString("\n") { message ->
         a2uiMessageJson.encodeToString(JsonObject.serializer(), message).lines().joinToString(
-          "\n"
+          "\n",
         ) {
           "// $it"
         }
@@ -2219,7 +2219,7 @@ class UiBuilderEditorReducer(
         "\n\n// A2UI messages — what an agent streams to draw this surface, one per line on the " +
         "wire:\n" +
         messages +
-        "\n"
+        "\n",
     )
   }
 
@@ -2229,7 +2229,7 @@ class UiBuilderEditorReducer(
    * not.
    */
   private fun EditorGeneratedCode.withRemoteContent(
-    document: UiBuilderDocument
+    document: UiBuilderDocument,
   ): EditorGeneratedCode {
     val hosts =
       document.nodes.values
@@ -2243,7 +2243,7 @@ class UiBuilderEditorReducer(
       bodies.filterIsInstance<InlineRemoteContentExporter.Result.Refused>().flatMap { it.reasons }
     if (emitted.isEmpty()) {
       return EditorGeneratedCode.Refused(
-        (this as? EditorGeneratedCode.Refused)?.reasons.orEmpty() + refusedBodies
+        (this as? EditorGeneratedCode.Refused)?.reasons.orEmpty() + refusedBodies,
       )
     }
     val header =
@@ -2253,11 +2253,11 @@ class UiBuilderEditorReducer(
           listOf(
             (reasons + refusedBodies).joinToString("\n") {
               "// The screen around this content is not generated: ${it.replace("\n", " ")}"
-            }
+            },
           )
       }
     return EditorGeneratedCode.Source(
-      (header + emitted.map { it.source }).joinToString("\n\n").trimEnd() + "\n"
+      (header + emitted.map { it.source }).joinToString("\n\n").trimEnd() + "\n",
     )
   }
 
@@ -2296,8 +2296,8 @@ class UiBuilderEditorReducer(
       EditorGeneratedCode.Refused(
         listOf(
           "this design could not be read as a protocol document" +
-            (failure.message?.let { ": $it" } ?: "")
-        )
+            (failure.message?.let { ": $it" } ?: ""),
+        ),
       )
     }
 
@@ -2493,7 +2493,7 @@ class UiBuilderEditorReducer(
           label = capability?.let(node::contentLabel) ?: componentLabel,
           componentId = node.componentId,
           inSlot = inSlot,
-        )
+        ),
       )
       current = location?.nodeId
     }
@@ -2615,7 +2615,7 @@ class UiBuilderEditorReducer(
    * encodes to nothing, so a stale row never refuses an insert.
    */
   private fun ComponentCapability.variantProperties(
-    variant: EditorCatalogVariant?
+    variant: EditorCatalogVariant?,
   ): Map<String, JsonObject> {
     if (variant == null || variant.componentId != componentId) return emptyMap()
     val property = propertiesByName[variant.property] ?: return emptyMap()
@@ -2824,9 +2824,9 @@ class UiBuilderEditorReducer(
             properties =
               JsonObject(
                 root.node.properties +
-                  ("documentBase64" to literal("string", JsonPrimitive(documentBase64)))
-              )
-          )
+                  ("documentBase64" to literal("string", JsonPrimitive(documentBase64))),
+              ),
+          ),
       )
     return state.apply(sequence, operations, selectionAfter = nodeId)
   }
@@ -3169,7 +3169,7 @@ class UiBuilderEditorReducer(
       )
     if (!mark.drawable) return state
     return state.withReference(
-      state.reference.copy(marks = state.reference.marks + mark, mintedIds = minted)
+      state.reference.copy(marks = state.reference.marks + mark, mintedIds = minted),
     )
   }
 
@@ -3209,7 +3209,7 @@ class UiBuilderEditorReducer(
         tool = ReferenceTool.MovePiece,
         mintedIds = minted,
         settings = state.reference.settings.copy(visible = true),
-      )
+      ),
     )
   }
 
@@ -3336,7 +3336,7 @@ class UiBuilderEditorReducer(
           // Same depth: sibling slots of one parent, so the catalog's recommended slot wins (an
           // empty Scaffold's content).
           { (target, _) -> if (isRecommended(state, target)) 0 else 1 },
-        )
+        ),
       )
   }
 
@@ -3612,7 +3612,7 @@ class UiBuilderEditorReducer(
       inserted.reference.copy(
         pieces = inserted.reference.pieces.filterNot { it.id == pieceId },
         selectedPieceId = inserted.reference.selectedPieceId.takeIf { it != pieceId },
-      )
+      ),
     )
   }
 
@@ -3811,12 +3811,12 @@ class UiBuilderEditorReducer(
                   val snapped = snappedDpNumber(value) ?: return@mapValues value
                   if (snapped != value) touched += 1
                   snapped
-                }
+                },
               )
             changedValues += touched
             if (touched > 0) modifiersChanged = true
             rebuilt
-          }
+          },
         )
       if (modifiersChanged) operations += DesignOperation.SetModifiers(nodeId, snappedModifiers)
     }
@@ -4141,7 +4141,7 @@ class UiBuilderEditorReducer(
     if (token.targets(state.document, catalog).isEmpty()) {
       return refused(
         "${token.label} has nowhere to land: this design has no " +
-          token.bindings.joinToString(" or ") { it.componentId.substringAfterLast('/') }
+          token.bindings.joinToString(" or ") { it.componentId.substringAfterLast('/') },
       )
     }
     val operations = token.writes(state.document, catalog, parsed)
@@ -4182,8 +4182,8 @@ class UiBuilderEditorReducer(
               held.nodes +
                 (write.nodeId to
                   node.copy(
-                    properties = JsonObject(node.properties + (write.property to write.value))
-                  ))
+                    properties = JsonObject(node.properties + (write.property to write.value)),
+                  )),
           )
         }
     }
@@ -4278,7 +4278,7 @@ class UiBuilderEditorReducer(
             "type" to JsonPrimitive("stateEquals"),
             "variable" to JsonPrimitive(variable),
             "value" to typedStateValue(equalsValue, declaration),
-          )
+          ),
         )
     validator.validate(state.document, nodeId, propertyName, encoded)?.let { issue ->
       return state.rejected(
@@ -4731,7 +4731,7 @@ class UiBuilderEditorReducer(
       )
     val selectedAfter =
       state.selectionBeforeOperations[targetOperationId]?.takeIf(
-        application.state.document.nodes::containsKey
+        application.state.document.nodes::containsKey,
       ) ?: application.state.document.roots.firstOrNull()
     return state.withApplication(application, sequence, selectedAfter)
   }
@@ -4756,7 +4756,7 @@ class UiBuilderEditorReducer(
       )
     val selectedAfter =
       state.selectionAfterOperations[targetOperationId]?.takeIf(
-        application.state.document.nodes::containsKey
+        application.state.document.nodes::containsKey,
       ) ?: application.state.document.roots.firstOrNull()
     return state.withApplication(application, sequence, selectedAfter)
   }
@@ -4782,7 +4782,7 @@ class UiBuilderEditorReducer(
             mapOf(
               "componentKey" to JsonPrimitive(componentKey),
               "arguments" to starterArguments(document, componentKey),
-            )
+            ),
           ),
       )
     return document.copy(
@@ -4826,7 +4826,7 @@ class UiBuilderEditorReducer(
     fun refuse(reason: String) = ComponentPlan(refusal = reason)
     if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE)
       return refuse(
-        "Use Export selected as template in the dashboard toolbar for reusable sections and views"
+        "Use Export selected as template in the dashboard toolbar for reusable sections and views",
       )
     val document = state.document
     val nodeId =
@@ -4855,7 +4855,7 @@ class UiBuilderEditorReducer(
       if (member.eventBindings.isNotEmpty())
         return refuse(
           "$label handles ${member.eventBindings.keys.first()}; a component draws from its " +
-            "arguments alone, so put the action on each place it is used"
+            "arguments alone, so put the action on each place it is used",
         )
       if (
         member.properties.values.any {
@@ -4863,7 +4863,7 @@ class UiBuilderEditorReducer(
         } || SHOW_BY_STATE in member.properties
       )
         return refuse(
-          "$label reads screen state, which a component's own function cannot see; unbind it first"
+          "$label reads screen state, which a component's own function cannot see; unbind it first",
         )
       if (member.componentId.endsWith("scaffold"))
         return refuse("A scaffold is a whole screen, so it cannot be a component's body")
@@ -4875,7 +4875,7 @@ class UiBuilderEditorReducer(
       .firstOrNull { it in PARENT_SCOPED_MODIFIERS }
       ?.let {
         return refuse(
-          "Take `$it` off ${componentLabel(node.componentId)} first: it belongs to the slot"
+          "Take `$it` off ${componentLabel(node.componentId)} first: it belongs to the slot",
         )
       }
     val functionName =
@@ -4917,7 +4917,7 @@ class UiBuilderEditorReducer(
             mapOf(
               "componentKey" to JsonPrimitive(key),
               "arguments" to JsonObject(arguments),
-            )
+            ),
           ),
       )
     val operations =
@@ -5040,8 +5040,8 @@ class UiBuilderEditorReducer(
                         "system" to JsonPrimitive(wanted.system),
                         "componentId" to JsonPrimitive(wanted.componentId),
                         "digest" to JsonPrimitive(symbol.digest),
-                      )
-                    ))
+                      ),
+                    )),
               ),
             )
           fresh
@@ -5175,7 +5175,7 @@ class UiBuilderEditorReducer(
           JsonObject(
             symbol.declaration +
               ("root" to JsonPrimitive(copyRoot)) +
-              listOfNotNull(name?.let { "name" to JsonPrimitive(it) })
+              listOfNotNull(name?.let { "name" to JsonPrimitive(it) }),
           ),
           EditorLibrarySource(wanted.system, wanted.componentId, symbol.digest),
         ),
@@ -5258,7 +5258,7 @@ class UiBuilderEditorReducer(
             mapOf(
               "componentKey" to JsonPrimitive(componentKey),
               "arguments" to starterArguments(document, componentKey),
-            )
+            ),
           ),
       )
     return state.apply(
@@ -5288,7 +5288,7 @@ class UiBuilderEditorReducer(
           if (declared?.typeNames()?.authoredTypes() != setOf("string")) return@mapNotNull null
           key to literal("string", JsonPrimitive(key.humanLabel()))
         }
-        .toMap()
+        .toMap(),
     )
   }
 
@@ -5319,7 +5319,7 @@ class UiBuilderEditorReducer(
         DesignOperation.DeclareComponent(
           componentKey,
           JsonObject(declaration + ("name" to JsonPrimitive(functionName))),
-        )
+        ),
       ),
       selectionAfter = state.selectedNodeId,
     )
@@ -5412,7 +5412,7 @@ class UiBuilderEditorReducer(
         EditorComponentAction(
           "Detach instance",
           UiBuilderEditorEvent.DetachPlacement(nodeId),
-        )
+        ),
       )
     val owner = document.owningComponent(nodeId) ?: return emptyList()
     val ownerName = componentDeclarationName(document.components[owner]) ?: owner
@@ -5555,7 +5555,7 @@ class UiBuilderEditorReducer(
             val key = value.bindingKey() ?: return@mapNotNull name to value
             arguments[key]?.let { name to it }
           }
-          .toMap()
+          .toMap(),
       )
     val operations =
       copied.map { operation ->
@@ -5566,14 +5566,15 @@ class UiBuilderEditorReducer(
           node =
             node.copy(
               component =
-                JsonObject(component + ("arguments" to resolved(node.placementArguments())))
+                JsonObject(component + ("arguments" to resolved(node.placementArguments()))),
             )
         }
         // The placement's own layout belongs to the call site, and now to the copy's root.
         if (node.id == copyRoot)
           node =
             node.copy(
-              modifiers = kotlinx.serialization.json.JsonArray(placement.modifiers + node.modifiers)
+              modifiers =
+                kotlinx.serialization.json.JsonArray(placement.modifiers + node.modifiers),
             )
         operation.copy(node = node)
       } + DesignOperation.DeleteNode(nodeId)
@@ -5618,14 +5619,15 @@ class UiBuilderEditorReducer(
       body.copy(
         properties =
           JsonObject(
-            if (value == null) body.properties - property else body.properties + (property to value)
-          )
+            if (value == null) body.properties - property
+            else body.properties + (property to value),
+          ),
       )
     val probed =
       state.copy(
         collaboration =
           state.collaboration.copy(
-            document = state.document.copy(nodes = state.document.nodes + (probe.id to probe))
+            document = state.document.copy(nodes = state.document.nodes + (probe.id to probe)),
           ),
         selection = listOf(bodyNodeId),
       )
@@ -5683,14 +5685,14 @@ class UiBuilderEditorReducer(
           DesignOperation.SetComponentArguments(
             placement.id,
             JsonObject(placement.placementArguments() + (argument to encoded)),
-          )
+          ),
         ),
         selectionAfter = placement.id,
       )
       .let { edited ->
         if (edited.lastOutcome is CommandOutcome.Accepted)
           edited.copy(
-            propertyErrors = edited.propertyErrors - EditorPropertyLocation(placement.id, argument)
+            propertyErrors = edited.propertyErrors - EditorPropertyLocation(placement.id, argument),
           )
         else edited
       }
@@ -5871,9 +5873,9 @@ class UiBuilderEditorReducer(
           component =
             JsonObject(
               (node.component ?: JsonObject(emptyMap())) +
-                ("componentKey" to JsonPrimitive(renamed))
-            )
-        )
+                ("componentKey" to JsonPrimitive(renamed)),
+            ),
+        ),
     )
   }
 
@@ -6021,7 +6023,7 @@ class UiBuilderEditorReducer(
  * uploaded picture.
  */
 internal fun UiBuilderDocument.widgetAssetBytes(
-  fetched: (contentDigest: String) -> ByteArray?
+  fetched: (contentDigest: String) -> ByteArray?,
 ): WidgetAssetBytes = WidgetAssetBytes { assetKey ->
   val bytes =
     when (val asset = resolveAsset(assetKey)) {

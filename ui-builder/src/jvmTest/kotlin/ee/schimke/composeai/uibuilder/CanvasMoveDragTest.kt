@@ -94,7 +94,7 @@ class CanvasMoveDragTest {
             nodeBounds(snapshot),
             end.x,
             end.y,
-          )
+          ),
         )
       val landed =
         reducer.reduce(
@@ -289,7 +289,7 @@ class CanvasMoveDragTest {
   ): UiBuilderPixelBounds? = snapshot?.nodes?.firstOrNull { it.nodeId == nodeId }?.bounds
 
   private fun nodeBounds(
-    snapshot: UiBuilderInspectionSnapshot?
+    snapshot: UiBuilderInspectionSnapshot?,
   ): Map<String, UiBuilderPixelBounds> =
     snapshot?.nodes.orEmpty().mapNotNull { node -> node.bounds?.let { node.nodeId to it } }.toMap()
 
@@ -423,7 +423,7 @@ class CanvasMoveDragTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

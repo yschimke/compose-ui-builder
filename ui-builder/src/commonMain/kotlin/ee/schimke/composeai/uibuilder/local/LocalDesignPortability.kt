@@ -51,7 +51,7 @@ fun localCheckoutRecord(
           sequence = sequence,
           documentDigest = documentDigest,
           takenAtEpochMillis = nowEpochMillis,
-        )
+        ),
     )
 
 /**
@@ -82,7 +82,7 @@ fun localCopyRecord(
           revision = document.revision,
           documentDigest = documentDigest,
           copiedAtEpochMillis = nowEpochMillis,
-        )
+        ),
     )
 }
 
@@ -243,7 +243,7 @@ class LocalDesignSyncBack(
           },
         refusal =
           replay.stop?.let { LocalSyncRefusal(it.operationId, it.code, it.message, it.remaining) },
-      )
+      ),
     )
   }
 

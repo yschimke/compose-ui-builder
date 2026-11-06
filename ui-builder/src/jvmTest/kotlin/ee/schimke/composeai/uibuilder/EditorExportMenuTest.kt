@@ -38,7 +38,9 @@ class EditorExportMenuTest {
     )
     assertEquals(UiBuilderBuildFeatures.remoteCompose, entries.any { it.label == "Copy JSON" })
     assertTrue(
-      entries.none { it is EditorExportMenuEntry.CopyPicture && it.format == EditorExportFormat.Rc }
+      entries.none {
+        it is EditorExportMenuEntry.CopyPicture && it.format == EditorExportFormat.Rc
+      },
     )
     assertEquals(UiBuilderBuildFeatures.remoteCompose, entries.any { it.label == "Download JSON" })
     assertEquals(

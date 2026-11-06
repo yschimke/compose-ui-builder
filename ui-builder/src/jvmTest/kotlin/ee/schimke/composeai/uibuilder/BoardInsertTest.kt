@@ -41,7 +41,7 @@ class BoardInsertTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -180,11 +180,11 @@ class BoardInsertTest {
                             mapOf(
                               "type" to JsonPrimitive("float"),
                               "value" to JsonPrimitive(1.25),
-                            )
-                          )
-                      )
-                  )
-              ))
+                            ),
+                          ),
+                      ),
+                  ),
+              )),
       )
     val initial = reducer.initial(themed, selectedNodeId = null)
     assertEquals(1.25f, reducer.themeSettings(initial).typeScale)
@@ -260,9 +260,9 @@ class BoardInsertTest {
           nodes =
             mapOf(
               "screen" to
-                UiBuilderNode(id = "screen", componentId = WearScreenCodeExporter.SCAFFOLD)
+                UiBuilderNode(id = "screen", componentId = WearScreenCodeExporter.SCAFFOLD),
             ),
-        )
+        ),
       )
     assertFalse(wearScreen.document.isBoard)
 
@@ -287,8 +287,8 @@ class BoardInsertTest {
           RcDocument(
             header = RcHeader(RcVersion(0, 1, 0)),
             operations = listOf(RcRemark("published sticker")),
-          )
-        )
+          ),
+        ),
       )
 
     val added =

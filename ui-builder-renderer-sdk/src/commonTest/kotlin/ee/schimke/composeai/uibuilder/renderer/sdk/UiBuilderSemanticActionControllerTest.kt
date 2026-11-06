@@ -27,7 +27,7 @@ class UiBuilderSemanticActionControllerTest {
     assertEquals(
       "ACTION_DISABLED",
       assertIs<UiBuilderSemanticActionResult.Rejected>(
-          controller.dispatch(action("target", "activate"), disabled)
+          controller.dispatch(action("target", "activate"), disabled),
         )
         .code,
     )
@@ -35,7 +35,7 @@ class UiBuilderSemanticActionControllerTest {
     assertEquals(
       "ACTION_NOT_VISIBLE",
       assertIs<UiBuilderSemanticActionResult.Rejected>(
-          controller.dispatch(action("target", "activate"), clipped)
+          controller.dispatch(action("target", "activate"), clipped),
         )
         .code,
     )
@@ -51,11 +51,11 @@ class UiBuilderSemanticActionControllerTest {
             scrollBy = { value ->
               delta += value
               value
-            }
-          )
+            },
+          ),
       )
     assertIs<UiBuilderSemanticActionResult.Applied>(
-      controller.dispatch(action("list", "scrollBy", 240.0), snapshot("list"))
+      controller.dispatch(action("list", "scrollBy", 240.0), snapshot("list")),
     )
     assertEquals(240f, delta)
   }
@@ -69,14 +69,14 @@ class UiBuilderSemanticActionControllerTest {
           controller.dispatch(
             action("target", "activate"),
             snapshot("target").copy(documentRevision = 2),
-          )
+          ),
         )
         .code,
     )
     assertEquals(
       "ACTION_NOT_AVAILABLE",
       assertIs<UiBuilderSemanticActionResult.Rejected>(
-          controller.dispatch(action("target", "activate"), snapshot("target"))
+          controller.dispatch(action("target", "activate"), snapshot("target")),
         )
         .code,
     )

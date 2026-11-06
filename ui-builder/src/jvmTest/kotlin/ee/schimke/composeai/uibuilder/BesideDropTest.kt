@@ -180,7 +180,7 @@ class BesideDropTest {
 
   /** The palette row whose thumbnail carries the drag named by [contentDescription]. */
   private fun androidx.compose.ui.test.ComposeUiTest.onDragRow(
-    contentDescription: String
+    contentDescription: String,
   ): SemanticsNodeInteraction = onNodeWithContentDescription(contentDescription)
 
   private companion object {
@@ -246,7 +246,7 @@ class BesideDropTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

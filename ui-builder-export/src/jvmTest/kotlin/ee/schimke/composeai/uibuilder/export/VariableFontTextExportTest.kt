@@ -38,7 +38,7 @@ class VariableFontTextExportTest {
   private val record: ComponentRecordFile = run {
     fun read(name: String) =
       json.decodeFromString<ComponentRecordFile>(
-        File(root, "docs/design/fixtures/ui-builder/$name").readText()
+        File(root, "docs/design/fixtures/ui-builder/$name").readText(),
       )
     val m3 = read("m3-catalog-components-v1.json")
     m3
@@ -74,7 +74,7 @@ class VariableFontTextExportTest {
           ${second?.let { """, "second": {"id": "second", "componentId": "m3/variable-font-text", "properties": $it, "slots": {}, "modifiers": []}""" }.orEmpty()}
         }
       }
-      """
+      """,
     )
 
   private fun export(
@@ -108,8 +108,8 @@ class VariableFontTextExportTest {
               """{"text": {"type": "string", "value": "Hello"},
                   "font": {"type": "enum", "value": "googleSansFlex"},
                   "rond": {"type": "float", "value": 100}}""",
-          )
-        )
+          ),
+        ),
       )
     assertTrue("VariableFontTextRobotoFlexFlex(" in source, source)
     assertTrue("fontSize = 48.sp" in source, source)
@@ -147,7 +147,7 @@ class VariableFontTextExportTest {
               "wght": {"type": "state", "variable": "weight"}}""",
           state =
             """{"weight": {"type": "value", "valueType": "float", "initialValue": 400, "persistence": "preview"}}""",
-        )
+        ),
       )
     if (!UiBuilderBuildFeatures.remoteCompose) {
       val refused = assertIs<ScreenExportGate.Outcome.Refused>(outcome)
@@ -168,33 +168,33 @@ class VariableFontTextExportTest {
     assertTrue(
       reasons("""{"text": {"type": "expr", "op": "concat", "args": []}}""").any {
         "`text` is not a literal" in it
-      }
+      },
     )
     assertTrue(
       reasons(
           """{"text": {"type": "string", "value": "Flex"},
-              "wght": {"type": "system", "value": "time.secondOfHour"}}"""
+              "wght": {"type": "system", "value": "time.secondOfHour"}}""",
         )
-        .any { "`wght` is computed" in it }
+        .any { "`wght` is computed" in it },
     )
     assertTrue(
       reasons(
           """{"text": {"type": "string", "value": "Flex"},
-              "font": {"type": "enum", "value": "comicSans"}}"""
+              "font": {"type": "enum", "value": "comicSans"}}""",
         )
-        .any { "`comicSans`, which is not a font it draws in" in it }
+        .any { "`comicSans`, which is not a font it draws in" in it },
     )
     assertTrue(
       reasons(
           """{"text": {"type": "string", "value": "Flex"},
-              "rond": {"type": "float", "value": 50}}"""
+              "rond": {"type": "float", "value": 50}}""",
         )
-        .any { "Roboto Flex has no rond axis a design can set" in it }
+        .any { "Roboto Flex has no rond axis a design can set" in it },
     )
     assertTrue(
       reasons("""{"text": {"type": "string", "value": "日本"}}""").any {
         "Roboto Flex has no glyph for 日 本" in it
-      }
+      },
     )
   }
 
@@ -220,7 +220,7 @@ class VariableFontTextExportTest {
               "properties": $properties, "slots": {}, "modifiers": []}
           }
         }
-        """
+        """,
       )
       .toUiBuilderDocument()
 
@@ -247,9 +247,9 @@ class VariableFontTextExportTest {
         export(
           m3Design(
             """{"text": {"type": "string", "value": "Flex"},
-                "fontSizeSp": {"type": "float", "value": 0}}"""
-          )
-        )
+                "fontSizeSp": {"type": "float", "value": 0}}""",
+          ),
+        ),
       )
     assertTrue("fontSize = 32.sp" in source, source)
   }
@@ -273,7 +273,7 @@ class VariableFontTextExportTest {
       WearScreenCodeExporter.export(
         wearDesign(
           """{"text": {"type": "string", "value": "Flex"},
-              "wght": {"type": "state", "variable": "weight"}}"""
+              "wght": {"type": "state", "variable": "weight"}}""",
         ),
         variableFonts = VariableFontExport(fonts),
       )

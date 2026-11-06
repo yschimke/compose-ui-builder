@@ -118,7 +118,7 @@ object RecordFreeExport {
             }
               .getOrElse {
                 Generated.Refused(
-                  listOf("document: Remote source export could not read the design: ${it.message}")
+                  listOf("document: Remote source export could not read the design: ${it.message}"),
                 )
               }
         } else
@@ -144,8 +144,8 @@ object RecordFreeExport {
       return Generated.Refused(
         listOf(
           "the root is `${root.componentId}`, which this catalog does not mark as a launcher " +
-            "widget (`${CatalogExportRouting.LAUNCHER_HOST_TRAIT}`)"
-        )
+            "widget (`${CatalogExportRouting.LAUNCHER_HOST_TRAIT}`)",
+        ),
       )
     }
     return when (
@@ -271,7 +271,7 @@ object RecordFreeExport {
             add("nodes.$id.assetBindings: an A2UI image or video names its `url` directly")
           if (node.tokenBindings.isNotEmpty())
             add(
-              "nodes.$id.tokenBindings: A2UI has no design tokens; write the value on the component"
+              "nodes.$id.tokenBindings: A2UI has no design tokens; write the value on the component",
             )
         }
       }
@@ -292,7 +292,7 @@ object RecordFreeExport {
     }
       .getOrElse {
         Generated.Refused(
-          listOf("document: Remote source export could not read the design: ${it.message}")
+          listOf("document: Remote source export could not read the design: ${it.message}"),
         )
       }
   }
@@ -339,8 +339,8 @@ object RecordFreeExport {
       listOf(
         "$root, but a Wear design exports only as a Wear screen or a Wear widget: put its " +
           "content inside a `${WearScreenCodeExporter.SCAFFOLD}` (or start from the " +
-          "\"wear-screen\" template), or make the root a Wear widget container"
-      )
+          "\"wear-screen\" template), or make the root a Wear widget container",
+      ),
     )
   }
 
@@ -514,8 +514,8 @@ object RecordFreeExport {
         Generated.Refused(
           listOf(
             "this design could not be read as a builder document" +
-              (failure.message?.let { ": $it" } ?: "")
-          )
+              (failure.message?.let { ": $it" } ?: ""),
+          ),
         )
       }
   }
@@ -712,8 +712,8 @@ object RecordFreeExport {
         NativePreview.Refused(
           listOf(
             "this design could not be read as a builder document" +
-              (failure.message?.let { ": $it" } ?: "")
-          )
+              (failure.message?.let { ": $it" } ?: ""),
+          ),
         )
       }
   }

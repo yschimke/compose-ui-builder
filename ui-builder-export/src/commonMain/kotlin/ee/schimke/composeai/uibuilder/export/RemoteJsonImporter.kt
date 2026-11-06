@@ -193,7 +193,7 @@ object RemoteJsonImporter {
                 "catalogRevision" to JsonPrimitive("candidate"),
                 "capabilityDigest" to JsonPrimitive("candidate"),
                 "nativeRuntimeId" to JsonPrimitive("candidate"),
-              )
+              ),
             ),
           environment =
             JsonObject(
@@ -202,7 +202,7 @@ object RemoteJsonImporter {
                 "heightDp" to JsonPrimitive(height),
                 "density" to JsonPrimitive(1.0),
                 "fontScale" to JsonPrimitive(1.0),
-              )
+              ),
             ),
           stateVariables = JsonObject(emptyMap()),
           roots = listOf(ROOT_ID),
@@ -257,7 +257,7 @@ object RemoteJsonImporter {
               nextId("spacer"),
               "layout/box",
               modifiers = modifiers(obj["modifiers"], "$path.modifiers"),
-            )
+            ),
           )
         else -> gap("$path: `${type ?: obj.keys.firstOrNull()}` has no builder equivalent")
       }
@@ -283,7 +283,7 @@ object RemoteJsonImporter {
           properties = JsonObject(properties),
           modifiers = modifiers(obj["modifiers"], "$path.modifiers"),
           slots = mapOf("children" to children),
-        )
+        ),
       )
     }
 
@@ -313,7 +313,7 @@ object RemoteJsonImporter {
           REMOTE_TEXT_COMPONENT_ID,
           properties = JsonObject(properties),
           modifiers = modifiers(obj["modifiers"], "$path.modifiers"),
-        )
+        ),
       )
     }
 
@@ -321,7 +321,7 @@ object RemoteJsonImporter {
       JsonArray(
         (element as? JsonArray).orEmpty().mapIndexedNotNull { index, modifier ->
           modifier(modifier, "$path[$index]")
-        }
+        },
       )
 
     /** `[a, b, …]` as numbers; null when it is not a list of numbers. */
@@ -412,11 +412,11 @@ object RemoteJsonImporter {
               mapOf(
                 "viewportWidth" to float(viewportWidth),
                 "viewportHeight" to float(viewportHeight),
-              )
+              ),
             ),
           modifiers = modifierList,
           slots = mapOf(UiDrawing.OPS_SLOT to ops),
-        )
+        ),
       )
     }
 
@@ -556,7 +556,7 @@ object RemoteJsonImporter {
           UiDrawing.GROUP,
           JsonObject(properties),
           slots = mapOf(UiDrawing.OPS_SLOT to ops),
-        )
+        ),
       )
     }
 
@@ -602,7 +602,7 @@ object RemoteJsonImporter {
           UiDrawing.CLIP,
           bounds,
           slots = mapOf(UiDrawing.OPS_SLOT to ops),
-        )
+        ),
       )
     }
 
@@ -631,7 +631,7 @@ object RemoteJsonImporter {
           UiDrawing.REPEAT,
           JsonObject(properties),
           slots = mapOf(UiDrawing.OPS_SLOT to ops),
-        )
+        ),
       )
     }
 
@@ -661,7 +661,7 @@ object RemoteJsonImporter {
           UiDrawing.IF,
           JsonObject(mapOf("condition" to parsed(formula))),
           slots = mapOf(UiDrawing.OPS_SLOT to ops),
-        )
+        ),
       )
     }
 
@@ -681,7 +681,7 @@ object RemoteJsonImporter {
                   color(resolveColor((value as JsonPrimitive).content))
                     ?.get("value")
                     ?.jsonPrimitive
-                    ?.content ?: throw Gap("paint colour `$value` is not a colour")
+                    ?.content ?: throw Gap("paint colour `$value` is not a colour"),
               )
             "style" ->
               paint.copy(stroke = (value as JsonPrimitive).content.lowercase().startsWith("stroke"))
@@ -859,9 +859,9 @@ object RemoteJsonImporter {
                         mapOf(
                           "type" to JsonPrimitive("bool"),
                           "value" to JsonPrimitive(it == "true"),
-                        )
+                        ),
                       )
-                  }
+                  },
                 ))
           "drawLine" ->
             "draw/line" to
@@ -1121,7 +1121,7 @@ object RemoteJsonImporter {
           it == kotlin.math.floor(it) && it >= 2 && it <= UiDrawing.MAX_POINTS
         }
           ?: throw Gap(
-            "path expression `$id` needs a literal count from 2 to ${UiDrawing.MAX_POINTS}"
+            "path expression `$id` needs a literal count from 2 to ${UiDrawing.MAX_POINTS}",
           )
       fun source(key: String): String {
         val element = body[key] as? JsonPrimitive ?: throw Gap("path expression `$id` needs `$key`")
@@ -1278,7 +1278,7 @@ object RemoteJsonImporter {
       }
     if (!argb.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) return null
     return JsonObject(
-      mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#${argb.uppercase()}"))
+      mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#${argb.uppercase()}")),
     )
   }
 

@@ -98,7 +98,7 @@ class WearCanvasDeviceSizeTest {
     var snapshot: UiBuilderInspectionSnapshot? = null
     renderComposeScene(SCENE_PX, SCENE_PX, Density(1f)) {
       CompositionLocalProvider(
-        LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue
+        LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue,
       ) {
         UiBuilderSurface(
           document = screen(rootId),
@@ -128,7 +128,7 @@ class WearCanvasDeviceSizeTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),
@@ -141,7 +141,7 @@ class WearCanvasDeviceSizeTest {
               componentId = rootId,
               properties =
                 JsonObject(
-                  mapOf("timeText" to literal("10:10"), "background" to literal("#000000"))
+                  mapOf("timeText" to literal("10:10"), "background" to literal("#000000")),
                 ),
               modifiers = JsonArray(emptyList()),
               slots = mapOf("content" to listOf("label")),
@@ -164,7 +164,7 @@ class WearCanvasDeviceSizeTest {
         // Declare the catalog's `platform: "wear"`; without it the canvas leaves the device
         // question to the host.
         CompositionLocalProvider(
-          LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue
+          LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue,
         ) {
           if (hostDevice == null) {
             UiBuilderSurface(document = document(), onInspectionSnapshot = { snapshot = it })
@@ -212,7 +212,7 @@ class WearCanvasDeviceSizeTest {
               "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
               "animations": "settled"
             }
-            """
+            """,
           )
           .jsonObject,
       stateVariables = JsonObject(emptyMap()),
@@ -229,11 +229,11 @@ class WearCanvasDeviceSizeTest {
                     "variant" to literal("circular"),
                     "progress" to literal("0.5"),
                     "enabled" to literal("true"),
-                  )
+                  ),
                 ),
               modifiers = JsonArray(listOf(size(48))),
               slots = emptyMap(),
-            )
+            ),
         ),
     )
 
@@ -246,7 +246,7 @@ class WearCanvasDeviceSizeTest {
         "type" to JsonPrimitive("size"),
         "widthDp" to JsonPrimitive(dp),
         "heightDp" to JsonPrimitive(dp),
-      )
+      ),
     )
 
   private companion object {

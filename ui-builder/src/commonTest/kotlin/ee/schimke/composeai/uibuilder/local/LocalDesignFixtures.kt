@@ -57,7 +57,7 @@ internal object LocalDesignFixtures {
         clientId = "test-client",
         baseRevision = baseRevision,
         operations = listOf(DesignOperation.DeleteNode("nothing-here")),
-      )
+      ),
     )
 
   /** One text node appended to the root column, at [baseRevision]. */
@@ -80,8 +80,8 @@ internal object LocalDesignFixtures {
               node = UiBuilderNode(id = nodeId, componentId = "m3/text"),
               parent = ParentSlot("root", "content"),
               afterNodeId = afterNodeId,
-            )
+            ),
           ),
-      )
+      ),
     )
 }

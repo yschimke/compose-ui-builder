@@ -69,13 +69,14 @@ class LinearGradientDirectionTest {
   private fun exported(direction: String): String {
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
       )
     val reference =
       UiBuilderReducer.replay(
           Json.parseToJsonElement(
-            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
-          ) as JsonObject
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+              .readText(),
+          ) as JsonObject,
         )
         .document
     return CapabilityComposeCodeExporter.export(
@@ -115,12 +116,12 @@ class LinearGradientDirectionTest {
                       "startColor" to literal("color", "#FF000000"),
                       "endColor" to literal("color", "#FFFFFFFF"),
                       "direction" to literal("enum", direction),
-                    )
+                    ),
                   ),
                 modifiers =
                   JsonArray(listOf(JsonObject(mapOf("type" to JsonPrimitive("fillMaxSize"))))),
                 slots = emptyMap(),
-              )
+              ),
           ),
       )
     return document

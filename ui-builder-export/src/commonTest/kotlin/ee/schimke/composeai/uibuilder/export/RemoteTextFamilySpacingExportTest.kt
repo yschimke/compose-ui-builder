@@ -103,7 +103,7 @@ class RemoteTextFamilySpacingExportTest {
             .associateBy { it.id },
       )
     return assertIs<InlineRemoteContentExporter.Result.Emitted>(
-        InlineRemoteContentExporter.export(design, "remote")
+        InlineRemoteContentExporter.export(design, "remote"),
       )
       .source
   }

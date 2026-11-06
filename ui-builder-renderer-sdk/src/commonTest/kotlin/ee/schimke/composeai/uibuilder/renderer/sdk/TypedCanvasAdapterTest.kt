@@ -68,7 +68,7 @@ class TypedCanvasAdapterTest {
                 put("value", "true")
               },
             )
-          }
+          },
         ),
       )
     assertEquals("Toggle", canvas.value(adapter.label))
@@ -90,7 +90,7 @@ class TypedCanvasAdapterTest {
                 put("value", "true")
               },
             )
-          }
+          },
         ),
       )
     assertFailsWith<IllegalArgumentException> { malformed.value(adapter.checked) }
@@ -106,7 +106,7 @@ class TypedCanvasAdapterTest {
                 put("variable", "checkedState")
               },
             )
-          }
+          },
         ),
       )
     assertFailsWith<IllegalArgumentException> { unresolved.value(adapter.checked) }
@@ -127,7 +127,7 @@ class TypedCanvasAdapterTest {
                 put("value", "true")
               },
             )
-          }
+          },
         ),
       )
     assertEquals(1, bad.prepare().size)
@@ -149,7 +149,9 @@ class TypedCanvasAdapterTest {
             .also {
               it.parameters =
                 listOf(
-                  TargetParameter.Builder("count", "Int").also { it.typeFqn = "kotlin.Int" }.build()
+                  TargetParameter.Builder("count", "Int")
+                    .also { it.typeFqn = "kotlin.Int" }
+                    .build(),
                 )
             }
             .build(),
@@ -170,7 +172,7 @@ class TypedCanvasAdapterTest {
                   put("value", "3.0")
                 },
               )
-            }
+            },
           ),
         )
       assertEquals(1, typed.prepare().size)
@@ -270,7 +272,7 @@ class TypedCanvasAdapterTest {
           {"type": "object", "fields": {
             "name": {"type": "string", "value": "Grace"},
             "unread": {"type": "int", "value": 2}}}]}}
-        """
+        """,
       )
     assertEquals(emptyList(), canvas.prepare())
     assertEquals(
@@ -291,7 +293,7 @@ class TypedCanvasAdapterTest {
           "unread": {"type": "int", "value": 7},
           "tags": {"type": "list", "values": [
             {"type": "string", "value": "a"}, {"type": "string", "value": "b"}]}}}}
-        """
+        """,
       )
     assertEquals(Contact("Linus", 7, listOf("a", "b")), canvas.value(adapter.pinned))
     assertEquals(emptyList(), canvas.value(adapter.contacts))

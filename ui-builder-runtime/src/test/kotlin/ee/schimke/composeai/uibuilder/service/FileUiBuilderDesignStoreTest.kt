@@ -335,7 +335,7 @@ class FileUiBuilderDesignStoreTest {
     val overBudget =
       base.copy(
         document =
-          base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") })
+          base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") }),
       )
 
     assertFailsWith<UiBuilderPersistenceException> { store.commit("checkout", null, overBudget) }
@@ -570,7 +570,7 @@ class FileUiBuilderDesignStoreTest {
       design("checkout").let { base ->
         base.copy(
           document =
-            base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") })
+            base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") }),
         )
       }
 
@@ -811,8 +811,8 @@ class FileUiBuilderDesignStoreTest {
                     grantedByActorId = "owner",
                     grantedAtEpochMillis = 1_000,
                   )
-                }
-            )
+                },
+            ),
         )
       }
     Files.write(
@@ -902,8 +902,8 @@ class FileUiBuilderDesignStoreTest {
                   grantedByActorId = "owner",
                   grantedAtEpochMillis = 1_000,
                 )
-              }
-          )
+              },
+          ),
       )
 
     assertFailsWith<UiBuilderPersistenceException> { store.commit("checkout", null, wide) }
@@ -972,7 +972,7 @@ class FileUiBuilderDesignStoreTest {
       design("checkout").let { base ->
         base.copy(
           document =
-            base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") })
+            base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") }),
         )
       }
     assertFailsWith<UiBuilderPersistenceException> { store.commit("checkout", null, large) }
@@ -986,7 +986,7 @@ class FileUiBuilderDesignStoreTest {
     val legacy =
       LegacyUiBuilderState.encode(
         PersistedServiceV1(
-          mapOf("checkout" to design("checkout"), "settings" to design("settings"))
+          mapOf("checkout" to design("checkout"), "settings" to design("settings")),
         ),
         LegacyUiBuilderState.Format.V2,
       )

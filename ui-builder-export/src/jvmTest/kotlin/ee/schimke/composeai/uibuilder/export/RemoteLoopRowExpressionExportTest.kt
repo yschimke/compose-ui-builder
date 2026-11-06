@@ -58,9 +58,9 @@ class RemoteLoopRowExpressionExportTest {
                       "type" to JsonPrimitive("value"),
                       "valueType" to JsonPrimitive("float"),
                       "initialValue" to JsonPrimitive(2),
-                    )
-                  )
-              )
+                    ),
+                  ),
+              ),
             ),
           roots = listOf("loop"),
           nodes =
@@ -72,7 +72,7 @@ class RemoteLoopRowExpressionExportTest {
                   properties =
                     JsonObject(mapOf("data" to Json.parseToJsonElement(rows).jsonObject)),
                   slots = mapOf("template" to listOf(template)),
-                )
+                ),
             ) + nodes.associateBy { it.id },
         ),
         refusals,
@@ -159,9 +159,9 @@ class RemoteLoopRowExpressionExportTest {
             mapOf(
               "verticalSpacingDp" to
                 JsonObject(
-                  mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive("goal"))
-                )
-            )
+                  mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive("goal")),
+                ),
+            ),
           ),
         slots = mapOf("children" to listOf("label")),
       )

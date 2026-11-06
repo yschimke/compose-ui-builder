@@ -35,7 +35,7 @@ class CatalogUpgradePreviewTest {
     val document =
       document("d")
         .withNode(
-          node("label", "m3/text", mapOf("text" to "Discover Weekly", "color" to "#FFFFFF"))
+          node("label", "m3/text", mapOf("text" to "Discover Weekly", "color" to "#FFFFFF")),
         )
         // A size is a number on both sides (`fontSizeSp` and `fontSize`, via
         // `ComponentRecordPacks.jsonTypeOf`).
@@ -106,7 +106,7 @@ class CatalogUpgradePreviewTest {
                   "shapeDp" to DecimalValueV1(12.0),
                 ),
               slots = mapOf("content" to listOf("label")),
-            )
+            ),
         )
         .withNode(node("label", "m3/text", mapOf("text" to "hi")))
 
@@ -188,7 +188,7 @@ class CatalogUpgradePreviewTest {
             "card",
             DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
             component = DesignComponentInstanceV1("summary", emptyMap()),
-          )
+          ),
         )
         .copy(components = mapOf("summary" to DesignComponentV1("Summary", "body")))
 
@@ -243,15 +243,15 @@ class CatalogUpgradePreviewTest {
                                       mapOf(
                                         "filled" to JsonPrimitive("m3/card"),
                                         "elevated" to JsonPrimitive("m3/elevated-card"),
-                                      )
+                                      ),
                                     ),
-                                )
+                                ),
                               ),
-                          )
-                        )
-                    )
-                  )
-              )
+                          ),
+                        ),
+                    ),
+                  ),
+              ),
             )
           it.components =
             listOf(
@@ -263,7 +263,7 @@ class CatalogUpgradePreviewTest {
     val document =
       document("d")
         .withNode(
-          node("card", "m3/card", mapOf("variant" to "elevated", "containerColor" to "#fff"))
+          node("card", "m3/card", mapOf("variant" to "elevated", "containerColor" to "#fff")),
         )
 
     val outcome = planCatalogUpgrade(document, target, TARGET)
@@ -330,7 +330,7 @@ class CatalogUpgradePreviewTest {
     assertEquals(
       ServiceErrorCodeV1.INTERNAL,
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(narrowed, owner, UiBuilderServiceRequest.OpenDesign("widget"))
+          execute(narrowed, owner, UiBuilderServiceRequest.OpenDesign("widget")),
         )
         .error
         .code,
@@ -353,7 +353,7 @@ class CatalogUpgradePreviewTest {
     assertEquals(
       ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
       assertIs<UiBuilderServiceResponse.Error>(
-          execute(stranded, owner, UiBuilderServiceRequest.OpenDesign("widget"))
+          execute(stranded, owner, UiBuilderServiceRequest.OpenDesign("widget")),
         )
         .error
         .code,
@@ -364,7 +364,7 @@ class CatalogUpgradePreviewTest {
             stranded,
             owner,
             UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade("widget"),
-          )
+          ),
         )
         .preview
     assertEquals(CatalogUpgradePreviewStatusV1.READY, preview.status)
@@ -383,15 +383,15 @@ class CatalogUpgradePreviewTest {
                 clientId = "browser",
                 baseRevision = preview.baseRevision,
                 operations = listOf(preview.mutation()),
-              )
+              ),
             ),
-          )
+          ),
         )
         .outcome
     assertIs<AcceptedOutcomeV1>(outcome)
     val opened =
       assertIs<UiBuilderServiceResponse.Snapshot>(
-        execute(stranded, owner, UiBuilderServiceRequest.OpenDesign("widget"))
+        execute(stranded, owner, UiBuilderServiceRequest.OpenDesign("widget")),
       )
     assertEquals(TARGET, opened.snapshot.state.document.catalogPin)
     assertEquals(1, opened.snapshot.state.document.revision)
@@ -409,7 +409,7 @@ class CatalogUpgradePreviewTest {
             stranded,
             owner,
             UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade("widget"),
-          )
+          ),
         )
         .preview
 
@@ -425,9 +425,9 @@ class CatalogUpgradePreviewTest {
                 "browser",
                 preview.baseRevision,
                 listOf(preview.mutation().copy(previewDigest = "not-the-preview")),
-              )
+              ),
             ),
-          )
+          ),
         )
         .outcome
     assertIs<RejectedOutcomeV1>(outcome)
@@ -446,7 +446,7 @@ class CatalogUpgradePreviewTest {
         nodes =
           stored.document.nodes.mapValues { (id, node) ->
             node.copy(slots = mapOf("children" to listOf(id)))
-          }
+          },
       )
     store.commitAll(mapOf("widget" to (stored to stored.copy(document = cyclic))))
 
@@ -523,7 +523,7 @@ class CatalogUpgradePreviewTest {
                           "componentId" to JsonPrimitive("remote-m3/remote-text"),
                           "properties" to
                             JsonObject(mapOf("fontSizeSp" to JsonPrimitive("fontSize"))),
-                        )
+                        ),
                       ),
                     "m3/surface" to
                       JsonObject(
@@ -532,13 +532,13 @@ class CatalogUpgradePreviewTest {
                           "slots" to JsonObject(mapOf("content" to JsonPrimitive("children"))),
                           "modifiers" to
                             JsonObject(
-                              mapOf("containerColor" to JsonPrimitive(containerColorBecomes))
+                              mapOf("containerColor" to JsonPrimitive(containerColorBecomes)),
                             ),
-                        )
+                        ),
                       ),
-                  )
-                )
-            )
+                  ),
+                ),
+            ),
           )
         it.exportCapabilities =
           ExportCapabilitiesV1.Builder()
@@ -572,11 +572,11 @@ class CatalogUpgradePreviewTest {
                           "componentId" to JsonPrimitive("m3/card"),
                           "setProperties" to
                             JsonObject(mapOf("style" to JsonPrimitive("outlined"))),
-                        )
-                      )
-                  )
-                )
-            )
+                        ),
+                      ),
+                  ),
+                ),
+            ),
           )
         it.exportCapabilities =
           ExportCapabilitiesV1.Builder()
@@ -625,7 +625,7 @@ class CatalogUpgradePreviewTest {
             published.components +
               listOfNotNull(
                 component("m3/text", listOf("text", "color", "fontSizeSp", "letterSpacingSp"))
-                  .takeIf { borrowedStillDeclaresText }
+                  .takeIf { borrowedStillDeclaresText },
               ) +
               component("m3/assist-chip", listOf("text"))
         }
@@ -711,7 +711,7 @@ class CatalogUpgradePreviewTest {
     val document =
       document(designId).withNode(node("label", componentId, mapOf("text" to "Discover Weekly")))
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document))
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document)),
     )
   }
 
@@ -725,7 +725,7 @@ class CatalogUpgradePreviewTest {
           service,
           owner,
           UiBuilderServiceRequest.PreviewCatalogUpgrade(designId, revision, SOURCE, TARGET),
-        )
+        ),
       )
       .preview
 
@@ -784,7 +784,7 @@ class CatalogUpgradePreviewTest {
         override fun resumeWith(result: Result<T>) {
           completion = result
         }
-      }
+      },
     )
     return assertNotNull(completion, "suspend function did not complete").getOrThrow()
   }
@@ -796,7 +796,7 @@ class CatalogUpgradePreviewTest {
   ): DesignDocumentV1 {
     val node = nodes.getValue(nodeId)
     return copy(
-      nodes = nodes + (nodeId to node.copy(properties = node.properties + (property to value)))
+      nodes = nodes + (nodeId to node.copy(properties = node.properties + (property to value))),
     )
   }
 

@@ -57,13 +57,13 @@ class CanvasAdapterRegistryTest {
                         "type" to JsonPrimitive("state"),
                         "variable" to JsonPrimitive("progress"),
                         "value" to JsonPrimitive("0.25"),
-                      )
+                      ),
                     ),
                   "literal" to
                     JsonObject(
-                      mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(0.5))
+                      mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(0.5)),
                     ),
-                )
+                ),
               ),
           ),
         modifier = Modifier,

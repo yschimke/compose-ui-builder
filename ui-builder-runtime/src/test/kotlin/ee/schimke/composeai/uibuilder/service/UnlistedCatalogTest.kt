@@ -61,7 +61,7 @@ class UnlistedCatalogTest {
     assertEquals(
       executor(emptySet())
         .reference(
-          executor(emptySet()).listCatalogs().single { it.benchmark.catalogSystemId == wearM3 }
+          executor(emptySet()).listCatalogs().single { it.benchmark.catalogSystemId == wearM3 },
         ),
       reference,
       "unlisting a catalog must not move its pin, or toggling it would strand designs",
@@ -80,19 +80,19 @@ class UnlistedCatalogTest {
       )
     val listed =
       assertIs<UiBuilderServiceResponse.Catalogs>(
-        execute(service, UiBuilderServiceRequest.ListCatalogs)
+        execute(service, UiBuilderServiceRequest.ListCatalogs),
       )
     val wear = listed.catalogs.single { it.benchmark.catalogSystemId == wearM3 }
     assertTrue(CatalogListing.isUnlisted(wear))
     assertFalse(
-      CatalogListing.isUnlisted(listed.catalogs.single { it.benchmark.catalogSystemId == m3 })
+      CatalogListing.isUnlisted(listed.catalogs.single { it.benchmark.catalogSystemId == m3 }),
     )
     assertTrue(wearM3 in listed.pins)
 
     val fixture =
       Json.parseToJsonElement(
           File("../docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
-            .readText()
+            .readText(),
         )
         .jsonObject
     val document =
@@ -105,10 +105,10 @@ class UnlistedCatalogTest {
         )
         .toDesignDocumentV1()
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, UiBuilderServiceRequest.CreateDesign(document))
+      execute(service, UiBuilderServiceRequest.CreateDesign(document)),
     )
     assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(service, UiBuilderServiceRequest.OpenDesign("pilot-design"))
+      execute(service, UiBuilderServiceRequest.OpenDesign("pilot-design")),
     )
   }
 
@@ -125,7 +125,7 @@ class UnlistedCatalogTest {
           override fun resumeWith(result: Result<UiBuilderServiceResponse>) {
             completion = result
           }
-        }
+        },
       )
     return checkNotNull(completion) { "suspended without completing" }.getOrThrow()
   }

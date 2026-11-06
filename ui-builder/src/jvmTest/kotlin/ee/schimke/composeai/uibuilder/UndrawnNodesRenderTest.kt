@@ -28,7 +28,7 @@ class UndrawnNodesRenderTest {
 
       assertEquals(
         listOf(
-          UiBuilderUndrawnNode("mystery", "nowhere/mystery", UiBuilderUndrawnNode.UNSUPPORTED)
+          UiBuilderUndrawnNode("mystery", "nowhere/mystery", UiBuilderUndrawnNode.UNSUPPORTED),
         ),
         UiBuilderUndrawnNodes.forGeneration(undrawnGenerationKey(document.id, document.revision)),
       )
@@ -44,7 +44,7 @@ class UndrawnNodesRenderTest {
           UiBuilderUndrawnNode("a", "draw/canvas", UiBuilderUndrawnNode.UNSUPPORTED),
           UiBuilderUndrawnNode("b", "draw/canvas", UiBuilderUndrawnNode.UNSUPPORTED),
           UiBuilderUndrawnNode("c", "nowhere/mystery", UiBuilderUndrawnNode.STAND_IN),
-        )
+        ),
       ),
     )
     assertEquals(
@@ -52,7 +52,7 @@ class UndrawnNodesRenderTest {
       undrawnStatusLabel(
         listOf("a/a", "b/b", "c/c", "d/d").map {
           UiBuilderUndrawnNode(it, it, UiBuilderUndrawnNode.STAND_IN)
-        }
+        },
       ),
     )
   }

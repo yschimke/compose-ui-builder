@@ -30,8 +30,8 @@ class RemoteDrawingCurvedTextExportTest {
             "modifiers":[{"type":"size","widthDp":96,"heightDp":96}],
             "slots":{"ops":["label"]}},
           "label":$op}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(document: UiBuilderDocument, name: String): String =
@@ -57,7 +57,7 @@ class RemoteDrawingCurvedTextExportTest {
           """{"id":"label","componentId":"draw/text-circle","properties":{
             "text":{"type":"expr","op":"concat","args":[
               {"type":"state","variable":"steps"},{"type":"string","value":" steps"}]},
-            "color":{"type":"color","value":"#FFFFFFFF"}}}"""
+            "color":{"type":"color","value":"#FFFFFFFF"}}}""",
         ),
         "TextCircle",
       )
@@ -77,7 +77,7 @@ class RemoteDrawingCurvedTextExportTest {
             "text":{"type":"string","value":"along the way"},
             "pathData":{"type":"string","value":"M8 80 Q48 8 88 80"},
             "startDp":{"type":"float","value":4},
-            "color":{"type":"color","value":"#FFFFFFFF"}}}"""
+            "color":{"type":"color","value":"#FFFFFFFF"}}}""",
         ),
         "TextPath",
       )
@@ -101,9 +101,9 @@ class RemoteDrawingCurvedTextExportTest {
         WearWidgetCodeExporter.export(
           document(
             """{"id":"label","componentId":"draw/text-path","properties":{
-              "text":{"type":"string","value":"lost"}}}"""
-          )
-        )
+              "text":{"type":"string","value":"lost"}}}""",
+          ),
+        ),
       )
 
     assertTrue(refused.reasons.any { "label.pathData" in it }, refused.reasons.toString())

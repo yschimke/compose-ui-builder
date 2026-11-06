@@ -29,7 +29,7 @@ class WearClickActionExportTest {
             properties = mapOf("onClickAction" to objectAction("toggle", "running")),
           ),
           text("start-label", "Start"),
-        )
+        ),
       )
 
     assertTrue("var running by remember { mutableStateOf(false) }" in source, source)
@@ -50,7 +50,7 @@ class WearClickActionExportTest {
                 mapOf(
                   "variant" to literal("enum", "plain"),
                   "onClickAction" to objectAction("set", "opened", JsonPrimitive(true)),
-                )
+                ),
               ),
             slots = mapOf("content" to listOf("row-label")),
             eventBindings =
@@ -63,15 +63,15 @@ class WearClickActionExportTest {
                           mapOf(
                             "type" to JsonPrimitive("increment"),
                             "variable" to JsonPrimitive("count"),
-                          )
-                        )
-                      )
-                    )
-                )
+                          ),
+                        ),
+                      ),
+                    ),
+                ),
               ),
           ),
           text("row-label", "Inbox"),
-        )
+        ),
       )
 
     assertTrue("var count by remember { mutableStateOf(0) }" in source, source)
@@ -98,8 +98,8 @@ class WearClickActionExportTest {
               properties = mapOf("onClickAction" to objectAction("toggle", "undeclared")),
             ),
             text("go-label", "Go"),
-          )
-        )
+          ),
+        ),
       )
 
     assertEquals(1, refused.reasons.size, refused.reasons.toString())
@@ -125,12 +125,12 @@ class WearClickActionExportTest {
                             put("type", JsonPrimitive("increment"))
                             put("variable", JsonPrimitive("count"))
                             if (amount != null) put("amount", amount)
-                          }
-                        )
-                      )
-                    )
-                )
-              )
+                          },
+                        ),
+                      ),
+                    ),
+                ),
+              ),
           ),
         text("add-label", "Add"),
       )
@@ -139,7 +139,7 @@ class WearClickActionExportTest {
       JsonObject(mapOf("type" to JsonPrimitive("expr"), "source" to JsonPrimitive("count * 2")))
     val refused =
       assertIs<WearScreenCodeExporter.Result.Refused>(
-        WearScreenCodeExporter.export(counter(formula))
+        WearScreenCodeExporter.export(counter(formula)),
       )
     assertTrue("node `add` click action 1" in refused.reasons.single(), refused.reasons.toString())
 
@@ -200,9 +200,9 @@ class WearClickActionExportTest {
                   JsonObject(mapOf("type" to JsonPrimitive("boolean"), "value" to value)),
                 )
               }
-            }
+            },
           ),
-      )
+      ),
     )
 
   private fun flag(initial: Boolean) = declaration("bool", JsonPrimitive(initial))
@@ -217,6 +217,6 @@ class WearClickActionExportTest {
         "nullable" to JsonPrimitive(false),
         "initialValue" to initial,
         "persistence" to JsonPrimitive("preview"),
-      )
+      ),
     )
 }

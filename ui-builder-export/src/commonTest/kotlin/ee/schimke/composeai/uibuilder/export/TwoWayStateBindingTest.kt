@@ -23,7 +23,7 @@ class TwoWayStateBindingTest {
       TwoWayStateBinding.writeBackVariable(
         json("""{"type":"stateEquals","variable":"notify","value":true}"""),
         null,
-      )
+      ),
     )
     assertNull(TwoWayStateBinding.writeBackVariable(json("""{"type":"bool","value":true}"""), null))
     assertNull(TwoWayStateBinding.writeBackVariable(null, null))

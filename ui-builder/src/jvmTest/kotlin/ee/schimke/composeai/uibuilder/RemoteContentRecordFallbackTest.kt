@@ -146,7 +146,7 @@ class RemoteContentRecordFallbackTest {
             id = "host",
             componentId = "remote-m3/widget-container-small",
             slots = mapOf("content" to listOf(childId)),
-          )
+          ),
       ) + child,
       root = "host",
       state = state,
@@ -164,12 +164,12 @@ class RemoteContentRecordFallbackTest {
                     id = "label",
                     componentId = "remote-m3/remote-text",
                     properties = buildJsonObject { put("text", value("Next train")) },
-                  )
+                  ),
               ),
               childId = "label",
             ),
             components = mapOf("remote-m3/remote-text" to remoteText),
-          )
+          ),
         )
         .source
 
@@ -213,7 +213,7 @@ class RemoteContentRecordFallbackTest {
                 "remote-m3/remote-button" to remoteButton,
                 "remote-m3/remote-text" to remoteText,
               ),
-          )
+          ),
         )
         .source
 
@@ -260,7 +260,7 @@ class RemoteContentRecordFallbackTest {
                 "remote-m3/remote-button" to remoteButton,
                 "remote-m3/remote-text" to remoteText,
               ),
-          )
+          ),
         )
         .source
 
@@ -303,13 +303,13 @@ class RemoteContentRecordFallbackTest {
                       )
                     },
                   eventBindings = eventBindings,
-                )
+                ),
             ),
             childId = "box",
             state = buildJsonObject { put("notify", stateVariable("bool", JsonPrimitive(true))) },
           ),
           components = mapOf("remote-m3/checkbox-button" to remoteCheckboxButton),
-        )
+        ),
       )
       .source
 
@@ -332,7 +332,7 @@ class RemoteContentRecordFallbackTest {
   fun `an authored toggle of the bound flag is written once`() {
     val source =
       checkboxSource(
-        buildJsonObject { put("checkedChange", JsonArray(listOf(action("toggle", "notify")))) }
+        buildJsonObject { put("checkedChange", JsonArray(listOf(action("toggle", "notify")))) },
       )
     assertTrue("combinedAction" !in source, source)
     assertEquals(1, Regex("valueChange\\(notify, !notify\\)").findAll(source).count(), source)
@@ -361,8 +361,8 @@ class RemoteContentRecordFallbackTest {
                                 put("type", JsonPrimitive("increment"))
                                 put("variable", JsonPrimitive("count"))
                                 if (amount != null) put("amount", amount)
-                              }
-                            )
+                              },
+                            ),
                           ),
                         )
                       },
@@ -382,7 +382,7 @@ class RemoteContentRecordFallbackTest {
                 "remote-m3/remote-button" to remoteButton,
                 "remote-m3/remote-text" to remoteText,
               ),
-          )
+          ),
         )
         .source
 
@@ -428,7 +428,7 @@ class RemoteContentRecordFallbackTest {
                 "remote-m3/remote-button" to remoteButton,
                 "remote-m3/remote-text" to remoteText,
               ),
-          )
+          ),
         )
         .source
 
@@ -455,7 +455,7 @@ class RemoteContentRecordFallbackTest {
                         listOf(
                           action("set", "page", JsonPrimitive(2)),
                           action("toggle", "expanded"),
-                        )
+                        ),
                       ),
                     )
                   },
@@ -611,7 +611,7 @@ class RemoteContentRecordFallbackTest {
                   put("root", JsonPrimitive("headline-root"))
                 },
               )
-            }
+            },
         )
 
     val source =
@@ -619,7 +619,7 @@ class RemoteContentRecordFallbackTest {
           WearWidgetCodeExporter.export(
             document,
             components = mapOf("remote-m3/remote-text" to remoteText),
-          )
+          ),
         )
         .source
 
@@ -663,7 +663,7 @@ class RemoteContentRecordFallbackTest {
                   put("root", JsonPrimitive("headline-root"))
                 },
               )
-            }
+            },
         )
 
     val refused =
@@ -671,7 +671,7 @@ class RemoteContentRecordFallbackTest {
         WearWidgetCodeExporter.export(
           document,
           components = mapOf("remote-m3/remote-text" to remoteText),
-        )
+        ),
       )
     assertTrue(
       refused.reasons.any { "missing component argument `caption`" in it },
@@ -692,11 +692,11 @@ class RemoteContentRecordFallbackTest {
                   id = "place",
                   componentId = "design/component-instance",
                   component = buildJsonObject { put("componentKey", JsonPrimitive("missing")) },
-                )
+                ),
             ),
             childId = "place",
-          )
-        )
+          ),
+        ),
       )
     assertTrue(
       refused.reasons.any { "places `missing`" in it },
@@ -715,7 +715,7 @@ class RemoteContentRecordFallbackTest {
         widget(
           mapOf("label" to UiBuilderNode(id = "label", componentId = "remote-m3/no-record")),
           childId = "label",
-        )
+        ),
       )
     val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
     assertTrue(

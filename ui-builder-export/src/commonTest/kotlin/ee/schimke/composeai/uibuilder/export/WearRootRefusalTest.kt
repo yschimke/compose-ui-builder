@@ -25,7 +25,7 @@ class WearRootRefusalTest {
 
     val refused =
       assertIs<RecordFreeExport.Generated.Refused>(
-        RecordFreeExport.generate(bare, UiBuilderCatalogPlatform.WEAR)
+        RecordFreeExport.generate(bare, UiBuilderCatalogPlatform.WEAR),
       )
 
     assertEquals(listOf(expected), refused.reasons)
@@ -38,7 +38,7 @@ class WearRootRefusalTest {
     assertTrue(RecordFreeExport.applies(saved, UiBuilderCatalogPlatform.WEAR))
     val refused =
       assertIs<RecordFreeExport.Generated.Refused>(
-        RecordFreeExport.generate(saved, UiBuilderCatalogPlatform.WEAR, "com.example")
+        RecordFreeExport.generate(saved, UiBuilderCatalogPlatform.WEAR, "com.example"),
       )
     assertEquals(listOf(expected), refused.reasons)
   }
@@ -76,7 +76,7 @@ class WearRootRefusalTest {
         "com.example",
         tagNodes = true,
         platform = UiBuilderCatalogPlatform.MOBILE,
-      )
+      ),
     )
   }
 
@@ -86,14 +86,14 @@ class WearRootRefusalTest {
 
     val refused =
       assertIs<RecordFreeExport.Generated.Refused>(
-        RecordFreeExport.generate(two, UiBuilderCatalogPlatform.WEAR)
+        RecordFreeExport.generate(two, UiBuilderCatalogPlatform.WEAR),
       )
 
     assertEquals(
       listOf(
         "this design has 2 roots, but a Wear design exports only as a Wear screen or a Wear " +
           "widget: put its content inside a `wear-m3/screen-scaffold` (or start from the " +
-          "\"wear-screen\" template), or make the root a Wear widget container"
+          "\"wear-screen\" template), or make the root a Wear widget container",
       ),
       refused.reasons,
     )
@@ -121,7 +121,7 @@ class WearRootRefusalTest {
       )
 
     assertIs<RecordFreeExport.Generated.Emitted>(
-      RecordFreeExport.generate(screen, UiBuilderCatalogPlatform.WEAR)
+      RecordFreeExport.generate(screen, UiBuilderCatalogPlatform.WEAR),
     )
   }
 

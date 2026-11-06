@@ -29,7 +29,7 @@ class ReferenceOverlayStateTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val initial = reducer.initial(document)
@@ -63,8 +63,8 @@ class ReferenceOverlayStateTest {
           vector(
             """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
                  <rect data-name="Card" width="8" height="4"/>
-               </svg>"""
-          )
+               </svg>""",
+          ),
         ),
       )
     assertEquals(listOf("Card"), attached.reference.layoutBoxes.map { it.name })
@@ -84,7 +84,7 @@ class ReferenceOverlayStateTest {
         reducer.reduce(
           it,
           UiBuilderEditorEvent.UpdateReferenceSettings(
-            it.reference.settings.copy(mode = ReferenceDiffMode.Difference)
+            it.reference.settings.copy(mode = ReferenceDiffMode.Difference),
           ),
         )
       }
@@ -107,7 +107,7 @@ class ReferenceOverlayStateTest {
             opacityPercent = 4000,
             scalePercent = -10,
             offsetXDp = Float.NaN,
-          )
+          ),
         ),
       )
     assertEquals(100, absurd.reference.settings.opacityPercent)
@@ -251,7 +251,7 @@ class ReferenceOverlayStateTest {
       reducer.reduce(
         state,
         UiBuilderEditorEvent.UpdateReferenceSettings(
-          state.reference.settings.copy(mode = ReferenceDiffMode.Difference, offsetXDp = 24f)
+          state.reference.settings.copy(mode = ReferenceDiffMode.Difference, offsetXDp = 24f),
         ),
       )
     val replaced = reducer.reduce(state, UiBuilderEditorEvent.AttachReference(raster("second")))

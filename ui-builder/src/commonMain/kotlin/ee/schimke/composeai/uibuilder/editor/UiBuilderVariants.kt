@@ -155,7 +155,7 @@ fun UiBuilderDocument.wearScreenPanes(): List<UiBuilderVariantPane> {
                 mapOf(
                   "widthDp" to JsonPrimitive(spec.contentWidthDp),
                   "heightDp" to JsonPrimitive(spec.contentHeightDp),
-                )
+                ),
               )
             AdaptiveWearWidget.isAdaptive(this) -> AdaptiveWearWidget.resolve(this, size)
             else -> this
@@ -185,7 +185,7 @@ internal val UiBuilderVariantPane.drawnFrameDp: Pair<Float, Float>
  * stills leave it out.
  */
 internal fun UiBuilderDocument.widgetPreviewPanes(
-  resizable: Boolean = true
+  resizable: Boolean = true,
 ): List<UiBuilderVariantPane>? =
   wearWidgetScaffoldSize()?.let(::wearWidgetPreviewPanes)
     ?: if (isLauncherWidget()) launcherWidgetPreviewPanes(resizable) else null
@@ -217,7 +217,7 @@ fun UiBuilderDocument.catalogPreviewPanes(
                 mapOf(
                   "widthDp" to JsonPrimitive(spec.contentWidthDp),
                   "heightDp" to JsonPrimitive(spec.contentHeightDp),
-                )
+                ),
               ),
             wearWidgetHostShape = preview.shape,
             wearHostFrame = spec,
@@ -248,7 +248,7 @@ fun UiBuilderDocument.catalogPreviewPanes(
                 mapOf(
                   "widthDp" to JsonPrimitive(preview.widthDp),
                   "heightDp" to JsonPrimitive(height),
-                )
+                ),
               ),
           )
         }
@@ -290,7 +290,7 @@ internal const val LAUNCHER_RESIZABLE_PANE_ID = "preview-launcher-resizable"
  * both cell count and dp.
  */
 internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
-  resizable: Boolean = true
+  resizable: Boolean = true,
 ): List<UiBuilderVariantPane> {
   val own = launcherGridSize()
   val sizes =
@@ -319,7 +319,7 @@ internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
             widthDp = settings.widthDp.toFloat(),
             heightDp = settings.heightDp.toFloat(),
             document = this,
-          )
+          ),
         )
       }
   if (!resizable) return offGrid + fixed
@@ -332,7 +332,7 @@ internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
       heightDp = patch.second,
       document = this,
       launcherGridResizable = true,
-    )
+    ),
   ) + offGrid + fixed
 }
 
@@ -355,14 +355,14 @@ internal fun UiBuilderDocument.nearestLauncherGridSize(): LauncherWidgetGrid.Siz
           LauncherWidgetGrid.CELL_HEIGHT_DP)
         .roundToInt()
         .coerceAtLeast(1),
-    )
+    ),
   )
 }
 
 /** This design at [size]'s reference dp, for a pane to draw. */
 internal fun UiBuilderDocument.atLauncherSize(size: LauncherWidgetGrid.Size): UiBuilderDocument =
   withEnvironmentOverrides(
-    mapOf("widthDp" to JsonPrimitive(size.widthDp), "heightDp" to JsonPrimitive(size.heightDp))
+    mapOf("widthDp" to JsonPrimitive(size.widthDp), "heightDp" to JsonPrimitive(size.heightDp)),
   )
 
 /** `3x2 · 203×220dp`. */
@@ -389,7 +389,7 @@ internal fun clampLauncherSize(
  * both sizes, each pane resolving the design (`AdaptiveWearWidget.resolve`) as the export does.
  */
 internal fun UiBuilderDocument.wearWidgetPreviewPanes(
-  size: WearWidgetScaffoldSize
+  size: WearWidgetScaffoldSize,
 ): List<UiBuilderVariantPane> {
   if (!AdaptiveWearWidget.isAdaptive(this)) return wearWidgetPreviewPanes(size, this, null)
   // Small first: it is the size the template has adapted, so it is what a designer checks.
@@ -477,7 +477,7 @@ fun UiBuilderDocument.variantPanes(
               "widthDp" to JsonPrimitive(preset.widthDp),
               "heightDp" to JsonPrimitive(preset.heightDp),
               "density" to JsonPrimitive(preset.density),
-            )
+            ),
           ),
       )
     }
@@ -526,9 +526,9 @@ private fun EditorVariantAxis.overrides(document: UiBuilderDocument): Map<String
  * text.
  */
 internal fun UiBuilderDocument.withEnvironmentOverrides(
-  overrides: Map<String, JsonPrimitive>
+  overrides: Map<String, JsonPrimitive>,
 ): UiBuilderDocument =
   copy(
     environment =
-      JsonObject(environment + overrides.mapValues { (_, value) -> JsonPrimitive(value.content) })
+      JsonObject(environment + overrides.mapValues { (_, value) -> JsonPrimitive(value.content) }),
   )

@@ -60,7 +60,7 @@ class RemoteIconCanvasTest {
             "theme" to JsonPrimitive("dark"),
             "locale" to JsonPrimitive("en-US"),
             "layoutDirection" to JsonPrimitive("ltr"),
-          )
+          ),
         ),
       stateVariables = JsonObject(emptyMap()),
       roots = listOf("host"),
@@ -81,7 +81,7 @@ class RemoteIconCanvasTest {
                   mapOf(
                     "imageVector" to literal("enum", "home"),
                     "tint" to literal("color", tint),
-                  )
+                  ),
                 ),
             ),
         ),

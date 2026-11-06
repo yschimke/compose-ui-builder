@@ -334,9 +334,9 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                       Modifier.matchParentSize()
                                         .background(
                                           Brush.verticalGradient(
-                                            listOf(Color(0x00000000), Color(0xFF000000))
-                                          )
-                                        )
+                                            listOf(Color(0x00000000), Color(0xFF000000)),
+                                          ),
+                                        ),
                                     )
                                     // node:podcast-card-android-follow component:m3/icon-button
                                     // symbol:IconButton
@@ -423,9 +423,9 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                       Modifier.matchParentSize()
                                         .background(
                                           Brush.verticalGradient(
-                                            listOf(Color(0x00000000), Color(0xFF000000))
-                                          )
-                                        )
+                                            listOf(Color(0x00000000), Color(0xFF000000)),
+                                          ),
+                                        ),
                                     )
                                     // node:podcast-card-google-follow component:m3/icon-button
                                     // symbol:IconButton
@@ -1294,7 +1294,7 @@ private fun BuilderSupportingPaneScaffold(
   BoxWithConstraints(modifier) {
     val frameDirective =
       calculatePaneScaffoldDirective(
-        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)
+        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture),
       )
     val partitioned =
       if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective
@@ -1305,11 +1305,11 @@ private fun BuilderSupportingPaneScaffold(
       when (paneSizing) {
         "fixedStart" ->
           PaneExpansionAnchor.Offset.fromStart(
-            (fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2
+            (fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2,
           )
         "fixedEnd" ->
           PaneExpansionAnchor.Offset.fromEnd(
-            (fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2
+            (fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2,
           )
         "split" -> PaneExpansionAnchor.Proportion(splitFraction.coerceIn(.1f, .9f))
         else -> null
@@ -1436,9 +1436,9 @@ private fun BuilderRadialGradient(
           listOf(innerColor.copy(alpha = innerAlpha), outerColor),
           center = Offset(size.width * centerFraction.x, size.height * centerFraction.y),
           radius = size.maxDimension * .82f,
-        )
+        ),
       )
-    }
+    },
   )
 }
 

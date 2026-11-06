@@ -81,7 +81,7 @@ class UiBuilderTemplatesTest {
   fun `a new design can declare the state its screen will react to`() {
     val reference =
       UiBuilderReducer.replay(
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
         )
         .document
     val blank =
@@ -108,7 +108,7 @@ class UiBuilderTemplatesTest {
   fun `a blank design still declares no state when none is asked for`() {
     val reference =
       UiBuilderReducer.replay(
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
         )
         .document
     val blank = blankUiBuilderDocument("from-scratch", reference.catalogPin, reference.environment)
@@ -120,7 +120,7 @@ class UiBuilderTemplatesTest {
   fun `two state variables cannot share a name`() {
     val reference =
       UiBuilderReducer.replay(
-          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
         )
         .document
     assertFailsWith<IllegalArgumentException> {

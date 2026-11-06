@@ -64,7 +64,7 @@ internal fun ReferenceComponentCapture(
         // Recorded and not drawn: the specimen is being photographed, not shown. Drawing it would
         // put a stray component in the corner of the editor for as long as the capture took.
         drawLayer(layer)
-      }
+      },
   ) {
     UiBuilderSurface(document = specimen, editorOverlay = false)
   }
@@ -128,7 +128,7 @@ private fun specimenBaseDocument(source: UiBuilderDocument): UiBuilderDocument =
           mapOf(
             "widthDp" to JsonPrimitive(SPECIMEN_WIDTH_DP),
             "heightDp" to JsonPrimitive(SPECIMEN_HEIGHT_DP),
-          )
+          ),
       ),
     stateVariables = source.stateVariables,
     roots = listOf(SPECIMEN_ROOT_ID),
@@ -141,7 +141,7 @@ private fun specimenBaseDocument(source: UiBuilderDocument): UiBuilderDocument =
             properties = JsonObject(emptyMap()),
             modifiers = JsonArray(emptyList()),
             slots = mapOf("children" to emptyList()),
-          )
+          ),
       ),
   )
 

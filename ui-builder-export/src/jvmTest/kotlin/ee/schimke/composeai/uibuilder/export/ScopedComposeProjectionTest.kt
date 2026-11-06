@@ -19,7 +19,7 @@ class ScopedComposeProjectionTest {
 
   private val scopedGeneratorAvailable = runCatching {
     Json.decodeFromString<ee.schimke.composeai.discovery.ScreenDocument>(
-      """{"name":"Probe","functions":[],"root":{"componentId":"","repetition":{"fields":{},"rows":[]}}}"""
+      """{"name":"Probe","functions":[],"root":{"componentId":"","repetition":{"fields":{},"rows":[]}}}""",
     )
   }
     .isSuccess
@@ -39,7 +39,7 @@ class ScopedComposeProjectionTest {
     .let { json ->
       fun read(name: String) =
         json.decodeFromString<ComponentRecordFile>(
-          File(root, "docs/design/fixtures/ui-builder/$name").readText()
+          File(root, "docs/design/fixtures/ui-builder/$name").readText(),
         )
       val m3 = read("m3-catalog-components-v1.json")
       val taken = m3.components.map { it.canonicalId }.toSet()
@@ -57,7 +57,7 @@ class ScopedComposeProjectionTest {
           root,
           "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid",
         )
-        .readText()
+        .readText(),
     )
 
   private fun source(document: DesignDocumentV1): String? {
@@ -67,7 +67,7 @@ class ScopedComposeProjectionTest {
       assertTrue(
         assertIs<ScreenDocumentProjection.Outcome.Refused>(projected).reasons.any {
           "shared generator support" in it
-        }
+        },
       )
       return null
     }
@@ -150,14 +150,14 @@ class ScopedComposeProjectionTest {
         it.copy(
           properties =
             it.properties +
-              ("data" to ListValueV1(listOf(ObjectValueV1(mapOf("gap" to StringValueV1("wide"))))))
+              ("data" to ListValueV1(listOf(ObjectValueV1(mapOf("gap" to StringValueV1("wide")))))),
         )
       }
     refused(wrong, "expected kotlin.Float")
     val missing =
       edit(fixture(), "loop") {
         it.copy(
-          properties = it.properties + ("data" to ListValueV1(listOf(ObjectValueV1(emptyMap()))))
+          properties = it.properties + ("data" to ListValueV1(listOf(ObjectValueV1(emptyMap())))),
         )
       }
     refused(missing, "missing row field `gap`")
@@ -191,7 +191,7 @@ class ScopedComposeProjectionTest {
       edit(base, "place") {
           it.copy(
             component =
-              DesignComponentInstanceV1("pair", mapOf("outerSpacing" to BindingValueV1("gap")))
+              DesignComponentInstanceV1("pair", mapOf("outerSpacing" to BindingValueV1("gap"))),
           )
         }
         .let {
@@ -251,7 +251,7 @@ class ScopedComposeProjectionTest {
           id = "inner",
           properties =
             mapOf(
-              "data" to ListValueV1(listOf(ObjectValueV1(mapOf("gap" to BindingValueV1("gap")))))
+              "data" to ListValueV1(listOf(ObjectValueV1(mapOf("gap" to BindingValueV1("gap"))))),
             ),
         )
     val nested =

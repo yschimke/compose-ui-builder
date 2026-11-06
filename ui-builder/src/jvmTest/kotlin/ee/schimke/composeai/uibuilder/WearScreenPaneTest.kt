@@ -53,7 +53,7 @@ class WearScreenPaneTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val reference =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -70,7 +70,7 @@ class WearScreenPaneTest {
       environment =
         JsonObject(
           weather.environment +
-            mapOf("widthDp" to JsonPrimitive(200), "heightDp" to JsonPrimitive(108))
+            mapOf("widthDp" to JsonPrimitive(200), "heightDp" to JsonPrimitive(108)),
         ),
     )
 
@@ -182,7 +182,7 @@ class WearScreenPaneTest {
       assertTrue(
         onAllNodesWithContentDescription("Watch screen", substring = true)
           .fetchSemanticsNodes()
-          .isEmpty()
+          .isEmpty(),
       )
     }
 
@@ -271,9 +271,9 @@ class WearScreenPaneTest {
       parentFile.mkdirs()
       writeBytes(
         checkNotNull(
-            Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
+            Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG),
           )
-          .bytes
+          .bytes,
       )
     }
   }

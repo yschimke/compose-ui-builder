@@ -55,7 +55,7 @@ fun UiBuilderReferenceDifferencePreview() {
           referencePreviewOverlay.settings.copy(
             mode = ReferenceDiffMode.Difference,
             alwaysShowBoxes = false,
-          )
+          ),
       ),
   )
 }
@@ -95,7 +95,7 @@ fun UiBuilderReferenceComponentPiecePreview() {
               right = 0.7f,
               bottom = 0.5f,
               componentId = "m3/text",
-            )
+            ),
           ),
       ),
   )
@@ -110,7 +110,7 @@ private const val COMPONENT_PIECE_SVG =
 
 internal val referencePreviewDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
-      Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject
+      Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject,
     )
     .document
 }
@@ -162,7 +162,7 @@ internal val referencePreviewOverlay: RestoredReference by lazy {
                 Base64.Default.encode(
                   ("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48">""" +
                       """<rect width="160" height="48" rx="24" fill="#b9c3ff"/></svg>""")
-                    .encodeToByteArray()
+                    .encodeToByteArray(),
                 ),
               widthPx = 160,
               heightPx = 48,
@@ -172,7 +172,7 @@ internal val referencePreviewOverlay: RestoredReference by lazy {
           right = 0.68f,
           bottom = 0.82f,
           componentId = "m3/button",
-        )
+        ),
       ),
     marks =
       listOf(

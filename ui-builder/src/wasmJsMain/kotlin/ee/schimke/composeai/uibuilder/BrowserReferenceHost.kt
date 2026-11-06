@@ -152,7 +152,7 @@ internal class BrowserReferenceHost(
       is ReferenceUrl.Figma ->
         ReferenceImportOutcome.Refused(
           "The web editor does not hold a Figma token, so it cannot render that frame. " +
-            FIGMA_PASTE_ADVICE
+            FIGMA_PASTE_ADVICE,
         )
       is ReferenceUrl.Image ->
         awaitImport({ fetchReferenceUrlPromise(parsed.url) }, "import-url", sourceUrl = parsed.url)
@@ -165,7 +165,11 @@ internal class BrowserReferenceHost(
   suspend fun snapshotDesign(revision: Long? = null): ReferenceImportOutcome {
     val result =
       http.execute(
-        ExportDesignRequestV1(designId = designId, revision = revision, format = ExportFormatV1.PNG)
+        ExportDesignRequestV1(
+          designId = designId,
+          revision = revision,
+          format = ExportFormatV1.PNG,
+        ),
       )
     val artifact =
       when (result) {
@@ -188,7 +192,7 @@ internal class BrowserReferenceHost(
         name = "Snapshot of this design",
         mediaType = artifact.mediaType,
         base64 = artifact.content,
-      )
+      ),
     )
   }
 
@@ -232,7 +236,7 @@ internal class BrowserReferenceHost(
         widthPx = picked.widthPx,
         heightPx = picked.heightPx,
         sourceUrl = sourceUrl,
-      )
+      ),
     )
   }
 
@@ -446,7 +450,7 @@ private suspend fun awaitJsString(promise: Promise<JsString>): String =
   }).then((response) => response.text().then((text) => JSON.stringify({
     status: response.status,
     body: text,
-  })))"""
+  })))""",
 )
 private external fun referenceFetch(
   method: String,
@@ -473,7 +477,7 @@ private external fun referenceFetch(
     .catch(() => JSON.stringify({
       error: 'the browser would not fetch that picture: the site allows no cross-origin reads, ' +
         'or this page may not reach it. Download it and import the file instead',
-    }))"""
+    }))""",
 )
 private external fun fetchReferenceUrlPromise(url: String): Promise<JsString>
 
@@ -497,7 +501,7 @@ private external fun fetchReferenceUrlPromise(url: String): Promise<JsString>
       setTimeout(() => { if (!(input.files && input.files.length)) settle(''); }, 500);
     }, { once: true });
     input.click();
-  })"""
+  })""",
 )
 private external fun pickReferenceFilePromise(): Promise<JsString>
 
@@ -517,7 +521,7 @@ private external fun pickReferenceFilePromise(): Promise<JsString>
       }
     };
     globalThis.addEventListener('paste', handler, true);
-  })"""
+  })""",
 )
 private external fun awaitReferencePastePromise(): Promise<JsString>
 
@@ -562,6 +566,6 @@ private external fun awaitReferencePastePromise(): Promise<JsString>
         return JSON.stringify({ error: 'the picture could not be read' });
       }
     };
-  }"""
+  }""",
 )
 internal external fun installReferenceBridge()

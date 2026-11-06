@@ -42,7 +42,7 @@ internal fun resolveFontSettings(
 ): ResolvedFontSettings {
   val features =
     FontSettings.formatFeatures(
-        FontSettings.parseFeatures(node.textProperty(FontSettings.FEATURE_PROPERTY))
+        FontSettings.parseFeatures(node.textProperty(FontSettings.FEATURE_PROPERTY)),
       )
       .ifEmpty { null }
   val axes = FontSettings.parseVariations(node.textProperty(FontSettings.VARIATION_PROPERTY))

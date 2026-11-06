@@ -91,7 +91,7 @@ class ReferenceComparisonTest {
         mapOf(
           "type" to JsonPrimitive(type),
           "value" to if (value is Number) JsonPrimitive(value) else JsonPrimitive(value.toString()),
-        )
+        ),
       )
     assertEquals(18f, text(mapOf("fontSizeSp" to literal("float", 18))).referenceFontSize()?.sp)
     assertEquals(

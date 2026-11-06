@@ -63,8 +63,8 @@ class AdaptiveListDetailTest {
                         "paneSizing" to value("enum", JsonPrimitive(policy)),
                         "fixedPaneWidthDp" to value("float", JsonPrimitive(width)),
                         "splitFraction" to value("float", JsonPrimitive(fraction)),
-                      )
-                  )
+                      ),
+                  ),
               )),
     )
   }
@@ -112,9 +112,9 @@ class AdaptiveListDetailTest {
                 mapOf(
                   "text" to
                     JsonObject(
-                      mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Extra"))
-                    )
-                )
+                      mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Extra")),
+                    ),
+                ),
               ),
           )
       val extraBox =
@@ -136,11 +136,11 @@ class AdaptiveListDetailTest {
                         pane.properties +
                           ("activePaneIndex" to
                             JsonObject(
-                              mapOf("type" to JsonPrimitive("int"), "value" to JsonPrimitive(2))
-                            ))
+                              mapOf("type" to JsonPrimitive("int"), "value" to JsonPrimitive(2)),
+                            )),
                       ),
                   ),
-              )
+              ),
         )
       setContent { MaterialTheme { UiBuilderSurface(changed) } }
       onNodeWithText("Extra").assertIsDisplayed()
@@ -217,7 +217,7 @@ class AdaptiveListDetailTest {
                   is Int -> JsonPrimitive(value)
                   else -> error("unexpected value")
                 },
-            )
+            ),
           )
         val pane = seed.nodes.getValue("panes")
         val changed =
@@ -233,9 +233,9 @@ class AdaptiveListDetailTest {
                             "activePaneIndex" to value("int", index),
                             "listPaneVisible" to value("bool", listVisible),
                             "detailPaneVisible" to value("bool", detailVisible),
-                          )
-                      )
-                  ))
+                          ),
+                      ),
+                  )),
           )
         setContent { MaterialTheme { UiBuilderSurface(changed) } }
         onNodeWithText(expected as String).assertIsDisplayed()
@@ -258,8 +258,8 @@ class AdaptiveListDetailTest {
                   "listPanePreferredWidthDp" to width(200),
                   "detailPanePreferredWidthDp" to width(300),
                   "extraPanePreferredWidthDp" to width(500),
-                )
-            )
+                ),
+            ),
         )
       setContent {
         CompositionLocalProvider(LocalUiBuilderUnrolled provides true) {

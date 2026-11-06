@@ -52,7 +52,7 @@ class TypedUnionNullablePropertyTest {
               componentId = "acme/device",
               properties =
                 JsonObject(properties.associate { (name, value) -> name to json(value) }),
-            )
+            ),
         ),
     )
 
@@ -94,7 +94,7 @@ class TypedUnionNullablePropertyTest {
         "status" to
           """{"type": "union", "case": "failed", "fields": {
             "message": {"type": "string", "value": "timeout"}, "seen": {"type": "null"},
-            "storedKb": {"type": "int", "value": 9007199254740993}}}"""
+            "storedKb": {"type": "int", "value": 9007199254740993}}}""",
       ),
     )
     val cases =
@@ -151,7 +151,7 @@ class TypedUnionNullablePropertyTest {
       json(
         """{"type": "union", "case": "failed", "fields": {
           "message": {"type": "string", "value": ""}, "seen": {"type": "null"},
-          "storedKb": {"type": "int", "value": 0}}}"""
+          "storedKb": {"type": "int", "value": 0}}}""",
       ),
       failed.status(),
     )
@@ -200,7 +200,7 @@ class TypedUnionNullablePropertyTest {
     assertEquals(
       json(
         """{"type": "object", "fields": {"name": {"type": "string", "value": ""},
-          "verified": {"type": "null"}}}"""
+          "verified": {"type": "null"}}}""",
       ),
       started.document.nodes.getValue("device").properties["owner"],
     )

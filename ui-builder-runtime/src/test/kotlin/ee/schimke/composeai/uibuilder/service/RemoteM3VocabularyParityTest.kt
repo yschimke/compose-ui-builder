@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 class RemoteM3VocabularyParityTest {
   private val catalog =
     PublishedCatalogFixtures.executor(
-        linkedSetOf("m3-catalog", CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
+        linkedSetOf("m3-catalog", CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID),
       )
       .listCatalogs()
       .single {

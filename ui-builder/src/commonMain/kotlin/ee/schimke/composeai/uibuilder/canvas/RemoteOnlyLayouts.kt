@@ -51,8 +51,8 @@ internal fun CollapsibleLinearLayout(
         visible.remove(
           visible.minWith(
             compareBy<Int> { priorities.getOrNull(it) ?: Float.POSITIVE_INFINITY }
-              .thenByDescending { it }
-          )
+              .thenByDescending { it },
+          ),
         )
       }
     }
@@ -66,7 +66,7 @@ internal fun CollapsibleLinearLayout(
           val share = if (totalWeight > 0f) (remaining * weight / totalWeight).toInt() else 0
           measurables[index].measure(
             if (vertical) Constraints(minHeight = share, maxHeight = share, maxWidth = crossMax)
-            else Constraints(minWidth = share, maxWidth = share, maxHeight = crossMax)
+            else Constraints(minWidth = share, maxWidth = share, maxHeight = crossMax),
           )
         } ?: eager[index]
     }

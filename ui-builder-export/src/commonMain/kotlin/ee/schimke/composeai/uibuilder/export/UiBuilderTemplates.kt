@@ -80,9 +80,9 @@ fun encodeNewDesignStates(state: List<NewDesignState>): String =
             "name" to JsonPrimitive(it.name),
             "kind" to JsonPrimitive(it.type.name),
             "initial" to it.initialValue,
-          )
+          ),
         )
-      }
+      },
     ),
   )
 
@@ -189,7 +189,7 @@ internal fun NewDesignState.declaration(): JsonObject =
       "nullable" to JsonPrimitive(false),
       "initialValue" to initialValue,
       "persistence" to JsonPrimitive("preview"),
-    )
+    ),
   )
 
 /**
@@ -203,7 +203,7 @@ fun mobileScreenEnvironment(environment: JsonObject): JsonObject =
       it["heightDp"] = JsonPrimitive(PIXEL_6_HEIGHT_DP)
       it["density"] = JsonPrimitive(PIXEL_6_DENSITY)
       it["exportDevices"] = JsonArray(MOBILE_EXPORT_DEVICES.map(::JsonPrimitive))
-    }
+    },
   )
 
 /**

@@ -84,7 +84,7 @@ class ProductionProjectFilesTest {
       .forEach { path ->
         assertContains(
           assertIs<ProductionContractResult.Invalid>(
-              ProductionProjectFiles.load(root, listOf(path))
+              ProductionProjectFiles.load(root, listOf(path)),
             )
             .issues
             .map { it.code },
@@ -95,7 +95,7 @@ class ProductionProjectFilesTest {
     git("add", "--", "Link.uid")
     assertContains(
       assertIs<ProductionContractResult.Invalid>(
-          ProductionProjectFiles.load(root, listOf("Link.uid"))
+          ProductionProjectFiles.load(root, listOf("Link.uid")),
         )
         .issues
         .map { it.code },
@@ -109,7 +109,7 @@ class ProductionProjectFilesTest {
     Files.copy(root.resolve("Library.uid"), root.resolve("[L]ibrary.uid"))
     val invalid =
       assertIs<ProductionContractResult.Invalid>(
-        ProductionProjectFiles.load(root, listOf("[L]ibrary.uid"))
+        ProductionProjectFiles.load(root, listOf("[L]ibrary.uid")),
       )
     assertContains(invalid.issues.map { it.code }, "UNTRACKED_INPUT")
   }

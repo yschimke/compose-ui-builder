@@ -16,7 +16,7 @@ class DialogDesignExportTest {
 
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
 
   private fun export(designId: String) =

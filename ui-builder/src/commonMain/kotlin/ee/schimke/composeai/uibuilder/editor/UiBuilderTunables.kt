@@ -204,7 +204,7 @@ internal fun UiBuilderDocument.tunableWrites(
                     "value" to
                       if (wrapper == "int") JsonPrimitive(round(value).toLong())
                       else JsonPrimitive(value),
-                  )
+                  ),
               )
             node.copy(properties = JsonObject(node.properties + (target.property to encoded)))
           }
@@ -216,8 +216,8 @@ internal fun UiBuilderDocument.tunableWrites(
                     val modifier = element as? JsonObject
                     if (index != target.index || modifier == null) element
                     else JsonObject(modifier + (target.field to modifierPrimitive(value)))
-                  }
-                )
+                  },
+                ),
             )
         }
     }
@@ -277,7 +277,7 @@ private fun JsonElement?.number(): Double? {
 }
 
 private fun ee.schimke.composeai.uibuilder.export.UiBuilderNode.modifierAt(
-  target: TunableTarget.Modifier
+  target: TunableTarget.Modifier,
 ): JsonObject? =
   (modifiers.getOrNull(target.index) as? JsonObject)?.takeIf { it.wrapper() == target.type }
 

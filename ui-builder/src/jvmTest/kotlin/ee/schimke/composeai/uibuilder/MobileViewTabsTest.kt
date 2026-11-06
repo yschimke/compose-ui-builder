@@ -48,7 +48,7 @@ class MobileViewTabsTest {
         .reduce(
           initial,
           UiBuilderEditorEvent.UpdateEnvironment(
-            settings.copy(exportDevices = listOf(phone.id, tablet.id))
+            settings.copy(exportDevices = listOf(phone.id, tablet.id)),
           ),
         )
         .document
@@ -235,9 +235,9 @@ class MobileViewTabsTest {
     private val fixture =
       Json.parseToJsonElement(
           checkNotNull(
-              MobileViewTabsTest::class.java.getResource("/jetcaster-discover-operations-v1.json")
+              MobileViewTabsTest::class.java.getResource("/jetcaster-discover-operations-v1.json"),
             )
-            .readText()
+            .readText(),
         )
         .jsonObject
   }

@@ -105,7 +105,7 @@ class EditorDesktopPointerInteractionTest {
       runOnIdle {
         assertTrue(
           assertNotNull(latest).document.nodes.getValue("main-episode-title").properties !=
-            originalText
+            originalText,
         )
       }
 
@@ -123,7 +123,7 @@ class EditorDesktopPointerInteractionTest {
       runOnIdle {
         assertTrue(
           assertNotNull(latest).document.nodes.getValue("main-episode-title").properties !=
-            originalText
+            originalText,
         )
       }
     }
@@ -754,9 +754,9 @@ class EditorDesktopPointerInteractionTest {
           checkNotNull(
               EditorDesktopPointerInteractionTest::class
                 .java
-                .getResource("/jetcaster-discover-operations-v1.json")
+                .getResource("/jetcaster-discover-operations-v1.json"),
             )
-            .readText()
+            .readText(),
         )
         .jsonObject
   }

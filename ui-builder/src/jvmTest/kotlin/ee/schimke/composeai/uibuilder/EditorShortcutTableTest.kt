@@ -283,7 +283,7 @@ class EditorShortcutTableTest {
       editorShortcutFor(
         EditorChord(Key.G, command = true, shift = false, alt = true),
         editing = false,
-      )
+      ),
     )
   }
 

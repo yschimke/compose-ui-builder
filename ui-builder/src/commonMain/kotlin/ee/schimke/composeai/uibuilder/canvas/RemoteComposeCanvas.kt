@@ -70,8 +70,8 @@ internal fun RemoteComposeDocument(
         remember {
           Result.failure(
             IllegalArgumentException(
-              "Remote Compose node needs either documentBase64 or documentUrl"
-            )
+              "Remote Compose node needs either documentBase64 or documentUrl",
+            ),
           )
         }
     }
@@ -270,7 +270,7 @@ internal fun decodeRemoteComposeDocument(encoded: String): Result<RcDocument> = 
 }
 
 private fun UiBuilderNode.remoteComposeNamedValues(
-  state: Map<String, String?>
+  state: Map<String, String?>,
 ): Map<String, RcNamedValue> {
   val declarations = obj("namedValues")["value"] as? JsonObject ?: return emptyMap()
   return declarations

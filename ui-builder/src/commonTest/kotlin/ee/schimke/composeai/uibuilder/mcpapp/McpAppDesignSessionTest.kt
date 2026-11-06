@@ -251,16 +251,17 @@ class McpAppDesignSessionTest {
                     mapOf(
                       "text" to
                         JsonObject(
-                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi"))
-                        )
-                    )
+                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi")),
+                        ),
+                    ),
                   ),
-              ))
+              )),
       )
     val root = document.nodes.getValue("root")
     val withChild =
       document.copy(
-        nodes = document.nodes + ("root" to root.copy(slots = mapOf("children" to listOf("title"))))
+        nodes =
+          document.nodes + ("root" to root.copy(slots = mapOf("children" to listOf("title")))),
       )
     val host = FakeMcpAppHost(file.resourceUri, UidDesignFiles.encode(withChild))
     val session = session(host)
@@ -319,8 +320,8 @@ class McpAppDesignSessionTest {
       JsonObject(
         mapOf(
           "openai/message" to
-            JsonObject(mapOf("target" to JsonPrimitive("active"), "send" to JsonPrimitive(true)))
-        )
+            JsonObject(mapOf("target" to JsonPrimitive("active"), "send" to JsonPrimitive(true))),
+        ),
       ),
       message["_meta"],
     )
@@ -397,8 +398,10 @@ class McpAppDesignSessionTest {
           JsonObject(
             mapOf(
               "text" to
-                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi")))
-            )
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi")),
+                ),
+            ),
           ),
       )
     val root = seed.nodes.getValue("root")
@@ -406,7 +409,7 @@ class McpAppDesignSessionTest {
       nodes =
         seed.nodes +
           ("title" to title) +
-          ("root" to root.copy(slots = mapOf("children" to listOf("title"))))
+          ("root" to root.copy(slots = mapOf("children" to listOf("title")))),
     )
   }
 }
@@ -492,7 +495,7 @@ internal fun <T> runImmediate(block: suspend () -> T): T {
       override fun resumeWith(result: Result<T>) {
         completed = result
       }
-    }
+    },
   )
   return completed?.getOrThrow() ?: error("the fake host suspended unexpectedly")
 }

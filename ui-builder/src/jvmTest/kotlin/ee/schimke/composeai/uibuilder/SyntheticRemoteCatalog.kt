@@ -138,7 +138,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = 1,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p("themePrimaryColor", "string")
@@ -219,7 +219,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p("contentAlignment", "string")
@@ -238,7 +238,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p(
@@ -262,7 +262,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p(
@@ -287,7 +287,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = 1,
                 roles = "Container Leaf",
                 traits = "AnyContent",
-              )
+              ),
             ),
         ) {
           p("data", "object", required = true)
@@ -307,7 +307,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "DrawOperation",
-              )
+              ),
             ),
         ),
         syntheticComponent("draw/rect", "Rectangle", "Leaf", traits = "DrawOperation") {
@@ -329,7 +329,7 @@ internal val SYNTHETIC_REMOTE_JSON: String by lazy {
                 max = null,
                 roles = "Scaffold Container Leaf",
                 traits = "DrawOperation",
-              )
+              ),
             ),
         ) {
           p("from", "number", "object")

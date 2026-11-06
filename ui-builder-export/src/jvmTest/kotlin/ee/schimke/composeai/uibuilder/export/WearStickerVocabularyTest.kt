@@ -39,7 +39,7 @@ class WearStickerVocabularyTest {
             "properties": {"text": {"type": "binding", "value": "label"}$text}}
         }
       }
-      """
+      """,
     )
 
   private fun component(document: DesignDocumentV1) =
@@ -61,7 +61,7 @@ class WearStickerVocabularyTest {
           """, "textAlign": {"type": "enum", "value": "start"},
             "style": {"type": "enum", "value": "bodyMedium"}""",
           checked = false,
-        )
+        ),
       )
     val tree = row.root.toString()
     assertTrue("androidx.compose.ui.text.style.TextAlign" in tree && "Start" in tree, tree)
@@ -72,12 +72,12 @@ class WearStickerVocabularyTest {
   @Test
   fun `the gate admits Wear's MaterialTheme and nothing else under androidx wear compose`() {
     assertTrue(
-      "androidx.wear.compose.material3.MaterialTheme" in ScreenExportGate.EXPRESSION_PACKAGES
+      "androidx.wear.compose.material3.MaterialTheme" in ScreenExportGate.EXPRESSION_PACKAGES,
     )
     assertTrue(
       ScreenExportGate.EXPRESSION_PACKAGES.none {
         it.startsWith("androidx.wear") && it != "androidx.wear.compose.material3.MaterialTheme"
-      }
+      },
     )
   }
 
@@ -89,8 +89,8 @@ class WearStickerVocabularyTest {
           """"componentId": "wear-m3/split-checkbox-button",
             "properties": {"checked": {"type": "binding", "value": "checked"},
               "toggleContentDescription": {"type": "binding", "value": "label"}},
-            "eventBindings": {"checkedChange": [], "containerClick": []}"""
-        )
+            "eventBindings": {"checkedChange": [], "containerClick": []}""",
+        ),
       )
     val parameters = row.parameters.associateBy { it.name }
     assertIs<ScreenParameter.Callback>(parameters["onControlCheckedChange"], parameters.toString())
@@ -110,8 +110,8 @@ class WearStickerVocabularyTest {
           document(
             """"componentId": "$component",
               "properties": {"selected": {"type": "binding", "value": "checked"}},
-              "eventBindings": {"$event": []}"""
-          )
+              "eventBindings": {"$event": []}""",
+          ),
         )
       val name = "onControl" + event.replaceFirstChar { it.uppercaseChar() }
       assertTrue(

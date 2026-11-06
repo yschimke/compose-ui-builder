@@ -63,7 +63,7 @@ class ValueKindWriteRulesTest {
         DesignOperation.InsertNode(
           image("assetKey" to typed("string", "avatar-lain")),
           parent = ParentSlot("column", "children"),
-        )
+        ),
       )
 
     assertEquals(RejectionCode.INVALID_PROPERTY, rejected.code)
@@ -82,7 +82,7 @@ class ValueKindWriteRulesTest {
       DesignOperation.InsertNode(
         image("assetKey" to typed("assetKey", GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY)),
         parent = ParentSlot("column", "children"),
-      )
+      ),
     )
     val withImage =
       document(image("assetKey" to typed("assetKey", GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY)))

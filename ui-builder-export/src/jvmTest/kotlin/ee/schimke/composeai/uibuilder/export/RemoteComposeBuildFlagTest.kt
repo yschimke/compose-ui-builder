@@ -15,7 +15,7 @@ class RemoteComposeBuildFlagTest {
     ignoreUnknownKeys = true
   }
     .decodeFromString<UiBuilderDocument>(
-      File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
+      File(root, "experiments/remote-state-selection/bound-actions.uid").readText(),
     )
 
   @Test
@@ -53,7 +53,7 @@ class RemoteComposeBuildFlagTest {
       assertTrue(
         assertIs<RecordFreeExport.Generated.Refused>(result).reasons.any {
           "disabled in this build" in it
-        }
+        },
       )
   }
 
@@ -67,7 +67,7 @@ class RemoteComposeBuildFlagTest {
       assertTrue(
         assertIs<InlineRemoteContentExporter.Result.Refused>(result).reasons.any {
           "disabled in this build" in it
-        }
+        },
       )
   }
 }

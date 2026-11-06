@@ -32,8 +32,8 @@ class RemoteDrawingPathExportTest {
             "modifiers":[{"type":"size","widthDp":96,"heightDp":96}],
             "slots":{"ops":[$ops]}},
           $nodes}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun exported(document: UiBuilderDocument, name: String): String =
@@ -103,9 +103,9 @@ class RemoteDrawingPathExportTest {
                   properties =
                     JsonObject(
                       clip.nodes.getValue("lens").properties +
-                        ("exclude" to Json.parseToJsonElement("""{"type":"bool","value":true}"""))
-                    )
-                ))
+                        ("exclude" to Json.parseToJsonElement("""{"type":"bool","value":true}""")),
+                    ),
+                )),
       )
 
     assertContains(exported(excluded, "PathClipOut"), "Z\"), ClipOp.Difference); ")
@@ -197,9 +197,9 @@ class RemoteDrawingPathExportTest {
                     JsonObject(
                       morph.nodes.getValue("mouth").properties +
                         ("toPathData" to
-                          Json.parseToJsonElement("""{"type":"string","value":"M4 12 L20 12"}"""))
-                    )
-                ))
+                          Json.parseToJsonElement("""{"type":"string","value":"M4 12 L20 12"}""")),
+                    ),
+                )),
       )
 
     val refused =

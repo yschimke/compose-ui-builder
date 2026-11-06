@@ -65,13 +65,13 @@ object LauncherWidgetCodeExporter {
       document.nodes[rootId] ?: return Result.Refused(listOf("the root node `$rootId` is missing"))
     if (root.componentId != rootComponentId) {
       return Result.Refused(
-        listOf("the root is `${root.componentId}`, not a launcher widget (`$rootComponentId`)")
+        listOf("the root is `${root.componentId}`, not a launcher widget (`$rootComponentId`)"),
       )
     }
     val contentIds = root.slots["content"].orEmpty()
     if (contentIds.size > 1) {
       return Result.Refused(
-        listOf("the launcher widget holds one body; this design has ${contentIds.size}")
+        listOf("the launcher widget holds one body; this design has ${contentIds.size}"),
       )
     }
 
@@ -174,7 +174,7 @@ object LauncherWidgetCodeExporter {
       appendLine()
       // A catalog's label is authored text, so it is escaped like any other string the file writes.
       appendLine(
-        "@Preview(name = ${previewLabel.quoted()}, widthDp = $widthDp, heightDp = $heightDp)"
+        "@Preview(name = ${previewLabel.quoted()}, widthDp = $widthDp, heightDp = $heightDp)",
       )
       appendLine("@Composable")
       appendLine("fun ${name}Preview() =")

@@ -38,7 +38,7 @@ class CatalogPreviewPaneTest {
           {"kind": "hologram"},
           {"kind": "frame"}
         ]}}
-        """
+        """,
       )
       .jsonObject
 

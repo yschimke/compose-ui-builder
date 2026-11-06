@@ -30,12 +30,12 @@ class UnadvertisedComponentTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val jetcaster =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val confetti =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/confetti-schedule-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/confetti-schedule-operations-v1.json")).jsonObject,
       )
       .document
 

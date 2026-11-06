@@ -55,7 +55,7 @@ object ProductionGenerationCli {
         error(
           result.issues.joinToString("\n") {
             "${it.file}:${it.nodeId ?: it.declaration ?: ""} [${it.code}] ${it.message}"
-          }
+          },
         )
     }
 

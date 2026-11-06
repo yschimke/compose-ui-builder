@@ -35,7 +35,7 @@ object UiBuilderBoard {
           mapOf(
             "verticalSpacingDp" to literal("float", JsonPrimitive(SPACING_DP)),
             "horizontalAlignment" to literal("enum", JsonPrimitive("center")),
-          )
+          ),
         ),
       modifiers = JsonArray(listOf(JsonObject(mapOf("type" to JsonPrimitive("fillMaxWidth"))))),
     )

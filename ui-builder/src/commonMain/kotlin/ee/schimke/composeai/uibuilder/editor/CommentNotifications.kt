@@ -406,7 +406,7 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
 
   /** What went wrong, as a state rather than a crash: the browser refusing, a host that threw. */
   private suspend fun settle(
-    block: suspend () -> CommentNotificationsState
+    block: suspend () -> CommentNotificationsState,
   ): CommentNotificationsState =
     try {
       block()

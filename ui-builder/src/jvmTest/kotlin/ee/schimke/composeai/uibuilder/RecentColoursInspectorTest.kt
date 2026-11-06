@@ -42,14 +42,15 @@ import org.jetbrains.skia.Image
 class RecentColoursInspectorTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val document =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(
-            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json")).readText()
+            checkNotNull(javaClass.getResource("/jetcaster-discover-operations-v1.json"))
+              .readText(),
           )
-          .jsonObject
+          .jsonObject,
       )
       .document
 
@@ -123,9 +124,9 @@ class RecentColoursInspectorTest {
       parentFile.mkdirs()
       writeBytes(
         checkNotNull(
-            Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
+            Image.makeFromBitmap(screenshot.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG),
           )
-          .bytes
+          .bytes,
       )
     }
   }

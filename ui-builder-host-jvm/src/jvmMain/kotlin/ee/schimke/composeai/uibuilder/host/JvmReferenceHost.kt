@@ -78,7 +78,7 @@ class JvmReferenceHost(
       }
     if (size > MAX_REFERENCE_BYTES) {
       return ReferenceImportOutcome.Refused(
-        "A reference must be under ${MAX_REFERENCE_BYTES / (1024 * 1024)} MB."
+        "A reference must be under ${MAX_REFERENCE_BYTES / (1024 * 1024)} MB.",
       )
     }
     return imported(Files.readAllBytes(path), path.fileName.toString(), sourceUrl = null)
@@ -103,12 +103,12 @@ class JvmReferenceHost(
     val nodeId =
       link.nodeId
         ?: return ReferenceImportOutcome.Refused(
-          "That links the whole file. Copy a link to one frame instead."
+          "That links the whole file. Copy a link to one frame instead.",
         )
     val token =
       figmaToken()
         ?: return ReferenceImportOutcome.Refused(
-          "Set FIGMA_TOKEN to a Figma personal access token to fetch frames. $FIGMA_PASTE_ADVICE"
+          "Set FIGMA_TOKEN to a Figma personal access token to fetch frames. $FIGMA_PASTE_ADVICE",
         )
     val api =
       "https://api.figma.com/v1/images/${link.fileKey}" +
@@ -132,7 +132,7 @@ class JvmReferenceHost(
           403 -> "Figma refused the token (403): it cannot read that file."
           404 -> "Figma has no such file (404)."
           else -> "Figma answered ${answer.statusCode()}."
-        }
+        },
       )
     }
     val imageUrl =
@@ -189,7 +189,7 @@ class JvmReferenceHost(
         widthPx = decoded?.width ?: 0,
         heightPx = decoded?.height ?: 0,
         sourceUrl = sourceUrl,
-      )
+      ),
     )
   }
 

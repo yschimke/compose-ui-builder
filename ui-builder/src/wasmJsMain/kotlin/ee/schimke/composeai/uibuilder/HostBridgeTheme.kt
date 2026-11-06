@@ -121,7 +121,7 @@ private fun ColorScheme.withRole(role: String, color: Color): ColorScheme =
   } catch (e) {
     return null;
   }
-}"""
+}""",
 )
 internal external fun readHostTheme(): String?
 
@@ -133,6 +133,6 @@ internal external fun readHostTheme(): String?
     if (!data || data.type !== 'compose-ui-builder/theme' || !data.theme) return;
     onTheme(typeof data.theme === 'string' ? data.theme : JSON.stringify(data.theme));
   });
-}"""
+}""",
 )
 internal external fun listenForHostTheme(onTheme: (String) -> Unit)

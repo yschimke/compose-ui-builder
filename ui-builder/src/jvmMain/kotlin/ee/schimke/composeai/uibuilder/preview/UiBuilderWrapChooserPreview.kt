@@ -27,7 +27,7 @@ fun UiBuilderWrapChooserPreview() {
           kind = EditorComponentKind.Container,
           group = "Layout",
         )
-      }
+      },
     )
   MaterialTheme(colorScheme = darkColorScheme()) {
     Surface { WrapChooserPanel(choices, highlighted = 1, onPick = {}, Modifier.padding(20.dp)) }

@@ -49,11 +49,11 @@ class CanvasAdapterIdTest {
                         mapOf(
                           "type" to JsonPrimitive("string"),
                           "value" to JsonPrimitive(label),
-                        )
-                      )
-                  )
+                        ),
+                      ),
+                  ),
                 ),
-            )
+            ),
         ),
     )
 
@@ -117,12 +117,12 @@ class CanvasAdapterIdTest {
                             mapOf(
                               "type" to JsonPrimitive("string"),
                               "value" to JsonPrimitive("Mapped"),
-                            )
-                          )
-                      )
-                    )
+                            ),
+                          ),
+                      ),
+                    ),
                 )
-              }
+              },
           )
         }
       val mapping =
@@ -139,7 +139,7 @@ class CanvasAdapterIdTest {
       }
 
       assertTrue(
-        onAllNodesWithText("Mapped", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        onAllNodesWithText("Mapped", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(),
       )
     }
 

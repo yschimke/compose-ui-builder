@@ -28,7 +28,7 @@ class RemoteRepetitionCanvasProofTest {
       fun render(suffix: String): androidx.compose.ui.graphics.PixelMap {
         val document =
           Json.decodeFromString<UiBuilderDocument>(
-            File(input, "rows-$density.$suffix.json").readText()
+            File(input, "rows-$density.$suffix.json").readText(),
           )
         return renderComposeScene(100 * density, 120 * density, Density(density.toFloat())) {
             UiBuilderSurface(document)
@@ -46,7 +46,7 @@ class RemoteRepetitionCanvasProofTest {
       ImageIO.write(image, "png", File(output, "canvas-$density.png"))
       val player =
         ImageIO.read(
-          File(project, "experiments/remote-compose-poc/build/repetition-proof/rows-$density.png")
+          File(project, "experiments/remote-compose-poc/build/repetition-proof/rows-$density.png"),
         )
       assertEquals(image.width, player.width)
       assertEquals(image.height, player.height)

@@ -67,8 +67,8 @@ public object InlineRemoteContentExporter {
       return Result.Refused(
         listOf(
           "`$nodeId` is `${node.componentId}`, not remote content — this generator writes the " +
-            "body of a `$REMOTE_COMPOSE_INLINE_COMPONENT_ID` node"
-        )
+            "body of a `$REMOTE_COMPOSE_INLINE_COMPONENT_ID` node",
+        ),
       )
     }
 
@@ -178,7 +178,7 @@ public object InlineRemoteContentExporter {
         buildString {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
           appendLine(
-            "// Components of design ${document.id.escapeComment()} revision ${document.revision}."
+            "// Components of design ${document.id.escapeComment()} revision ${document.revision}.",
           )
           appendLine("@file:Suppress(\"RestrictedApi\")")
           appendLine()
@@ -226,7 +226,7 @@ public object InlineRemoteContentExporter {
         buildString {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
           appendLine(
-            "// $description " + "${document.id.escapeComment()} revision ${document.revision}."
+            "// $description " + "${document.id.escapeComment()} revision ${document.revision}.",
           )
           appendLine("@file:Suppress(\"RestrictedApi\")")
           appendLine()
@@ -241,7 +241,7 @@ public object InlineRemoteContentExporter {
           // Pictures as parameters without defaults: there is no generated preview, and the call
           // site is the application's.
           appendLine(
-            "fun $name(${emitter.imageParameters.joinToString { "${it.identifier}: RemoteImageBitmap" }}) {"
+            "fun $name(${emitter.imageParameters.joinToString { "${it.identifier}: RemoteImageBitmap" }}) {",
           )
           emitter.stateLocals().forEach { appendLine("$INDENT$it") }
           if (emitter.usesTheme) {

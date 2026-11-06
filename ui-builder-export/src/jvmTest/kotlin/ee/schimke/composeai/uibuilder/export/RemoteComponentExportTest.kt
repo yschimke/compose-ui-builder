@@ -46,7 +46,7 @@ class RemoteComponentExportTest {
             "modifiers": [{"type": "fillMaxWidth"}]}
         }
       }
-      """
+      """,
       )
       .toUiBuilderDocument()
 
@@ -105,7 +105,7 @@ class RemoteComponentExportTest {
                 "properties": {"text": {"type": "binding", "value": "content"}}}
             }
           }
-          """
+          """,
         )
         .toUiBuilderDocument()
     val result = InlineRemoteContentExporter.exportComponents(card)
@@ -134,7 +134,7 @@ class RemoteComponentExportTest {
           "components": {$components},
           "nodes": {$nodes}
         }
-        """
+        """,
       )
       .toUiBuilderDocument()
 
@@ -154,7 +154,7 @@ class RemoteComponentExportTest {
           "card_one": {"id": "card_one", "componentId": "remote-m3/remote-card",
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -181,7 +181,7 @@ class RemoteComponentExportTest {
           "card": {"id": "card", "componentId": "remote-m3/remote-card",
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -204,7 +204,7 @@ class RemoteComponentExportTest {
               "borderWidthDp": {"type": "int", "value": 2}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -229,7 +229,7 @@ class RemoteComponentExportTest {
               "borderColor": {"type": "colorToken", "value": "outline"}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -254,7 +254,7 @@ class RemoteComponentExportTest {
               "enabled": {"type": "binding", "value": "enabled"},
               "strokeWidth": {"type": "binding", "value": "strokeWidth"}}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -279,7 +279,7 @@ class RemoteComponentExportTest {
             "properties": {"indeterminate": {"type": "bool", "value": true},
               "strokeWidth": {"type": "int", "value": 8}}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -302,7 +302,7 @@ class RemoteComponentExportTest {
             "properties": {"indeterminate": {"type": "bool", "value": true},
               "progress": {"type": "float", "value": 0.5}}}
           """,
-        )
+        ),
       )
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
   }
@@ -322,7 +322,7 @@ class RemoteComponentExportTest {
               "contentColor": {"type": "colorToken", "value": "onSurface"}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -351,7 +351,7 @@ class RemoteComponentExportTest {
             "properties": {"containerColor": {"type": "colorToken", "value": "not a role"}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     assertIs<InlineRemoteContentExporter.Result.Refused>(result, result.toString())
   }
@@ -370,7 +370,7 @@ class RemoteComponentExportTest {
             "properties": {"borderColor": {"type": "binding", "value": "borderColor"}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -394,7 +394,7 @@ class RemoteComponentExportTest {
               "indicatorRadius": {"type": "int", "value": 3},
               "padding": {"type": "int", "value": 2}}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -421,7 +421,7 @@ class RemoteComponentExportTest {
               "contentColor": {"type": "colorToken", "value": "onPrimary"}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
@@ -452,7 +452,7 @@ class RemoteComponentExportTest {
                 {"type": "binding", "value": "on"}]}},
             "eventBindings": {"click": []}}
           """,
-        )
+        ),
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source

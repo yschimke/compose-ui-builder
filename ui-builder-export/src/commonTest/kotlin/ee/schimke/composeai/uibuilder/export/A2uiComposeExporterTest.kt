@@ -97,7 +97,7 @@ class A2uiComposeExporterTest {
   fun `a design becomes a composable that sends its own payload to the processor`() {
     val result =
       assertIs<A2uiComposeExporter.Result.Emitted>(
-        A2uiComposeExporter.export(document(booking), packageName = "com.example.a2ui")
+        A2uiComposeExporter.export(document(booking), packageName = "com.example.a2ui"),
       )
     val source = result.source
 
@@ -167,11 +167,11 @@ class A2uiComposeExporterTest {
                 put("variable", "fullName")
               }
             },
-        )
+        ),
       )
     val source =
       assertIs<A2uiComposeExporter.Result.Emitted>(
-          A2uiComposeExporter.export(document(nodes, state))
+          A2uiComposeExporter.export(document(nodes, state)),
         )
         .source
 
@@ -182,7 +182,7 @@ class A2uiComposeExporterTest {
     assertTrue(
       source.indexOf("A2uiCreateSurfaceMessage(") < source.indexOf("A2uiUpdateDataModelMessage(") &&
         source.indexOf("A2uiUpdateDataModelMessage(") <
-          source.indexOf("A2uiUpdateComponentsMessage(")
+          source.indexOf("A2uiUpdateComponentsMessage("),
     )
     // A snippet has no package line.
     assertTrue(!source.contains("\npackage "), source)
@@ -234,7 +234,7 @@ class A2uiComposeExporterTest {
     assertEquals(
       "listOf(\"a\", 1, null)",
       A2uiComposeExporter.literal(
-        JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1), JsonNull))
+        JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive(1), JsonNull)),
       ),
     )
     // A value too wide for one line breaks out one entry per line, each closing at its own indent.
@@ -244,7 +244,7 @@ class A2uiComposeExporterTest {
           buildJsonObject {
             put("label", "Option $label")
             put("value", label.lowercase())
-          }
+          },
         )
       }
     }
@@ -263,7 +263,7 @@ class A2uiComposeExporterTest {
     val doc = document(booking)
     val generated =
       assertIs<RecordFreeExport.Generated.Emitted>(
-        RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.A2UI, "com.example")
+        RecordFreeExport.generate(doc, UiBuilderCatalogPlatform.A2UI, "com.example"),
       )
     assertEquals("BookingScreen", generated.composableName)
     assertTrue("A2uiComponentPayload(" in generated.source)
@@ -334,7 +334,7 @@ private fun a2uiUiBuilderDocument(
                 mapOf(
                   "text" to literal("string", JsonPrimitive("Hello, A2UI")),
                   "variant" to literal("enum", JsonPrimitive("h2")),
-                )
+                ),
               ),
             modifiers = JsonArray(emptyList()),
           ),

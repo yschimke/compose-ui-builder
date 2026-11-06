@@ -146,8 +146,8 @@ class FigmaSnapshotImporterTest {
       snapshot.copy(
         root =
           snapshot.root.copy(
-            stamp = FigmaStamp(designId = "checkout", nodeId = "screen", revision = 7)
-          )
+            stamp = FigmaStamp(designId = "checkout", nodeId = "screen", revision = 7),
+          ),
       )
     val imported = FigmaSnapshotImporter(catalog, map).import(stamped, designId = "checkout")
     assertEquals(listOf("screen"), UiBuilderReducer.replay(imported.operations).document.roots)
@@ -182,7 +182,7 @@ class FigmaSnapshotImporterTest {
               width = 100.0,
               height = 40.0,
               instance = FigmaInstance(componentSet = "Button", component = "State=Enabled"),
-            )
+            ),
           ),
       )
     val imported = FigmaSnapshotImporter(catalog, map).import(FigmaSnapshot(root = bare), "bare")
@@ -204,8 +204,8 @@ class FigmaSnapshotImporterTest {
               width = 40.0,
               height = 40.0,
               fill = FigmaPaint(color = "#FF6750A4"),
-            )
-          )
+            ),
+          ),
       )
     val imported = FigmaSnapshotImporter(catalog, map).import(FigmaSnapshot(root = ellipse), "e")
     assertEquals(

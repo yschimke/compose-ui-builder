@@ -20,7 +20,7 @@ object ExportFigmaScene {
     val map =
       FigmaComponentMap.parse(
         checkNotNull(ExportFigmaScene::class.java.getResource("/m3-catalog-figma-map-v1.json"))
-          .readText()
+          .readText(),
       )
     val scene =
       FigmaSceneExporter(map)

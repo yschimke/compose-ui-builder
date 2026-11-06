@@ -26,7 +26,7 @@ class ReferencePiecePromotionTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
   private val initial = reducer.initial(document, selectedNodeId = "discover-grid")
@@ -64,7 +64,7 @@ class ReferencePiecePromotionTest {
     val inserted = promoted.document.nodes.values.first { it.id !in document.nodes }
     assertEquals("m3/text", inserted.componentId)
     assertTrue(
-      promoted.document.nodes.getValue(target.nodeId).slots[target.slot]!!.contains(inserted.id)
+      promoted.document.nodes.getValue(target.nodeId).slots[target.slot]!!.contains(inserted.id),
     )
     // The picture is gone: the real thing is standing where it was.
     assertTrue(promoted.reference.pieces.isEmpty())

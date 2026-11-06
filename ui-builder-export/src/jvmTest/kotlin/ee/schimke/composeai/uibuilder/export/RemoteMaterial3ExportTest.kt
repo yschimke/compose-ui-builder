@@ -78,7 +78,7 @@ class RemoteMaterial3ExportTest {
               put("contentDescription", wrapped("string", JsonPrimitive("Home")))
               put("tint", wrapped("colorToken", JsonPrimitive("primary")))
             },
-        )
+        ),
       )
 
     assertTrue("imageVector = Icons.Filled.Home.toRemoteImageVector()" in source, source)
@@ -110,8 +110,8 @@ class RemoteMaterial3ExportTest {
             REMOTE_ICON_COMPONENT_ID,
             properties =
               buildJsonObject { put("imageVector", wrapped("enum", JsonPrimitive("not-an-icon"))) },
-          )
-        )
+          ),
+        ),
       )
 
     val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
@@ -151,7 +151,7 @@ class RemoteMaterial3ExportTest {
   fun `the ids and records are the published catalog's`() {
     val published =
       kotlinx.serialization.json.Json.parseToJsonElement(
-          fixture("remote-m3-published-v1.json").readText()
+          fixture("remote-m3-published-v1.json").readText(),
         )
         .let { it as JsonObject }
         .getValue("statusSemantics")

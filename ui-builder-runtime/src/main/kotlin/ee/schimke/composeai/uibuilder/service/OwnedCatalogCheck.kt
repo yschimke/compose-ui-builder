@@ -62,7 +62,7 @@ internal object OwnedCatalogCheck {
       }
       if (route is CatalogExportRouting.Route.Unsupported) {
         add(
-          "$catalogId: declares ${route.adapter}/v${route.version}, which this build does not ship"
+          "$catalogId: declares ${route.adapter}/v${route.version}, which this build does not ship",
         )
       }
       val published = templates ?: CatalogSeedTemplates(catalogId, emptyList())
@@ -85,7 +85,7 @@ internal object OwnedCatalogCheck {
             .toDesignDocumentV1()
         executor.validate(document, catalog)?.let {
           add(
-            "$catalogId/$templateId: does not validate: ${it.code} ${it.nodeId ?: ""} ${it.message}"
+            "$catalogId/$templateId: does not validate: ${it.code} ${it.nodeId ?: ""} ${it.message}",
           )
         }
         exportRefusal(document, route, catalog, packComponents, exportRecord)?.let {

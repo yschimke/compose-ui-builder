@@ -30,7 +30,7 @@ class ExportDevicesTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -48,7 +48,7 @@ class ExportDevicesTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          settings.copy(exportDevices = listOf("id:pixel_6", "id:pixel_fold"))
+          settings.copy(exportDevices = listOf("id:pixel_6", "id:pixel_fold")),
         ),
       )
 
@@ -114,7 +114,7 @@ class ExportDevicesTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(exportDevices = listOf("id:pixel_6"))
+          initial.document.screenEnvironmentSettings().copy(exportDevices = listOf("id:pixel_6")),
         ),
       )
     val current = withDevices.document.screenEnvironmentSettings()
@@ -131,7 +131,7 @@ class ExportDevicesTest {
             locale = current.locale,
             theme = current.theme,
             layoutDirection = current.layoutDirection,
-          )
+          ),
         ),
       )
 
@@ -169,21 +169,21 @@ class ExportDevicesTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(exportDevices = listOf("id:pixel_6"))
+          initial.document.screenEnvironmentSettings().copy(exportDevices = listOf("id:pixel_6")),
         ),
       )
     val cleared =
       reducer.reduce(
         chosen,
         UiBuilderEditorEvent.UpdateEnvironment(
-          chosen.document.screenEnvironmentSettings().copy(exportDevices = emptyList())
+          chosen.document.screenEnvironmentSettings().copy(exportDevices = emptyList()),
         ),
       )
 
     val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(chosen, cleared))
     val mutation =
       assertIs<UpdateEnvironmentMutationV1>(
-        assertIs<DesignCommandV1>(submission.toWire()).operations.single()
+        assertIs<DesignCommandV1>(submission.toWire()).operations.single(),
       )
     assertTrue(
       mutation.changes.single() is ResetExportDevicesEnvironmentChangeV1,
@@ -201,7 +201,7 @@ class ExportDevicesTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(exportDevices = devices)
+          initial.document.screenEnvironmentSettings().copy(exportDevices = devices),
         ),
       )
     val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, next))

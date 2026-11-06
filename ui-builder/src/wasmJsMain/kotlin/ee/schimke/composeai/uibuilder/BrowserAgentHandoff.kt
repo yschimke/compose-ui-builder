@@ -22,7 +22,7 @@ private val agentJson = Json { ignoreUnknownKeys = true }
 internal fun readAgentPreferences(designId: String): UiBuilderAgentPreferences {
   val general = runCatching {
     agentJson.decodeFromString<BrowserAgentPreferences>(
-      readAgentPreference("ui-builder.agent.preferences")
+      readAgentPreference("ui-builder.agent.preferences"),
     )
   }
     .getOrDefault(BrowserAgentPreferences())
@@ -62,7 +62,7 @@ private external fun readAgentPreference(key: String): String
     localStorage.setItem('ui-builder.agent.document.' + designId, instructions);
     return '';
   } catch (_) { return 'Could not save prompt preferences in this browser'; }
-}"""
+}""",
 )
 private external fun writeAgentPreferences(
   designId: String,
@@ -93,7 +93,7 @@ internal data class AgentPresenceParticipant(
 internal suspend fun fetchAgentPresence(designId: String): List<UiBuilderCollaborator> =
   agentJson
     .decodeFromString<AgentPresencePayload>(
-      fetchText("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/agents")
+      fetchText("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/agents"),
     )
     .agents
     .map { it.collaborator() }
@@ -103,7 +103,7 @@ internal suspend fun fetchAgentPresence(designId: String): List<UiBuilderCollabo
   """(endpoint, name) => {
   const config = {name, type: 'http', url: endpoint};
   globalThis.location.href = 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify(config));
-}"""
+}""",
 )
 internal external fun connectAgentVsCode(endpoint: String, name: String)
 
@@ -114,7 +114,7 @@ internal external fun openAgentSetup(url: String)
   """(designId, endpoint, guide, prompt) => {
   globalThis.__uiBuilderAgent = {designId, mcpEndpoint: endpoint, serverName: 'compose-preview-catalog', setupUrl: guide, prompt};
   document.querySelector('meta[name="ui-builder-mcp-endpoint"]')?.setAttribute('content', endpoint);
-}"""
+}""",
 )
 internal external fun publishAgentHandoff(
   designId: String,

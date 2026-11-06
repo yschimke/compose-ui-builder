@@ -23,7 +23,7 @@ fun UiBuilderChromeMockPreview() {
 
 private val chromeMockDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
-      Json.parseToJsonElement(previewResource("/ui-builder-chrome-mock-v1.json")).jsonObject
+      Json.parseToJsonElement(previewResource("/ui-builder-chrome-mock-v1.json")).jsonObject,
     )
     .document
 }

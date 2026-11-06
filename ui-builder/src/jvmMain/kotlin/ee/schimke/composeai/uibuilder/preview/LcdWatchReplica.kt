@@ -255,7 +255,7 @@ private fun ClockCanvas.dayCells(x: Double, y: Double, h: Double) {
           formula(
             "select(" +
               lighting.joinToString(" || ") { "time.dayOfWeek == ${it + 1}" } +
-              ", 0.9, 0.06)"
+              ", 0.9, 0.06)",
           )
       path(
         "lcd-day-$position-$segment",

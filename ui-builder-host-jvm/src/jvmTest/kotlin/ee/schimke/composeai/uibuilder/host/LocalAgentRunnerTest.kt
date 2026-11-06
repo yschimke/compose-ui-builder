@@ -105,14 +105,14 @@ printf '%s\n' '{"type":"text","sessionID":"ses_abc123","part":{"text":"Review"}}
       )
       assertEquals("{\"*\":\"deny\"}", Files.readString(directory.resolve("permission.json")))
       assertTrue(
-        Files.readString(directory.resolve("config.json")).contains("\"share\":\"disabled\"")
+        Files.readString(directory.resolve("config.json")).contains("\"share\":\"disabled\""),
       )
       assertTrue(
         localAgentEnvironment(
             mapOf("OPENCODE_CONFIG_CONTENT" to "untrusted", "ANTHROPIC_API_KEY" to "secret"),
             LocalHarness.OpenCode,
           )
-          .isEmpty()
+          .isEmpty(),
       )
     } finally {
       directory.toFile().deleteRecursively()

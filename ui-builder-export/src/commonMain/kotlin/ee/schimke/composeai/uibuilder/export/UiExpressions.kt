@@ -422,7 +422,7 @@ object UiExpressions {
             .mapNotNull { (name, declaration) ->
               stateKind(declaration as? JsonObject)?.let { name to it }
             }
-            .toMap()
+            .toMap(),
         )
 
       /**
@@ -588,7 +588,7 @@ object UiExpressions {
       SYSTEM -> {
         val id = (obj["value"] as? JsonPrimitive)?.contentOrNull
         Expr.System(
-          SYSTEM_VALUES[id] ?: throw ExpressionIssue("$where: unknown system value `$id`")
+          SYSTEM_VALUES[id] ?: throw ExpressionIssue("$where: unknown system value `$id`"),
         )
       }
       EXPR -> {
@@ -720,7 +720,7 @@ object UiExpressions {
   private fun resultKind(op: Op, kinds: List<UiValueKind>, where: String): UiValueKind {
     fun fail(): Nothing =
       throw ExpressionIssue(
-        "$where: `${op.wire}` does not apply to ${kinds.joinToString { it.wire }}"
+        "$where: `${op.wire}` does not apply to ${kinds.joinToString { it.wire }}",
       )
     fun numeric(vararg index: Int) = index.all { kinds[it].numeric }
     fun promoted(vararg index: Int) =
@@ -1564,7 +1564,7 @@ private class FormulaParser(private val text: String, private val stateNames: Se
         "type" to JsonPrimitive(UiExpressions.EXPR),
         "op" to JsonPrimitive(op),
         "args" to JsonArray(args.toList()),
-      )
+      ),
     )
 
   private fun binary(next: () -> JsonObject, vararg operators: Pair<String, String>): JsonObject {
@@ -1659,7 +1659,7 @@ private class FormulaParser(private val text: String, private val stateNames: Se
             literal(UiExpressions.COLOR_TOKEN, JsonPrimitive(name.removePrefix(THEME_PREFIX)))
           name in UiExpressions.SYSTEM_VALUES ->
             JsonObject(
-              mapOf("type" to JsonPrimitive(UiExpressions.SYSTEM), "value" to JsonPrimitive(name))
+              mapOf("type" to JsonPrimitive(UiExpressions.SYSTEM), "value" to JsonPrimitive(name)),
             )
           name in stateNames ->
             JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive(name)))

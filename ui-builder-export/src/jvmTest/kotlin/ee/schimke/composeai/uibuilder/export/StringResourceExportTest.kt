@@ -23,7 +23,7 @@ class StringResourceExportTest {
 
   private val record: ComponentRecordFile =
     json.decodeFromString(
-      File(root, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").readText()
+      File(root, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").readText(),
     )
 
   private val res = "ee.schimke.m3catalog.generated.resources.Res"
@@ -47,7 +47,7 @@ class StringResourceExportTest {
             "slots": {}, "modifiers": []}
         }
       }
-      """
+      """,
     )
 
   private fun export(key: String, structure: CatalogScreenStructure?) =

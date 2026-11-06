@@ -31,7 +31,7 @@ class StyleSelectsComponentProjectionTest {
           ${nodes.joinToString(",\n") { (id, body) -> "\"$id\": $body" }}
         }
       }
-      """
+      """,
     )
 
   private fun node(id: String, componentId: String, properties: String) =
@@ -41,7 +41,7 @@ class StyleSelectsComponentProjectionTest {
 
   private fun projected(document: DesignDocumentV1) =
     assertIs<ScreenDocumentProjection.Outcome.Projected>(
-        ScreenDocumentProjection.project(document, "Styled")
+        ScreenDocumentProjection.project(document, "Styled"),
       )
       .document
       .root
@@ -63,7 +63,7 @@ class StyleSelectsComponentProjectionTest {
               "variant": {"type": "enum", "value": "elevated"}""",
           ),
           node("tonal", "m3/icon-button", """"style": {"type": "enum", "value": "tonal"}"""),
-        )
+        ),
       )
     assertEquals(
       listOf(

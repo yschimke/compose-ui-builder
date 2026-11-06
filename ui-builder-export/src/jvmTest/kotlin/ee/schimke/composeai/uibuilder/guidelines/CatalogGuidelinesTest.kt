@@ -38,7 +38,7 @@ class CatalogGuidelinesTest {
            "profiles": ["launcher-widgets-v7+experimental"]}
         ]
       }
-      """
+      """,
     )
 
   @Test
@@ -115,7 +115,7 @@ class CatalogGuidelinesTest {
     assertEquals(
       DesignGuidelineRule.SURFACE_WIDGET,
       DesignGuidelinePrompt.surfaceOf(
-        Json.encodeToJsonElement(UiBuilderDocument.serializer(), doc).jsonObject
+        Json.encodeToJsonElement(UiBuilderDocument.serializer(), doc).jsonObject,
       ),
     )
   }

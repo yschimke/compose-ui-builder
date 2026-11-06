@@ -25,7 +25,7 @@ class GuidelineServedTest {
     assertTrue(
       served
         .describe("typesafe/jev-router")
-        .startsWith("checked by deepseek/deepseek-v4.1-flash on CoreWeave")
+        .startsWith("checked by deepseek/deepseek-v4.1-flash on CoreWeave"),
     )
   }
 
@@ -34,7 +34,7 @@ class GuidelineServedTest {
     val served =
       DesignGuidelinePrompt.parseServed(
         """{"id":"gen-1","model":"deepseek/deepseek-v4.1-flash","provider":"DeepInfra",""" +
-          """"usage":{"cost":0.0027},"choices":[]}"""
+          """"usage":{"cost":0.0027},"choices":[]}""",
       )
     assertNull(served.routing)
     assertEquals(

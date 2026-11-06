@@ -30,13 +30,13 @@ class DesktopLaunchOptionsTest {
     assertEquals(
       expected,
       DesktopLaunchOptions.parse(
-        arrayOf("--catalog", "wear-m3", "--server", "https://preview.coo.ee")
+        arrayOf("--catalog", "wear-m3", "--server", "https://preview.coo.ee"),
       ),
     )
     assertEquals(
       expected,
       DesktopLaunchOptions.parse(
-        arrayOf("--server", "https://preview.coo.ee", "--catalog", "wear-m3")
+        arrayOf("--server", "https://preview.coo.ee", "--catalog", "wear-m3"),
       ),
     )
   }
@@ -107,7 +107,7 @@ class DesktopLaunchOptionsTest {
   fun `a template and a design file are not asked for together`() {
     assertFailsWith<IllegalArgumentException> {
       DesktopLaunchOptions.parse(
-        arrayOf("--catalog", "remote-m3", "--template", "weather-widget", "a.uid")
+        arrayOf("--catalog", "remote-m3", "--template", "weather-widget", "a.uid"),
       )
     }
   }
@@ -143,7 +143,7 @@ class DesktopLaunchOptionsTest {
     assertEquals("wear-m3", options.catalogOverride?.systemId)
     assertFailsWith<IllegalArgumentException> {
       DesktopLaunchOptions.parse(
-        arrayOf("--catalog", "remote-m3", "--catalog-file", file.toString())
+        arrayOf("--catalog", "remote-m3", "--catalog-file", file.toString()),
       )
     }
   }

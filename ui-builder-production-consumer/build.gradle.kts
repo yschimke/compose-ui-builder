@@ -18,7 +18,7 @@ dependencies {
     uiBuilderGenerator(project(":ui-builder-codegen-jvm"))
   } else {
     uiBuilderGenerator(
-      "ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm:$publishedGeneratorVersion"
+      "ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm:$publishedGeneratorVersion",
     )
   }
   implementation(libs.compose.material3)
@@ -57,7 +57,7 @@ val generateUiBuilderSources =
         projectDir.absolutePath,
         layout.buildDirectory.dir("generated/uiBuilder").get().asFile.absolutePath,
         "--entries",
-      ) + entries + listOf("--records") + records.files.map { it.absolutePath }
+      ) + entries + listOf("--records") + records.files.map { it.absolutePath },
     )
   }
 

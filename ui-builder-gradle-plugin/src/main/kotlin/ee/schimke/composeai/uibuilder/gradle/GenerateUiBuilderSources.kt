@@ -20,7 +20,7 @@ import org.gradle.process.ExecOperations
 
 /** Git-index eligibility must be checked even when sources and generated outputs are unchanged. */
 @UntrackedTask(
-  because = "Every invocation validates the live Git index and the complete UID import closure"
+  because = "Every invocation validates the live Git index and the complete UID import closure",
 )
 abstract class GenerateUiBuilderSources : DefaultTask() {
   @get:Input abstract val entries: ListProperty<String>
@@ -52,7 +52,7 @@ abstract class GenerateUiBuilderSources : DefaultTask() {
             projectDirectory.get().asFile.absolutePath,
             outputDirectory.get().asFile.absolutePath,
             "--entries",
-          ) + entries.get() + listOf("--records") + records.files.map { file -> file.absolutePath }
+          ) + entries.get() + listOf("--records") + records.files.map { file -> file.absolutePath },
         )
       }
       .assertNormalExitValue()

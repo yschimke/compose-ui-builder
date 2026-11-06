@@ -190,7 +190,7 @@ class TidyTest {
             ]
           }
           """
-            .trimIndent()
+            .trimIndent(),
         )
         .jsonObject
   }

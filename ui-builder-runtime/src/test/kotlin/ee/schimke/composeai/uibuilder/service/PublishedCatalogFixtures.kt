@@ -47,10 +47,10 @@ internal fun benchmarkCatalog(): CatalogCapabilityV1 =
     checkNotNull(
         CurrentM3UiBuilderCatalogExecutor::class
           .java
-          .getResourceAsStream("/ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json")
+          .getResourceAsStream("/ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json"),
       )
       .bufferedReader()
-      .use { it.readText() }
+      .use { it.readText() },
   )
 
 /** Explicit benchmark catalog for tests that validate the Jetcaster operations fixture. */
@@ -82,7 +82,7 @@ internal fun fixtureCatalogExecutor(
         (if ("m3-catalog" in catalogSystemIds)
           mapOf(
             "m3-catalog" to
-              benchmark.newBuilder().also { it.exportCapabilities = exportCapabilities }.build()
+              benchmark.newBuilder().also { it.exportCapabilities = exportCapabilities }.build(),
           )
         else emptyMap()) + published
     }

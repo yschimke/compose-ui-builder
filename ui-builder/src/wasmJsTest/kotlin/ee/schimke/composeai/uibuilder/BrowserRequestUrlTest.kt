@@ -50,7 +50,7 @@ class BrowserRequestUrlTest {
       )
 
     assertTrue(
-      prompt.contains("https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder")
+      prompt.contains("https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder"),
     )
     assertTrue(prompt.contains("https://preview.example/mcp"))
     assertTrue(prompt.contains("https://preview.example/ui-builder/settings"))
@@ -62,8 +62,8 @@ class BrowserRequestUrlTest {
     assertTrue(prompt.contains("`compose-preview-catalog` MCP server"))
     assertTrue(
       prompt.contains(
-        "claude mcp add --transport http compose-preview-catalog https://preview.example/mcp"
-      )
+        "claude mcp add --transport http compose-preview-catalog https://preview.example/mcp",
+      ),
     )
   }
 
@@ -162,7 +162,7 @@ class BrowserRequestUrlTest {
 private external fun replaceLocation(value: String)
 
 @JsFun(
-  "(assetBase, devicePresets) => { globalThis.composeUiBuilderMcpApp = { assetBase, devicePresets }; }"
+  "(assetBase, devicePresets) => { globalThis.composeUiBuilderMcpApp = { assetBase, devicePresets }; }",
 )
 private external fun setMcpApp(assetBase: String, devicePresets: String)
 

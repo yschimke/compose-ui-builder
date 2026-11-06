@@ -46,7 +46,7 @@ class UiBuilderEditorStateTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -60,7 +60,7 @@ class UiBuilderEditorStateTest {
     assertFalse(
       reducer
         .reduce(clipped, UiBuilderEditorEvent.ToggleWearWidgetClipContent)
-        .wearWidgetClipContent
+        .wearWidgetClipContent,
     )
   }
 
@@ -198,7 +198,7 @@ class UiBuilderEditorStateTest {
             locale = "ar-EG",
             theme = EditorScreenTheme.Dark,
             layoutDirection = EditorLayoutDirection.Rtl,
-          )
+          ),
         ),
       )
 
@@ -231,7 +231,7 @@ class UiBuilderEditorStateTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(
-          initial.document.screenEnvironmentSettings().copy(fontScale = 0.1)
+          initial.document.screenEnvironmentSettings().copy(fontScale = 0.1),
         ),
       )
     assertIs<CommandOutcome.Rejected>(rejected.lastOutcome)
@@ -311,7 +311,7 @@ class UiBuilderEditorStateTest {
             contentColor = "#FFF4F6FF",
             typeScale = 1.15f,
             cornerRadiusDp = 24f,
-          )
+          ),
         ),
       )
 
@@ -335,7 +335,7 @@ class UiBuilderEditorStateTest {
         it.name.startsWith("theme") &&
           it.name !in ThemeTypefaces.PROPERTIES &&
           it.name != ThemeTextStyle.PROPERTY
-      }
+      },
     )
 
     val undone = reducer.reduce(themed, UiBuilderEditorEvent.Undo)
@@ -350,7 +350,7 @@ class UiBuilderEditorStateTest {
       reducer.reduce(
         initial,
         UiBuilderEditorEvent.ApplyTheme(
-          EditorThemeSettings(primaryColor = "purple", typeScale = 2f)
+          EditorThemeSettings(primaryColor = "purple", typeScale = 2f),
         ),
       )
 
@@ -390,7 +390,7 @@ class UiBuilderEditorStateTest {
 
     val container = reducer.propertyFields(reducer.initial(document, "main-scaffold"))
     assertTrue(
-      container.any { it.name == "loading" && it.control == EditorPropertyControl.Boolean }
+      container.any { it.name == "loading" && it.control == EditorPropertyControl.Boolean },
     )
 
     val text = reducer.propertyFields(reducer.initial(document, "detail-podcast-title"))
@@ -402,7 +402,7 @@ class UiBuilderEditorStateTest {
     assertTrue(
       text.none {
         it.name in setOf("fontScale", "density", "locale", "theme", "viewport", "layoutDirection")
-      }
+      },
     )
   }
 
@@ -428,7 +428,7 @@ class UiBuilderEditorStateTest {
         .propertyFields(invalid)
         .single { it.name == "mainPanePreferredWidthDp" }
         .error
-        ?.contains("0..4096") == true
+        ?.contains("0..4096") == true,
     )
 
     val accepted =
@@ -451,7 +451,7 @@ class UiBuilderEditorStateTest {
       operation.value.jsonObject.getValue("value").jsonPrimitive.content,
     )
     assertNull(
-      reducer.propertyFields(accepted).single { it.name == "mainPanePreferredWidthDp" }.error
+      reducer.propertyFields(accepted).single { it.name == "mainPanePreferredWidthDp" }.error,
     )
   }
 
@@ -592,10 +592,10 @@ class UiBuilderEditorStateTest {
                         acceptedRoles = listOf("Container"),
                       )
                     } else slot
-                  }
+                  },
               )
             } else component
-          }
+          },
       )
     val cyclicReducer = UiBuilderEditorReducer(cyclicCatalog)
     val initial = cyclicReducer.initial(document, selectedNodeId = "main-background")
@@ -669,7 +669,7 @@ class UiBuilderEditorStateTest {
         .slots
         .getValue("content")
         .single()
-        .startsWith("$copyId-")
+        .startsWith("$copyId-"),
     )
   }
 
@@ -739,7 +739,7 @@ class UiBuilderEditorStateTest {
                 nodeId = "main-scrim",
                 parent = ParentSlot("main-background", "children"),
                 afterNodeId = "main-scaffold",
-              )
+              ),
             ),
         ),
       )
@@ -1778,7 +1778,7 @@ class UiBuilderEditorStateTest {
       reducer.actionInsertCandidates(reducer.initial(without, without.roots.single())),
     )
     assertTrue(
-      reducer.actionInsertCandidates(reducer.initial(with, with.roots.single())).isNotEmpty()
+      reducer.actionInsertCandidates(reducer.initial(with, with.roots.single())).isNotEmpty(),
     )
   }
 }

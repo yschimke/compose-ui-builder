@@ -89,7 +89,7 @@ internal fun productionFixtureInputs(): List<ProductionInput> {
                 "episode-card",
                 listOf("episode"),
                 mapOf("onClick" to "onEpisodeClick"),
-              )
+              ),
             ),
         ),
       design = productionDesign("library"),
@@ -149,7 +149,7 @@ class ProductionContractsTest {
     val file = ProductionUidFiles.encode(productionFixtureInputs().last().file)
     assertFailsWith<IllegalArgumentException> {
       ProductionUidFiles.decode(
-        file.replace(ProductionUidFiles.SCHEMA, "compose-ui-builder-production/v2")
+        file.replace(ProductionUidFiles.SCHEMA, "compose-ui-builder-production/v2"),
       )
     }
     assertFailsWith<SerializationException> {
@@ -197,7 +197,7 @@ class ProductionContractsTest {
             input.file.copy(
               entryPoint = input.file.entryPoint!!.copy(bindings = emptyList()),
               design = input.file.design!!.copy(title = "A different layout", revision = 17),
-            )
+            ),
         )
     }
     assertEquals(before, ProductionModelGenerator.generate(valid(changed)))
@@ -211,7 +211,9 @@ class ProductionContractsTest {
         editScreen {
           it.copy(
             bindings =
-              listOf(ProductionBinding("library", "text", listOf("episode", "missing"), stringType))
+              listOf(
+                ProductionBinding("library", "text", listOf("episode", "missing"), stringType),
+              ),
           )
         },
         "UNKNOWN_DATA_FIELD",
@@ -230,8 +232,8 @@ class ProductionContractsTest {
                 "text",
                 listOf("title"),
                 ProductionType.Scalar(ScalarType.BOOLEAN),
-              )
-            )
+              ),
+            ),
         )
       },
       "BINDING_TYPE_MISMATCH",
@@ -240,7 +242,7 @@ class ProductionContractsTest {
       editScreen {
         it.copy(
           bindings =
-            listOf(ProductionBinding("library", "text", listOf("title", "length"), stringType))
+            listOf(ProductionBinding("library", "text", listOf("title", "length"), stringType)),
         )
       },
       "INVALID_DATA_PATH",
@@ -263,17 +265,17 @@ class ProductionContractsTest {
                         model.fields.map { field ->
                           if (field.name != "episode") field
                           else field.copy(type = ProductionType.Model("episode", nullable = true))
-                        }
+                        },
                     )
-                }
-            )
+                },
+            ),
         )
       }
     issue(inputs, "MISSING_NULL_FALLBACK")
     issue(
       editScreen {
         it.copy(
-          bindings = listOf(ProductionBinding("library", "text", listOf("subtitle"), stringType))
+          bindings = listOf(ProductionBinding("library", "text", listOf("subtitle"), stringType)),
         )
       },
       "BINDING_TYPE_MISMATCH",
@@ -291,7 +293,7 @@ class ProductionContractsTest {
     issue(
       editScreen {
         it.copy(
-          events = listOf(ProductionEvent("onEpisodeClick", ProductionType.Scalar(ScalarType.INT)))
+          events = listOf(ProductionEvent("onEpisodeClick", ProductionType.Scalar(ScalarType.INT))),
         )
       },
       "COMPONENT_EVENT_MISMATCH",
@@ -328,8 +330,8 @@ class ProductionContractsTest {
           input.copy(
             file =
               input.file.copy(
-                models = input.file.models.map { it.copy(fields = it.fields + it.fields.first()) }
-              )
+                models = input.file.models.map { it.copy(fields = it.fields + it.fields.first()) },
+              ),
           )
       },
       "DUPLICATE_FIELD",
@@ -345,8 +347,8 @@ class ProductionContractsTest {
                 listOf(
                   models.file.models
                     .first()
-                    .copy(id = "case", kotlinType = "example.ui.libraryuidata")
-                )
+                    .copy(id = "case", kotlinType = "example.ui.libraryuidata"),
+                ),
             ),
         ),
       "OUTPUT_PATH_COLLISION",
@@ -400,10 +402,10 @@ class ProductionContractsTest {
                           ProductionField(
                             "parent",
                             ProductionType.ListType(ProductionType.Model("library")),
-                          )
+                          ),
                     )
-                }
-            )
+                },
+            ),
         )
       },
       "MODEL_CYCLE",
@@ -424,10 +426,10 @@ class ProductionContractsTest {
                           "episode-card",
                           emptyList(),
                           mapOf("onClick" to "onClick"),
-                        )
-                      )
-                  )
-              )
+                        ),
+                      ),
+                  ),
+              ),
           )
       },
       "COMPONENT_CYCLE",
@@ -445,9 +447,9 @@ class ProductionContractsTest {
               input.file.copy(
                 design =
                   input.file.design!!.copy(
-                    stateVariables = JsonObject(mapOf("selected" to JsonPrimitive(true)))
-                  )
-              )
+                    stateVariables = JsonObject(mapOf("selected" to JsonPrimitive(true))),
+                  ),
+              ),
           )
       }
     issue(inputs, "OWNED_APPLICATION_STATE")
@@ -455,7 +457,7 @@ class ProductionContractsTest {
     issue(
       editScreen {
         it.copy(
-          bindings = listOf(ProductionBinding("missing", "text", listOf("title"), stringType))
+          bindings = listOf(ProductionBinding("missing", "text", listOf("title"), stringType)),
         )
       },
       "UNKNOWN_NODE",

@@ -25,7 +25,7 @@ import kotlinx.serialization.json.jsonObject
 class RenameDesignTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
     )
   private val document = UiBuilderReducer.replay(fixture).document
 
@@ -96,9 +96,9 @@ class RenameDesignTest {
     private val fixture =
       Json.parseToJsonElement(
           checkNotNull(
-              RenameDesignTest::class.java.getResource("/jetcaster-discover-operations-v1.json")
+              RenameDesignTest::class.java.getResource("/jetcaster-discover-operations-v1.json"),
             )
-            .readText()
+            .readText(),
         )
         .jsonObject
   }

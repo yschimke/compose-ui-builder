@@ -635,7 +635,7 @@ fun UiBuilderEditor(
                 } else initialPanes)
                 .intersect(availablePanes)
                 .ifEmpty { setOf(availablePanes.first()) },
-          )
+          ),
       )
     }
   // The undo offer after a delete, cut or unwrap. One at a time: the job is the offer, so
@@ -700,7 +700,7 @@ fun UiBuilderEditor(
               // Past every id that came back, so a stroke drawn now cannot collide with a stroke
               // drawn in a previous session.
               mintedIds = restored.pieces.size + restored.marks.size,
-            )
+            ),
           )
         }
   }
@@ -763,7 +763,7 @@ fun UiBuilderEditor(
   var mobilePanel by
     remember(document.id) {
       mutableStateOf(
-        if (initialInspectorOpen) MobileEditorPanel.Properties else MobileEditorPanel.None
+        if (initialInspectorOpen) MobileEditorPanel.Properties else MobileEditorPanel.None,
       )
     }
   // Which panels are open. Local on purpose: collaborators' open panels are not part of the
@@ -775,7 +775,7 @@ fun UiBuilderEditor(
           initialLayersOpen -> NavigatorTab.Layers
           initialComponentsOpen -> NavigatorTab.Insert
           else -> null
-        }
+        },
       )
     }
   var inspectorOpen by remember(document.id) { mutableStateOf(initialInspectorOpen) }
@@ -1077,7 +1077,7 @@ fun UiBuilderEditor(
     val pasted = pastedReference ?: return@LaunchedEffect
     dispatch(
       if (state.reference.attached) UiBuilderEditorEvent.PlaceReferencePiece(pasted)
-      else UiBuilderEditorEvent.AttachReference(pasted)
+      else UiBuilderEditorEvent.AttachReference(pasted),
     )
   }
   LaunchedEffect(state) { onStateChanged(state) }
@@ -1197,7 +1197,7 @@ fun UiBuilderEditor(
                     copyLinkSentence(
                       copy,
                       DesignUrlSelectors(revision = revision, nodeId = nodeId),
-                    )
+                    ),
                   )
                 }
               }
@@ -1224,7 +1224,7 @@ fun UiBuilderEditor(
                   say(
                     copyCodeSentence(code, layer) {
                       systemClipboard.setClipEntry(plainTextClipEntry(it))
-                    }
+                    },
                   )
                 }
               }
@@ -1300,7 +1300,7 @@ fun UiBuilderEditor(
                 plan.target,
                 variant,
                 plan.afterNodeId,
-              )
+              ),
             )
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
@@ -1685,7 +1685,7 @@ fun UiBuilderEditor(
               base64 = kotlin.io.encoding.Base64.Default.encode(png),
               widthPx = bitmap.width,
               heightPx = bitmap.height,
-            )
+            ),
           )
       }
   val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
@@ -1818,7 +1818,7 @@ fun UiBuilderEditor(
                   focusEditor()
                   reducer.dropTarget(state, item.componentId)?.let { target ->
                     dispatch(
-                      UiBuilderEditorEvent.InsertComponent(item.componentId, target, item.variant)
+                      UiBuilderEditorEvent.InsertComponent(item.componentId, target, item.variant),
                     )
                   }
                 },
@@ -1898,7 +1898,7 @@ fun UiBuilderEditor(
                         field.field,
                         value,
                         field.index,
-                      )
+                      ),
                     )
                   }
                 },
@@ -2089,7 +2089,7 @@ fun UiBuilderEditor(
       nativeRender =
         UiBuilderNativeRender(
           failure =
-            "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview."
+            "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview.",
         )
       nativePending = false
       return@LaunchedEffect
@@ -2129,7 +2129,7 @@ fun UiBuilderEditor(
         if (clippedWidgetPreview)
           UiBuilderNativeRender(
             failure =
-              "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview."
+              "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview.",
           )
         else nativeRender,
       pending = !clippedWidgetPreview && nativePending,
@@ -2341,7 +2341,7 @@ fun UiBuilderEditor(
             if (publication == null) {
               say(
                 reducer.libraryPublicationRefusal(state, componentKey)
-                  ?: "This component cannot be published"
+                  ?: "This component cannot be published",
               )
             } else {
               editorScope.launch {
@@ -2352,7 +2352,7 @@ fun UiBuilderEditor(
                   }
                     .getOrElse {
                       EditorLibraryPublishResult.Refused(
-                        "The project library could not be reached: ${it.message ?: it}"
+                        "The project library could not be reached: ${it.message ?: it}",
                       )
                     }
                 ) {
@@ -2365,7 +2365,7 @@ fun UiBuilderEditor(
                           publication.componentId,
                           result.digest,
                         ),
-                      )
+                      ),
                     )
                     onLibraryChanged()
                     say("Published ${publication.title} to the project library")
@@ -2434,7 +2434,7 @@ fun UiBuilderEditor(
                 fontSizeSp = alignment.fontSizeSp,
                 widthDp = alignment.widthDp,
                 heightDp = alignment.heightDp,
-              )
+              ),
             )
           },
           onSelectNode = { selectNodeForEditing(it) },
@@ -2463,7 +2463,7 @@ fun UiBuilderEditor(
                 copyLinkSentence(
                   copy,
                   DesignUrlSelectors(nodeId = thread.anchor?.nodeId, threadId = thread.id),
-                )
+                ),
               )
             }
           }
@@ -2523,7 +2523,7 @@ fun UiBuilderEditor(
             UiBuilderEditorEvent.PlaceReferencePiece(
               captured,
               componentId = pendingCapture.componentId,
-            )
+            ),
           )
         }
       },
@@ -2557,7 +2557,7 @@ fun UiBuilderEditor(
           onDismiss = {
             showShortcutsDialog = false
             focusEditor()
-          }
+          },
         )
       }
       wrapChoices?.let { choices ->
@@ -2646,7 +2646,7 @@ fun UiBuilderEditor(
                   }
                 },
               )
-            }
+            },
         ) {
           if (focusedCanvas) {
             // No toolbar: the host's own bar above the editor is the focused layout's chrome.
@@ -2848,7 +2848,7 @@ fun UiBuilderEditor(
                               dispatch(UiBuilderEditorEvent.ToggleCodePane)
                             }
                             dispatch(
-                              UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties)
+                              UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties),
                             )
                             inspectorOpen = true
                           }
@@ -2985,7 +2985,7 @@ fun UiBuilderEditor(
                           entry == EditorDock.Code && hostChrome != null && onGeneratedCode != null
                         ) {
                           onGeneratedCode(
-                            reducer.generatedCode(state.document) { assetBytesByDigest[it] }
+                            reducer.generatedCode(state.document) { assetBytesByDigest[it] },
                           )
                         } else {
                           val mode = entry.inspectorMode()
@@ -3177,7 +3177,7 @@ fun UiBuilderEditor(
           Modifier.align(Alignment.BottomCenter)
             .padding(horizontal = 12.dp)
             .padding(
-              bottom = viewportInsets.bottom + if (compact) MOBILE_DOCK_HEIGHT + 8.dp else 40.dp
+              bottom = viewportInsets.bottom + if (compact) MOBILE_DOCK_HEIGHT + 8.dp else 40.dp,
             ),
         )
         if (showPacks) {
@@ -3199,7 +3199,7 @@ fun UiBuilderEditor(
               state =
                 state.copy(
                   collaboration =
-                    state.collaboration.copy(document = state.document.copy(title = title))
+                    state.collaboration.copy(document = state.document.copy(title = title)),
                 )
               say("Renamed to $title")
             },

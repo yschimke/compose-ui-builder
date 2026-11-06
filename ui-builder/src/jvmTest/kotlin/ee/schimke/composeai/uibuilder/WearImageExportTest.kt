@@ -42,7 +42,7 @@ class WearImageExportTest {
       nodes =
         base.nodes +
           ("wear-list" to list.copy(slots = mapOf("items" to listOf(node.id)))) +
-          (node.id to node)
+          (node.id to node),
     )
   }
 
@@ -90,8 +90,8 @@ class WearImageExportTest {
             "contentScale" to "fillBounds",
             "alignment" to "bottomEnd",
             "contentDescription" to "A runner",
-          )
-        )
+          ),
+        ),
       )
     assertTrue("contentScale = ContentScale.FillBounds," in authored, authored)
     assertTrue("alignment = Alignment.BottomEnd," in authored, authored)

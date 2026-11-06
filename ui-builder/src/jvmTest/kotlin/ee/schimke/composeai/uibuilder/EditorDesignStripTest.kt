@@ -26,7 +26,7 @@ class EditorDesignStripTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
       .copy(title = "Strip active design")
@@ -102,7 +102,7 @@ class EditorDesignStripTest {
   fun `a file of one design with nothing to add draws no strip`() =
     runDesktopComposeUiTest(width = 1600, height = 900) {
       setContent(
-        render(UiBuilderFileDesigns(listOf(UiBuilderFileDesign(document.id, "")), document.id))
+        render(UiBuilderFileDesigns(listOf(UiBuilderFileDesign(document.id, "")), document.id)),
       )
       waitForIdle()
       assertEquals(0, onAllNodesWithText("Designs").fetchSemanticsNodes().size)

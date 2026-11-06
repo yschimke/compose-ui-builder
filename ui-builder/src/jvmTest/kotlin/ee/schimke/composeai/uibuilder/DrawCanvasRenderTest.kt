@@ -79,7 +79,7 @@ class DrawCanvasRenderTest {
     runDesktopComposeUiTest(width = 600, height = 400) {
       setContent {
         ProductionUiBuilderSurface(
-          decodeProductionRendererDocument(VIEWPORT_DOCUMENT.replace("MODE", viewportMode))
+          decodeProductionRendererDocument(VIEWPORT_DOCUMENT.replace("MODE", viewportMode)),
         )
       }
       val pixels = onRoot().captureToImage().toPixelMap()
@@ -107,7 +107,7 @@ class DrawCanvasRenderTest {
     runDesktopComposeUiTest(width = 600, height = 400) {
       setContent {
         ProductionUiBuilderSurface(
-          decodeProductionRendererDocument(TEXT_DOCUMENT.replace("VALIGN", verticalAlign))
+          decodeProductionRendererDocument(TEXT_DOCUMENT.replace("VALIGN", verticalAlign)),
         )
       }
       val pixels = onRoot().captureToImage().toPixelMap()
@@ -170,7 +170,7 @@ class DrawCanvasRenderTest {
         listOf("fill"),
         fill(
           """"color":{"type":"color","value":"#FFFF0000"},
-          "gradientColor":{"type":"color","value":"#FF0000FF"}"""
+          "gradientColor":{"type":"color","value":"#FF0000FF"}""",
         ),
       )
     val listed =
@@ -210,7 +210,7 @@ class DrawCanvasRenderTest {
         listOf("half"),
         rect(
           """{"type":"expr","op":"div","args":[
-            {"type":"system","value":"canvas.width"},{"type":"int","value":2}]}"""
+            {"type":"system","value":"canvas.width"},{"type":"int","value":2}]}""",
         ),
       )
     assertTrue(literal > 1_000, "the 40dp rectangle was not drawn ($literal samples)")

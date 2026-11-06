@@ -27,8 +27,8 @@ class RemoteLayerAndSemanticsExportTest {
           "host":{"id":"host","componentId":"remote-m3/widget-container-small",
             "slots":{"content":["box"]}},
           "box":{"id":"box","componentId":"layout/box","modifiers":$modifiers}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun emitted(modifiers: String): String =
@@ -43,7 +43,7 @@ class RemoteLayerAndSemanticsExportTest {
 
   private fun refused(modifiers: String): List<String> =
     assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(document(modifiers))
+        WearWidgetCodeExporter.export(document(modifiers)),
       )
       .reasons
 
@@ -52,7 +52,7 @@ class RemoteLayerAndSemanticsExportTest {
     val source =
       emitted(
         """[{"type":"remoteCall","name":"graphicsLayer","args":{
-          "rotationZ":{"type":"float","value":15},"alpha":{"type":"float","value":0.5}}}]"""
+          "rotationZ":{"type":"float","value":15},"alpha":{"type":"float","value":0.5}}}]""",
       )
     File("build/draw-proof").apply { mkdirs() }.resolve("LayerWidget.kt").writeText(source)
 
@@ -68,7 +68,7 @@ class RemoteLayerAndSemanticsExportTest {
           "contentDescription":{"type":"expr","op":"concat","args":[
             {"type":"state","variable":"count"},{"type":"string","value":" unread"}]},
           "role":{"type":"string","value":"Button"},
-          "mergeDescendants":{"type":"bool","value":true}}}]"""
+          "mergeDescendants":{"type":"bool","value":true}}}]""",
       )
     File("build/draw-proof").apply { mkdirs() }.resolve("SemanticsWidget.kt").writeText(source)
 
@@ -90,7 +90,7 @@ class RemoteLayerAndSemanticsExportTest {
       emitted(
         """[{"type":"remoteCall","name":"semantics","args":{
           "contentDescription":{"type":"string","value":"Steps today"},
-          "clear":{"type":"bool","value":true}}}]"""
+          "clear":{"type":"bool","value":true}}}]""",
       )
     File("build/draw-proof").apply { mkdirs() }.resolve("ClearWidget.kt").writeText(source)
 
@@ -102,16 +102,16 @@ class RemoteLayerAndSemanticsExportTest {
     assertTrue(
       refused(
           """[{"type":"remoteCall","name":"semantics","args":{
-            "role":{"type":"string","value":"Slider"}}}]"""
+            "role":{"type":"string","value":"Slider"}}}]""",
         )
-        .any { "semantics.role" in it }
+        .any { "semantics.role" in it },
     )
     assertTrue(
       refused(
           """[{"type":"remoteCall","name":"semantics","args":{
-            "clear":{"type":"bool","value":true},"mergeDescendants":{"type":"bool","value":true}}}]"""
+            "clear":{"type":"bool","value":true},"mergeDescendants":{"type":"bool","value":true}}}]""",
         )
-        .any { "semantics" in it }
+        .any { "semantics" in it },
     )
   }
 }

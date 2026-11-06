@@ -55,7 +55,7 @@ actual object GoogleMaterialIconVectors {
   """(url) => fetch(url).then((response) => {
     if (!response.ok) throw new Error('HTTP ' + response.status + ' for ' + url);
     return response.text();
-  })"""
+  })""",
 )
 private external fun fetchIconShard(url: String): Promise<JsString>
 
@@ -68,6 +68,6 @@ private external fun fetchIconShard(url: String): Promise<JsString>
     const module = document.querySelector(
       'script[type="module"][src$="uiBuilder.mjs"], script[type="module"][src$="uiBuilderRenderer.mjs"]');
     return module ? new URL('icons/', module.src).href : 'icons/';
-  }"""
+  }""",
 )
 private external fun iconDataBaseUrl(): String

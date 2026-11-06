@@ -63,7 +63,7 @@ class RemoteComposeSourcesTest {
         """
         {"previews": [{"id": "a__b", "label": "A", "remoteCompose": true, "somethingNew": 3}]}
         """
-          .trimIndent()
+          .trimIndent(),
       )
 
     assertEquals(listOf("a__b"), sources.map(RemoteComposeSource::id))
@@ -95,7 +95,7 @@ class RemoteComposeSourcesTest {
           }
         ]}
         """
-          .trimIndent()
+          .trimIndent(),
       )
 
     assertEquals(listOf("button-child", "button-child"), sources.map(RemoteComposeSource::group))
@@ -133,7 +133,7 @@ class RemoteComposeSourcesTest {
           {"id": "button__ideal__disabled__compact", "label": "button__ideal__disabled__compact", "remoteCompose": true}
         ]}
         """
-          .trimIndent()
+          .trimIndent(),
       )
 
     assertEquals(

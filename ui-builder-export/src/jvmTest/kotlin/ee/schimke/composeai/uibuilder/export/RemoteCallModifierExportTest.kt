@@ -32,19 +32,19 @@ class RemoteCallModifierExportTest {
           "host":{"id":"host","componentId":"remote-m3/widget-container-small",
             "slots":{"content":["box"]}},
           "box":{"id":"box","componentId":"layout/box","modifiers":$modifiers}}}
-        """
-      ) as JsonObject
+        """,
+      ) as JsonObject,
     )
 
   private fun emitted(modifiers: String): String =
     assertIs<WearWidgetCodeExporter.Result.Emitted>(
-        WearWidgetCodeExporter.export(document(modifiers), packageName = "proof.calls")
+        WearWidgetCodeExporter.export(document(modifiers), packageName = "proof.calls"),
       )
       .source
 
   private fun refused(modifiers: String): List<String> =
     assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(document(modifiers))
+        WearWidgetCodeExporter.export(document(modifiers)),
       )
       .reasons
 
@@ -75,7 +75,7 @@ class RemoteCallModifierExportTest {
              {"type":"state","variable":"progress"},{"type":"float","value":2}]}}},
          {"type":"remoteCall","name":"basicMarquee","args":{
            "iterations":{"type":"int","value":3},"velocity":{"type":"float","value":40}}}]
-        """
+        """,
         )
         .also {
           File("build/remote-call-proof").apply { mkdirs() }.resolve("Calls.kt").writeText(it)
@@ -96,7 +96,7 @@ class RemoteCallModifierExportTest {
 
     val argument =
       refused(
-        """[{"type":"remoteCall","name":"border","args":{"radius":{"type":"float","value":1}}}]"""
+        """[{"type":"remoteCall","name":"border","args":{"radius":{"type":"float","value":1}}}]""",
       )
     assertTrue(argument.any { "`border` takes (width, color)" in it }, argument.toString())
 
@@ -105,7 +105,7 @@ class RemoteCallModifierExportTest {
         """
         [{"type":"remoteCall","name":"basicMarquee","args":{
           "velocity":{"type":"state","variable":"progress"}}}]
-        """
+        """,
       )
     assertTrue(plain.any { "plain Kotlin value upstream" in it }, plain.toString())
   }

@@ -183,7 +183,7 @@ private val REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES =
       {"id":"button-filled__ideal__disabled__large","label":"button-filled__ideal__disabled__large","remoteCompose":true}
     ]}
     """
-      .trimIndent()
+      .trimIndent(),
   )
 
 /** Deterministic stand-ins for the four catalog PNGs used by the chrome preview above. */
@@ -229,7 +229,7 @@ fun UiBuilderLayoutInspectorPreview() {
 
 internal val editorChromePreviewDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
-      Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject
+      Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject,
     )
     .document
 }
@@ -269,7 +269,7 @@ fun UiBuilderDegradedDesignPreview() {
                 blocking = false,
                 propertyName = "oldFontStyle",
                 replacementProperties = listOf("fontStyle", "fontWeight"),
-              )
+              ),
             ),
           dispatch = {},
         )
@@ -290,7 +290,7 @@ fun UiBuilderLargeIssuesTriagePreview() {
           message = "content accepts one child but contains two on card-$index",
           nodeId = "card-$index",
           componentId = "m3/card",
-        )
+        ),
       ) +
         (1..5).map { occurrence ->
           EditorProblem(
@@ -349,7 +349,7 @@ fun UiBuilderNewDesignPreview() {
                   "wear-screen",
                   "Blank screen",
                   "A ScreenScaffold with its clock and scroll indicator, over an empty list.",
-                )
+                ),
               ),
           ),
           UiBuilderNewDesignCatalog(
@@ -361,7 +361,7 @@ fun UiBuilderNewDesignPreview() {
                   "wear-widget-small",
                   "Blank small widget",
                   "216×76dp host with a single content slot.",
-                )
+                ),
               ),
           ),
         )
@@ -419,11 +419,11 @@ fun UiBuilderNavigationActionPreview() {
                   buildJsonObject {
                     put("type", "navigatePage")
                     put("pageKey", "confirmation")
-                  }
-                )
+                  },
+                ),
               ),
             )
-          }
+          },
       )
   MaterialTheme {
     Surface {
@@ -432,7 +432,7 @@ fun UiBuilderNavigationActionPreview() {
           listOf(
             UiBuilderPageDestination("checkout", "Checkout"),
             UiBuilderPageDestination("confirmation", "Confirmation"),
-          )
+          ),
       ) {
         Column(Modifier.padding(24.dp)) {
           Text("Button · ${node.componentId}", style = MaterialTheme.typography.titleMedium)
@@ -577,8 +577,8 @@ private fun UiBuilderDocument.onDevice(preset: UiBuilderDevicePreset): UiBuilder
             "widthDp" to JsonPrimitive(preset.widthDp),
             "heightDp" to JsonPrimitive(preset.heightDp),
             "density" to JsonPrimitive(preset.density),
-          )
-      )
+          ),
+      ),
   )
 
 /**
@@ -638,7 +638,7 @@ private val editorCodePanePreviewDocument: UiBuilderDocument by lazy {
               componentId = "layout/column",
               slots =
                 mapOf(
-                  "children" to listOf("code-pane-heading", "code-pane-rule", "code-pane-card")
+                  "children" to listOf("code-pane-heading", "code-pane-rule", "code-pane-card"),
                 ),
             ),
           "code-pane-card" to
@@ -656,7 +656,7 @@ private val editorCodePanePreviewDocument: UiBuilderDocument by lazy {
                   mapOf(
                     "text" to previewStringValue("Latest episodes"),
                     "style" to previewTypedValue("typographyToken", "titleMedium"),
-                  )
+                  ),
                 ),
             ),
           "code-pane-heading" to
@@ -668,7 +668,7 @@ private val editorCodePanePreviewDocument: UiBuilderDocument by lazy {
                   mapOf(
                     "text" to previewStringValue("Discover"),
                     "style" to previewTypedValue("typographyToken", "headlineSmall"),
-                  )
+                  ),
                 ),
             ),
           "code-pane-rule" to
@@ -776,8 +776,8 @@ private val androidNativePreviewCatalog: CapabilityCatalog by lazy {
                     put("fidelity", JsonPrimitive("authoritative"))
                     put("backend", JsonPrimitive(UiBuilderPreviewSurfaces.BACKEND_ANDROID))
                   }
-                })
-          ))
+                }),
+          )),
     )
   CapabilityCatalogParser.parse(declared.toString())
 }
@@ -799,7 +799,7 @@ private val nativeLivePreviewStream =
               UiBuilderNativeNodeBounds(x = 32, y = 96, width = 736, height = 112),
               UiBuilderNativeNodeBounds(x = 32, y = 240, width = 736, height = 1120),
             ),
-          )
+          ),
       )
 
     override val failure: String? = null
@@ -878,9 +878,9 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
                         mapOf(
                           "type" to JsonPrimitive("string"),
                           "value" to JsonPrimitive("normal"),
-                        )
-                      ))
-                )
+                        ),
+                      )),
+                ),
             ),
           // Leaves the icon orphaned in `nodes` and the slot pointing at a missing node, as a
           // botched delete would; both must be reported, not crash.
@@ -888,9 +888,9 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
             searchInput.copy(
               slots =
                 searchInput.slots - "trailingIcon" +
-                  mapOf("leadingIcon" to listOf("search-leading-icon", "icon-that-was-deleted"))
+                  mapOf("leadingIcon" to listOf("search-leading-icon", "icon-that-was-deleted")),
             ),
-        )
+        ),
   )
 }
 
@@ -974,7 +974,7 @@ private val historyPreviewEdits: List<UiBuilderEditorEvent> =
       "Search podcasts",
     ),
     UiBuilderEditorEvent.UpdateEnvironment(
-      editorChromePreviewDocument.screenEnvironmentSettings().copy(density = 2.0)
+      editorChromePreviewDocument.screenEnvironmentSettings().copy(density = 2.0),
     ),
     UiBuilderEditorEvent.Undo,
   )
@@ -1104,7 +1104,7 @@ private val wearBoardDocument: UiBuilderDocument by lazy {
           "heightDp" to JsonPrimitive(1400),
           "density" to JsonPrimitive(2.0),
           "theme" to JsonPrimitive("dark"),
-        )
+        ),
       ),
     stateVariables = JsonObject(emptyMap()),
     roots = listOf("board"),
@@ -1129,9 +1129,9 @@ private val wearBoardDocument: UiBuilderDocument by lazy {
                         mapOf(
                           "type" to JsonPrimitive("string"),
                           "value" to JsonPrimitive(label),
-                        )
-                      )
-                  )
+                        ),
+                      ),
+                  ),
                 ),
             ),
           )
@@ -1157,8 +1157,8 @@ private fun UiBuilderDocument.onCanvasFrame(): UiBuilderDocument =
             "widthDp" to JsonPrimitive(900),
             "heightDp" to JsonPrimitive(1400),
             "density" to JsonPrimitive(2.0),
-          )
-      )
+          ),
+      ),
   )
 
 /** This design under the light scheme, so a Dark variant beside it is visibly a variant. */
@@ -1170,6 +1170,6 @@ private fun UiBuilderDocument.claiming(preset: UiBuilderDevicePreset): UiBuilder
   copy(
     environment =
       JsonObject(
-        environment + mapOf("exportDevices" to JsonArray(listOf(JsonPrimitive(preset.id))))
-      )
+        environment + mapOf("exportDevices" to JsonArray(listOf(JsonPrimitive(preset.id)))),
+      ),
   )

@@ -234,7 +234,7 @@ private constructor(
   override val comments = mutableComments.asStateFlow()
   private val mutableCommentStatus =
     MutableStateFlow<String?>(
-      "Comments are available when this design is opened from a preview server."
+      "Comments are available when this design is opened from a preview server.",
     )
   override val commentStatus = mutableCommentStatus.asStateFlow()
 
@@ -254,8 +254,8 @@ private constructor(
           val result =
             service.execute(
               ApplyOperationRequestV1(
-                submission.toProtocolSubmission(ACTOR_ID, CLIENT_ID, baseRevision)
-              )
+                submission.toProtocolSubmission(ACTOR_ID, CLIENT_ID, baseRevision),
+              ),
             )
         ) {
           is OperationOutcomeResponseV1 -> refresh(persist = true)
@@ -439,7 +439,7 @@ fun OfflineUiBuilderSessionView(
             java.security.MessageDigest.getInstance("SHA-256")
               .digest(
                 Json.encodeToString(listOf(session.actorId, current.snapshot.state.document.id))
-                  .toByteArray()
+                  .toByteArray(),
               )
               .joinToString("") { "%02x".format(it) }
           JvmLocalAgentHost(
@@ -518,7 +518,7 @@ fun OfflineUiBuilderSessionView(
 
 private fun fixtureDocument(): UiBuilderDocument =
   UiBuilderReducer.replay(
-      Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject
+      Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
     )
     .document
 
@@ -599,7 +599,7 @@ public enum class OfflineCatalog(
                 mapOf(
                   "catalogRevision" to JsonPrimitive(catalogRevision),
                   "nativeRuntimeId" to JsonPrimitive(nativeRuntimeId),
-                )
+                ),
             ),
         )
       }

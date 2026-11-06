@@ -35,7 +35,7 @@ internal val tabRowSelectionPreviewDocument: UiBuilderDocument by lazy {
           "catalogRevision" to JsonPrimitive("candidate"),
           "capabilityDigest" to JsonPrimitive("candidate"),
           "nativeRuntimeId" to JsonPrimitive("candidate"),
-        )
+        ),
       ),
     environment =
       JsonObject(
@@ -53,7 +53,7 @@ internal val tabRowSelectionPreviewDocument: UiBuilderDocument by lazy {
           "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
           "animations" to JsonPrimitive("settled"),
           "networkAccess" to JsonPrimitive(false),
-        )
+        ),
       ),
     stateVariables =
       JsonObject(
@@ -63,9 +63,9 @@ internal val tabRowSelectionPreviewDocument: UiBuilderDocument by lazy {
               mapOf(
                 "valueType" to JsonPrimitive("int"),
                 "initialValue" to JsonPrimitive(1),
-              )
-            )
-        )
+              ),
+            ),
+        ),
       ),
     roots = listOf("root"),
     nodes =
@@ -83,9 +83,9 @@ internal val tabRowSelectionPreviewDocument: UiBuilderDocument by lazy {
                       mapOf(
                         "type" to JsonPrimitive("state"),
                         "variable" to JsonPrimitive("selectedTab"),
-                      )
-                    )
-                )
+                      ),
+                    ),
+                ),
               ),
             slots = mapOf("tabs" to tabIds),
           ),
@@ -106,9 +106,9 @@ internal val tabRowSelectionPreviewDocument: UiBuilderDocument by lazy {
                           "type" to JsonPrimitive("stateEquals"),
                           "variable" to JsonPrimitive("selectedTab"),
                           "value" to JsonPrimitive(index),
-                        )
-                      )
-                  )
+                        ),
+                      ),
+                  ),
                 ),
               eventBindings =
                 JsonObject(
@@ -121,11 +121,11 @@ internal val tabRowSelectionPreviewDocument: UiBuilderDocument by lazy {
                               "type" to JsonPrimitive("set"),
                               "variable" to JsonPrimitive("selectedTab"),
                               "value" to JsonPrimitive(index),
-                            )
-                          )
-                        )
-                      )
-                  )
+                            ),
+                          ),
+                        ),
+                      ),
+                  ),
                 ),
               slots = mapOf("text" to listOf("$id-label")),
             ),

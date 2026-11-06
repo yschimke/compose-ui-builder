@@ -21,7 +21,7 @@ class EditorFlagPropertyTest {
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
-        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
       )
       .document
 
@@ -31,7 +31,7 @@ class EditorFlagPropertyTest {
       assertNotNull(
         reducer
           .propertyFields(reducer.initial(document, selectedNodeId = "chip-crime"))
-          .firstOrNull { it.name == "selected" }
+          .firstOrNull { it.name == "selected" },
       )
 
     assertEquals(EditorPropertyControl.Boolean, field.control)

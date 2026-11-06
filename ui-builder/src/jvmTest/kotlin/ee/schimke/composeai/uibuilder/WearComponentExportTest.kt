@@ -58,7 +58,7 @@ class WearComponentExportTest {
       nodes =
         base.nodes +
           ("wear-list" to list.copy(slots = mapOf("items" to nodes.map { it.id }))) +
-          nodes.associateBy { it.id }
+          nodes.associateBy { it.id },
     )
   }
 
@@ -103,8 +103,8 @@ class WearComponentExportTest {
             componentId = WearScreenCodeExporter.CHECKBOX_BUTTON,
             properties =
               properties("label" to "Notifications", "secondaryLabel" to "On", "checked" to true),
-          )
-        )
+          ),
+        ),
       )
 
     assertTrue("import androidx.wear.compose.material3.CheckboxButton" in source, source)
@@ -158,8 +158,8 @@ class WearComponentExportTest {
                 put("initialValue", true)
                 put("persistence", "preview")
               }
-            }
-        )
+            },
+        ),
       )
 
     assertEquals(
@@ -212,8 +212,8 @@ class WearComponentExportTest {
                 put("initialValue", true)
                 put("persistence", "preview")
               }
-            }
-        )
+            },
+        ),
       )
 
     assertTrue("var wifiChecked by remember { mutableStateOf(true) }" in source, source)
@@ -232,8 +232,8 @@ class WearComponentExportTest {
             id = "daily",
             componentId = WearScreenCodeExporter.RADIO_BUTTON,
             properties = properties("label" to "Daily", "selected" to false),
-          )
-        )
+          ),
+        ),
       )
 
     assertTrue("RadioButton(" in source, source)
@@ -252,8 +252,8 @@ class WearComponentExportTest {
             id = "wifi",
             componentId = WearScreenCodeExporter.SWITCH_BUTTON,
             properties = properties("label" to "Wi-Fi", "checked" to false),
-          )
-        )
+          ),
+        ),
       )
 
     assertTrue("import androidx.wear.compose.material3.SwitchButton" in source, source)
@@ -279,8 +279,8 @@ class WearComponentExportTest {
                 "steps" to 9,
                 "segmented" to "segmented",
               ),
-          )
-        )
+          ),
+        ),
       )
 
     assertTrue("Slider(" in source, source)
@@ -307,7 +307,7 @@ class WearComponentExportTest {
             componentId = WearScreenCodeExporter.ICON,
             properties = properties("iconKey" to "playCircle"),
           ),
-        )
+        ),
       )
 
     assertTrue("import androidx.wear.compose.material3.FilledTonalIconButton" in source, source)
@@ -329,9 +329,9 @@ class WearComponentExportTest {
               id = "mystery",
               componentId = WearScreenCodeExporter.ICON,
               properties = properties("iconKey" to "notAnIcon"),
-            )
-          )
-        )
+            ),
+          ),
+        ),
       )
 
     assertTrue("notAnIcon" in refused.reasons.single(), refused.reasons.single())
@@ -355,7 +355,7 @@ class WearComponentExportTest {
                 id = "when",
                 componentId = WearScreenCodeExporter.TIME_PICKER,
                 properties = properties("initialTime" to "07:30", "type" to "hours-minutes-24h"),
-              ))
+              )),
       )
 
     val source = export(document)
@@ -385,7 +385,7 @@ class WearComponentExportTest {
                 componentId = WearScreenCodeExporter.ALERT_DIALOG,
                 properties =
                   properties("title" to "Delete run?", "text" to "This cannot be undone"),
-              ))
+              )),
       )
 
     val source = export(document)
@@ -409,9 +409,9 @@ class WearComponentExportTest {
               id = "confirm",
               componentId = WearScreenCodeExporter.ALERT_DIALOG,
               properties = properties("title" to "Delete run?"),
-            )
-          )
-        )
+            ),
+          ),
+        ),
       )
 
     assertTrue("overlays" in refused.reasons.single(), refused.reasons.single())
@@ -439,7 +439,7 @@ class WearComponentExportTest {
                 id = "done-label",
                 componentId = WearScreenCodeExporter.TEXT,
                 properties = properties("text" to "Done"),
-              ))
+              )),
       )
 
     val source = export(document)
@@ -492,13 +492,13 @@ class WearComponentExportTest {
             base.nodes +
               (root.id to
                 root.copy(
-                  slots = root.slots + (slot?.let { mapOf(it to listOf("node")) } ?: emptyMap())
+                  slots = root.slots + (slot?.let { mapOf(it to listOf("node")) } ?: emptyMap()),
                 )) +
               ("wear-list" to
                 list.copy(
-                  slots = mapOf("items" to if (slot == null) listOf("node") else emptyList())
+                  slots = mapOf("items" to if (slot == null) listOf("node") else emptyList()),
                 )) +
-              ("node" to node)
+              ("node" to node),
         )
 
       val result = WearScreenCodeExporter.export(document)

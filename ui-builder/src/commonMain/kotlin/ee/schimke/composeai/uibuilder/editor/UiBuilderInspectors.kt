@@ -243,7 +243,7 @@ internal fun PropertyInspector(
       )
       // Swatches in the property controls show the design's colours, not the editor chrome's.
       CompositionLocalProvider(
-        LocalInspectorColorScheme provides inspectorColorScheme(themeSettings)
+        LocalInspectorColorScheme provides inspectorColorScheme(themeSettings),
       ) {
         InspectorBody(
           state = state,
@@ -613,7 +613,7 @@ private fun InspectorBody(
                     field.name,
                     variable,
                     equalsValue,
-                  )
+                  ),
                 )
               },
               onUnbind = { dispatch(UiBuilderEditorEvent.UnbindProperty(node.id, field.name)) },
@@ -635,7 +635,7 @@ private fun InspectorBody(
                     value.isBlank() && field.name in FontSettings.PROPERTIES ->
                       UiBuilderEditorEvent.ClearProperty(node.id, field.name)
                     else -> UiBuilderEditorEvent.CommitProperty(node.id, field.name, value)
-                  }
+                  },
                 )
               },
               onListEdit = { edit ->
@@ -646,7 +646,7 @@ private fun InspectorBody(
                       structure.property,
                       structure.path,
                       edit,
-                    )
+                    ),
                   )
                 }
               },
@@ -668,7 +668,7 @@ private fun InspectorBody(
                   // The row's own list: the path without the row's index.
                   structure.path.dropLast(1),
                   edit,
-                )
+                ),
               )
             }
           }
@@ -681,7 +681,7 @@ private fun InspectorBody(
       } else if (visibleFields.isEmpty() && !addOpen) {
         item {
           LocalUiBuilderChrome.current.InspectorMessage(
-            "Nothing is set on this layer. Add a property to give it one."
+            "Nothing is set on this layer. Add a property to give it one.",
           )
         }
       }
@@ -793,7 +793,7 @@ private fun InspectorBody(
                             field.field,
                             value,
                             index,
-                          )
+                          ),
                         )
                       }
                     }
@@ -912,7 +912,7 @@ private fun PropertyControl(
       notes = field.notes?.takeIf { bound == null && formula == null },
       error = field.error?.takeIf { bound == null },
       supporting = field.supporting?.takeIf { bound == null && formula == null },
-    )
+    ),
   ) {
     if (formula != null) {
       FormulaEditor(field, formula, onTextInputFocusChanged, onFormula, onUnbind)
@@ -1083,7 +1083,7 @@ private fun FormulaEditor(
         contentDescription = "Compute ${field.label} with a formula",
         compactLabel = true,
         onClick = { open = true },
-      )
+      ),
     )
     return
   }
@@ -1104,7 +1104,7 @@ private fun FormulaEditor(
         enabled = text.isNotBlank() && text != current,
         primary = true,
         onClick = { onFormula(text) },
-      )
+      ),
     )
     if (onUnbind != null) {
       LocalUiBuilderChrome.current.InspectorAction(
@@ -1112,7 +1112,7 @@ private fun FormulaEditor(
           label = "Clear",
           contentDescription = "Give ${field.label} a value of its own again",
           onClick = onUnbind,
-        )
+        ),
       )
     }
   }
@@ -1141,7 +1141,7 @@ private fun StateBindMenu(
         contentDescription = "Bind ${field.label} to state",
         compactLabel = true,
         onClick = { open = true },
-      )
+      ),
     )
     LocalUiBuilderChrome.current.PopupMenu(
       expanded = open,
@@ -1184,7 +1184,7 @@ private fun StateBindMenu(
             pending = null
             comparison = ""
           },
-        )
+        ),
       )
     }
   }
@@ -1211,7 +1211,7 @@ private fun DraftPropertyControl(
           next,
           draft?.sourceValue ?: field.value,
           InspectorPropertyDraftStatus.DIRTY,
-        )
+        ),
     )
   }
   fun submit(next: String = value) {
@@ -1242,7 +1242,7 @@ private fun DraftPropertyControl(
         onFocusChanged = onTextInputFocusChanged,
         onValueChange = ::update,
         onSubmit = { submit() },
-      )
+      ),
     )
     if (dirty) {
       LocalUiBuilderChrome.current.InspectorAction(
@@ -1254,7 +1254,7 @@ private fun DraftPropertyControl(
           horizontalPaddingDp = 10,
           modifier = Modifier.padding(start = 4.dp, top = 7.dp),
           onClick = { submit() },
-        )
+        ),
       )
     }
   }
@@ -1296,7 +1296,7 @@ private fun DraftPropertyControl(
                 .editorNumber(bounds.integer)
             submit(next)
           },
-        )
+        ),
       )
       Text(
         bounds
@@ -1319,7 +1319,7 @@ private fun DraftPropertyControl(
                 .editorNumber(bounds.integer)
             submit(next)
           },
-        )
+        ),
       )
     }
   }
@@ -1329,7 +1329,7 @@ private fun DraftPropertyControl(
         label = "Use sample text",
         horizontalPaddingDp = 10,
         onClick = { submit("Edited in Compose") },
-      )
+      ),
     )
   }
 }
@@ -1403,7 +1403,7 @@ internal fun triageProblems(problems: List<EditorProblem>): List<EditorProblemGr
           { it.title },
           { it.nodeId.orEmpty() },
         )
-        .thenBy { it.code }
+        .thenBy { it.code },
     )
 }
 
@@ -1535,7 +1535,7 @@ private fun ProblemGroupRow(
         Text(
           if (detailsOpen) "Hide details"
           else if (group.problems.size == 1) "Technical details"
-          else "${group.problems.size} occurrences"
+          else "${group.problems.size} occurrences",
         )
       }
     }
@@ -1557,9 +1557,9 @@ private fun ProblemGroupRow(
               UiBuilderEditorEvent.ResolveUndeclaredProperty(
                 problem.nodeId,
                 problem.propertyName,
-              )
+              ),
             )
-          }
+          },
         ) {
           Text("Drop")
         }
@@ -1581,7 +1581,7 @@ private fun ProblemGroupRow(
                         problem.nodeId,
                         problem.propertyName,
                         replacement,
-                      )
+                      ),
                     )
                   },
                 )
@@ -1651,7 +1651,7 @@ private fun OperationHistoryRow(entry: EditorOperationEntry, onSelectNode: (Stri
             .padding(8.dp)
         else base.padding(vertical = 4.dp)
       }
-      .let { base -> entry.nodeId?.let { id -> base.clickable { onSelectNode(id) } } ?: base }
+      .let { base -> entry.nodeId?.let { id -> base.clickable { onSelectNode(id) } } ?: base },
   ) {
     entry.standing.marker()?.let { marker ->
       Text(
@@ -1907,7 +1907,7 @@ private fun ScreenEnvironmentInspector(
         validationError = document.screenEnvironmentValidationError(parsed)
         if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(parsed))
       },
-    )
+    ),
   )
   // Clarifies that Apply covers only these fields; the device menus commit as you pick.
   Text(
@@ -1987,7 +1987,7 @@ private fun DevicePresetPicker(
         filled = true,
         modifier = Modifier.fillMaxWidth(),
         onClick = { expanded = true },
-      )
+      ),
     )
     LocalUiBuilderChrome.current.PopupMenu(
       expanded = expanded,
@@ -2009,7 +2009,7 @@ private fun DevicePresetPicker(
                     expanded = false
                     onPick(preset)
                   },
-                )
+                ),
               )
             }
           }
@@ -2019,7 +2019,7 @@ private fun DevicePresetPicker(
               UiBuilderMenuEntry.Action("Show all devices (${presets.size - shown.size} more)") {
                 // Stays open: revealing the rest precedes a choice.
                 showAll = true
-              }
+              },
             )
           }
         },
@@ -2073,7 +2073,7 @@ private fun VariantAxisPicker(
               enabled = drawn,
               onClick = onToggleWearScreenPanes,
             )
-            .takeIf { offersWearScreens }
+            .takeIf { offersWearScreens },
         ),
   )
 }
@@ -2131,7 +2131,7 @@ private fun ExportDevicePicker(
         filled = true,
         modifier = Modifier.fillMaxWidth(),
         onClick = { expanded = true },
-      )
+      ),
     )
     LocalUiBuilderChrome.current.PopupMenu(
       expanded = expanded,
@@ -2155,7 +2155,7 @@ private fun ExportDevicePicker(
                   // The menu stays open: picking a set one item at a time through a menu that
                   // closes after each is the interaction this control exists to avoid.
                   onClick = { onToggle(preset.id) },
-                )
+                ),
               )
             }
           }
@@ -2164,7 +2164,7 @@ private fun ExportDevicePicker(
             add(
               UiBuilderMenuEntry.Action("Show all devices (${presets.size - shown.size} more)") {
                 showAll = true
-              }
+              },
             )
           }
         },
@@ -2189,7 +2189,7 @@ private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> 
         filled = true,
         modifier = Modifier.fillMaxWidth(),
         onClick = { expanded = true },
-      )
+      ),
     )
     TrackEditorOverlay(expanded)
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -2517,7 +2517,7 @@ private fun EnvironmentTextField(
       modifier = modifier,
       onFocusChanged = onFocusChanged,
       onValueChange = onValueChange,
-    )
+    ),
   )
 }
 
@@ -2615,7 +2615,7 @@ private fun LocalComponentHeader(
       TextButton(
         onClick = {
           dispatch(UiBuilderEditorEvent.ReplaceLocalComponent(component.key, published.componentId))
-        }
+        },
       ) {
         Text("Replace with ${published.displayName}")
       }

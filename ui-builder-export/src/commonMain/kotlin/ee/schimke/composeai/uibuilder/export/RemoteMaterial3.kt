@@ -389,7 +389,7 @@ public object RemoteMaterial3 {
             is Boolean -> JsonPrimitive(value)
             else -> error("unsupported canvas default $value")
           },
-      )
+      ),
     )
 }
 

@@ -192,7 +192,7 @@ class RemoteDocumentPreviewTest {
               UiBuilderNode(
                 id = "widget-root",
                 componentId = "remote-m3/widget-container-small",
-              )
+              ),
           ),
       )
     var calls = 0
@@ -248,16 +248,16 @@ class RemoteDocumentPreviewTest {
     runDesktopComposeUiTest(width = 1600, height = 1000) {
       val base =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       val catalog =
         base.copy(
           browserPreview =
             BrowserPreviewCapabilityV1.Builder(
-                BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER
+                BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER,
               )
               .also { it.format = ExportFormatV1.RC }
-              .build()
+              .build(),
         )
       var documentRequests = 0
       var nativeRequests = 0
@@ -291,16 +291,16 @@ class RemoteDocumentPreviewTest {
     runDesktopComposeUiTest(width = 1200, height = 900) {
       val base =
         CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText(),
         )
       val catalog =
         base.copy(
           browserPreview =
             BrowserPreviewCapabilityV1.Builder(
-                BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER
+                BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER,
               )
               .also { it.format = ExportFormatV1.RC }
-              .build()
+              .build(),
         )
       var documentRequests = 0
       var nativeRequests = 0

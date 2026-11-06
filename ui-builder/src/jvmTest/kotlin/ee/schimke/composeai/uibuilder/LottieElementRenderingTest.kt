@@ -74,7 +74,7 @@ class LottieElementRenderingTest {
             buildMap {
               if (json.isNotEmpty()) put("json", property(json))
               if (url.isNotEmpty()) put("url", property(url))
-            }
+            },
           ),
         modifiers = JsonArray(listOf(buildJsonObject { put("type", "fillMaxWidth") })),
       )
