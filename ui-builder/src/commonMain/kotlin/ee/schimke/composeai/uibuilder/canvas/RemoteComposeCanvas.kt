@@ -229,8 +229,11 @@ internal fun PlayedInlineRemoteContent(
 internal fun rememberHostTypefaces(): RcTypefaceLoader {
   // The host's map fills in as families load, in place: copy it here, where reading it subscribes
   // this composition to it, and key the loader on the copy, so a face that arrives later is drawn.
-  val loaded = LocalUiBuilderFontFamilies.current.toMap()
-  return remember(loaded) { hostTypefaces(loaded) }
+  // A host map may instead load a family when it is asked for one (the production renderer's): the
+  // live map's own lookup stays the fallback.
+  val live = LocalUiBuilderFontFamilies.current
+  val loaded = live.toMap()
+  return remember(live, loaded) { hostTypefaces(loaded, live::get) }
 }
 
 /**
@@ -239,7 +242,10 @@ internal fun rememberHostTypefaces(): RcTypefaceLoader {
  * `google:` ([RcTypefaceLoader.typeface]), so both sides meet at [canonicalFamilyName]: looked up
  * verbatim, no named face would ever reach the canvas.
  */
-internal fun hostTypefaces(loaded: Map<String, FontFamily>): RcTypefaceLoader {
+internal fun hostTypefaces(
+  loaded: Map<String, FontFamily>,
+  resolve: (family: String) -> FontFamily? = loaded::get,
+): RcTypefaceLoader {
   val byName =
     loaded.entries
       .mapNotNull { (name, family) -> canonicalFamilyName(name)?.let { it to family } }
@@ -250,6 +256,7 @@ internal fun hostTypefaces(loaded: Map<String, FontFamily>): RcTypefaceLoader {
 
     override fun typeface(family: String, variations: RcFontVariations?): FontFamily? =
       canonicalFamilyName(family)?.let(byName::get)
+        ?: resolve(family)
         ?: RcTypefaceLoader.Default.typeface(family, variations)
   }
 }

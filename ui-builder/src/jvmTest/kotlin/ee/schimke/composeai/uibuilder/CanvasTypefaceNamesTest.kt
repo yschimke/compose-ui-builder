@@ -86,6 +86,35 @@ class CanvasTypefaceNamesTest {
   }
 
   /**
+   * A host map may load a family only when it is asked for it, listing none until then (the
+   * production renderer's): the canvas still asks it.
+   */
+  @Test
+  fun aFaceTheHostLoadsOnDemandIsUsed() {
+    val onDemand =
+      object : AbstractMap<String, FontFamily>() {
+        override val entries: Set<Map.Entry<String, FontFamily>> = emptySet()
+
+        override fun get(key: String): FontFamily? = orbitron.takeIf {
+          canonicalFamilyName(key) == "orbitron"
+        }
+      }
+    var loader: RcTypefaceLoader? = null
+    val scene = ImageComposeScene(10, 10, Density(1f))
+    try {
+      scene.setContent {
+        CompositionLocalProvider(LocalUiBuilderFontFamilies provides onDemand) {
+          loader = rememberHostTypefaces()
+        }
+      }
+      scene.render()
+      assertSame(orbitron, loader!!.typeface("orbitron"))
+    } finally {
+      scene.close()
+    }
+  }
+
+  /**
    * The host's map fills in place as families load: a face that arrives later reaches the canvas.
    */
   @Test
