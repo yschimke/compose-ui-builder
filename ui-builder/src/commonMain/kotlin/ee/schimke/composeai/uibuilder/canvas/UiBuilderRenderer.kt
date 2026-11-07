@@ -207,6 +207,7 @@ import ee.schimke.composeai.uibuilder.rememberThemeRoleFamilies
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasAdapterRegistry
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasDocumentHost
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasDocumentScope
+import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasHostAction
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasMode
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasRenderNode
 import ee.schimke.composeai.uibuilder.renderer.sdk.LocalCanvasAdapterRegistry
@@ -302,6 +303,13 @@ internal val LocalUiBuilderCatalogComponentIds =
 
 /** Destination selected by a `navigatePage` action in the live canvas. */
 internal val LocalUiBuilderNavigator = staticCompositionLocalOf<(String) -> Unit> { { _ -> } }
+
+/**
+ * Where a host action a node fires on the canvas goes; see [CanvasHostAction]. The editor logs it,
+ * and a host embedding the editor may answer it. Nowhere by default.
+ */
+internal val LocalUiBuilderHostActions =
+  staticCompositionLocalOf<(CanvasHostAction) -> Unit> { { _ -> } }
 
 /**
  * Which host container a Wear widget design is drawn inside. A composition local because the
@@ -606,6 +614,7 @@ fun UiBuilderSurface(
               },
               onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
               onOverlayBoundsForgotten = { path -> overlayBounds.remove(path) },
+              onHostAction = LocalUiBuilderHostActions.current,
               rootModifier = { entry ->
                 when {
                   entry.node.componentId.startsWith("remote-m3/widget-container-") ->

@@ -71,6 +71,51 @@ class CanvasNodePreparationTest {
     assertEquals(emptyList(), writes)
   }
 
+  /** A host action goes to the host, in order with the writes around it, and writes nothing. */
+  @Test
+  fun `a host action is reported in order and writes no state`() {
+    val node =
+      UiBuilderNode(
+        id = "key-7",
+        componentId = "layout/box",
+        eventBindings =
+          JsonObject(
+            mapOf(
+              "click" to
+                JsonArray(
+                  listOf(
+                    action("toggle", "pressed"),
+                    hostAction("calc.key", JsonPrimitive("7")),
+                    hostAction("calc.clear"),
+                    // Malformed: no name, so nothing fires, as its export is refused.
+                    hostAction(" "),
+                    hostAction("lights.on", JsonPrimitive(true)),
+                  ),
+                ),
+            ),
+          ),
+      )
+    val log = mutableListOf<String>()
+
+    dispatchCanvasEvent(
+      node = node,
+      event = "click",
+      state = mapOf("pressed" to "false"),
+      onState = { name, value -> log += "state $name=$value" },
+      onNavigate = {},
+      onHostAction = { log += "host ${it.nodeId}.${it.event} ${it.name} ${it.value}" },
+    )
+
+    assertEquals(
+      listOf(
+        "state pressed=true",
+        "host key-7.click calc.key \"7\"",
+        "host key-7.click calc.clear null",
+      ),
+      log,
+    )
+  }
+
   /** `wear-m3/button.onClickAction` runs as one more click action, after the bound ones. */
   @Test
   fun `a click runs the bound actions and then onClickAction`() {
@@ -160,6 +205,15 @@ class CanvasNodePreparationTest {
         put("type", JsonPrimitive(type))
         put("variable", JsonPrimitive(variable))
         if (value != null) put("value", JsonPrimitive(value))
+      },
+    )
+
+  private fun hostAction(name: String, value: JsonPrimitive? = null) =
+    JsonObject(
+      buildMap {
+        put("type", JsonPrimitive("hostAction"))
+        put("name", JsonPrimitive(name))
+        if (value != null) put("value", value)
       },
     )
 }

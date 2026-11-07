@@ -12,6 +12,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.editor.themeHost
 import ee.schimke.composeai.uibuilder.export.AndroidGoogleFonts
 import ee.schimke.composeai.uibuilder.export.FontSettings
+import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
@@ -93,19 +94,24 @@ internal class ComposeEmitter(
    */
   fun emit(): String {
     val functionName = document.exportFunctionName()
-    val navigates =
+    fun bindsAction(type: String) =
       document.nodes.values.any { node ->
         node.eventBindings.values.any { encoded ->
           (encoded as? JsonArray).orEmpty().any { action ->
-            (action as? JsonObject)?.optionalString("type") == "navigatePage"
+            (action as? JsonObject)?.optionalString("type") == type
           }
         }
       }
+    // Each callback only when an action calls it, so a screen that neither navigates nor talks to
+    // its host keeps a bare signature.
+    val callbacks =
+      listOfNotNull(
+        "onNavigatePage: (String) -> Unit = {}".takeIf { bindsAction("navigatePage") },
+        "onHostAction: (name: String, value: Any?) -> Unit = { _, _ -> }"
+          .takeIf { bindsAction(HostActions.TYPE) },
+      )
     appendLine("@Composable")
-    appendLine(
-      if (navigates) "fun $functionName(onNavigatePage: (String) -> Unit = {}) {"
-      else "fun $functionName() {",
-    )
+    appendLine("fun $functionName(${callbacks.joinToString(", ")}) {")
     emitState(1)
     document.roots.forEach { rootId -> emitNode(rootId, 1) }
     appendLine("}")
@@ -1500,6 +1506,10 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
         action.optionalString("pageKey")?.takeIf(String::isNotBlank)?.let {
           "onNavigatePage(\"${it.escape()}\")"
         } ?: "TODO(\"navigatePage needs a pageKey\")"
+      // The screen has no host of its own: it hands the action to its caller, which is the host.
+      HostActions.TYPE ->
+        HostActions.issue(action)?.let { "TODO(\"${it.escape()}\")" }
+          ?: "onHostAction(\"${HostActions.name(action)!!.escape()}\", ${hostActionValue(action)})"
       "select",
       // `set` is the protocol's own name for an assignment and behaves exactly as `select` does.
       "set",
@@ -1549,6 +1559,15 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
     }
   }
 }
+
+/** A host action's one value as a Kotlin literal, `null` when it carries none. */
+private fun hostActionValue(action: JsonObject): String =
+  when (val value = HostActions.value(action)) {
+    null -> "null"
+    is HostActions.Value.Text -> "\"${value.value.escape()}\""
+    is HostActions.Value.Integer -> value.value.toString()
+    is HostActions.Value.Decimal -> value.value.toString()
+  }
 
 /** A formula an action writes is computed by the Remote Compose player; this lane has none. */
 private fun computedActionTodo(name: String?): String =
@@ -2942,7 +2961,16 @@ internal val SUPPORTED_MODIFIERS =
   )
 
 private val SUPPORTED_ACTIONS =
-  setOf("select", "selectOrClear", "setText", "set", "toggle", "increment", "navigatePage")
+  setOf(
+    "select",
+    "selectOrClear",
+    "setText",
+    "set",
+    "toggle",
+    "increment",
+    "navigatePage",
+    HostActions.TYPE,
+  )
 
 /**
  * The components whose `click` binding the Compose export emits, derived from `HANDLED_FIELDS` so

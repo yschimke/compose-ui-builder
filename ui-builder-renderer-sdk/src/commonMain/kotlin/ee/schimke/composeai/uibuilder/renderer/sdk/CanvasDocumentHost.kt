@@ -57,8 +57,12 @@ internal constructor(
   private val semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
   /** [UiBuilderUndrawnNodes]' key for the document this scope draws. */
   private val undrawnKey: String = "",
+  private val hostAction: (CanvasHostAction) -> Unit = {},
 ) {
   fun setState(name: String, value: String?) = updateState(name, value)
+
+  /** A node fired a host action; see [CanvasHostAction]. */
+  fun sendHostAction(action: CanvasHostAction) = hostAction(action)
 
   /**
    * The node [nodeId] was not drawn as itself; see [UiBuilderUndrawnNode]. Call it from a side
@@ -133,8 +137,14 @@ fun CanvasDocumentHost(
    * bottom-pinned slots.
    */
   measureUnrolledExtent: Boolean = true,
+  /**
+   * A node fired a host action. The design's state is untouched by it; the host answers it, if at
+   * all, by changing the host inputs it owns.
+   */
+  onHostAction: (CanvasHostAction) -> Unit = {},
   content: @Composable CanvasDocumentScope.(CanvasRenderNode, Modifier) -> Unit,
 ) {
+  val currentHostAction = rememberUpdatedState(onHostAction)
   val semanticActions = mutableMapOf<String, UiBuilderSemanticActionEntry>()
   val ancestry = remember(document) { document.itemAncestryIndex() }
   var surfaceCoordinates by
@@ -274,6 +284,7 @@ fun CanvasDocumentHost(
       },
       semanticActions = semanticActions,
       undrawnKey = undrawnGenerationKey(document.id, document.revision),
+      hostAction = { action -> currentHostAction.value(action) },
     )
 
   Box(

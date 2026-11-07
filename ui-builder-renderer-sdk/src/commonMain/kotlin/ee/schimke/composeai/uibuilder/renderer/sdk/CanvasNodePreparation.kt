@@ -11,6 +11,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import ee.schimke.composeai.uibuilder.export.ClickActions
+import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -45,10 +46,20 @@ fun CanvasRenderNode.prepare(
   applyModifier: @Composable (Modifier, JsonObject) -> Modifier,
   onBounds: (UiBuilderInstancePath, LayoutCoordinates) -> Unit,
   onSemanticAction: (String, UiBuilderSemanticActionEntry) -> Unit,
+  onHostAction: (CanvasHostAction) -> Unit = {},
 ): PreparedCanvasNode {
   val enabled = node.canvasBoolean("enabled", true)
   val dispatch = { event: String ->
-    dispatchCanvasEvent(node, event, state, onState, onNavigate, expressionScope, clock)
+    dispatchCanvasEvent(
+      node,
+      event,
+      state,
+      onState,
+      onNavigate,
+      expressionScope,
+      clock,
+      onHostAction,
+    )
   }
   val activate = { dispatch("click") }
   // A click is the bound `eventBindings.click` plus a component's `onClickAction`; see
@@ -111,7 +122,23 @@ fun CanvasRenderNode.prepare(
 
 private val TOUCH_EVENTS = listOf("touchDown", "touchUp", "touchCancel")
 
-/** Execute one event's ordered state and navigation actions. */
+/**
+ * A host action a node fired on the canvas (see [HostActions]): what a host feeding the exported
+ * document would receive. It writes nothing in the design; the canvas reports it so an author sees
+ * what fired, and a host embedding the editor can answer it.
+ */
+data class CanvasHostAction(
+  val nodeId: String,
+  val event: String,
+  val name: String,
+  /** The action's one value, as a protocol literal, or null when it carries none. */
+  val value: JsonPrimitive?,
+)
+
+/**
+ * Execute one event's ordered state, navigation and host actions. A malformed host action (one
+ * [HostActions.issue] refuses) fires nothing, as its export is refused.
+ */
 fun dispatchCanvasEvent(
   node: UiBuilderNode,
   event: String,
@@ -121,6 +148,7 @@ fun dispatchCanvasEvent(
   /** The document's state kinds, which a formula-valued action is typed against. */
   scope: UiExpressions.Scope? = null,
   clock: UiExpressions.Clock = UiExpressions.Clock.DEFAULT,
+  onHostAction: (CanvasHostAction) -> Unit = {},
 ) {
   val actions =
     if (event == "click") ClickActions.of(node)
@@ -128,7 +156,17 @@ fun dispatchCanvasEvent(
   val working = state.toMutableMap()
   actions.forEach { element ->
     val action = element as? JsonObject ?: return@forEach
-    if ((action["type"] as? JsonPrimitive)?.content == "navigatePage") {
+    if (HostActions.isHostAction(action)) {
+      if (HostActions.issue(action) == null)
+        onHostAction(
+          CanvasHostAction(
+            nodeId = node.id,
+            event = event,
+            name = HostActions.name(action)!!,
+            value = HostActions.value(action)?.json,
+          ),
+        )
+    } else if ((action["type"] as? JsonPrimitive)?.content == "navigatePage") {
       (action["pageKey"] as? JsonPrimitive)
         ?.takeIf(JsonPrimitive::isString)
         ?.content
