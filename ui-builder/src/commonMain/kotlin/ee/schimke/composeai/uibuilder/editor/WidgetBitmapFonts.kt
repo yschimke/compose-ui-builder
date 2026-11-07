@@ -1,9 +1,7 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.text.font.FontFamily
 import ee.schimke.composeai.rcplayer.compose.RcComposeTextRasterizer
-import ee.schimke.composeai.rcplayer.compose.RcFontVariations
 import ee.schimke.composeai.rcplayer.compose.RcTypefaceLoader
 import ee.schimke.composeai.rcplayer.edit.RcBitmapFontGlyphs
 import ee.schimke.composeai.rcplayer.edit.RcDisplay
@@ -17,7 +15,7 @@ import ee.schimke.composeai.rcplayer.protocol.RcTextData
 import ee.schimke.composeai.rcplayer.protocol.RcTextStyleProperty
 import ee.schimke.composeai.rcplayer.protocol.RcWireLimits
 import ee.schimke.composeai.uibuilder.UiBuilderFontRegistry
-import ee.schimke.composeai.uibuilder.canonicalFamilyName
+import ee.schimke.composeai.uibuilder.canvas.hostTypefaces
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -163,29 +161,9 @@ object WidgetBitmapFonts {
 }
 
 /**
- * [loaded] (keyed by a document's spelling, `google:Orbitron`) by the name the rasterizer asks with
- * (lower case, no `google:`), over the player's defaults: the faces a bitmap-font export draws its
- * glyphs in.
- */
-fun widgetTypefaces(loaded: Map<String, FontFamily>): RcTypefaceLoader {
-  val byName =
-    loaded.entries
-      .mapNotNull { (name, family) -> canonicalFamilyName(name)?.let { it to family } }
-      .toMap()
-  return object : RcTypefaceLoader {
-    override val families: Set<String>
-      get() = RcTypefaceLoader.Default.families + byName.keys
-
-    override fun typeface(family: String, variations: RcFontVariations?): FontFamily? =
-      canonicalFamilyName(family)?.let(byName::get)
-        ?: RcTypefaceLoader.Default.typeface(family, variations)
-  }
-}
-
-/**
- * The faces [families] name, from this registry ([widgetTypefaces]): any not loaded yet are asked
- * for and waited on, up to [timeoutMillis], since the glyphs are drawn in them. A family that
- * doesn't arrive in time is declined by the rasterizer and stays text.
+ * The faces [families] name, from this registry, as the canvas looks them up ([hostTypefaces]): any
+ * not loaded yet are asked for and waited on, up to [timeoutMillis], since the glyphs are drawn in
+ * them. A family that doesn't arrive in time is declined by the rasterizer and stays text.
  */
 suspend fun UiBuilderFontRegistry.typefacesFor(
   families: Set<String>,
@@ -193,5 +171,5 @@ suspend fun UiBuilderFontRegistry.typefacesFor(
 ): RcTypefaceLoader {
   families.filter { it !in loaded }.forEach(::request)
   withTimeoutOrNull(timeoutMillis) { snapshotFlow { families.all { it in loaded } }.first { it } }
-  return widgetTypefaces(loaded.toMap())
+  return hostTypefaces(loaded.toMap())
 }
