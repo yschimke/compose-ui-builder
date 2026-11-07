@@ -32,6 +32,7 @@ class NewDesignKeyboardTest {
         )
       }
 
+      onNodeWithContentDescription("More options").performScrollTo().performClick()
       onNodeWithContentDescription("Design ID").performTextReplacement("keyboard-design")
       onNodeWithContentDescription("Design ID").performImeAction()
 
@@ -50,6 +51,7 @@ class NewDesignKeyboardTest {
         )
       }
 
+      onNodeWithContentDescription("More options").performScrollTo().performClick()
       onNodeWithContentDescription("Add state variables").performClick()
       onNodeWithContentDescription("State name").performTextReplacement("expanded")
       onNodeWithContentDescription("State initial value").performTextReplacement("true")
@@ -74,6 +76,7 @@ class NewDesignKeyboardTest {
           onCreatePublic = { _, _, _, _, _ -> creations += "public" },
         )
       }
+      onNodeWithContentDescription("More options").performScrollTo().performClick()
       onNodeWithContentDescription("Design ID").performImeAction()
       onNodeWithText("Public (read only)").performScrollTo().performClick()
       onNodeWithContentDescription("Design ID").performImeAction()
@@ -110,6 +113,7 @@ class NewDesignKeyboardTest {
         )
       }
       onNodeWithText("Starter 5").performScrollTo().performClick()
+      onNodeWithContentDescription("More options").performScrollTo().performClick()
       onNodeWithContentDescription("Design ID").performScrollTo()
       onNodeWithContentDescription("Add state variables").performScrollTo().performClick()
       onNodeWithContentDescription("State name")

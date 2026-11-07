@@ -318,6 +318,18 @@ fun UiBuilderLargeIssuesTriagePreview() {
 @Preview(widthDp = 900, heightDp = 900)
 @Composable
 fun UiBuilderNewDesignPreview() {
+  NewDesignScreenSample()
+}
+
+/** The same screen at phone width, where the panels stack and the template grid is two across. */
+@Preview(widthDp = 412, heightDp = 1100)
+@Composable
+fun UiBuilderNewDesignPhonePreview() {
+  NewDesignScreenSample()
+}
+
+@Composable
+private fun NewDesignScreenSample() {
   UiBuilderNewDesignScreen(
     // Fixed, not random: the app rolls a new name each time, and so would every render of this.
     initialDesignId = "sunny-otter",

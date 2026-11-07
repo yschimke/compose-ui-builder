@@ -153,6 +153,7 @@ class UiBuilderHomeScreenTest {
           )
         }
       }
+      onNodeWithContentDescription("More options").performScrollTo().performClick()
       onNodeWithContentDescription("Design ID").assertTextContains("sunny-otter")
       onNodeWithText("Create").performScrollTo().performClick()
       assertEquals("sunny-otter", createdId)
@@ -164,6 +165,31 @@ class UiBuilderHomeScreenTest {
       assertNotEquals("sunny-otter", generated)
       assertTrue(generated.isNotBlank())
     }
+
+  @Test
+  fun `the id, visibility and state wait behind More options`() = runComposeUiTest {
+    var created: String? = null
+    setContent {
+      UiBuilderNewDesignScreen(
+        catalogs = catalogs,
+        initialCatalogSystemId = "m3-catalog",
+        initialDesignId = "quiet-heron",
+        onCreatePublic = { _, _, _, _, _ -> },
+        onCreate = { _, designId, _, _, _ -> created = designId },
+      )
+    }
+    onNodeWithContentDescription("Design title").assertExists()
+    onNodeWithContentDescription("Design ID").assertDoesNotExist()
+    onNodeWithText("Public (read only)").assertDoesNotExist()
+    onNodeWithContentDescription("Add state variables").assertDoesNotExist()
+    // Folded away, the defaults still create the design.
+    onNodeWithText("Create").performScrollTo().performClick()
+    assertEquals("quiet-heron", created)
+    onNodeWithContentDescription("More options").performScrollTo().performClick()
+    onNodeWithContentDescription("Design ID").assertTextContains("quiet-heron")
+    onNodeWithText("Public (read only)").assertExists()
+    onNodeWithContentDescription("Add state variables").assertExists()
+  }
 
   @Test
   fun `opening and copying name the design they were pressed on`() = runComposeUiTest {
