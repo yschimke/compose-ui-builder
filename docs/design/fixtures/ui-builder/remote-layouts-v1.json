@@ -1,0 +1,264 @@
+{
+  "schema": "ui-builder-remote-layouts/v1",
+  "source": {
+    "group": "androidx.compose.remote",
+    "artifact": "remote-creation-compose",
+    "version": "1.0.0-alpha21"
+  },
+  "layouts": [
+    {
+      "name": "RemoteBox",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "contentAlignment",
+              "type": "RemoteAlignment",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "() -> Unit",
+              "optional": false,
+              "composableSlot": true
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RemoteCollapsibleColumn",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "verticalArrangement",
+              "type": "RemoteArrangement.Vertical",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "horizontalAlignment",
+              "type": "RemoteAlignment.Horizontal",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "RemoteCollapsibleColumnScope.() -> Unit",
+              "optional": false,
+              "composableSlot": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RemoteCollapsibleRow",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "horizontalArrangement",
+              "type": "RemoteArrangement.Horizontal",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "verticalAlignment",
+              "type": "RemoteAlignment.Vertical",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "RemoteCollapsibleRowScope.() -> Unit",
+              "optional": false,
+              "composableSlot": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RemoteColumn",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "verticalArrangement",
+              "type": "RemoteArrangement.Vertical",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "horizontalAlignment",
+              "type": "RemoteAlignment.Horizontal",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "RemoteColumnScope.() -> Unit",
+              "optional": false,
+              "composableSlot": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RemoteFitBox",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "horizontalAlignment",
+              "type": "RemoteAlignment.Horizontal",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "verticalArrangement",
+              "type": "RemoteArrangement.Vertical",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "() -> Unit",
+              "optional": true,
+              "composableSlot": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RemoteFlowRow",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "horizontalArrangement",
+              "type": "RemoteArrangement.Horizontal",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "verticalArrangement",
+              "type": "RemoteArrangement.Vertical",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "maxItemsInEachRow",
+              "type": "Int",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "maxLines",
+              "type": "Int",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "() -> Unit",
+              "optional": false,
+              "composableSlot": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RemoteRow",
+      "package": "androidx.compose.remote.creation.compose.layout",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "modifier",
+              "type": "RemoteModifier",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "horizontalArrangement",
+              "type": "RemoteArrangement.Horizontal",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "verticalAlignment",
+              "type": "RemoteAlignment.Vertical",
+              "optional": true,
+              "composableSlot": false
+            },
+            {
+              "name": "content",
+              "type": "RemoteRowScope.() -> Unit",
+              "optional": false,
+              "composableSlot": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -3306,13 +3306,10 @@ internal class RemoteContentEmitter(
     val pad = INDENT.repeat(depth)
     val children = node.slots["children"].orEmpty()
     if (children.isEmpty()) {
-      // Only two calls compile without a content lambda: `RemoteFitBox` (its `content` defaults)
-      // and the spacer overload `RemoteBox(modifier)`. A `RemoteBox` with a `contentAlignment`, and
-      // every other container, requires one, so an empty cell writes an empty lambda.
-      val lambdaOptional =
-        symbol == "RemoteFitBox" ||
-          (symbol == "RemoteBox" && arguments.all { it.startsWith(MODIFIER_ARGUMENT) })
-      if (lambdaOptional) {
+      // Written bare only when a released overload takes these arguments and no content, or
+      // defaults it (`RemoteBox(modifier)`, `RemoteFitBox`); otherwise an empty cell writes an
+      // empty lambda, which every container accepts.
+      if (RemoteLayoutSignatures.contentLambdaOptional(symbol, arguments.map(::argumentName))) {
         return (pad + if (arguments.isEmpty()) "$symbol()" else call(symbol, arguments, pad)).split(
           "\n",
         )
@@ -3335,6 +3332,9 @@ internal class RemoteContentEmitter(
     scope = enclosing
     return (pad + head).split("\n") + body + listOf("$pad}")
   }
+
+  /** The parameter a written `name = value` argument names. */
+  private fun argumentName(argument: String): String = argument.substringBefore(" = ").trim()
 
   /** The container symbol whose lambda the node being emitted sits in, or null at the top. */
   private var scope: String? = null
