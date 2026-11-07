@@ -105,12 +105,37 @@ internal class JvmHostLogicProgram(
       withDeadline(fresh, loadBudgetMs) {
         run(fresh, PRELUDE, "host logic did not load")
         run(fresh, source + EPILOGUE, "host logic did not load")
+        // Loaded, so it parses; now that both are exported, not only declared.
+        EXPORTS.forEach { requireExported(fresh, it) }
       }
       instance = fresh
     } catch (error: Throwable) {
       fresh.close()
       throw error
     }
+  }
+
+  /**
+   * Refuses a program that declares [name] without exporting it, which the browser's engine (it
+   * reads the module namespace) refuses too. A module may not export one name twice, so the program
+   * with `export { name };` appended compiles only when it never exported it. The probe re-exports
+   * the program's own binding, which loading has shown is declared, so it adds no name the program
+   * could already be using.
+   */
+  private fun requireExported(instance: Instance, name: String) {
+    val probe = "$source\n;export { $name };\n"
+    val exported =
+      try {
+        instance.runner.compile(probe)
+        false
+      } catch (error: Throwable) {
+        val message = reported(error.message.orEmpty(), instance.runner.stderr()).orEmpty()
+        if (!message.contains("duplicate exported name")) throw HostLogicError(message)
+        true
+      } finally {
+        instance.runner.clearOutput()
+      }
+    if (!exported) throw HostLogicError("host logic must export a function named $name")
   }
 
   override fun call(function: String, argumentsJson: String, now: Long, seed: Int): Result<String> =
@@ -272,6 +297,8 @@ internal class JvmHostLogicProgram(
         .trimIndent()
 
     const val CALL = "__hostLogicCall();"
+
+    val EXPORTS = listOf("init", "onAction")
 
     /** The interpreter's message for a syntax error or a throw at load: `Error: expecting ';'`. */
     fun reported(message: String, stderr: String): String? =
