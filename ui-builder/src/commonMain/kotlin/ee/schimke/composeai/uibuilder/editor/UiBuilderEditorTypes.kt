@@ -50,6 +50,12 @@ data class UiBuilderNewDesignCatalog(
    * from `newDesign.primary`; null leaves it to [isPrimary]'s default.
    */
   val primary: Boolean? = null,
+  /**
+   * What the design is for, as a person picks it first in the New design form: the catalog's
+   * `newDesign.device` word (`phone`, `watch`, `widget`, `glasses`, `smart-home`, `agent`, or its
+   * own). Null leaves it to [newDesignDevice]'s fallback.
+   */
+  val device: String? = null,
 )
 
 /**

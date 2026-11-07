@@ -1,8 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.NewDesignDevice
 import ee.schimke.composeai.uibuilder.editor.catalogOwnedNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.isPrimary
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs
+import ee.schimke.composeai.uibuilder.editor.newDesignDevice
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -222,5 +224,21 @@ class CatalogOwnedNewDesignTest {
     assertFalse(
       catalogOwnedNewDesignCatalog(withNewDesign(wear, """{"primary": false}""")).isPrimary,
     )
+  }
+
+  @Test
+  fun `a catalog names the device its designs are for`() {
+    val launcher =
+      withNewDesign(
+        catalog("remote-widgets", "remote-compose", null, null),
+        """{"device": "phone"}""",
+      )
+    assertEquals("phone", catalogOwnedNewDesignCatalog(launcher).device)
+    assertEquals(NewDesignDevice.PHONE, catalogOwnedNewDesignCatalog(launcher).newDesignDevice)
+    // Saying nothing leaves it to the platform: Remote Compose is a widget.
+    val quiet =
+      catalogOwnedNewDesignCatalog(catalog("remote-widgets", "remote-compose", null, null))
+    assertEquals(null, quiet.device)
+    assertEquals(NewDesignDevice.WIDGET, quiet.newDesignDevice)
   }
 }

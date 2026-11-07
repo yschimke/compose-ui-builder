@@ -215,8 +215,72 @@ private class NewDesignFormState(
 private fun NewDesignTypePicker(form: NewDesignFormState, picker: NewDesignTypeOptions) {
   val other = picker.other
   Text("1. What are you designing?", style = MaterialTheme.typography.titleSmall)
+  NewDesignTypeCards(form, picker.primary)
+  if (other.isNotEmpty()) {
+    val expanded = form.otherTypesExpanded ?: other.any { it.systemId == form.selectedCatalogId }
+    TextButton(onClick = { form.otherTypesExpanded = !expanded }) {
+      Text(if (expanded) "Hide other design types" else "Other design types…")
+    }
+    if (expanded) {
+      FlowRow(
+        modifier = Modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        other.forEach { catalog ->
+          FilterChip(
+            selected = form.selectedCatalogId == catalog.systemId,
+            onClick = { form.selectCatalog(catalog) },
+            label = { Text(catalog.label) },
+          )
+        }
+      }
+    }
+  }
+}
+
+/**
+ * "What are you designing?" asked device first, where the catalogs span more than one
+ * ([newDesignAsksDeviceFirst]): a chip per [NewDesignDevice], then — when that device has more than
+ * one catalog — a card per catalog. Every catalog of the device is offered, so nothing hides behind
+ * "Other design types…".
+ */
+@Composable
+private fun NewDesignDevicePicker(form: NewDesignFormState) {
+  val groups = remember(form.catalogs) { newDesignDeviceGroups(form.catalogs) }
+  val labels = remember(form.catalogs) { newDesignTypeLabels(form.catalogs) }
+  val device = form.selectedCatalog.newDesignDevice
+  Text("1. What are you designing?", style = MaterialTheme.typography.titleSmall)
+  FlowRow(
+    modifier = Modifier.selectableGroup(),
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    groups.forEach { (option, members) ->
+      FilterChip(
+        selected = option == device,
+        onClick = { if (option != device) form.selectCatalog(members.first()) },
+        label = { Text(option.label) },
+      )
+    }
+  }
+  val members = groups.firstOrNull { it.first == device }?.second.orEmpty()
+  if (members.size > 1) {
+    Text(
+      "Which kind?",
+      style = MaterialTheme.typography.labelLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    NewDesignTypeCards(
+      form,
+      members.map { newDesignTypeChoice(it).copy(title = labels.getValue(it.systemId)) },
+    )
+  }
+}
+
+/** A row (wrapping at [TYPE_CARDS_PER_ROW]) of selectable type cards: title over subtitle. */
+@Composable
+private fun NewDesignTypeCards(form: NewDesignFormState, choices: List<NewDesignTypeChoice>) {
   // Three to a row: past that a card is too narrow for its title, so further cards wrap.
-  picker.primary.chunked(TYPE_CARDS_PER_ROW).forEach { row ->
+  choices.chunked(TYPE_CARDS_PER_ROW).forEach { row ->
     Row(
       modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).selectableGroup(),
       horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -250,28 +314,8 @@ private fun NewDesignTypePicker(form: NewDesignFormState, picker: NewDesignTypeO
         }
       }
       // Keep a short last row's cards the width of the full rows above it.
-      if (picker.primary.size > TYPE_CARDS_PER_ROW)
+      if (choices.size > TYPE_CARDS_PER_ROW)
         repeat(TYPE_CARDS_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
-    }
-  }
-  if (other.isNotEmpty()) {
-    val expanded = form.otherTypesExpanded ?: other.any { it.systemId == form.selectedCatalogId }
-    TextButton(onClick = { form.otherTypesExpanded = !expanded }) {
-      Text(if (expanded) "Hide other design types" else "Other design types…")
-    }
-    if (expanded) {
-      FlowRow(
-        modifier = Modifier.selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-      ) {
-        other.forEach { catalog ->
-          FilterChip(
-            selected = form.selectedCatalogId == catalog.systemId,
-            onClick = { form.selectCatalog(catalog) },
-            label = { Text(catalog.label) },
-          )
-        }
-      }
     }
   }
 }
@@ -345,7 +389,13 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
     // A host offering one catalog has no type to choose, so the form starts at the template —
     // unless that catalog's templates are grouped, when the groups are the choice.
     val oneCatalog = brand?.singleCatalog == true && form.catalogs.size == 1 && !picker.byGroup
-    if (!oneCatalog) NewDesignTypePicker(form, picker)
+    val deviceFirst =
+      remember(form.catalogs, brand) { newDesignAsksDeviceFirst(form.catalogs, brand) }
+    when {
+      oneCatalog -> Unit
+      deviceFirst -> NewDesignDevicePicker(form)
+      else -> NewDesignTypePicker(form, picker)
+    }
     Text(
       if (oneCatalog) "Choose a starting point" else "2. Choose a starting point",
       style = MaterialTheme.typography.titleSmall,

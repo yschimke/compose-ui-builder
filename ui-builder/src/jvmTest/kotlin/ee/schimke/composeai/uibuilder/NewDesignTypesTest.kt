@@ -1,11 +1,15 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.editor.NewDesignDevice
 import ee.schimke.composeai.uibuilder.editor.NewDesignTypeChoice
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.homeDesignKindLabel
 import ee.schimke.composeai.uibuilder.editor.isWidgetDesign
+import ee.schimke.composeai.uibuilder.editor.newDesignAsksDeviceFirst
+import ee.schimke.composeai.uibuilder.editor.newDesignDevice
+import ee.schimke.composeai.uibuilder.editor.newDesignDeviceGroups
 import ee.schimke.composeai.uibuilder.editor.newDesignTargetGroups
 import ee.schimke.composeai.uibuilder.editor.newDesignTemplateColumns
 import ee.schimke.composeai.uibuilder.editor.newDesignTypeChoice
@@ -31,6 +35,7 @@ class NewDesignTypesTest {
     description: String? = null,
     primary: Boolean? = null,
     platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.MOBILE,
+    device: String? = null,
   ) =
     UiBuilderNewDesignCatalog(
       systemId = id,
@@ -39,6 +44,7 @@ class NewDesignTypesTest {
       platform = platform,
       description = description,
       primary = primary,
+      device = device,
     )
 
   private val m3 = card("m3-catalog", "Mobile app", description = "Phone & tablet", primary = true)
@@ -199,6 +205,57 @@ class NewDesignTypesTest {
     assertEquals(2, newDesignTemplateColumns(340.dp))
     assertEquals(3, newDesignTemplateColumns(460.dp))
     assertEquals(4, newDesignTemplateColumns(1000.dp))
+  }
+
+  @Test
+  fun `a catalog's device is what it declares, else inferred from its label and platform`() {
+    assertEquals(NewDesignDevice.PHONE, m3.newDesignDevice)
+    assertEquals(NewDesignDevice.WATCH, wear.newDesignDevice)
+    // Remote Compose is a widget whether it lands on a watch or a launcher.
+    assertEquals(NewDesignDevice.WIDGET, remote.newDesignDevice)
+    assertEquals(NewDesignDevice.WIDGET, launcher.newDesignDevice)
+    assertEquals(NewDesignDevice.AGENT, a2ui.newDesignDevice)
+    // Labels name devices the platform enum has no word for.
+    assertEquals(NewDesignDevice.GLASSES, card("xr-glasses", "Glasses").newDesignDevice)
+    assertEquals(NewDesignDevice.SMART_HOME, ha.newDesignDevice)
+    // A declared device wins, known or the catalog's own.
+    assertEquals(NewDesignDevice.PHONE, launcher.copy(device = "phone").newDesignDevice)
+    assertEquals(
+      NewDesignDevice("car", "Car"),
+      card("auto", "Android Auto", device = "car").newDesignDevice,
+    )
+  }
+
+  @Test
+  fun `devices are offered in a fixed order, primary catalogs first within each`() {
+    val glasses = card("xr-glasses", "Glasses")
+    val groups = newDesignDeviceGroups(listOf(a2ui, glasses, launcher, m3, remote, wear, ha))
+    assertEquals(
+      listOf(
+        NewDesignDevice.PHONE,
+        NewDesignDevice.WATCH,
+        NewDesignDevice.WIDGET,
+        NewDesignDevice.GLASSES,
+        NewDesignDevice.SMART_HOME,
+        NewDesignDevice.AGENT,
+      ),
+      groups.map { it.first },
+    )
+    assertEquals(
+      listOf("remote-m3", "remote-widgets"),
+      groups.first { it.first == NewDesignDevice.WIDGET }.second.map { it.systemId },
+    )
+  }
+
+  @Test
+  fun `the device is asked first only across devices, on an unnarrowed host`() {
+    assertTrue(newDesignAsksDeviceFirst(listOf(m3, wear)))
+    assertFalse(newDesignAsksDeviceFirst(listOf(m3, card("compose-foundation", "Foundation"))))
+    assertFalse(
+      newDesignAsksDeviceFirst(listOf(m3, wear), UiBuilderBrand(catalogs = listOf("m3-catalog"))),
+    )
+    // One catalog's template groups are the choice instead.
+    assertFalse(newDesignAsksDeviceFirst(listOf(ha), UiBuilderBrand(catalogs = listOf("ha-cards"))))
   }
 
   @Test

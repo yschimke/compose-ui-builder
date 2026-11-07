@@ -47,6 +47,7 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
     platform = UiBuilderCatalogPlatform.from(semantics),
     description = chooser?.string("description"),
     primary = (chooser?.get("primary") as? JsonPrimitive)?.booleanOrNull,
+    device = chooser?.string("device"),
     templates =
       ids
         .withIndex()
