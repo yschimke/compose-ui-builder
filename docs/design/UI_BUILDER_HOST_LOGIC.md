@@ -214,8 +214,9 @@ CanvasHostAction (a node's hostAction fired)
   the values are drawn in the same frame as the press. The CSP is why it is an interpreter at all:
   the editor's page allows `'wasm-unsafe-eval'` and not `'unsafe-eval'`, so the page cannot
   evaluate a design's source, and inside QuickJS the program has no `fetch`, DOM, timers or
-  storage. `Date.now()` reads the design's fixed time and `Math.random()` is seeded per call, so a
-  run is reproducible.
+  storage. Every way of reading the time (`Date.now()`, `new Date()`, `Date()`) reads the design's
+  fixed time and `Math.random()` is seeded per call, so a run is reproducible; and everything that
+  can run the program's code, down to reading what it threw, runs under the budget.
 - `language: "javascript"` is JavaScript only for now: the "compile" is QuickJS parsing the module,
   and its syntax error is what the panel shows. TypeScript's type syntax needs a stripping step,
   which belongs with the server compile in slice 3.

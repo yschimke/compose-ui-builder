@@ -3,6 +3,13 @@
 // and not 'unsafe-eval', which is the whole reason this is an interpreter and not `new Function`.
 // It also gives the program no ambient authority: QuickJS has no fetch, DOM, timers or storage.
 //
+// The program is untrusted, and runs on the editor's main thread, so two rules hold throughout:
+// - Everything that can run the program's code — loading it, reading its exports, calling it,
+//   serialising what it returns, reading what it threw — runs under the interrupt deadline.
+// - Nothing the host relies on is reachable by the program: the module namespace, the original
+//   `JSON.parse` / `JSON.stringify` and the clock setter are handles this file holds, never globals
+//   the program could redefine with a getter or a setter.
+//
 // Every value crosses as a JSON string, so the Kotlin side sees strings only.
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline } from "quickjs-emscripten-core";
 import variant from "@jitl/quickjs-singlefile-browser-release-sync";
@@ -12,59 +19,116 @@ const quickjs = () => (engine ??= newQuickJSWASMModuleFromVariant(variant));
 
 const DEFAULTS = { memoryBytes: 8 << 20, stackBytes: 512 << 10, timeMs: 200 };
 
-// Deterministic stand-ins for the clock and randomness, reset before every call from env.
-const PRELUDE = `
-  globalThis.__seed = 1;
+// Evaluated before the program, so what it captures is the engine's own. It fixes every way of
+// reading the time to the design's clock (`Date.now()`, `new Date()`, `Date()`) and seeds
+// `Math.random()`, and hands back the setter the host calls before each call, with the original
+// JSON functions. Nothing it defines is left on the global object.
+const PRELUDE = `(() => {
+  let now = 0;
+  let seed = 1;
+  const RealDate = Date;
+  function FixedDate(...args) {
+    if (!new.target) return new RealDate(now).toString();
+    return args.length === 0 ? new RealDate(now) : new RealDate(...args);
+  }
+  FixedDate.now = () => now;
+  FixedDate.parse = RealDate.parse;
+  FixedDate.UTC = RealDate.UTC;
+  FixedDate.prototype = RealDate.prototype;
+  Object.defineProperty(RealDate.prototype, "constructor", { value: FixedDate });
+  globalThis.Date = FixedDate;
   Math.random = () => {
-    let t = (globalThis.__seed = (globalThis.__seed + 0x6d2b79f5) | 0);
+    let t = (seed = (seed + 0x6d2b79f5) | 0);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  Date.now = () => globalThis.__now;
-`;
+  return {
+    clock: (n, s) => { now = n; seed = s | 0; },
+    parse: JSON.parse,
+    stringify: JSON.stringify,
+    json: JSON,
+  };
+})()`;
 
 class HostLogicSession {
   constructor(QuickJS, source, limits) {
     this.limits = { ...DEFAULTS, ...limits };
     this.runtime = QuickJS.newRuntime();
-    this.runtime.setMemoryLimit(this.limits.memoryBytes);
-    this.runtime.setMaxStackSize(this.limits.stackBytes);
-    this.vm = this.runtime.newContext();
-    this.#guarded(() => {
-      this.#unwrap(this.vm.evalCode(PRELUDE, "prelude.js")).dispose();
-      const namespace = this.#unwrap(this.vm.evalCode(source, "host-logic.mjs", { type: "module" }));
-      this.vm.setProp(this.vm.global, "__hostLogic", namespace);
-      namespace.dispose();
-    });
-    for (const name of ["init", "onAction"]) {
-      if (this.#evalJson(`typeof globalThis.__hostLogic.${name}`) !== "function")
-        throw new Error(`host logic must export a function named ${name}`);
+    this.handles = [];
+    try {
+      this.runtime.setMemoryLimit(this.limits.memoryBytes);
+      this.runtime.setMaxStackSize(this.limits.stackBytes);
+      this.vm = this.runtime.newContext();
+      this.#guarded(() => {
+        const prelude = this.#keep(this.#unwrap(this.vm.evalCode(PRELUDE, "prelude.js")));
+        this.clock = this.#keep(this.vm.getProp(prelude, "clock"));
+        this.parse = this.#keep(this.vm.getProp(prelude, "parse"));
+        this.stringify = this.#keep(this.vm.getProp(prelude, "stringify"));
+        this.json = this.#keep(this.vm.getProp(prelude, "json"));
+        const namespace = this.#keep(
+          this.#unwrap(this.vm.evalCode(source, "host-logic.mjs", { type: "module" })),
+        );
+        // A module namespace's exports are bindings, not properties a program can give a getter.
+        this.functions = {};
+        for (const name of ["init", "onAction"]) {
+          const fn = this.#keep(this.vm.getProp(namespace, name));
+          if (this.vm.typeof(fn) !== "function")
+            throw new Error(`host logic must export a function named ${name}`);
+          this.functions[name] = fn;
+        }
+      });
+    } catch (error) {
+      this.dispose();
+      throw error;
     }
   }
 
-  // Calls the program's [name] with [argsJson] (a JSON array), under the time budget. [envJson]
-  // seeds the clock and randomness. Returns the result as JSON, or throws with the program's error.
+  // Calls the program's [name] with [argsJson] (a JSON array) under the deadline, with the clock
+  // at [now] and randomness seeded with [seed]. Returns the result as JSON, or throws with what the
+  // program threw.
   call(name, argsJson, now, seed) {
+    const fn = this.functions[name];
+    if (!fn) throw new Error(`host logic has no function named ${name}`);
     return this.#guarded(() => {
-      const args = this.vm.newString(argsJson);
-      this.vm.setProp(this.vm.global, "__args", args);
-      args.dispose();
-      const time = this.vm.newNumber(now);
-      this.vm.setProp(this.vm.global, "__now", time);
-      time.dispose();
-      const s = this.vm.newNumber(seed | 0);
-      this.vm.setProp(this.vm.global, "__seed", s);
-      s.dispose();
-      return this.#evalJson(
-        `JSON.stringify(globalThis.__hostLogic[${JSON.stringify(name)}](...JSON.parse(globalThis.__args)) ?? null)`,
-      );
+      const scratch = [];
+      const keep = (handle) => (scratch.push(handle), handle);
+      try {
+        this.#unwrap(
+          this.vm.callFunction(
+            this.clock,
+            this.vm.undefined,
+            keep(this.vm.newNumber(now)),
+            keep(this.vm.newNumber(seed | 0)),
+          ),
+        ).dispose();
+        const args = keep(
+          this.#unwrap(
+            this.vm.callFunction(this.parse, this.json, keep(this.vm.newString(argsJson))),
+          ),
+        );
+        const count = this.vm.getNumber(keep(this.vm.getProp(args, "length")));
+        const spread = [];
+        for (let i = 0; i < count; i++) spread.push(keep(this.vm.getProp(args, i)));
+        const result = keep(this.#unwrap(this.vm.callFunction(fn, this.vm.undefined, ...spread)));
+        const json = keep(this.#unwrap(this.vm.callFunction(this.stringify, this.json, result)));
+        return this.vm.typeof(json) === "string" ? this.vm.getString(json) : "null";
+      } finally {
+        scratch.forEach((handle) => handle.alive && handle.dispose());
+      }
     });
   }
 
   dispose() {
-    this.vm.dispose();
-    this.runtime.dispose();
+    for (const handle of this.handles) if (handle.alive) handle.dispose();
+    this.handles = [];
+    if (this.vm?.alive) this.vm.dispose();
+    if (this.runtime?.alive) this.runtime.dispose();
+  }
+
+  #keep(handle) {
+    this.handles.push(handle);
+    return handle;
   }
 
   #guarded(block) {
@@ -76,26 +140,41 @@ class HostLogicSession {
     }
   }
 
-  #evalJson(code) {
-    const handle = this.#unwrap(this.vm.evalCode(code, "call.js"));
-    try {
-      return this.vm.dump(handle);
-    } finally {
-      handle.dispose();
-    }
-  }
-
+  // Called inside #guarded, so a thrown object whose `name` or `message` is a looping getter is
+  // interrupted like any other code the program wrote.
   #unwrap(result) {
-    if (result.error) {
-      const error = this.vm.dump(result.error);
-      result.error.dispose();
-      const message =
-        error && typeof error === "object"
-          ? `${error.name ?? "Error"}: ${error.message ?? JSON.stringify(error)}`
-          : String(error);
-      throw new Error(message);
+    if (!result.error) return result.value;
+    const error = result.error;
+    let message;
+    try {
+      const read = (key) => {
+        const handle = this.vm.getProp(error, key);
+        try {
+          return this.vm.typeof(handle) === "string" ? this.vm.getString(handle) : undefined;
+        } finally {
+          handle.dispose();
+        }
+      };
+      const kind = this.vm.typeof(error);
+      if (kind === "string") message = this.vm.getString(error);
+      else if (kind === "number" || kind === "boolean" || kind === "undefined")
+        message = `host logic threw ${String(this.vm.dump(error))}`;
+      else {
+        // A getter that throws or runs out of time leaves no string here, not an exception: what
+        // `getProp` hands back is then the error itself, so only a real string is trusted.
+        const name = read("name");
+        const text = read("message");
+        message =
+          text !== undefined
+            ? `${name ?? "Error"}: ${text}`
+            : "host logic threw an object that is not an Error";
+      }
+    } catch {
+      message = "host logic threw something that cannot be read";
+    } finally {
+      error.dispose();
     }
-    return result.value;
+    throw new Error(message);
   }
 }
 
