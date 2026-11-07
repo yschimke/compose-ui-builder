@@ -164,6 +164,34 @@ class NewDesignTypesTest {
   }
 
   @Test
+  fun `with no catalog asking for the row, the first ones fill it`() {
+    val quiet = listOf(m3, wear, remote, launcher, a2ui).map { it.copy(primary = null) }
+    val options = newDesignTypeOptions(quiet)
+    assertEquals(
+      listOf("m3-catalog", "wear-m3", "remote-m3"),
+      options.primary.map { it.catalogSystemId },
+    )
+    assertEquals(listOf("remote-widgets", "a2ui-catalog"), options.other.map { it.systemId })
+  }
+
+  @Test
+  fun `catalogs sharing a label are told apart by their id`() {
+    val phones =
+      listOf(
+        card("m3-catalog", "Mobile"),
+        card("compose-foundation", "Mobile"),
+        card("mobile", "mobile"),
+        card("wear-m3", "Wear"),
+      )
+    val options = newDesignTypeOptions(phones)
+    assertEquals(
+      listOf("Mobile · M3 Catalog", "Mobile · Compose Foundation", "Mobile"),
+      options.primary.map { it.title },
+    )
+    assertEquals(listOf("Wear"), options.other.map { it.label })
+  }
+
+  @Test
   fun `one group, or none, is no choice`() {
     assertEquals(emptyList(), newDesignTargetGroups(m3))
     val oneGroup =

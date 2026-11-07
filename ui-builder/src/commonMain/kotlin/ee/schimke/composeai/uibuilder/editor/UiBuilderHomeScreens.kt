@@ -112,7 +112,11 @@ private class NewDesignFormState(
   private val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
 
-  var otherTypesExpanded by mutableStateOf(!initialCatalog.isPrimary)
+  /**
+   * Whether "Other design types…" is open: null until the person toggles it, when it is open
+   * exactly while the chosen catalog is one of the folded-away ones.
+   */
+  var otherTypesExpanded by mutableStateOf<Boolean?>(null)
   var selectedCatalogId by mutableStateOf(initialCatalog.systemId)
   /**
    * The template group chosen as the target, when the picker offers a single catalog's groups
@@ -244,10 +248,11 @@ private fun NewDesignTypePicker(form: NewDesignFormState, picker: NewDesignTypeO
     }
   }
   if (other.isNotEmpty()) {
-    TextButton(onClick = { form.otherTypesExpanded = !form.otherTypesExpanded }) {
-      Text(if (form.otherTypesExpanded) "Hide other design types" else "Other design types…")
+    val expanded = form.otherTypesExpanded ?: other.any { it.systemId == form.selectedCatalogId }
+    TextButton(onClick = { form.otherTypesExpanded = !expanded }) {
+      Text(if (expanded) "Hide other design types" else "Other design types…")
     }
-    if (form.otherTypesExpanded) {
+    if (expanded) {
       FlowRow(
         modifier = Modifier.selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
