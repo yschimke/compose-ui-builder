@@ -100,9 +100,9 @@ enum class WatchScreenShape(val label: String) {
  * container's whole frame, padding included), centred in it and clipped to [frameCornerRadiusDp] so
  * nothing square shows behind a rounded container.
  *
- * [tileCompat] draws the screen as a tile carousel page instead: the host's app icon at the top and
- * the container under it (see [WATCH_TILE_ICON_TOP_DP]), as a host without partial-height widgets
- * shows a widget in Glance Wear's `CONTAINER_TYPE_TILE_COMPAT`.
+ * [tileCompat] draws the screen as a tile carousel page instead: the system's app icon at the top
+ * (see [WATCH_TILE_ICON_TOP_DP]) and the container still centred, as a host without partial-height
+ * widgets shows a widget in Glance Wear's `CONTAINER_TYPE_TILE_COMPAT`.
  */
 data class WatchScreen(
   val shape: WatchScreenShape,
@@ -119,15 +119,16 @@ data class WatchScreen(
 const val WATCH_SCREEN_DP: Float = 240f
 
 /**
- * A tile-compat screen's layout, top down: the app icon's inset from the screen's top, its size,
- * and the gap to the widget container below. Chosen so a 216×124 Large squircle, all four rounded
- * corners, clears a [WATCH_SCREEN_DP] round screen: the container's top sits 50dp down.
+ * Where the system draws a tile's app icon: ProtoLayout Material 3's `primaryLayout` reserves a
+ * [WATCH_TILE_ICON_DP] icon slot [WATCH_TILE_ICON_TOP_DP] below the top of the screen
+ * (`PrimaryLayoutDefaults.HEADER_ICON_SIZE_DP`, `HEADER_MARGIN_TOP_DP`), and the system places the
+ * icon in it. Content keeps [WATCH_TILE_HEADER_BOTTOM_DP] (`HEADER_MARGIN_BOTTOM_DP`) clear below.
  */
-const val WATCH_TILE_ICON_TOP_DP: Float = 18f
+const val WATCH_TILE_ICON_TOP_DP: Float = 3f
 
 const val WATCH_TILE_ICON_DP: Float = 24f
 
-const val WATCH_TILE_ICON_GAP_DP: Float = 8f
+const val WATCH_TILE_HEADER_BOTTOM_DP: Float = 6f
 
 /** A square watch's corner radius, as a fraction of its side. */
 const val SQUARE_WATCH_CORNER_FRACTION: Float = 0.2f

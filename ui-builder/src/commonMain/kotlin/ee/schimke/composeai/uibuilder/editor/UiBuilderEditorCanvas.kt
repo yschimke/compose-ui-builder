@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -1715,21 +1714,16 @@ internal fun WatchScreenFrame(
       .clip(shape)
       .background(Color.Black)
       .semantics { contentDescription = "Watch screen · $label" },
-    contentAlignment = if (screen.tileCompat) Alignment.TopCenter else Alignment.Center,
+    contentAlignment = Alignment.Center,
   ) {
-    val container: @Composable () -> Unit = {
-      Box(Modifier.clip(RoundedCornerShape((screen.frameCornerRadiusDp * scale).dp))) { content() }
-    }
+    // A tile's main content stays centred; the system's icon sits in the header slot above it.
     if (screen.tileCompat) {
-      Column(
-        Modifier.padding(top = (WATCH_TILE_ICON_TOP_DP * scale).dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
-        TileAppIcon(scale)
-        Spacer(Modifier.height((WATCH_TILE_ICON_GAP_DP * scale).dp))
-        container()
-      }
-    } else container()
+      TileAppIcon(
+        scale,
+        Modifier.align(Alignment.TopCenter).padding(top = (WATCH_TILE_ICON_TOP_DP * scale).dp),
+      )
+    }
+    Box(Modifier.clip(RoundedCornerShape((screen.frameCornerRadiusDp * scale).dp))) { content() }
   }
 }
 
@@ -1738,9 +1732,10 @@ internal fun WatchScreenFrame(
  * launcher icon, so this is a neutral stand-in of the right size and place.
  */
 @Composable
-private fun TileAppIcon(scale: Float) {
+private fun TileAppIcon(scale: Float, modifier: Modifier = Modifier) {
   Box(
-    Modifier.size((WATCH_TILE_ICON_DP * scale).dp)
+    modifier
+      .size((WATCH_TILE_ICON_DP * scale).dp)
       .clip(CircleShape)
       .background(Color(0xFF3C4043))
       .semantics { contentDescription = "App icon" },

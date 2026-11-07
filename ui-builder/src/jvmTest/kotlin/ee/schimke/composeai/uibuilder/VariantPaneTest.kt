@@ -19,8 +19,8 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderVariantPane
 import ee.schimke.composeai.uibuilder.editor.WATCH_SCREEN_DP
+import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_HEADER_BOTTOM_DP
 import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_DP
-import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_GAP_DP
 import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_TOP_DP
 import ee.schimke.composeai.uibuilder.editor.WatchScreenShape
 import ee.schimke.composeai.uibuilder.editor.offersWearTilePane
@@ -152,8 +152,9 @@ class VariantPaneTest {
     assertEquals(WatchScreenShape.Round, screen.shape)
     assertEquals(216f to 124f, screen.frameWidthDp to screen.frameHeightDp)
     assertEquals(widget, tile.document)
-    // The container's top corners, 26dp arcs, stay on a round screen under the icon.
-    val top = WATCH_TILE_ICON_TOP_DP + WATCH_TILE_ICON_DP + WATCH_TILE_ICON_GAP_DP
+    // Centred, the container clears the system's icon slot and its 26dp corners clear the screen.
+    val top = (WATCH_SCREEN_DP - screen.frameHeightDp) / 2f
+    assertTrue(top >= WATCH_TILE_ICON_TOP_DP + WATCH_TILE_ICON_DP + WATCH_TILE_HEADER_BOTTOM_DP)
     val r = screen.frameCornerRadiusDp
     val dx = screen.frameWidthDp / 2f - r
     val dy = WATCH_SCREEN_DP / 2f - (top + r)
