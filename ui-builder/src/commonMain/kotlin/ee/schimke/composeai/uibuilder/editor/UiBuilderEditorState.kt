@@ -2631,7 +2631,11 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val declaration =
-      if (event.action is EditorStateAction.Navigate) null
+      // Neither writes local state, so neither names a declaration.
+      if (
+        event.action is EditorStateAction.Navigate || event.action is EditorStateAction.HostAction
+      )
+        null
       else
         state.document.stateVariables[event.action.variable] as? JsonObject
           ?: return state.rejected(

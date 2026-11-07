@@ -35,3 +35,41 @@ class HostActionsTest {
     assertEquals(HostActions.Value.Text("7"), HostActions.value(hostAction(JsonPrimitive("7"))))
   }
 }
+
+class HostActionsAuthoredValueTest {
+  @Test
+  fun `typed text reads as JSON would, and only a number spelled as one is a number`() {
+    assertEquals(HostActions.Value.Integer(7), HostActions.authoredValue("7"))
+    assertEquals(HostActions.Value.Integer(-2), HostActions.authoredValue(" -2 "))
+    assertEquals(HostActions.Value.Decimal(0.5f), HostActions.authoredValue("0.5"))
+    assertEquals(HostActions.Value.Text("007"), HostActions.authoredValue("007"))
+    assertEquals(HostActions.Value.Text("+1"), HostActions.authoredValue("+1"))
+    assertEquals(HostActions.Value.Text("NaN"), HostActions.authoredValue("NaN"))
+    assertEquals(HostActions.Value.Text("7"), HostActions.authoredValue("\"7\""))
+    assertEquals(HostActions.Value.Text("×"), HostActions.authoredValue("×"))
+    assertEquals(null, HostActions.authoredValue("  "))
+  }
+}
+
+class HostActionsEditableTextTest {
+  @Test
+  fun `a stored value opens as text that reads back as the same value`() {
+    for (value in
+      listOf(
+        JsonPrimitive("7"),
+        JsonPrimitive(""),
+        JsonPrimitive("  "),
+        JsonPrimitive("0.5"),
+        JsonPrimitive("×"),
+        JsonPrimitive("007"),
+        JsonPrimitive(7),
+        JsonPrimitive(0.5f),
+      )) {
+      val reread = HostActions.authoredValue(HostActions.editableText(value))?.json
+      assertEquals(value, reread, "`$value` opened as `${HostActions.editableText(value)}`")
+    }
+    assertEquals("", HostActions.editableText(null))
+    assertEquals("×", HostActions.editableText(JsonPrimitive("×")))
+    assertEquals("\"7\"", HostActions.editableText(JsonPrimitive("7")))
+  }
+}

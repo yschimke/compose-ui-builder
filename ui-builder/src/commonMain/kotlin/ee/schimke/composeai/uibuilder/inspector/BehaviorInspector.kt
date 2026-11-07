@@ -13,10 +13,12 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorStateAction
 import ee.schimke.composeai.uibuilder.editor.TrackEditorOverlay
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_STATE_NAME
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.StateSelection
 import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -207,6 +209,7 @@ internal fun EventActionsInspector(
     remember(node.id) { mutableStateOf(document.stateVariables.keys.firstOrNull().orEmpty()) }
   var kind by remember(node.id) { mutableStateOf("set") }
   var value by remember(node.id) { mutableStateOf("") }
+  var hostName by remember(node.id) { mutableStateOf("") }
   var editingIndex by remember(node.id) { mutableStateOf<Int?>(null) }
   val selectedDeclaration = document.stateVariables[variable] as? JsonObject
   val initialValue = selectedDeclaration?.get("initialValue") as? JsonPrimitive
@@ -227,8 +230,18 @@ internal fun EventActionsInspector(
       // generator has no lowering yet and would refuse it.
       (if (isNumber && remoteCompose) listOf("increment" to "Add") else emptyList()) +
       (if (isNullable) listOf("selectOrClear" to "Select / clear") else emptyList())
+  // Where an export writes one: `hostAction(…)` in a Remote Compose document, and an `onHostAction`
+  // callback on a phone screen. A Wear screen has no host to send it to.
+  val hostActions =
+    LocalUiBuilderCatalogPlatform.current in
+      setOf(
+        UiBuilderCatalogPlatform.REMOTE_COMPOSE.wireValue,
+        UiBuilderCatalogPlatform.MOBILE.wireValue,
+      )
   val actionKinds =
-    stateActionKinds + if (pages.isNotEmpty()) listOf("navigatePage" to "Navigate") else emptyList()
+    stateActionKinds +
+      (if (pages.isNotEmpty()) listOf("navigatePage" to "Navigate") else emptyList()) +
+      (if (hostActions) listOf(HostActions.TYPE to "Host action") else emptyList())
   LaunchedEffect(variable, selectedDeclaration) {
     if (kind !in actionKinds.map { it.first }) kind = "set"
   }
@@ -291,8 +304,9 @@ internal fun EventActionsInspector(
       val actionKind = (action?.get("type") as? JsonPrimitive)?.content.orEmpty()
       val actionVariable = (action?.get("variable") as? JsonPrimitive)?.content.orEmpty()
       val actionPage = (action?.get("pageKey") as? JsonPrimitive)?.content.orEmpty()
+      val actionHost = (action?.get("name") as? JsonPrimitive)?.content.orEmpty()
       Text(
-        "${index + 1}. $actionKind ${actionPage.ifBlank { actionVariable }} ${actionOperandText(action?.get("value") ?: action?.get("amount"))}",
+        "${index + 1}. $actionKind ${actionPage.ifBlank { actionHost.ifBlank { actionVariable } }} ${actionOperandText(action?.get("value") ?: action?.get("amount"))}",
         style = MaterialTheme.typography.bodySmall,
       )
       Row {
@@ -306,6 +320,7 @@ internal fun EventActionsInspector(
               "selectOrClear",
               "increment",
               "navigatePage",
+              HostActions.TYPE,
             )
         )
           TextButton(
@@ -313,7 +328,11 @@ internal fun EventActionsInspector(
               editingIndex = index
               kind = if (actionKind in setOf("select", "setText")) "set" else actionKind
               if (actionKind == "navigatePage") value = actionPage
-              else {
+              else if (actionKind == HostActions.TYPE) {
+                hostName = actionHost
+                // Quoted where it must be, so Save without a change keeps text as text.
+                value = HostActions.editableText(action?.get("value"))
+              } else {
                 variable = actionVariable
                 value =
                   actionOperandText(
@@ -349,7 +368,7 @@ internal fun EventActionsInspector(
         }
       }
     }
-    if (document.stateVariables.isEmpty() && pages.isEmpty()) {
+    if (document.stateVariables.isEmpty() && pages.isEmpty() && !hostActions) {
       Text(
         "Add a state value in Screen to give this action something to change.",
         style = MaterialTheme.typography.bodySmall,
@@ -366,33 +385,44 @@ internal fun EventActionsInspector(
       )
       var showOperands by remember { mutableStateOf(false) }
       val navigating = kind == "navigatePage"
+      val hosting = kind == HostActions.TYPE
       val choices =
         if (navigating) pages.map { it.designId to it.title }
         else document.stateVariables.keys.map { it to it }
-      Box {
-        OutlinedButton(onClick = { showOperands = true }) {
-          Text(
-            if (navigating) pages.firstOrNull { it.designId == value }?.title ?: "Choose screen"
-            else variable.ifBlank { "Choose state" },
-          )
-        }
-        TrackEditorOverlay(showOperands)
-        DropdownMenu(showOperands, { showOperands = false }) {
-          choices.forEach { (name, label) ->
-            DropdownMenuItem(
-              text = { Text(label) },
-              onClick = {
-                if (navigating) value = name else variable = name
-                showOperands = false
-              },
-              modifier =
-                Modifier.semantics {
-                  contentDescription = "Use ${if (navigating) "screen" else "state"} $name"
-                },
+      if (hosting)
+        OutlinedTextField(
+          hostName,
+          { hostName = it },
+          Modifier.fillMaxWidth().onFocusChanged { onTextInputFocusChanged(it.hasFocus) },
+          label = { Text("Host action name") },
+          supportingText = { Text("What the host matches on, such as calc.key") },
+          singleLine = true,
+        )
+      else
+        Box {
+          OutlinedButton(onClick = { showOperands = true }) {
+            Text(
+              if (navigating) pages.firstOrNull { it.designId == value }?.title ?: "Choose screen"
+              else variable.ifBlank { "Choose state" },
             )
           }
+          TrackEditorOverlay(showOperands)
+          DropdownMenu(showOperands, { showOperands = false }) {
+            choices.forEach { (name, label) ->
+              DropdownMenuItem(
+                text = { Text(label) },
+                onClick = {
+                  if (navigating) value = name else variable = name
+                  showOperands = false
+                },
+                modifier =
+                  Modifier.semantics {
+                    contentDescription = "Use ${if (navigating) "screen" else "state"} $name"
+                  },
+              )
+            }
+          }
         }
-      }
       FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         actionKinds.forEach { (id, label) ->
           FilterChip(kind == id, { kind = id }, label = { Text(label) })
@@ -403,20 +433,32 @@ internal fun EventActionsInspector(
           value,
           { value = it },
           Modifier.fillMaxWidth().onFocusChanged { onTextInputFocusChanged(it.hasFocus) },
-          label = { Text(if (kind == "increment") "Amount" else "Value") },
+          label = {
+            Text(
+              when (kind) {
+                "increment" -> "Amount"
+                HostActions.TYPE -> "Value (optional)"
+                else -> "Value"
+              },
+            )
+          },
           supportingText =
             if (kind == "set" || kind == "increment") ({ Text("Start with = for a formula") })
-            else null,
+            else if (hosting) ({ Text("Text or a number; leave blank for none") }) else null,
           singleLine = true,
         )
       TextButton(
         enabled =
-          if (navigating) pages.any { it.designId == value }
-          else variable in document.stateVariables,
+          when {
+            navigating -> pages.any { it.designId == value }
+            hosting -> hostName.isNotBlank()
+            else -> variable in document.stateVariables
+          },
         onClick = {
           val action =
             when (kind) {
               "navigatePage" -> EditorStateAction.Navigate(value)
+              HostActions.TYPE -> EditorStateAction.HostAction(hostName, value)
               "toggle" -> EditorStateAction.Toggle(variable)
               "selectOrClear" -> EditorStateAction.SelectOrClear(variable, value)
               "increment" -> EditorStateAction.Increment(variable, value.ifBlank { "1" })

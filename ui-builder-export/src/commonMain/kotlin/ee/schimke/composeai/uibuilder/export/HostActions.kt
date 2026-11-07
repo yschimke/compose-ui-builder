@@ -112,4 +112,54 @@ object HostActions {
       )
     return Result.success(Value.Decimal(decimal.toFloat()))
   }
+
+  /** `{"type": "hostAction", "name": [name]}`, plus `value` when there is one. */
+  fun encode(name: String, value: Value? = null): JsonObject =
+    JsonObject(
+      buildMap {
+        put("type", JsonPrimitive(TYPE))
+        put("name", JsonPrimitive(name))
+        if (value != null) put("value", value.json)
+      },
+    )
+
+  /**
+   * The value an author typed into a text field: a whole number or a decimal when it reads back as
+   * one, otherwise text. A number only when it is spelled as one, so `007` and `+1` stay text, and
+   * quoting (`"7"`) forces text. Blank is no value.
+   */
+  fun authoredValue(raw: String): Value? {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return null
+    if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"'))
+      return Value.Text(trimmed.substring(1, trimmed.length - 1))
+    trimmed
+      .toIntOrNull()
+      ?.takeIf { it.toString() == trimmed }
+      ?.let {
+        return Value.Integer(it)
+      }
+    if (NUMBER.matches(trimmed))
+      trimmed
+        .toDoubleOrNull()
+        ?.takeIf { it.isFinite() && it.toFloat().isFinite() }
+        ?.let {
+          return Value.Decimal(it.toFloat())
+        }
+    return Value.Text(raw)
+  }
+
+  /**
+   * [value] as the text an author edits, so that [authoredValue] reads it back unchanged: text that
+   * would read as a number or as nothing (`"7"`, `""`) is quoted, everything else is as it is.
+   */
+  fun editableText(value: JsonElement?): String {
+    val primitive = (value as? JsonPrimitive)?.takeUnless { it is JsonNull } ?: return ""
+    if (!primitive.isString) return primitive.content
+    val text = primitive.content
+    return if (authoredValue(text) == Value.Text(text)) text else "\"$text\""
+  }
+
+  /** A decimal as an author spells one: `0.5`, `-2.25`, `1e3`. Not `+1`, `.5` or `NaN`. */
+  private val NUMBER = Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?")
 }

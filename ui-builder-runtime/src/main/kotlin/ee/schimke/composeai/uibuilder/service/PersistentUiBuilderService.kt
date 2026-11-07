@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
@@ -4075,6 +4076,19 @@ public class PersistentUiBuilderService(
                 field = eventBindingField(mutation.event),
               )
             }
+          // A host action every lane can deliver, or none: the same reading the canvas and each
+          // export make, so a design never stores one its exports would each refuse.
+          mutation.actions.filterIsInstance<HostActionV1>().forEach { action ->
+            HostActions.issue(action.toJsonObject())?.let { issue ->
+              fail(
+                RejectionCodeV1.INVALID_DOCUMENT,
+                "${mutation.event}: $issue",
+                operationIndex = index,
+                nodeId = mutation.nodeId,
+                field = eventBindingField(mutation.event),
+              )
+            }
+          }
           // The same staleness question the property and modifier lanes ask, one field over: a
           // binding is a value, and the last writer wins.
           val conflicts =
@@ -5014,4 +5028,14 @@ internal fun rejected(
     nodeId,
     field,
     environmentField,
+  )
+
+/** [this] as the design action JSON `HostActions` reads. */
+private fun HostActionV1.toJsonObject(): kotlinx.serialization.json.JsonObject =
+  kotlinx.serialization.json.JsonObject(
+    buildMap {
+      put("type", JsonPrimitive(HostActions.TYPE))
+      put("name", JsonPrimitive(name))
+      value?.let { put("value", it) }
+    },
   )

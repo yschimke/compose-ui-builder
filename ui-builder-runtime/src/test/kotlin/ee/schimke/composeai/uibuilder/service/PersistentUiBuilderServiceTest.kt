@@ -2374,6 +2374,52 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a host action is stored, and one no lane could send is refused`() {
+    val service = service()
+    create(service)
+    val key = HostActionV1.Builder("calc.key").apply { value = JsonPrimitive("7") }.build()
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "key",
+            0,
+            InsertNodeMutationV1(textNode("node"), NodeLocationV1()),
+            SetEventBindingMutationV1("node", "click", listOf(key)),
+          ),
+        ),
+      ),
+    )
+    assertEquals(listOf(key), currentNode(service, "node").eventBindings.getValue("click"))
+
+    val flag =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "flag",
+              1,
+              SetEventBindingMutationV1(
+                "node",
+                "click",
+                listOf(
+                  HostActionV1.Builder("lights.on").apply { value = JsonPrimitive(true) }.build(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, flag.code)
+    assertEquals("eventBindings.click", flag.field)
+    assertContains(flag.message, "send 1 or 0")
+  }
+
+  @Test
   fun `navigation actions name another design held by the project`() {
     val service = service()
     create(service)
