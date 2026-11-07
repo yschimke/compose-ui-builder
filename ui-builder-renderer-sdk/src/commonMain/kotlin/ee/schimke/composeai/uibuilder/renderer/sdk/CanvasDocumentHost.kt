@@ -208,16 +208,15 @@ fun CanvasDocumentHost(
       }
     }
   var appliedDeclarations by remember(document.id) { mutableStateOf(document.stateVariables) }
+  // What the last composition drew from [hostValues], so one a host stops pushing is put back. Not
+  // snapshot state: it is bookkeeping for the write below, never read to draw.
+  val appliedHostValues = remember(document.id) { mutableMapOf<String, String?>() }
   SideEffect {
     if (appliedDeclarations != document.stateVariables) {
       reconcileCanvasState(state, appliedDeclarations, document.stateVariables)
       appliedDeclarations = document.stateVariables
     }
-    hostValues.forEach { (name, value) ->
-      val declaration = document.stateVariables[name] as? JsonObject
-      val hostInput = (declaration?.get("persistence") as? JsonPrimitive)?.contentOrNull == "host"
-      if (hostInput && state[name] != value) state[name] = value
-    }
+    applyHostValues(state, appliedHostValues, hostValues, document.stateVariables)
     inspection.updateState(state)
     // A hidden or background browser surface may not receive a layout frame immediately. Publish
     // the generation now; later bounds and text callbacks replace it with measured snapshots.

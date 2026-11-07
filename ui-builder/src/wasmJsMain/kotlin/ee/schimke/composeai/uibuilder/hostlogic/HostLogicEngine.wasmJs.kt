@@ -2,7 +2,6 @@
 
 package ee.schimke.composeai.uibuilder.hostlogic
 
-import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -19,7 +18,7 @@ internal actual val platformHostLogicEngine: HostLogicEngine? = QuickJsHostLogic
 
 private object QuickJsHostLogicEngine : HostLogicEngine {
   override suspend fun load(source: String): Result<HostLogicProgram> {
-    val reply = envelope(awaitString(loadHostLogicPromise(source)))
+    val reply = envelope(awaitLoad(loadHostLogicPromise(source)))
     val handle = (reply["handle"] as? JsonPrimitive)?.intOrNull
     return if (handle != null) Result.success(QuickJsProgram(handle))
     else Result.failure(HostLogicException(reply.error()))
@@ -46,13 +45,25 @@ private fun envelope(json: String): JsonObject =
 private fun JsonObject.error(): String =
   (this["error"] as? JsonPrimitive)?.contentOrNull ?: "the host-logic engine failed"
 
-private suspend fun awaitString(promise: kotlin.js.Promise<JsString>): String =
+/**
+ * Awaits a load. The promise cannot be cancelled, so a session that arrives once the caller has
+ * stopped waiting — a design switched, a program edited mid-import — is disposed here rather than
+ * left in the engine's registry with nobody holding its handle.
+ */
+private suspend fun awaitLoad(promise: kotlin.js.Promise<JsString>): String =
   suspendCancellableCoroutine { continuation ->
     promise.then { value ->
-      if (continuation.isActive) continuation.resume(value.toString())
+      val json = value.toString()
+      if (continuation.isActive) continuation.resume(json) { _, _, _ -> disposeLoaded(json) }
+      else disposeLoaded(json)
       null
     }
   }
+
+/** Disposes the session a load reply names, if it names one. */
+private fun disposeLoaded(json: String) {
+  (envelope(json)["handle"] as? JsonPrimitive)?.intOrNull?.let(::disposeHostLogic)
+}
 
 /**
  * Imports the engine once, loads [source] into a session of its own, and resolves to `{"handle":
