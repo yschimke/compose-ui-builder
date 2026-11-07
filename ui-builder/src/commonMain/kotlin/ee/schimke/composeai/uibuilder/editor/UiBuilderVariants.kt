@@ -432,40 +432,68 @@ private fun wearWidgetPreviewPanes(
       document = document,
       wearWidgetHostShape = shape,
     )
-  } +
-    listOfNotNull(if (size == WearWidgetScaffoldSize.Large) pixelWatchTilePane(document) else null)
+  }
 
 /**
- * A Large widget on a Pixel Watch that shows it as a tile. Hosts without partial-height widgets
- * (Wear OS 4–6, and Wear OS 7 on the Pixel Watch) put a widget whose service also binds
- * `BIND_TILE_PROVIDER` in the tile carousel, in Glance Wear's `CONTAINER_TYPE_TILE_COMPAT`: a whole
- * screen with the app's icon above the content, which is held to "specs similar to" the Large
- * container. The system renderer that lays that page out is not public, so this is an
- * approximation: a round screen, an icon placeholder at the top and the Large squircle container
- * under it.
+ * The design as a Pixel Watch shows a widget in its tile carousel: an opt-in way of looking
+ * ([UiBuilderEditorState.wearTilePane]) offered beside [wearScreenPanes].
+ *
+ * Hosts without partial-height widgets (Wear OS 4–6, and Wear OS 7 on the Pixel Watch) put a widget
+ * whose service also binds `BIND_TILE_PROVIDER` in the tile carousel, in Glance Wear's
+ * `CONTAINER_TYPE_TILE_COMPAT`: a whole screen with the app's icon above the content, which is held
+ * to "specs similar to" the Large container. The system renderer that lays that page out is not
+ * public, so this is an approximation: a round screen, an icon placeholder at the top and the Large
+ * squircle container under it.
+ *
+ * A Wear widget is drawn in its own container, an adaptive one resolved to Large; a Small-only
+ * widget has no Large layout to show, and a Wear screen is already a watch, so both get none.
+ * Anything else is laid out in the Large container's content box, as [wearScreenPanes] does.
  */
-private fun pixelWatchTilePane(document: UiBuilderDocument): UiBuilderVariantPane {
+fun UiBuilderDocument.wearTilePanes(): List<UiBuilderVariantPane> {
+  if (!offersWearTilePane()) return emptyList()
   val shape = WearWidgetHostShape.Squircle
-  val spec = WearWidgetScaffoldSize.Large.hostSpec(shape)
-  return UiBuilderVariantPane(
-    id = WEAR_TILE_PANE_ID,
-    label = "${wearHostName(shape)} · Tile",
-    widthDp = WATCH_SCREEN_DP,
-    heightDp = WATCH_SCREEN_DP,
-    document = document,
-    wearWidgetHostShape = shape,
-    watchScreen =
-      WatchScreen(
-        WatchScreenShape.Round,
-        spec.frameWidthDp.toFloat(),
-        spec.frameHeightDp.toFloat(),
-        minOf(spec.cornerRadiusDp, spec.frameHeightDp / 2f),
-        tileCompat = true,
-      ),
+  val size = WearWidgetScaffoldSize.Large
+  val spec = size.hostSpec(shape)
+  val own = wearWidgetScaffoldSize()
+  return listOf(
+    UiBuilderVariantPane(
+      id = WEAR_TILE_PANE_ID,
+      label = "${wearHostName(shape)} · Tile",
+      widthDp = WATCH_SCREEN_DP,
+      heightDp = WATCH_SCREEN_DP,
+      document =
+        when {
+          own == null ->
+            withEnvironmentOverrides(
+              mapOf(
+                "widthDp" to JsonPrimitive(spec.contentWidthDp),
+                "heightDp" to JsonPrimitive(spec.contentHeightDp),
+              ),
+            )
+          AdaptiveWearWidget.isAdaptive(this) -> AdaptiveWearWidget.resolve(this, size)
+          else -> this
+        },
+      wearWidgetHostShape = shape,
+      wearHostFrame = if (own == null) spec else null,
+      watchScreen =
+        WatchScreen(
+          WatchScreenShape.Round,
+          spec.frameWidthDp.toFloat(),
+          spec.frameHeightDp.toFloat(),
+          minOf(spec.cornerRadiusDp, spec.frameHeightDp / 2f),
+          tileCompat = true,
+        ),
+    ),
   )
 }
 
-/** The id of the Pixel Watch tile-compat pane; see [pixelWatchTilePane]. */
+/** Whether [wearTilePanes] has a pane for this design, so the toggle is worth offering. */
+fun UiBuilderDocument.offersWearTilePane(): Boolean =
+  !isWearScreen() &&
+    (wearWidgetScaffoldSize() != WearWidgetScaffoldSize.Small ||
+      AdaptiveWearWidget.isAdaptive(this))
+
+/** The id of the Pixel Watch tile-compat pane; see [wearTilePanes]. */
 internal const val WEAR_TILE_PANE_ID = "preview-widget-tile"
 
 /**

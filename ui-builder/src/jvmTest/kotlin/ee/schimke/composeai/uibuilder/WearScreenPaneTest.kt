@@ -262,6 +262,37 @@ class WearScreenPaneTest {
       captions.forEach { onNodeWithText(it).assertExists() }
     }
 
+  /** The tile pane is a chip of its own beside "Wear panes", drawn next to the host panes. */
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun `the Pixel Watch tile chip adds the tile beside a widget's host panes`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = weather,
+            catalog = catalog,
+            initialPanes = setOf(EditorPane.Editor, EditorPane.Preview),
+            initialInspectorMode = EditorInspectorMode.Screen,
+            initialInspectorOpen = true,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+      assertTrue(onAllNodesWithText("Pixel Watch · Tile").fetchSemanticsNodes().isEmpty())
+
+      onNodeWithContentDescription("Compare Pixel Watch tile").performClick()
+      waitForIdle()
+
+      runOnIdle { assertTrue(checkNotNull(latest).wearTilePane) }
+      onNodeWithText("Pixel Watch").assertExists()
+      onNodeWithText("Pixel Watch · Tile").assertExists()
+      onNodeWithContentDescription("App icon").assertExists()
+      capture("widget-tile")
+    }
+
   /** Written only when `WEAR_PANES_EVIDENCE` names a directory; see `docs/evidence/wear-panes`. */
   @OptIn(ExperimentalTestApi::class)
   private fun ComposeUiTest.capture(name: String) {

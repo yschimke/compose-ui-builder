@@ -153,6 +153,9 @@ sealed interface UiBuilderEditorEvent {
   /** Switches the approximate Wear watch panes on or off; see [wearScreenPanes]. */
   data object ToggleWearScreenPanes : UiBuilderEditorEvent
 
+  /** Switches the Pixel Watch tile pane on or off; see [wearTilePanes]. */
+  data object ToggleWearTilePane : UiBuilderEditorEvent
+
   data class MoveNode(
     val nodeId: String,
     val targetNodeId: String,

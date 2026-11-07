@@ -626,6 +626,11 @@ data class UiBuilderEditorState(
    */
   val wearScreenPanes: Boolean = false,
   /**
+   * Whether the preview also draws the design as a Pixel Watch tile ([wearTilePanes]), beside
+   * [wearScreenPanes]. Off by default.
+   */
+  val wearTilePane: Boolean = false,
+  /**
    * Whether the canvas draws the design at its whole extent or at its device frame. State rather
    * than view-local because it changes what selection does.
    */

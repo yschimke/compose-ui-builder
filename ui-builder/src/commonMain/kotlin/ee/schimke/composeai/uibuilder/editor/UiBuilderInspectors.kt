@@ -441,6 +441,7 @@ private fun InspectorBody(
           platform = state.platform,
           variantAxes = state.variantAxes,
           wearScreenPanes = state.wearScreenPanes,
+          wearTilePane = state.wearTilePane,
           variantsDrawn = variantsDrawn,
           onTextInputFocusChanged = onTextInputFocusChanged,
           dispatch = dispatch,
@@ -1720,6 +1721,8 @@ private fun ScreenEnvironmentInspector(
   variantAxes: Set<EditorVariantAxis>,
   /** Whether the approximate Wear watch panes are drawn — see [wearScreenPanes]. */
   wearScreenPanes: Boolean,
+  /** Whether the Pixel Watch tile pane is drawn — see [wearTilePanes]. */
+  wearTilePane: Boolean,
   /**
    * Whether the surface drawing the variant strip is on screen. False on the host's renderer, where
    * the comparison chips go quiet but the device picker stays live (it still feeds the export).
@@ -1810,8 +1813,10 @@ private fun ScreenEnvironmentInspector(
     document = document,
     selected = variantAxes,
     wearScreenPanes = wearScreenPanes,
+    wearTilePane = wearTilePane,
     drawn = variantsDrawn,
     onToggleWearScreenPanes = { dispatch(UiBuilderEditorEvent.ToggleWearScreenPanes) },
+    onToggleWearTilePane = { dispatch(UiBuilderEditorEvent.ToggleWearTilePane) },
   ) {
     dispatch(UiBuilderEditorEvent.ToggleVariantAxis(it))
   }
@@ -2042,8 +2047,11 @@ private fun VariantAxisPicker(
   selected: Set<EditorVariantAxis>,
   /** The approximate Wear watch panes, offered after the axes wherever a design has some. */
   wearScreenPanes: Boolean,
+  /** The Pixel Watch tile pane, offered beside the watches wherever the design has one. */
+  wearTilePane: Boolean,
   drawn: Boolean,
   onToggleWearScreenPanes: () -> Unit,
+  onToggleWearTilePane: () -> Unit,
   onToggle: (EditorVariantAxis) -> Unit,
 ) {
   // A Wear screen is already a watch; see [wearScreenPanes].
@@ -2074,6 +2082,14 @@ private fun VariantAxisPicker(
               onClick = onToggleWearScreenPanes,
             )
             .takeIf { offersWearScreens },
+          UiBuilderInspectorChoiceModel(
+              label = WEAR_TILE_PANE_LABEL,
+              contentDescription = "Compare $WEAR_TILE_PANE_LABEL",
+              selected = wearTilePane,
+              enabled = drawn,
+              onClick = onToggleWearTilePane,
+            )
+            .takeIf { document.offersWearTilePane() },
         ),
   )
 }
@@ -2676,3 +2692,5 @@ internal data class SuggestionPanel(
 
 /** The "Also compare" chip that draws the design on approximate Wear watches. */
 internal const val WEAR_SCREEN_PANES_LABEL = "Wear panes"
+
+internal const val WEAR_TILE_PANE_LABEL = "Pixel Watch tile"

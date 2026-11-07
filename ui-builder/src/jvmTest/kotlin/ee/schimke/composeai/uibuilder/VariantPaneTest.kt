@@ -23,8 +23,10 @@ import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_DP
 import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_GAP_DP
 import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_TOP_DP
 import ee.schimke.composeai.uibuilder.editor.WatchScreenShape
+import ee.schimke.composeai.uibuilder.editor.offersWearTilePane
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.variantPanes
+import ee.schimke.composeai.uibuilder.editor.wearTilePanes
 import ee.schimke.composeai.uibuilder.editor.wearWidgetPreviewPanes
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -39,6 +41,7 @@ import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -111,12 +114,9 @@ class VariantPaneTest {
 
     val panes = widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large)
 
+    assertEquals(listOf("Rectangular", "Pixel Watch", "Samsung"), panes.map { it.label })
     assertEquals(
-      listOf("Rectangular", "Pixel Watch", "Samsung", "Pixel Watch · Tile"),
-      panes.map { it.label },
-    )
-    assertEquals(
-      listOf(232f to 144f, 216f to 124f, 230f to 168f, WATCH_SCREEN_DP to WATCH_SCREEN_DP),
+      listOf(232f to 144f, 216f to 124f, 230f to 168f),
       panes.map { it.widthDp to it.heightDp },
     )
     assertEquals(
@@ -124,7 +124,6 @@ class VariantPaneTest {
         WearWidgetHostShape.Rectangular,
         WearWidgetHostShape.Squircle,
         WearWidgetHostShape.Round,
-        WearWidgetHostShape.Squircle,
       ),
       panes.map { it.wearWidgetHostShape },
     )
@@ -142,7 +141,11 @@ class VariantPaneTest {
   fun `a large widget also previews as a Pixel Watch tile with the app icon above it`() {
     val widget = wearWidget(WearWidgetScaffoldSize.Large)
 
-    val tile = widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large).last()
+    // An opt-in compare pane, never one of the widget's own host panes.
+    assertTrue(
+      widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large).none { it.watchScreen != null },
+    )
+    val tile = widget.wearTilePanes().single()
 
     val screen = assertNotNull(tile.watchScreen)
     assertTrue(screen.tileCompat)
@@ -163,9 +166,31 @@ class VariantPaneTest {
   fun `a small widget gets no tile pane`() {
     val widget = wearWidget(WearWidgetScaffoldSize.Small)
 
-    assertTrue(
-      widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Small).none { it.watchScreen != null },
-    )
+    assertFalse(widget.offersWearTilePane())
+    assertEquals(emptyList(), widget.wearTilePanes())
+  }
+
+  @Test
+  fun `an adaptive widget's tile pane draws its Large resolution`() {
+    val adaptive =
+      AdaptiveWearWidget.newDocument("adaptive", JsonObject(emptyMap()), JsonObject(emptyMap()))
+
+    val tile = adaptive.wearTilePanes().single()
+
+    assertEquals(AdaptiveWearWidget.resolve(adaptive, WearWidgetScaffoldSize.Large), tile.document)
+  }
+
+  @Test
+  fun `the tile toggle is off by default, flips, and survives a document arriving`() {
+    val widget = wearWidget(WearWidgetScaffoldSize.Large)
+    val initial = reducer.initial(widget, selectedNodeId = null)
+    assertFalse(initial.wearTilePane)
+
+    val on = reducer.reduce(initial, UiBuilderEditorEvent.ToggleWearTilePane)
+
+    assertTrue(on.wearTilePane)
+    assertFalse(reducer.reduce(on, UiBuilderEditorEvent.ToggleWearTilePane).wearTilePane)
+    assertTrue(reducer.reconciled(on, widget).wearTilePane)
   }
 
   @Test
@@ -183,16 +208,11 @@ class VariantPaneTest {
         "Rectangular · Large",
         "Pixel Watch · Large",
         "Samsung · Large",
-        "Pixel Watch · Tile",
       ),
       panes.map { it.label },
     )
     assertEquals(panes.size, panes.map { it.id }.toSet().size, "pane ids collide")
-    assertEquals(
-      AdaptiveWearWidget.resolve(adaptive, WearWidgetScaffoldSize.Large),
-      panes.last().document,
-    )
-    panes.dropLast(1).forEach { pane ->
+    panes.forEach { pane ->
       val size =
         if (pane.label.endsWith("Small")) WearWidgetScaffoldSize.Small
         else WearWidgetScaffoldSize.Large
