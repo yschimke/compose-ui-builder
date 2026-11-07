@@ -48,6 +48,24 @@ val embedRemoteModifierVocabulary =
     )
   }
 
+// The Remote layout signatures, generated from the released `remote-creation-compose` sources by
+// `scripts/remote-vocabulary/generate_remote_layouts.py`; `RemoteContentEmitter` reads them to
+// decide whether an empty container may be written without a content lambda.
+val embedRemoteLayoutSignatures =
+  tasks.register<EmbedComponentRecord>("embedRemoteLayoutSignatures") {
+    record.set(rootProject.file("docs/design/fixtures/ui-builder/remote-layouts-v1.json"))
+    constantName.set("EMBEDDED_REMOTE_LAYOUTS_JSON")
+    sourceDescription.set(
+      "docs/design/fixtures/ui-builder/remote-layouts-v1.json\n" +
+        "// by :ui-builder-export:embedRemoteLayoutSignatures",
+    )
+    output.set(
+      layout.buildDirectory.file(
+        "generated/remoteLayoutSignatures/ee/schimke/composeai/uibuilder/EmbeddedRemoteLayouts.kt",
+      ),
+    )
+  }
+
 // The design-guideline rules, from the one reviewed file; `DesignGuidelineRuleSet.Bundled` reads it
 // in the editor and in compose-preview-server.
 val embedDesignGuidelines =
@@ -160,6 +178,11 @@ kotlin {
       kotlin.srcDir(
         embedRemoteModifierVocabulary.map {
           layout.buildDirectory.dir("generated/remoteModifierVocabulary")
+        },
+      )
+      kotlin.srcDir(
+        embedRemoteLayoutSignatures.map {
+          layout.buildDirectory.dir("generated/remoteLayoutSignatures")
         },
       )
       kotlin.srcDir(generateFlexpressVersion)

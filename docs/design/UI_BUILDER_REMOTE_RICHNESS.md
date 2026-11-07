@@ -15,6 +15,14 @@ The builder authors against the **latest released alpha**: `remote-material3` 1.
 regenerated against it yet). The embedded `remote-m3-record-v1.json` matches alpha13's signatures; export never writes a snapshot-only parameter, so every exported widget compiles against
 the alpha. The target moves with each new alpha, by refreshing the record and its goldens together.
 
+The layout containers the builder's layout nodes export as (`RemoteBox`, `RemoteColumn`,
+`RemoteFitBox`, …) are not catalog components, so they have no row in the record. Their released
+signatures are in `remote-layouts-v1.json`, generated from `remote-creation-compose` 1.0.0-alpha21
+by `scripts/remote-vocabulary/generate_remote_layouts.py`; `RemoteContentEmitter` reads it to
+decide whether an empty container may be written without a content lambda, and
+`RemoteLayoutSignaturesTest` fails when a release renames a parameter the emitter writes.
+Regenerate it with the modifier vocabulary on each new alpha.
+
 How the record was refreshed to alpha13, so the next refresh can repeat it: the 17 components
 remote-m3-catalog's **released** lane stickers came from its `composePreviewDiscover
 -PremoteSnapshot=` record (alpha13), with `bindings` stripped (the fixture never carried them) and
