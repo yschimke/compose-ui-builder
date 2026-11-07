@@ -43,6 +43,7 @@ import ee.schimke.composeai.uibuilder.editor.problemHeading
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
@@ -355,6 +356,7 @@ private fun NewDesignScreenSample() {
           UiBuilderNewDesignCatalog(
             systemId = "wear-m3",
             label = "Wear app",
+            platform = UiBuilderCatalogPlatform.WEAR,
             templates =
               listOf(
                 UiBuilderNewDesignTemplate(
@@ -367,6 +369,7 @@ private fun NewDesignScreenSample() {
           UiBuilderNewDesignCatalog(
             systemId = "remote-m3",
             label = "Wear widget",
+            platform = UiBuilderCatalogPlatform.REMOTE_COMPOSE,
             templates =
               listOf(
                 UiBuilderNewDesignTemplate(

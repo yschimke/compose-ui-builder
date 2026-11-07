@@ -30,6 +30,7 @@ import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.editor.newDesignDefaultTitle
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import java.io.File
 import kotlin.test.Test
@@ -336,6 +337,60 @@ class UiBuilderHomeScreenTest {
       onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals(listOf("m3-catalog/hello", "m3-catalog/blank"), submitted)
     }
+
+  @Test
+  fun `across devices the form asks for the device, then the kind`() = runComposeUiTest {
+    var created: Pair<String, String>? = null
+    fun catalog(id: String, label: String, platform: UiBuilderCatalogPlatform, template: String) =
+      UiBuilderNewDesignCatalog(
+        id,
+        label,
+        listOf(
+          UiBuilderNewDesignTemplate(template, template.replaceFirstChar(Char::uppercase), ""),
+        ),
+        platform = platform,
+      )
+    setContent {
+      UiBuilderNewDesignScreen(
+        catalogs =
+          listOf(
+            catalog("m3-catalog", "Mobile app", UiBuilderCatalogPlatform.MOBILE, "phone-blank"),
+            catalog("wear-m3", "Wear app", UiBuilderCatalogPlatform.WEAR, "watch-blank"),
+            catalog("remote-m3", "Wear widget", UiBuilderCatalogPlatform.REMOTE_COMPOSE, "tile"),
+            catalog(
+              "remote-widgets",
+              "Launcher widget",
+              UiBuilderCatalogPlatform.REMOTE_COMPOSE,
+              "launcher",
+            ),
+            catalog("xr", "Glasses", UiBuilderCatalogPlatform.MOBILE, "glance"),
+          ),
+        initialCatalogSystemId = "m3-catalog",
+        onCreate = { catalog, _, template, _, _ -> created = catalog to template },
+      )
+    }
+    listOf("Phone & tablet", "Watch", "Widget", "Glasses").forEach {
+      onNodeWithText(it).assertIsDisplayed()
+    }
+    // Nothing is folded away, and one catalog per device needs no second question.
+    onNodeWithText("Other design types…").assertDoesNotExist()
+    onNodeWithText("Which kind?").assertDoesNotExist()
+    onNodeWithText("Phone-blank").assertIsDisplayed()
+
+    onNodeWithText("Widget").performClick()
+    onNodeWithText("Which kind?").assertIsDisplayed()
+    onNodeWithText("Wear widget").assertIsSelected()
+    onNodeWithText("Launcher widget").performClick()
+    onNodeWithText("Launcher").assertIsDisplayed()
+    onNodeWithText("Tile").assertDoesNotExist()
+    onNodeWithContentDescription("Create design").performScrollTo().performClick()
+    assertEquals("remote-widgets" to "launcher", created)
+
+    onNodeWithText("Glasses").performClick()
+    onNodeWithText("Which kind?").assertDoesNotExist()
+    onNodeWithContentDescription("Create design").performScrollTo().performClick()
+    assertEquals("xr" to "glance", created)
+  }
 
   @Test
   fun `switching design types shows only their templates and resets the selection`() =

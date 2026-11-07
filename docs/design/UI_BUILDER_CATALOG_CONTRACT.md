@@ -437,8 +437,11 @@ reads it and `newDesignTypeOptions` (`editor/NewDesignTypes.kt`) lays out "What 
   "description": "Dashboard cards and widgets", // the card's second line; declaring it makes the card
                                                 //   the catalog's own (see below)
   "primary": true,                             // in the picker's row (true) or behind "Other design
-                                                //   types…" (false); unset: only m3-catalog, wear-m3
-                                                //   and remote-m3 are in the row
+                                                //   types…" (false); when no catalog says, the first
+                                                //   three in published order fill the row
+  "device": "smart-home",                      // what designs are for, asked first when the catalogs
+                                                //   span devices: phone, watch, widget, glasses,
+                                                //   smart-home, agent, or a word of its own
   "order": 1,                                  // the card's place once every catalog is owned
   "templates": [                               // one entry per `templates` path, matched by file name
     { "id": "tile", "label": "Tile card", "supportingText": "One entity, its icon and state.",
@@ -457,6 +460,14 @@ reads it and `newDesignTypeOptions` (`editor/NewDesignTypes.kt`) lays out "What 
 - **The row.** `primary` decides, defaulting to the three ids above. A white-labelled host whose
   `ui-builder-catalogs` meta narrows the catalogs puts every one it offers in the row, and there is
   no "Other design types…".
+- **Device first.** When the catalogs on offer span two or more devices (and the host has not
+  narrowed them, and the choice is not one catalog's groups), "What are you designing?" is a chip
+  per device — Phone & tablet, Watch, Widget, Glasses, Smart home, Agent UI, then any word a catalog
+  brings of its own — and, where a device has more than one catalog, a "Which kind?" card per
+  catalog. Nothing is folded behind "Other design types…" in this mode. A catalog that publishes no
+  `device` is placed by `newDesignDevice`: a label naming glasses or Home Assistant is taken at its
+  word, otherwise `wear` is a watch, `remote-compose` a widget, `a2ui` agent UI, `lovelace` smart
+  home and the rest a phone. The inference is a stopgap; `device` always wins.
 - **Groups as the choice.** When the form offers exactly one catalog and its templates name two or
   more distinct `group`s, the row's cards are those groups, in the order the templates first name
   them, each subtitled with its number of starting points; step 2 then lists only that group's

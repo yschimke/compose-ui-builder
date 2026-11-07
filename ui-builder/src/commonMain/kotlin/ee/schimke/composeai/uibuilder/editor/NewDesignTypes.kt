@@ -132,3 +132,84 @@ fun isWidgetDesign(systemId: String, catalogs: List<UiBuilderNewDesignCatalog>):
 
 private fun startingPoints(count: Int): String =
   if (count == 1) "1 starting point" else "$count starting points"
+
+/**
+ * What a design is for — the New design form's first question when the catalogs on offer span more
+ * than one. [id] is the word a catalog writes in `newDesign.device`; [label] is what a person
+ * reads.
+ */
+data class NewDesignDevice(val id: String, val label: String) {
+  companion object {
+    val PHONE = NewDesignDevice("phone", "Phone & tablet")
+    val WATCH = NewDesignDevice("watch", "Watch")
+    val WIDGET = NewDesignDevice("widget", "Widget")
+    val GLASSES = NewDesignDevice("glasses", "Glasses")
+    val SMART_HOME = NewDesignDevice("smart-home", "Smart home")
+    val AGENT = NewDesignDevice("agent", "Agent UI")
+
+    /** The devices the builder names, in the order the form offers them. */
+    val KNOWN: List<NewDesignDevice> = listOf(PHONE, WATCH, WIDGET, GLASSES, SMART_HOME, AGENT)
+
+    /** The device [word] names: a known one by its id, else one of the catalog's own. */
+    fun of(word: String): NewDesignDevice {
+      val id = word.trim().lowercase().replace(' ', '-')
+      return KNOWN.firstOrNull { it.id == id } ?: NewDesignDevice(id, newDesignTitleOf(id))
+    }
+  }
+}
+
+/**
+ * The device a catalog's designs are for: its `newDesign.device` when it says, else inferred.
+ * - A label naming a device the platform cannot ("Glasses", "Home Assistant") is taken at its word.
+ * - Otherwise the platform decides: Remote Compose documents are widgets (watch or launcher), A2UI
+ *   surfaces are agent UI, Lovelace configs are smart home, Wear is a watch, the rest a phone.
+ *
+ * The inference is a stopgap for catalogs that publish no `device`; a catalog that does is never
+ * second-guessed.
+ */
+val UiBuilderNewDesignCatalog.newDesignDevice: NewDesignDevice
+  get() {
+    device?.let {
+      return NewDesignDevice.of(it)
+    }
+    val words = "$label $systemId".lowercase()
+    return when {
+      "glasses" in words -> NewDesignDevice.GLASSES
+      "home assistant" in words || "home-assistant" in words -> NewDesignDevice.SMART_HOME
+      else ->
+        when (platform) {
+          UiBuilderCatalogPlatform.WEAR -> NewDesignDevice.WATCH
+          UiBuilderCatalogPlatform.REMOTE_COMPOSE -> NewDesignDevice.WIDGET
+          UiBuilderCatalogPlatform.A2UI -> NewDesignDevice.AGENT
+          UiBuilderCatalogPlatform.LOVELACE -> NewDesignDevice.SMART_HOME
+          UiBuilderCatalogPlatform.MOBILE -> NewDesignDevice.PHONE
+        }
+    }
+  }
+
+/**
+ * The catalogs grouped by [newDesignDevice]: the known devices in [NewDesignDevice.KNOWN]'s order,
+ * then any of the catalogs' own in the order they first appear. Within a device, catalogs that ask
+ * for the row (`primary`) come first, otherwise in published order.
+ */
+fun newDesignDeviceGroups(
+  catalogs: List<UiBuilderNewDesignCatalog>,
+): List<Pair<NewDesignDevice, List<UiBuilderNewDesignCatalog>>> {
+  val grouped = catalogs.groupBy { it.newDesignDevice }
+  val order = NewDesignDevice.KNOWN + grouped.keys.filter { it !in NewDesignDevice.KNOWN }
+  return order.mapNotNull { device ->
+    grouped[device]?.let { members -> device to members.sortedBy { !it.isPrimary } }
+  }
+}
+
+/**
+ * Whether the form asks for the device first: catalogs span two or more devices, the host has not
+ * narrowed them to its own set, and the choice is not one catalog's template groups.
+ */
+fun newDesignAsksDeviceFirst(
+  catalogs: List<UiBuilderNewDesignCatalog>,
+  brand: UiBuilderBrand? = null,
+): Boolean =
+  brand?.catalogs.orEmpty().isEmpty() &&
+    !newDesignTypeOptions(catalogs, brand).byGroup &&
+    newDesignDeviceGroups(catalogs).size > 1
