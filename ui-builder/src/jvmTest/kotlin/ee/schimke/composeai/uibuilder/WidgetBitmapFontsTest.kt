@@ -22,9 +22,9 @@ import ee.schimke.composeai.rcplayer.protocol.RcTextStyleProperty.FloatValue
 import ee.schimke.composeai.rcplayer.protocol.RcTextStyleProperty.IntValue
 import ee.schimke.composeai.rcplayer.protocol.RcVersion
 import ee.schimke.composeai.rcplayer.protocol.RcWireLimits
+import ee.schimke.composeai.uibuilder.canvas.hostTypefaces
 import ee.schimke.composeai.uibuilder.editor.BitmapFontWidgetHost
 import ee.schimke.composeai.uibuilder.editor.WidgetBitmapFonts
-import ee.schimke.composeai.uibuilder.editor.widgetTypefaces
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -79,7 +79,7 @@ class WidgetBitmapFontsTest {
     )
 
   private val orbitron =
-    widgetTypefaces(
+    hostTypefaces(
       mapOf(
         "google:Orbitron" to
           FontFamily(
@@ -163,7 +163,7 @@ class WidgetBitmapFontsTest {
         WidgetBitmapFonts.convert(
           widget,
           BitmapFontWidgetHost.Launcher,
-          widgetTypefaces(emptyMap()),
+          hostTypefaces(emptyMap()),
         ),
       )
     assertEquals(0, converted.converted, "no glyphs drawn in a fallback face")
