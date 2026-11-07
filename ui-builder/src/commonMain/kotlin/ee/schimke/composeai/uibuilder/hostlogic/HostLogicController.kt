@@ -148,8 +148,9 @@ class HostLogicController internal constructor(private val engine: HostLogicEngi
 }
 
 /**
- * [document]'s host logic, loaded on this platform's engine and reloaded whenever the program
- * changes. Changes elsewhere in the design keep the running program and its state.
+ * [document]'s host logic, loaded on this platform's engine and reloaded whenever the program or a
+ * host input's declaration changes. Changes elsewhere in the design keep the running program and
+ * its state.
  */
 @Composable
 fun rememberHostLogicController(
@@ -158,9 +159,10 @@ fun rememberHostLogicController(
 ): HostLogicController {
   val controller = remember(document.id, engine) { HostLogicController(engine) }
   val program: JsonObject? = document.hostLogic
-  LaunchedEffect(controller, program, HostLogic.hostInputs(document).keys) {
-    controller.load(document)
-  }
+  // Keyed on the host inputs' whole declarations, not their names: a changed type, initial value or
+  // nullability is a changed contract, so the program starts again from `init` against it rather
+  // than keeping values the new declaration may not hold.
+  LaunchedEffect(controller, program, HostLogic.hostInputs(document)) { controller.load(document) }
   controller.update(document)
   DisposableEffect(controller) { onDispose { controller.close() } }
   return controller
