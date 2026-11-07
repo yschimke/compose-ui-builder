@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.128.0](https://github.com/yschimke/compose-ui-builder/compare/v3.127.0...v3.128.0) (2026-11-07)
+
+
+### Features
+
+* run a design's host logic on the canvas ([#1147](https://github.com/yschimke/compose-ui-builder/issues/1147)) ([c3d0bb6](https://github.com/yschimke/compose-ui-builder/commit/c3d0bb604e5f395b6688e9fbb390674091914ebd))
+
 ## [3.127.0](https://github.com/yschimke/compose-ui-builder/compare/v3.126.0...v3.127.0) (2026-11-07)
 
 
