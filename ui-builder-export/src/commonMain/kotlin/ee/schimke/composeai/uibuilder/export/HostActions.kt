@@ -41,7 +41,11 @@ object HostActions {
         get() = JsonPrimitive(value)
     }
 
-    data class Decimal(val value: Double) : Value {
+    /**
+     * A `Float`, as `RemoteFloat` is: parsed to that precision once, so the canvas, the Compose
+     * export and the Remote document all send the same number.
+     */
+    data class Decimal(val value: Float) : Value {
       override val json: JsonPrimitive
         get() = JsonPrimitive(value)
     }
@@ -106,6 +110,6 @@ object HostActions {
           "a host action's decimal must be a finite Float, as RemoteFloat is",
         ),
       )
-    return Result.success(Value.Decimal(decimal))
+    return Result.success(Value.Decimal(decimal.toFloat()))
   }
 }

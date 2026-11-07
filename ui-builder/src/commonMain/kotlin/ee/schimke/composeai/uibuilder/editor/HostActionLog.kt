@@ -73,7 +73,8 @@ internal fun HostActionLog(log: List<CanvasHostAction>, fired: Int, modifier: Mo
       modifier =
         Modifier.widthIn(max = 320.dp).semantics {
           liveRegion = LiveRegionMode.Polite
-          contentDescription = "Sent to the host: ${log.last().logLine()}"
+          // Empty-safe: a design switch empties the log while the fade-out still draws this.
+          log.lastOrNull()?.let { contentDescription = "Sent to the host: ${it.logLine()}" }
         },
     ) {
       Column(
