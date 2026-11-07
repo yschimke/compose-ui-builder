@@ -49,7 +49,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +73,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_STATE_NAME
@@ -150,6 +151,12 @@ private class NewDesignFormState(
   // Folded away until asked for: most new designs declare no state at all, and the three
   // controls it takes to add one made the dialog read as a form with a required last section.
   var stateExpanded by mutableStateOf(false)
+  /**
+   * Whether **More options** is open: the design id, visibility and state. Folded away because each
+   * has a sensible default (a generated id, private, no state) and the form read as five required
+   * sections on a phone.
+   */
+  var moreOptionsExpanded by mutableStateOf(false)
   var variableName by mutableStateOf("")
   var variableKind by mutableStateOf(NewDesignStateType.Flag)
   var variableInitial by mutableStateOf("")
@@ -269,43 +276,64 @@ private fun NewDesignTypePicker(form: NewDesignFormState, picker: NewDesignTypeO
   }
 }
 
+/**
+ * One starting point in the template grid: its picture over its name, so templates are told apart
+ * by sight rather than by a line of text each.
+ */
 @Composable
-private fun NewDesignChoice(
+private fun NewDesignTemplateTile(
   selected: Boolean,
   label: String,
   supportingText: String,
   onClick: () -> Unit,
+  modifier: Modifier = Modifier,
   preview: @Composable () -> Unit = {},
 ) {
   Surface(
     modifier =
-      Modifier.fillMaxWidth().selectable(selected, role = Role.RadioButton, onClick = onClick),
+      modifier.fillMaxHeight().selectable(selected, role = Role.RadioButton, onClick = onClick),
     shape = RoundedCornerShape(12.dp),
     color =
       if (selected) MaterialTheme.colorScheme.secondaryContainer
       else MaterialTheme.colorScheme.surface,
     border =
       BorderStroke(
-        1.dp,
+        if (selected) 2.dp else 1.dp,
         if (selected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.outlineVariant,
       ),
   ) {
-    Row(
-      Modifier.padding(12.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Column(
+      Modifier.padding(10.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-      RadioButton(selected = selected, onClick = null)
       preview()
-      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.titleSmall)
-        if (supportingText.isNotBlank())
-          Text(supportingText, style = MaterialTheme.typography.bodySmall)
-      }
+      Text(
+        label,
+        style = MaterialTheme.typography.titleSmall,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+      )
+      if (supportingText.isNotBlank())
+        Text(
+          supportingText,
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+        )
     }
   }
 }
+
+/** Template grid columns for a form [width] wide: two on a phone, more where there is room. */
+internal fun newDesignTemplateColumns(width: Dp): Int =
+  (width / TEMPLATE_TILE_MIN_WIDTH).toInt().coerceIn(2, 4)
+
+private val TEMPLATE_TILE_MIN_WIDTH = 150.dp
 
 /** The New design form itself: catalog, starting point, id, and the optional state variables. */
 @Composable
@@ -322,40 +350,63 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
       if (oneCatalog) "Choose a starting point" else "2. Choose a starting point",
       style = MaterialTheme.typography.titleSmall,
     )
-    Column(
-      modifier = Modifier.selectableGroup(),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      val templates = form.targetTemplates
-      // Headed only when the catalog offers more than one kind of thing, in the catalog's order —
-      // and not when the picker already chose between those kinds.
-      val headed =
-        form.selectedGroup == null && templates.mapNotNull { it.group }.distinct().size > 1
-      templates.forEachIndexed { index, template ->
-        if (
-          headed &&
-            template.group != null &&
-            template.group != templates.getOrNull(index - 1)?.group
-        ) {
-          Text(
-            template.group,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = if (index == 0) 0.dp else 4.dp),
-          )
-        }
-        key(form.selectedCatalogId, template.id) {
-          NewDesignChoice(
-            selected = template.id == form.selectedTemplate.id,
-            label = template.label,
-            supportingText = template.supportingText,
-            onClick = { form.selectedTemplateId = template.id },
-            preview = {
-              TemplateThumbnail(template, form.selectedCatalog.previewCatalog) {
-                form.selectedTemplateId = template.id
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+      val columns = newDesignTemplateColumns(maxWidth)
+      Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        val templates = form.targetTemplates
+        // Headed only when the catalog offers more than one kind of thing, in the catalog's order —
+        // and not when the picker already chose between those kinds. Each heading starts a new run
+        // of grid rows.
+        val headed =
+          form.selectedGroup == null && templates.mapNotNull { it.group }.distinct().size > 1
+        val sections =
+          if (!headed) listOf(null to templates)
+          else
+            templates.fold(
+              mutableListOf<Pair<String?, MutableList<UiBuilderNewDesignTemplate>>>(),
+            ) { runs, template ->
+              val last = runs.lastOrNull()
+              if (last != null && (template.group == null || template.group == last.first))
+                last.second += template
+              else runs += template.group to mutableListOf(template)
+              runs
+            }
+        sections.forEachIndexed { sectionIndex, (heading, members) ->
+          if (heading != null)
+            Text(
+              heading,
+              style = MaterialTheme.typography.labelLarge,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(top = if (sectionIndex == 0) 0.dp else 4.dp),
+            )
+          members.chunked(columns).forEach { row ->
+            Row(
+              modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              row.forEach { template ->
+                key(form.selectedCatalogId, template.id) {
+                  NewDesignTemplateTile(
+                    selected = template.id == form.selectedTemplate.id,
+                    label = template.label,
+                    supportingText = template.supportingText,
+                    onClick = { form.selectedTemplateId = template.id },
+                    modifier = Modifier.weight(1f),
+                    preview = {
+                      TemplateThumbnail(template, form.selectedCatalog.previewCatalog) {
+                        form.selectedTemplateId = template.id
+                      }
+                    },
+                  )
+                }
               }
-            },
-          )
+              // Keep a short last row's tiles the width of the full rows above it.
+              repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+          }
         }
       }
     }
@@ -370,6 +421,20 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
       keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
       keyboardActions = KeyboardActions(onDone = { if (form.designIdValid) onSubmit() }),
     )
+    TextButton(
+      onClick = { form.moreOptionsExpanded = !form.moreOptionsExpanded },
+      modifier = Modifier.semantics { contentDescription = "More options" },
+    ) {
+      Text(if (form.moreOptionsExpanded) "Fewer options" else "More options…")
+    }
+    if (form.moreOptionsExpanded) NewDesignMoreOptions(form, onSubmit)
+  }
+}
+
+/** **More options**: the design id, visibility and starting state, each with a working default. */
+@Composable
+private fun NewDesignMoreOptions(form: NewDesignFormState, onSubmit: () -> Unit) {
+  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Text("Design ID", style = MaterialTheme.typography.labelLarge)
     OutlinedTextField(
       value = form.designId,

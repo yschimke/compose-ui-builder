@@ -1,11 +1,13 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.NewDesignTypeChoice
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.homeDesignKindLabel
 import ee.schimke.composeai.uibuilder.editor.isWidgetDesign
 import ee.schimke.composeai.uibuilder.editor.newDesignTargetGroups
+import ee.schimke.composeai.uibuilder.editor.newDesignTemplateColumns
 import ee.schimke.composeai.uibuilder.editor.newDesignTypeChoice
 import ee.schimke.composeai.uibuilder.editor.newDesignTypeOptions
 import ee.schimke.composeai.uibuilder.editor.templatesForTarget
@@ -189,6 +191,14 @@ class NewDesignTypesTest {
       options.primary.map { it.title },
     )
     assertEquals(listOf("Wear"), options.other.map { it.label })
+  }
+
+  @Test
+  fun `the template grid is two columns on a phone and at most four`() {
+    assertEquals(2, newDesignTemplateColumns(200.dp))
+    assertEquals(2, newDesignTemplateColumns(340.dp))
+    assertEquals(3, newDesignTemplateColumns(460.dp))
+    assertEquals(4, newDesignTemplateColumns(1000.dp))
   }
 
   @Test

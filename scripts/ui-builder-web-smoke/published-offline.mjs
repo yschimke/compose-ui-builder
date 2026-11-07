@@ -109,9 +109,10 @@ export async function verifyPublishedOfflineCreation(base, root, launchOptions, 
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     // The home chooser is drawn on the Compose canvas, with no DOM text locators. At this fixed
     // viewport the Create control is at this point (recorded in the offline chooser screenshot);
-    // it sits below the Title and Design ID fields, so a field added above it moves it.
+    // it sits below the Title field and the folded "More options…" (Design ID, visibility and
+    // state are inside it), so a field added above it moves it.
     if (shots) await page.screenshot({path: join(shots, 'published-offline-chooser.png')});
-    await page.mouse.click(245, 715);
+    await page.mouse.click(245, 571);
     // The stored seed proves which template was used, even if this synthetic catalog has no
     // native renderer. The document must be new and pinned to the remembered capability.
     const created = await pollBrowserValue(page, () => new Promise((resolve, reject) => {
