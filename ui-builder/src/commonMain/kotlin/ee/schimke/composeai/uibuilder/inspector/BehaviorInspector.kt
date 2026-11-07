@@ -330,7 +330,8 @@ internal fun EventActionsInspector(
               if (actionKind == "navigatePage") value = actionPage
               else if (actionKind == HostActions.TYPE) {
                 hostName = actionHost
-                value = actionOperandText(action?.get("value"))
+                // Quoted where it must be, so Save without a change keeps text as text.
+                value = HostActions.editableText(action?.get("value"))
               } else {
                 variable = actionVariable
                 value =

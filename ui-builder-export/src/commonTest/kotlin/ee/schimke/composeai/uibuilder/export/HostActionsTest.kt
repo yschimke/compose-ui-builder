@@ -50,3 +50,26 @@ class HostActionsAuthoredValueTest {
     assertEquals(null, HostActions.authoredValue("  "))
   }
 }
+
+class HostActionsEditableTextTest {
+  @Test
+  fun `a stored value opens as text that reads back as the same value`() {
+    for (value in
+      listOf(
+        JsonPrimitive("7"),
+        JsonPrimitive(""),
+        JsonPrimitive("  "),
+        JsonPrimitive("0.5"),
+        JsonPrimitive("×"),
+        JsonPrimitive("007"),
+        JsonPrimitive(7),
+        JsonPrimitive(0.5f),
+      )) {
+      val reread = HostActions.authoredValue(HostActions.editableText(value))?.json
+      assertEquals(value, reread, "`$value` opened as `${HostActions.editableText(value)}`")
+    }
+    assertEquals("", HostActions.editableText(null))
+    assertEquals("×", HostActions.editableText(JsonPrimitive("×")))
+    assertEquals("\"7\"", HostActions.editableText(JsonPrimitive("7")))
+  }
+}

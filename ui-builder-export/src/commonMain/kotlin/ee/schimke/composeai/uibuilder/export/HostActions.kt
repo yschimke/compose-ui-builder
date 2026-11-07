@@ -149,6 +149,17 @@ object HostActions {
     return Value.Text(raw)
   }
 
+  /**
+   * [value] as the text an author edits, so that [authoredValue] reads it back unchanged: text that
+   * would read as a number or as nothing (`"7"`, `""`) is quoted, everything else is as it is.
+   */
+  fun editableText(value: JsonElement?): String {
+    val primitive = (value as? JsonPrimitive)?.takeUnless { it is JsonNull } ?: return ""
+    if (!primitive.isString) return primitive.content
+    val text = primitive.content
+    return if (authoredValue(text) == Value.Text(text)) text else "\"$text\""
+  }
+
   /** A decimal as an author spells one: `0.5`, `-2.25`, `1e3`. Not `+1`, `.5` or `NaN`. */
   private val NUMBER = Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?")
 }
