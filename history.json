@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "cb0641aa878a760cee7865869fb4e8ae395f3787",
+    "generatedFrom": "0fcb9c480e207219a8b6ffb3885d8e96231c0943",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -4212,6 +4212,13 @@
             "path": "renders/ui-builder/UiBuilderNewDesignPhonePreview-eff465c5.png",
             "versions": [
                 {
+                    "blob": "3314367347e499c92a6f535e0c5433a9d2be689d",
+                    "commit": "0fcb9c480e207219a8b6ffb3885d8e96231c0943",
+                    "date": "2026-11-07T16:25:52Z",
+                    "sourceSha": "29c0ffc7",
+                    "commits": 1
+                },
+                {
                     "blob": "b04833681e19ebedf3dbb7b2ed9a07740d88c79e",
                     "commit": "cb0641aa878a760cee7865869fb4e8ae395f3787",
                     "date": "2026-11-07T13:54:24Z",
@@ -4233,13 +4240,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 3,
+            "observations": 4,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPreview": {
             "path": "renders/ui-builder/UiBuilderNewDesignPreview-7e7db055.png",
             "versions": [
+                {
+                    "blob": "677b458569406db4a10a60e572ed724a54af1bb5",
+                    "commit": "0fcb9c480e207219a8b6ffb3885d8e96231c0943",
+                    "date": "2026-11-07T16:25:52Z",
+                    "sourceSha": "29c0ffc7",
+                    "commits": 1
+                },
                 {
                     "blob": "397fa6e7e1e36326eb316bca49255fbd792fdda8",
                     "commit": "cb0641aa878a760cee7865869fb4e8ae395f3787",
@@ -4339,7 +4353,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 14,
+            "observations": 15,
             "unstable": false,
             "flapCount": 0
         },
