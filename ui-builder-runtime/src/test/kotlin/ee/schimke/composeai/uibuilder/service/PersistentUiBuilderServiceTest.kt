@@ -2374,6 +2374,63 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `host logic is stored, refused when no engine could take it, and undone`() {
+    val service = service()
+    create(service)
+    val logic =
+      HostLogicV1.Builder(HostLogicLanguageV1.JAVASCRIPT, "export function init() {}").build()
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("logic", 0, SetHostLogicMutationV1.Builder(logic).build()),
+        ),
+      ),
+    )
+    assertEquals(logic, currentDocument(service).hostLogic)
+
+    val huge =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "huge",
+              1,
+              SetHostLogicMutationV1.Builder(
+                  HostLogicV1.Builder(HostLogicLanguageV1.JAVASCRIPT, "x".repeat(70_000)).build(),
+                )
+                .build(),
+            ),
+          ),
+        ),
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, huge.code)
+    assertEquals("hostLogic", huge.field)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(batch("remove", 1, RemoveHostLogicMutationV1)),
+      ),
+    )
+    assertEquals(null, currentDocument(service).hostLogic)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 2, "remove"),
+        ),
+      ),
+    )
+    assertEquals(logic, currentDocument(service).hostLogic)
+  }
+
+  @Test
   fun `a host action is stored, and one no lane could send is refused`() {
     val service = service()
     create(service)

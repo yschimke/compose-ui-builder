@@ -467,6 +467,13 @@ tasks.register<Sync>("wasmFrontendDist") {
   }
   from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("ui-builder-boot.js") }
   from(rootProject.layout.projectDirectory.dir("assets/js-joda")) { include("js-joda.esm.js") }
+  // QuickJS on Wasm for a design's host logic, imported only when a design has some
+  // (`HostLogicEngine.wasmJs.kt`). In a directory of its own so the root scripts' budget does not
+  // count a file nothing preloads.
+  from(rootProject.layout.projectDirectory.dir("assets/host-logic")) {
+    include("engine.mjs", "LICENSE")
+    into("host-logic")
+  }
   from(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder")) {
     include(
       "confetti-schedule-operations-v1.json",

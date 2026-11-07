@@ -127,6 +127,12 @@ data class UiBuilderDocument(
   @EncodeDefault(EncodeDefault.Mode.NEVER)
   @Serializable(with = NullableUiBuilderDocumentHomeSerializer::class)
   val home: UiBuilderDocumentHome? = null,
+  /**
+   * The program standing in for the host that feeds this design, `{"language", "source"}` (the
+   * protocol's `HostLogicV1`, untyped); see [HostLogic]. Never encoded when absent, so a design
+   * without host logic hashes as it always did.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val hostLogic: JsonObject? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

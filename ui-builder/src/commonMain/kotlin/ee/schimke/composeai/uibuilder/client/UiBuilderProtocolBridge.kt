@@ -16,6 +16,7 @@ import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1
+import ee.schimke.composeai.uibuilder.protocol.HostLogicV1
 import ee.schimke.composeai.uibuilder.protocol.InsertNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.MoveNodeMutationV1
@@ -24,6 +25,7 @@ import ee.schimke.composeai.uibuilder.protocol.NullValueV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveComponentMutationV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveHostLogicMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
@@ -36,6 +38,7 @@ import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetHostLogicMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLocaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
@@ -269,6 +272,12 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         event,
         actions.map { bridgeJson.decodeFromString(DesignActionV1.serializer(), it.toString()) },
       )
+    is DesignOperation.SetHostLogic ->
+      SetHostLogicMutationV1.Builder(
+          bridgeJson.decodeFromString(HostLogicV1.serializer(), hostLogic.toString()),
+        )
+        .build()
+    DesignOperation.RemoveHostLogic -> RemoveHostLogicMutationV1
     is DesignOperation.SetModifiers ->
       SetModifiersMutationV1(
         nodeId,

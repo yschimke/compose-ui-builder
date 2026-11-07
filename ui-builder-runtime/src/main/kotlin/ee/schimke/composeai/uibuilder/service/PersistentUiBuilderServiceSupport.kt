@@ -715,6 +715,17 @@ internal fun staleComponentWrites(
     )
   else emptyList()
 
+/** A host-logic write someone else made first: `STALE_PROPERTY_WRITE` on the `hostLogic` field. */
+internal fun staleHostLogicWrites(
+  original: PersistedDesignV1,
+  staleness: StalenessWindow,
+): List<CommandConflictV1> =
+  if (staleness.stale(original, touchKey("h")))
+    listOf(
+      CommandConflictV1(ConflictCodeV1.STALE_PROPERTY_WRITE, null, "hostLogic", staleness.through),
+    )
+  else emptyList()
+
 private const val POSITION_STEP = 1_024
 private const val POSITION_MIDPOINT = 512
 private const val POSITION_MAX = 65_536
@@ -1104,6 +1115,8 @@ internal fun ChangeRecordV1.touchKeys(): List<String> =
     // Key granular, like a state variable: two actors declaring different components do not
     // conflict, and two declaring the same one are writing the same thing.
     is ComponentChangeV1 -> listOf(touchKey("c", componentKey))
+    // One program, one key: two actors editing it are editing the same thing.
+    is HostLogicChangeV1 -> listOf(touchKey("h"))
     is EventBindingChangeV1 -> listOf(touchKey("b", nodeId, event))
     is EnvironmentChangeRecordV1 -> fields.map { touchKey("e", it.name) }
     // `nodeId` rather than `affectedNodeIds`: the move check asks about the node that moved, and

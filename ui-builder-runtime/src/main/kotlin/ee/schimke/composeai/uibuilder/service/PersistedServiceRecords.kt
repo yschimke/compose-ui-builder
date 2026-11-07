@@ -263,6 +263,12 @@ internal data class ComponentChangeV1(
   val after: DesignComponentV1?,
 ) : ChangeRecordV1
 
+/** The design's host logic, before and after; a null side means set or removed. */
+@Serializable
+@SerialName("hostLogic")
+internal data class HostLogicChangeV1(val before: HostLogicV1?, val after: HostLogicV1?) :
+  ChangeRecordV1
+
 @Serializable
 @SerialName("environment")
 internal data class EnvironmentChangeRecordV1(

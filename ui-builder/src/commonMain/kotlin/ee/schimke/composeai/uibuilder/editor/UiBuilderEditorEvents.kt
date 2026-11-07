@@ -366,6 +366,9 @@ sealed interface UiBuilderEditorEvent {
   data class SetStateSelection(val nodeId: String, val selection: StateSelection?) :
     UiBuilderEditorEvent
 
+  /** Set the design's host-logic source, or remove its host logic when [source] is null. */
+  data class SetHostLogic(val source: String?) : UiBuilderEditorEvent
+
   data class SetEventBinding(val nodeId: String, val event: String, val actions: JsonArray) :
     UiBuilderEditorEvent
 
