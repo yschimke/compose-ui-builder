@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.129.0](https://github.com/yschimke/compose-ui-builder/compare/v3.128.0...v3.129.0) (2026-11-07)
+
+
+### Features
+
+* simulate a design's host logic on the JVM ([#1151](https://github.com/yschimke/compose-ui-builder/issues/1151)) ([9ed6a1d](https://github.com/yschimke/compose-ui-builder/commit/9ed6a1da459c62525c0b70a927fdd305b81aa14e))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.27.3 ([#1158](https://github.com/yschimke/compose-ui-builder/issues/1158)) ([d9b4dcb](https://github.com/yschimke/compose-ui-builder/commit/d9b4dcb6f3d35a494fa66d55a2bbffb16e2401f2))
+* refuse host logic that declares init and onAction without exporting them ([#1155](https://github.com/yschimke/compose-ui-builder/issues/1155)) ([57a226c](https://github.com/yschimke/compose-ui-builder/commit/57a226cfe87b23b10c27cd4c806e314ca9b5c58a))
+
 ## [3.128.0](https://github.com/yschimke/compose-ui-builder/compare/v3.127.0...v3.128.0) (2026-11-07)
 
 
