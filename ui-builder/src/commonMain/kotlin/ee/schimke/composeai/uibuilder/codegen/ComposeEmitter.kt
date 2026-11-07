@@ -1566,7 +1566,8 @@ private fun hostActionValue(action: JsonObject): String =
     null -> "null"
     is HostActions.Value.Text -> "\"${value.value.escape()}\""
     is HostActions.Value.Integer -> value.value.toString()
-    is HostActions.Value.Decimal -> value.value.toString()
+    // A `Float` literal, so the caller receives the type the Remote document sends.
+    is HostActions.Value.Decimal -> "${value.value}f"
   }
 
 /** A formula an action writes is computed by the Remote Compose player; this lane has none. */
