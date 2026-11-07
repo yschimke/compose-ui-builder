@@ -43,6 +43,13 @@
       "loadError": "host logic must export a function named onAction"
     },
     {
+      "name": "a program's own top-level names do not collide with the engine's checks",
+      "source": "const __hostLogicProbe = 1;\nexport function init() { return { state: __hostLogicProbe }; }\nexport function onAction() { return {}; }\n",
+      "calls": [
+        { "function": "init", "arguments": [{}], "now": 0, "seed": 1, "result": { "state": 1 } }
+      ]
+    },
+    {
       "name": "a program that declares its functions without exporting them does not load",
       "source": "function init() { return {}; }\nfunction onAction() { return {}; }\n",
       "loadError": "host logic must export a function named init"

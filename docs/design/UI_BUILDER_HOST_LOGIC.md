@@ -252,8 +252,8 @@ scenario fixture a test can assert.
   action, and sends at most 200 actions.
 - The program's exports are read from its module scope, where `export function init` and
   `export const onAction = …` declare them, and each is then checked to be exported, not only
-  declared (a module may not export one name twice, so the program with a second `export … as init`
-  appended compiles only when it never exported `init`). The browser reads the module namespace
+  declared (a module may not export one name twice, so the program with `export { init };` appended
+  compiles only when it never exported `init`). The browser reads the module namespace
   instead, so the forms that rename (`export { reduce as onAction }`, `export default`) work there
   and not here; write the two exports as declarations.
 

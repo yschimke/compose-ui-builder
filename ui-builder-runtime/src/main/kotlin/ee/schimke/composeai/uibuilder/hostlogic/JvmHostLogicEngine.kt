@@ -118,11 +118,12 @@ internal class JvmHostLogicProgram(
   /**
    * Refuses a program that declares [name] without exporting it, which the browser's engine (it
    * reads the module namespace) refuses too. A module may not export one name twice, so the program
-   * with a second `export … as name` appended compiles only when it never exported it, whatever
-   * form its own export takes.
+   * with `export { name };` appended compiles only when it never exported it. The probe re-exports
+   * the program's own binding, which loading has shown is declared, so it adds no name the program
+   * could already be using.
    */
   private fun requireExported(instance: Instance, name: String) {
-    val probe = "$source\n;const __hostLogicProbe = 0; export { __hostLogicProbe as $name };\n"
+    val probe = "$source\n;export { $name };\n"
     val exported =
       try {
         instance.runner.compile(probe)
