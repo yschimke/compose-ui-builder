@@ -251,20 +251,18 @@ one reading of it every lane shares.
 | Wear Compose (`wear-m3`) | Refused by name: a Wear screen has no host feeding it |
 | Canvas | Reported, in order with the writes around it, as a `CanvasHostAction`; the editor shows what was sent and passes it to an embedding host through `onHostAction`. Nothing in the design changes |
 
-A host action is also a protocol action, and the protocol's set is closed: `DesignActionV1` in
-`ui-builder-protocol` is a sealed type with no host action in it. Until a release adds one
-(`HostActionV1`, `@SerialName("hostAction")`, `name: String`, `value: JsonPrimitive? = null`), the
-editor cannot submit a host action as an edit and a server cannot store one, so the behaviour
-inspector does not offer it yet. Everything above works on a document that already carries one — a
-design file, a fixture, an MCP edit to a local design — and the inspector entry lands with the
-protocol bump.
+A host action is also a protocol action, `HostActionV1` in `ui-builder-protocol` (3.40.0,
+compose-preview-contracts#216), so an edit carries it and a server stores it; the server's reducer
+refuses one `HostActions` refuses, so a design never holds a host action its exports would each
+refuse. The behaviour inspector offers **Host action** on Remote Compose and mobile catalogs —
+a name, and a value read the way JSON reads it (`7` is a number, `"7"` is text, blank is none) —
+and not on Wear, which has no host.
 
 ## Slices
 
 1. **`hostAction` action** (#750 item 3): document shape, Remote Compose export, Compose export
-   (a callback parameter), canvas dispatch and event log. *This repo; done.* Then `HostActionV1`
-   in `ui-builder-protocol` (*compose-preview-contracts*), and with its release the behaviour
-   inspector entry here.
+   (a callback parameter), canvas dispatch and event log, `HostActionV1` in `ui-builder-protocol`
+   (*compose-preview-contracts*), and the behaviour inspector entry. *Done.*
 2. **`hostLogic` field and canvas runtime** (JavaScript): document field and editor operation,
    `HostLogicRuntime` interface, wasmJs Worker + QuickJS implementation, Reset host, error surface.
    Compilation is local type-stripping in this slice, so it can be tried without a server change.

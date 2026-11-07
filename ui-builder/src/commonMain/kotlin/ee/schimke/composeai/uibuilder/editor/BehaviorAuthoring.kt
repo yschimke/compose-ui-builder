@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.editor
 
+import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -86,6 +87,11 @@ internal fun UiBuilderDocument.behaviorIssue(): BehaviorIssue? {
         listOfNotNull(action["value"], action["amount"]).forEach { operand ->
           readIssue(operand, node.id, field)?.let {
             return it
+          }
+        }
+        if (HostActions.isHostAction(action)) {
+          HostActions.issue(action)?.let {
+            return BehaviorIssue("$event: $it", node.id, field)
           }
         }
         if (

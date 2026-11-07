@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.RedoCommand
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
 import ee.schimke.composeai.uibuilder.UndoCommand
 import ee.schimke.composeai.uibuilder.capability.PropertyPathSegment
+import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.StateSelection
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
@@ -561,6 +562,16 @@ sealed interface EditorStateAction {
 
   /** Add [amount] to a number; a negative amount counts down. */
   data class Increment(override val variable: String, val amount: String = "1") : EditorStateAction
+
+  /**
+   * Hand [name] to the host, with [value] as typed (blank for none); it writes no local state. See
+   * [HostActions] for what a value may be.
+   */
+  data class HostAction(
+    val name: String,
+    val value: String = "",
+    override val variable: String = "",
+  ) : EditorStateAction
 }
 
 /**
@@ -571,6 +582,7 @@ internal fun EditorStateAction.valueRefusal(declaration: JsonObject?): String? {
   val raw =
     when (this) {
       is EditorStateAction.Navigate -> return null
+      is EditorStateAction.HostAction -> return HostActions.issue(encoded(null))
       is EditorStateAction.Toggle -> return null
       is EditorStateAction.Set -> value
       is EditorStateAction.SelectOrClear -> value
@@ -665,6 +677,8 @@ internal fun EditorStateAction.encoded(
       JsonObject(
         mapOf("type" to JsonPrimitive("navigatePage"), "pageKey" to JsonPrimitive(pageKey)),
       )
+    is EditorStateAction.HostAction ->
+      HostActions.encode(name.trim(), HostActions.authoredValue(value))
     is EditorStateAction.Toggle ->
       JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive(variable)))
     is EditorStateAction.Set ->
