@@ -29,3 +29,30 @@ class CanvasStateWritesTest {
     assertEquals(listOf(80.0, 81.0), writes.map { it.second!!.toDouble() })
   }
 }
+
+class ApplyHostValuesTest {
+  private val declarations =
+    kotlinx.serialization.json.Json.parseToJsonElement(
+        """{"calc.display":{"valueType":"string","initialValue":"0","persistence":"host"},
+            "pressed":{"valueType":"bool","initialValue":false,"persistence":"session"}}""",
+      )
+      .let { it as kotlinx.serialization.json.JsonObject }
+
+  @Test
+  fun `host values are drawn, and an input a host stops pushing goes back to its initial value`() {
+    val state = mutableMapOf<String, String?>("calc.display" to "0", "pressed" to "true")
+    val applied = mutableMapOf<String, String?>()
+
+    applyHostValues(
+      state,
+      applied,
+      mapOf("calc.display" to "3", "pressed" to "false"),
+      declarations,
+    )
+    // The design's own state is the design's: a host value naming it is not drawn.
+    assertEquals(mapOf<String, String?>("calc.display" to "3", "pressed" to "true"), state)
+
+    applyHostValues(state, applied, emptyMap(), declarations)
+    assertEquals(mapOf<String, String?>("calc.display" to "0", "pressed" to "true"), state)
+  }
+}

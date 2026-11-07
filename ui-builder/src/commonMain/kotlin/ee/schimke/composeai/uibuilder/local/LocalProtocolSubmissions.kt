@@ -15,12 +15,14 @@ import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1
 import ee.schimke.composeai.uibuilder.protocol.EnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.HostLogicV1
 import ee.schimke.composeai.uibuilder.protocol.InsertNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.MoveNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveComponentMutationV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveHostLogicMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
@@ -32,6 +34,7 @@ import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetHostLogicMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLocaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
@@ -222,6 +225,15 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
           ),
         ),
       )
+    is SetHostLogicMutationV1 ->
+      MutationMapping.Mapped(
+        listOf(
+          DesignOperation.SetHostLogic(
+            localBridgeJson.encodeToJsonElement(HostLogicV1.serializer(), hostLogic).jsonObject,
+          ),
+        ),
+      )
+    RemoveHostLogicMutationV1 -> MutationMapping.Mapped(listOf(DesignOperation.RemoveHostLogic))
     is SetModifiersMutationV1 ->
       MutationMapping.Mapped(
         listOf(

@@ -98,6 +98,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -310,6 +311,12 @@ internal val LocalUiBuilderNavigator = staticCompositionLocalOf<(String) -> Unit
  */
 internal val LocalUiBuilderHostActions =
   staticCompositionLocalOf<(CanvasHostAction) -> Unit> { { _ -> } }
+
+/**
+ * Host inputs as the design's host logic last set them, drawn over the design's own state; see
+ * `HostLogicController`. Empty for a design without host logic.
+ */
+internal val LocalUiBuilderHostValues = compositionLocalOf<Map<String, String?>> { emptyMap() }
 
 /**
  * Which host container a Wear widget design is drawn inside. A composition local because the
@@ -615,6 +622,7 @@ fun UiBuilderSurface(
               onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
               onOverlayBoundsForgotten = { path -> overlayBounds.remove(path) },
               onHostAction = LocalUiBuilderHostActions.current,
+              hostValues = LocalUiBuilderHostValues.current,
               rootModifier = { entry ->
                 when {
                   entry.node.componentId.startsWith("remote-m3/widget-container-") ->

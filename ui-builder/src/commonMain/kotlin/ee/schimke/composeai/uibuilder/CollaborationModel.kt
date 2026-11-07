@@ -80,6 +80,17 @@ sealed interface DesignOperation {
   data class SetEventBinding(val nodeId: String, val event: String, val actions: JsonArray) :
     DesignOperation
 
+  /**
+   * Set the design's host logic (`{"language", "source"}`), replacing any;
+   * `SetHostLogicMutationV1`.
+   */
+  @Serializable
+  @SerialName("setHostLogic")
+  data class SetHostLogic(val hostLogic: JsonObject) : DesignOperation
+
+  /** Remove the design's host logic; `RemoveHostLogicMutationV1`. A no-op when it has none. */
+  @Serializable @SerialName("removeHostLogic") data object RemoveHostLogic : DesignOperation
+
   @Serializable
   @SerialName("setEnvironment")
   data class SetEnvironment(val field: String, val value: JsonElement) : DesignOperation
@@ -160,6 +171,8 @@ enum class PropertyTarget {
   Component,
   /** A placement's whole `component.arguments` map; the property is always `arguments`. */
   ComponentArguments,
+  /** The document's `hostLogic`; the address's node id is empty and its property is `hostLogic`. */
+  HostLogic,
 }
 
 data class PropertyAddress(
@@ -175,6 +188,7 @@ internal fun UiBuilderDocument.valueAt(address: PropertyAddress): JsonElement? =
     PropertyTarget.StateVariable -> stateVariables[address.property]
     PropertyTarget.Component -> components[address.property]
     PropertyTarget.ComponentArguments -> nodes[address.nodeId]?.component?.get("arguments")
+    PropertyTarget.HostLogic -> hostLogic
   }
 
 internal fun UiBuilderDocument.withValueAt(
@@ -186,6 +200,7 @@ internal fun UiBuilderDocument.withValueAt(
   if (address.target == PropertyTarget.StateVariable)
     return copy(stateVariables = stateVariables.updated())
   if (address.target == PropertyTarget.Component) return withComponent(address.property, value)
+  if (address.target == PropertyTarget.HostLogic) return copy(hostLogic = value as? JsonObject)
   val node =
     nodes[address.nodeId]
       ?: fail(RejectionCode.UNKNOWN_NODE, "unknown node ${address.nodeId}", address.nodeId)
@@ -205,7 +220,8 @@ internal fun UiBuilderDocument.withValueAt(
         )
       }
       PropertyTarget.StateVariable,
-      PropertyTarget.Component -> error("handled above")
+      PropertyTarget.Component,
+      PropertyTarget.HostLogic -> error("handled above")
     }
   return copy(nodes = nodes + (node.id to changed))
 }

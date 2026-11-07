@@ -25,6 +25,39 @@ fun canvasStateWrites(
   }
 }
 
+/**
+ * Draw [hostValues] — host inputs as a host is pushing them — over [state], and put back the
+ * declared initial value of every host input a host stopped pushing since [applied] (what the last
+ * call drew), so detaching a design's host logic leaves the canvas as reopening the design would. A
+ * name that is not a host input in [declarations] is the design's own, and is never touched.
+ * [applied] is updated to what this call drew.
+ */
+fun applyHostValues(
+  state: MutableMap<String, String?>,
+  applied: MutableMap<String, String?>,
+  hostValues: Map<String, String?>,
+  declarations: JsonObject,
+) {
+  fun hostInput(name: String): JsonObject? =
+    (declarations[name] as? JsonObject)?.takeIf {
+      (it["persistence"] as? JsonPrimitive)?.contentOrNull == "host"
+    }
+  (applied.keys - hostValues.keys).forEach { name ->
+    hostInput(name)?.let { declaration ->
+      state[name] =
+        (declaration["initialValue"] as? JsonPrimitive)
+          ?.takeUnless { it is kotlinx.serialization.json.JsonNull }
+          ?.contentOrNull
+    }
+  }
+  applied.clear()
+  hostValues.forEach { (name, value) ->
+    if (hostInput(name) == null) return@forEach
+    if (state[name] != value) state[name] = value
+    applied[name] = value
+  }
+}
+
 /** Authoring a declaration resets that variable's preview value; unrelated interactions survive. */
 fun reconcileCanvasState(
   state: MutableMap<String, String?>,

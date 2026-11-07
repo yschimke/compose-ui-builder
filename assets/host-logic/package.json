@@ -1,0 +1,14 @@
+{
+  "name": "ui-builder-host-logic-engine",
+  "private": true,
+  "description": "Builds engine.mjs: QuickJS on Wasm for a design's host logic. See README.md.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild engine.src.mjs --bundle --format=esm --platform=browser --minify --legal-comments=eof --banner:js='/*! ui-builder host-logic engine: QuickJS (c) 2017-2021 Fabrice Bellard and Charlie Gordon, quickjs-emscripten (c) 2019-2024 Jake Teton-Landis; MIT, see LICENSE beside this file. */' --outfile=engine.mjs"
+  },
+  "devDependencies": {
+    "@jitl/quickjs-singlefile-browser-release-sync": "0.32.0",
+    "esbuild": "0.25.10",
+    "quickjs-emscripten-core": "0.32.0"
+  }
+}

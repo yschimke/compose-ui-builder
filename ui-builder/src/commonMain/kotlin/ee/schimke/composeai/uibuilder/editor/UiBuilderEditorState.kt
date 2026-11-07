@@ -44,6 +44,7 @@ import ee.schimke.composeai.uibuilder.embeddedComponentRecord
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.CatalogExportProjections
 import ee.schimke.composeai.uibuilder.export.CatalogScreenStructure
+import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
@@ -479,6 +480,16 @@ class UiBuilderEditorReducer(
           selectionAfter = event.nodeId,
         )
       is UiBuilderEditorEvent.AppendAction -> appendAction(state, event)
+      // The source is checked by the collaboration reducer (`HostLogic.issue`), as an MCP edit is.
+      is UiBuilderEditorEvent.SetHostLogic ->
+        state.apply(
+          state.operationSequence + 1,
+          listOf(
+            event.source?.let { DesignOperation.SetHostLogic(HostLogic.encode(it)) }
+              ?: DesignOperation.RemoveHostLogic,
+          ),
+          selectionAfter = state.selectedNodeId,
+        )
       is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
       is UiBuilderEditorEvent.ToggleModifier -> toggleModifier(state, event.nodeId, event.type)
       is UiBuilderEditorEvent.ResizeNode ->
@@ -688,6 +699,8 @@ class UiBuilderEditorReducer(
         is DesignOperation.RemoveStateVariable -> "Removed state ${operation.name}"
         is DesignOperation.SetEventBinding ->
           "Changed ${operation.event} actions on ${label(operation.nodeId)}"
+        is DesignOperation.SetHostLogic -> "Changed the host logic"
+        is DesignOperation.RemoveHostLogic -> "Removed the host logic"
         is DesignOperation.SetModifiers -> "Changed the layout of ${label(operation.nodeId)}"
         is DesignOperation.SetComponentArguments -> "Changed ${label(operation.nodeId)}"
         is DesignOperation.DeclareComponent ->

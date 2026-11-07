@@ -80,6 +80,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderHostActions
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderHostValues
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNavigator
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
@@ -100,6 +101,9 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.frameGeometry
+import ee.schimke.composeai.uibuilder.hostlogic.HostLogicStatus
+import ee.schimke.composeai.uibuilder.hostlogic.rememberHostLogicController
+import ee.schimke.composeai.uibuilder.inspector.LocalHostLogicController
 import ee.schimke.composeai.uibuilder.inspector.LocalHoveredCommentThread
 import ee.schimke.composeai.uibuilder.inspector.LocalUiBuilderPageDestinations
 import ee.schimke.composeai.uibuilder.inspector.SuggestionRow
@@ -659,11 +663,16 @@ fun UiBuilderEditor(
   var hostActionLog by remember(document.id) { mutableStateOf(emptyList<CanvasHostAction>()) }
   var hostActionsFired by remember(document.id) { mutableIntStateOf(0) }
   val currentOnHostAction = rememberUpdatedState(onHostAction)
+  // The design's own host logic, when it has some: it answers what the canvas sends, and the values
+  // it sets are drawn over the design's state (`LocalUiBuilderHostValues`).
+  val hostLogic = rememberHostLogicController(state.document)
+  val currentHostLogic = rememberUpdatedState(hostLogic)
   val sendHostAction: (CanvasHostAction) -> Unit =
     remember(document.id) {
       { action ->
         hostActionLog = appendHostAction(hostActionLog, action)
         hostActionsFired++
+        currentHostLogic.value.onAction(action)
         currentOnHostAction.value(action)
       }
     }
@@ -2522,6 +2531,13 @@ fun UiBuilderEditor(
     LocalUiBuilderPageDestinations provides pageDestinations.filter { it.designId != document.id },
     LocalUiBuilderNavigator provides onNavigatePage,
     LocalUiBuilderHostActions provides sendHostAction,
+    LocalUiBuilderHostValues provides
+      when (hostLogic.status) {
+        HostLogicStatus.Running,
+        is HostLogicStatus.Failed -> hostLogic.values
+        else -> emptyMap()
+      },
+    LocalHostLogicController provides hostLogic,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
     LocalUiBuilderAssetBytes provides { digest -> assetBytesByDigest[digest] },

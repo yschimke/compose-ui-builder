@@ -129,13 +129,13 @@ network round trip per key press is the wrong latency for a calculator.
 
 So: **one runtime, two source languages**.
 
-1. The runtime is a JS sandbox, QuickJS-on-Wasm. The same engine runs in the browser (a Web Worker
-   beside the Wasm editor) and on the server (a JVM binding, or the same Wasm under a Wasm runtime),
-   so the canvas and the simulator cannot disagree about arithmetic, string formatting or
-   iteration order.
-2. `language: "javascript"` (TypeScript accepted) ships first. The server's "compile" is
-   type-stripping, bundling into one module, checking that `init` and `onAction` are exported, and
-   checking every literal host-input name against the design's declarations.
+1. The runtime is a JS sandbox, QuickJS-on-Wasm. The same engine runs in the browser (on the
+   editor's main thread, budgeted; see [On the canvas](#on-the-canvas)) and, in slice 3, on the
+   server (the same Wasm under a Wasm runtime), so the canvas and the simulator cannot disagree
+   about arithmetic, string formatting or iteration order.
+2. `language: "javascript"` ships first. TypeScript's type syntax comes with the server compile,
+   which strips types, bundles into one module, checks that `init` and `onAction` are exported,
+   and checks every literal host-input name against the design's declarations.
 3. `language: "kotlin"` follows, against a tiny published API
    (`fun init(env: HostEnv): HostStep`, `fun onAction(state: JsonObject, action: HostActionEvent,
    env: HostEnv): HostStep`). The server compiles it with Kotlin/JS into a module for the same
@@ -158,17 +158,18 @@ reopen and quietly run the wrong program.
 ```json
 "hostLogic": {
   "language": "javascript",
-  "source": "export function init(env) { … }",
-  "limits": { "instructions": 1000000, "memoryBytes": 8388608 }
+  "source": "export function init(env) { … }"
 }
 ```
 
 - `hostLogic` is an optional document field. Its absence keeps today's behaviour exactly: host
   actions are logged and nothing answers.
 - `UiBuilderDocument` gains it with `@EncodeDefault(NEVER)`, so every existing design and fixture
-  serialises byte-for-byte as before. It is a `:ui-builder-runtime` / `:ui-builder-export` wire
-  change, so the ABI dump moves with it, and an editor operation (`setHostLogic`, one revision, one
-  undo step) edits it rather than a free-form patch.
+  serialises byte-for-byte as before. On the wire it is `DesignDocumentV1.hostLogic`
+  (`HostLogicV1`, compose-preview-contracts#218), edited by `setHostLogic` and `removeHostLogic`:
+  one revision, one undo step, a stale-write conflict when two authors edit it at once.
+- Limits are the engine's, not the document's: 8 MiB of memory, a 512 KiB stack and 200 ms per call
+  (`assets/host-logic/engine.src.mjs`). A stored limit would let a design raise its own.
 - The source is a design asset in everything but name: bounded in size (64KiB), part of the
   revision, diffed in revision history, carried by fork.
 
@@ -186,14 +187,14 @@ list and in `check_design` beside layout findings.
 
 ### On the canvas
 
-A `HostLogicRuntime` sits between the player and the canvas's state:
+A `HostLogicController` sits between the canvas and an engine:
 
 ```text
-RcPlayerEvent.HostNamedAction / HostActionMetadata
-    -> HostLogicRuntime.onAction(name, value)       (Worker, budgeted)
-    -> values: { "calc.display": "3" }
-    -> canvas state: host inputs updated           (the player's named-value holder)
-    -> event log: action, value, private state, values, time taken
+CanvasHostAction (a node's hostAction fired)
+    -> HostLogicController.onAction(name, value)    (QuickJS, budgeted)
+    -> HostLogic.step: values checked against the design's host inputs
+    -> canvas state: host inputs drawn from the values (CanvasDocumentHost.hostValues)
+    -> "Sent to the host" log; status, private state and Reset host in Screen › Host logic
 ```
 
 - Host inputs stay read-only **to the design**. The runtime is the only writer, which is exactly
@@ -202,9 +203,23 @@ RcPlayerEvent.HostNamedAction / HostActionMetadata
 - A **Reset host** control re-runs `init`. Switching example dataset resets too.
 - A budget overrun, an exception, or a value of the wrong type stops the runtime, shows the error
   where the event log is, and leaves the last good values on screen. It never takes the editor down.
-- The runtime is behind an interface in `:ui-builder` commonMain. wasmJs implements it with a
-  Worker; JVM (desktop, IntelliJ, tests) with the same QuickJS Wasm under a JVM Wasm runtime, so
-  the desktop app gets host logic without a server.
+- The engine is behind `HostLogicEngine` in `:ui-builder` commonMain, and everything that is not
+  evaluation — what a call is handed, what of its answer is drawn — is `HostLogic` in
+  `:ui-builder-export`, so engines cannot disagree about it. wasmJs implements the engine with
+  QuickJS (`assets/host-logic`), imported the first time a design with host logic opens. The JVM
+  hosts (desktop, IntelliJ) have none yet and say so in the panel: running the same QuickJS there
+  means a Wasm runtime on the JVM, which is its own change.
+- QuickJS runs on the main thread rather than in a Worker. Every call is bounded by the interrupt
+  budget, so a runaway loop costs at most 200 ms and is reported, and a call is synchronous, so
+  the values are drawn in the same frame as the press. The CSP is why it is an interpreter at all:
+  the editor's page allows `'wasm-unsafe-eval'` and not `'unsafe-eval'`, so the page cannot
+  evaluate a design's source, and inside QuickJS the program has no `fetch`, DOM, timers or
+  storage. Every way of reading the time (`Date.now()`, `new Date()`, `Date()`) reads the design's
+  fixed time and `Math.random()` is seeded per call, so a run is reproducible; and everything that
+  can run the program's code, down to reading what it threw, runs under the budget.
+- `language: "javascript"` is JavaScript only for now: the "compile" is QuickJS parsing the module,
+  and its syntax error is what the panel shows. TypeScript's type syntax needs a stripping step,
+  which belongs with the server compile in slice 3.
 
 ### On the server
 
@@ -263,10 +278,11 @@ and not on Wear, which has no host.
 1. **`hostAction` action** (#750 item 3): document shape, Remote Compose export, Compose export
    (a callback parameter), canvas dispatch and event log, `HostActionV1` in `ui-builder-protocol`
    (*compose-preview-contracts*), and the behaviour inspector entry. *Done.*
-2. **`hostLogic` field and canvas runtime** (JavaScript): document field and editor operation,
-   `HostLogicRuntime` interface, wasmJs Worker + QuickJS implementation, Reset host, error surface.
-   Compilation is local type-stripping in this slice, so it can be tried without a server change.
-   *This repo.*
+2. **`hostLogic` field and canvas runtime** (JavaScript): `HostLogicV1` and its mutations in
+   `ui-builder-protocol` (*compose-preview-contracts*), the document field and editor operations,
+   the server's reducer, `HostLogicEngine` with the QuickJS engine, the canvas drawing the values,
+   and the Screen › Host logic panel with Reset host and the error surface. *This repo and
+   contracts.*
 3. **Server compile and simulate**: the compile route keyed by digest, diagnostics into
    `check_design`, `simulate_action`. *compose-preview-server*, against the slice 2 wire shape.
 4. **Export**: `host/logic.mjs` and the manifest entries. *This repo.*
