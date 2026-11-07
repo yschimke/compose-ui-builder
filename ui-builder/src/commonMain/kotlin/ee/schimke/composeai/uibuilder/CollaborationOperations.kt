@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -183,6 +184,14 @@ internal fun CollaborationState.applyOperation(
         baseRevision,
         trace,
       )
+    is DesignOperation.SetHostLogic -> {
+      HostLogic.issue(operation.hostLogic)?.let {
+        fail(RejectionCode.INVALID_PROPERTY, it, field = HOST_LOGIC_FIELD)
+      }
+      writeBehavior(HOST_LOGIC_ADDRESS, operation.hostLogic, baseRevision, trace)
+    }
+    is DesignOperation.RemoveHostLogic ->
+      writeBehavior(HOST_LOGIC_ADDRESS, null, baseRevision, trace)
     is DesignOperation.SetModifiers -> {
       modifierVersions[operation.nodeId]
         ?.takeIf { it > baseRevision }
@@ -556,6 +565,8 @@ internal fun DesignOperation.isPropertyWrite(): Boolean =
     this is DesignOperation.SetStateVariable ||
     this is DesignOperation.RemoveStateVariable ||
     this is DesignOperation.SetEventBinding ||
+    this is DesignOperation.SetHostLogic ||
+    this is DesignOperation.RemoveHostLogic ||
     this is DesignOperation.DeclareComponent ||
     this is DesignOperation.RemoveComponent ||
     this is DesignOperation.SetComponentArguments
@@ -1411,3 +1422,9 @@ private fun CollaborationState.inverseByRevision():
   }
   return inverses
 }
+
+/** The field a host-logic write names, in a rejection and a conflict. */
+internal const val HOST_LOGIC_FIELD: String = "hostLogic"
+
+/** The one address every host-logic write touches: the program is one value. */
+private val HOST_LOGIC_ADDRESS = PropertyAddress("", HOST_LOGIC_FIELD, PropertyTarget.HostLogic)

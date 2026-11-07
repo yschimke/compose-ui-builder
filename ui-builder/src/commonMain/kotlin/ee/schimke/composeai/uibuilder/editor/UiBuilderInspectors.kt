@@ -104,6 +104,7 @@ import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.CommentsInspector
 import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
+import ee.schimke.composeai.uibuilder.inspector.HostLogicInspector
 import ee.schimke.composeai.uibuilder.inspector.ReviewDecisionSection
 import ee.schimke.composeai.uibuilder.inspector.StateSelectionInspector
 import ee.schimke.composeai.uibuilder.inspector.StateVariablesInspector
@@ -432,6 +433,8 @@ private fun InspectorBody(
       Column(Modifier.verticalScroll(rememberScrollState())) {
         if (UiBuilderBuildFeatures.remoteCompose) {
           StateVariablesInspector(state.document, onTextInputFocusChanged, dispatch)
+          HorizontalDivider(Modifier.padding(vertical = 10.dp))
+          HostLogicInspector(state.document, onTextInputFocusChanged, dispatch)
           HorizontalDivider(Modifier.padding(vertical = 10.dp))
         }
         ScreenEnvironmentInspector(

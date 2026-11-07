@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.HostActions
+import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
@@ -3970,6 +3971,35 @@ public class PersistentUiBuilderService(
             staleStateWrites(original, staleness, mutation.name),
           )
         }
+        is SetHostLogicMutationV1 -> {
+          // The same reading the editor makes (`HostLogic.issue`), so a stored program is one the
+          // canvas can be handed.
+          HostLogic.issue(mutation.hostLogic.toJsonObject())?.let { issue ->
+            fail(
+              RejectionCodeV1.INVALID_DOCUMENT,
+              issue,
+              operationIndex = index,
+              field = "hostLogic",
+            )
+          }
+          val before = working.document.hostLogic
+          val document =
+            working.document.newBuilder().apply { hostLogic = mutation.hostLogic }.build()
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            HostLogicChangeV1(before, mutation.hostLogic),
+            staleHostLogicWrites(original, staleness),
+          )
+        }
+        RemoveHostLogicMutationV1 -> {
+          val before = working.document.hostLogic
+          val document = working.document.newBuilder().apply { hostLogic = null }.build()
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            HostLogicChangeV1(before, null),
+            staleHostLogicWrites(original, staleness),
+          )
+        }
         is DeclareComponentMutationV1 -> {
           if (mutation.componentKey.isBlank()) {
             fail(
@@ -4400,6 +4430,21 @@ public class PersistentUiBuilderService(
             }
             working =
               working.copy(document = working.document.withComponent(change.componentKey, target))
+          }
+          is HostLogicChangeV1 -> {
+            val expected = if (undo) change.after else change.before
+            if (working.document.hostLogic != expected) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "host logic changed after the target operation",
+                field = "hostLogic",
+              )
+            }
+            val target = if (undo) change.before else change.after
+            working =
+              working.copy(
+                document = working.document.newBuilder().apply { hostLogic = target }.build(),
+              )
           }
           is EnvironmentChangeRecordV1 -> {
             val expected = if (undo) change.after else change.before
@@ -5038,4 +5083,18 @@ private fun HostActionV1.toJsonObject(): kotlinx.serialization.json.JsonObject =
       put("name", JsonPrimitive(name))
       value?.let { put("value", it) }
     },
+  )
+
+/** [this] as the `{"language", "source"}` JSON `HostLogic` reads. */
+private fun HostLogicV1.toJsonObject(): kotlinx.serialization.json.JsonObject =
+  kotlinx.serialization.json.JsonObject(
+    mapOf(
+      "language" to
+        JsonPrimitive(
+          when (language) {
+            HostLogicLanguageV1.JAVASCRIPT -> HostLogic.LANGUAGE_JAVASCRIPT
+          },
+        ),
+      "source" to JsonPrimitive(source),
+    ),
   )

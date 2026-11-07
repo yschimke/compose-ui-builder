@@ -142,6 +142,12 @@ fun CanvasDocumentHost(
    * all, by changing the host inputs it owns.
    */
   onHostAction: (CanvasHostAction) -> Unit = {},
+  /**
+   * Host inputs' values as a host is pushing them, by name, drawn over the design's own state: what
+   * a design's host logic last set. A name that is not a host input is ignored, since the host owns
+   * only those.
+   */
+  hostValues: Map<String, String?> = emptyMap(),
   content: @Composable CanvasDocumentScope.(CanvasRenderNode, Modifier) -> Unit,
 ) {
   val currentHostAction = rememberUpdatedState(onHostAction)
@@ -206,6 +212,11 @@ fun CanvasDocumentHost(
     if (appliedDeclarations != document.stateVariables) {
       reconcileCanvasState(state, appliedDeclarations, document.stateVariables)
       appliedDeclarations = document.stateVariables
+    }
+    hostValues.forEach { (name, value) ->
+      val declaration = document.stateVariables[name] as? JsonObject
+      val hostInput = (declaration?.get("persistence") as? JsonPrimitive)?.contentOrNull == "host"
+      if (hostInput && state[name] != value) state[name] = value
     }
     inspection.updateState(state)
     // A hidden or background browser surface may not receive a layout frame immediately. Publish
