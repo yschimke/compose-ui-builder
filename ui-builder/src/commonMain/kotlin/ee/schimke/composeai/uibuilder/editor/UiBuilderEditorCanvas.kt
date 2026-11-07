@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -37,7 +38,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -1711,9 +1715,43 @@ internal fun WatchScreenFrame(
       .clip(shape)
       .background(Color.Black)
       .semantics { contentDescription = "Watch screen · $label" },
+    contentAlignment = if (screen.tileCompat) Alignment.TopCenter else Alignment.Center,
+  ) {
+    val container: @Composable () -> Unit = {
+      Box(Modifier.clip(RoundedCornerShape((screen.frameCornerRadiusDp * scale).dp))) { content() }
+    }
+    if (screen.tileCompat) {
+      Column(
+        Modifier.padding(top = (WATCH_TILE_ICON_TOP_DP * scale).dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        TileAppIcon(scale)
+        Spacer(Modifier.height((WATCH_TILE_ICON_GAP_DP * scale).dp))
+        container()
+      }
+    } else container()
+  }
+}
+
+/**
+ * The app icon a tile carousel page shows above a widget in tile-compat mode. The design carries no
+ * launcher icon, so this is a neutral stand-in of the right size and place.
+ */
+@Composable
+private fun TileAppIcon(scale: Float) {
+  Box(
+    Modifier.size((WATCH_TILE_ICON_DP * scale).dp)
+      .clip(CircleShape)
+      .background(Color(0xFF3C4043))
+      .semantics { contentDescription = "App icon" },
     contentAlignment = Alignment.Center,
   ) {
-    Box(Modifier.clip(RoundedCornerShape((screen.frameCornerRadiusDp * scale).dp))) { content() }
+    Icon(
+      Icons.Filled.Widgets,
+      contentDescription = null,
+      tint = Color(0xFFE8EAED),
+      modifier = Modifier.size((WATCH_TILE_ICON_DP * 0.6f * scale).dp),
+    )
   }
 }
 

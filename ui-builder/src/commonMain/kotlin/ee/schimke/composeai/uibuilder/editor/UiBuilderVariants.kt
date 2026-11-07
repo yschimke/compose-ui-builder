@@ -99,12 +99,17 @@ enum class WatchScreenShape(val label: String) {
  * A black watch screen of [shape] around a widget container [frameWidthDp]×[frameHeightDp] (the
  * container's whole frame, padding included), centred in it and clipped to [frameCornerRadiusDp] so
  * nothing square shows behind a rounded container.
+ *
+ * [tileCompat] draws the screen as a tile carousel page instead: the host's app icon at the top and
+ * the container under it (see [WATCH_TILE_ICON_TOP_DP]), as a host without partial-height widgets
+ * shows a widget in Glance Wear's `CONTAINER_TYPE_TILE_COMPAT`.
  */
 data class WatchScreen(
   val shape: WatchScreenShape,
   val frameWidthDp: Float,
   val frameHeightDp: Float,
   val frameCornerRadiusDp: Float,
+  val tileCompat: Boolean = false,
 )
 
 /**
@@ -112,6 +117,17 @@ data class WatchScreen(
  * container, rounded corners and all, clears a round screen's edge.
  */
 const val WATCH_SCREEN_DP: Float = 240f
+
+/**
+ * A tile-compat screen's layout, top down: the app icon's inset from the screen's top, its size,
+ * and the gap to the widget container below. Chosen so a 216×124 Large squircle, all four rounded
+ * corners, clears a [WATCH_SCREEN_DP] round screen: the container's top sits 50dp down.
+ */
+const val WATCH_TILE_ICON_TOP_DP: Float = 18f
+
+const val WATCH_TILE_ICON_DP: Float = 24f
+
+const val WATCH_TILE_ICON_GAP_DP: Float = 8f
 
 /** A square watch's corner radius, as a fraction of its side. */
 const val SQUARE_WATCH_CORNER_FRACTION: Float = 0.2f
@@ -416,7 +432,41 @@ private fun wearWidgetPreviewPanes(
       document = document,
       wearWidgetHostShape = shape,
     )
-  }
+  } +
+    listOfNotNull(if (size == WearWidgetScaffoldSize.Large) pixelWatchTilePane(document) else null)
+
+/**
+ * A Large widget on a Pixel Watch that shows it as a tile. Hosts without partial-height widgets
+ * (Wear OS 4–6, and Wear OS 7 on the Pixel Watch) put a widget whose service also binds
+ * `BIND_TILE_PROVIDER` in the tile carousel, in Glance Wear's `CONTAINER_TYPE_TILE_COMPAT`: a whole
+ * screen with the app's icon above the content, which is held to "specs similar to" the Large
+ * container. The system renderer that lays that page out is not public, so this is an
+ * approximation: a round screen, an icon placeholder at the top and the Large squircle container
+ * under it.
+ */
+private fun pixelWatchTilePane(document: UiBuilderDocument): UiBuilderVariantPane {
+  val shape = WearWidgetHostShape.Squircle
+  val spec = WearWidgetScaffoldSize.Large.hostSpec(shape)
+  return UiBuilderVariantPane(
+    id = WEAR_TILE_PANE_ID,
+    label = "${wearHostName(shape)} · Tile",
+    widthDp = WATCH_SCREEN_DP,
+    heightDp = WATCH_SCREEN_DP,
+    document = document,
+    wearWidgetHostShape = shape,
+    watchScreen =
+      WatchScreen(
+        WatchScreenShape.Round,
+        spec.frameWidthDp.toFloat(),
+        spec.frameHeightDp.toFloat(),
+        minOf(spec.cornerRadiusDp, spec.frameHeightDp / 2f),
+        tileCompat = true,
+      ),
+  )
+}
+
+/** The id of the Pixel Watch tile-compat pane; see [pixelWatchTilePane]. */
+internal const val WEAR_TILE_PANE_ID = "preview-widget-tile"
 
 /**
  * A compact tab's label: a device or the design's own frame by name alone (the pane repeats the
