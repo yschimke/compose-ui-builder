@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
+    "generatedFrom": "d20c8e42e72d7d9425313a55c30c88e39fe9ae1a",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -4201,9 +4201,31 @@
             "unstable": false,
             "flapCount": 0
         },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPhonePreview": {
+            "path": "renders/ui-builder/UiBuilderNewDesignPhonePreview-eff465c5.png",
+            "versions": [
+                {
+                    "blob": "37cfe91c50ef22a607cc71579d5c04b8ad0b8d53",
+                    "commit": "d20c8e42e72d7d9425313a55c30c88e39fe9ae1a",
+                    "date": "2026-11-07T11:10:52Z",
+                    "sourceSha": "430453ff",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPreview": {
             "path": "renders/ui-builder/UiBuilderNewDesignPreview-7e7db055.png",
             "versions": [
+                {
+                    "blob": "6b6e3621707b1bebd41d079b15bc8c12e634b107",
+                    "commit": "d20c8e42e72d7d9425313a55c30c88e39fe9ae1a",
+                    "date": "2026-11-07T11:10:52Z",
+                    "sourceSha": "430453ff",
+                    "commits": 1
+                },
                 {
                     "blob": "7a66c21365afc274b5c02c41d7e7890522863285",
                     "commit": "0cd9bffe015fe4c7be8a9d77acd2a14550958f95",
@@ -4282,7 +4304,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 11,
+            "observations": 12,
             "unstable": false,
             "flapCount": 0
         },
