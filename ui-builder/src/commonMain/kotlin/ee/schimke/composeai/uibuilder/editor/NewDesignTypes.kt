@@ -34,7 +34,12 @@ data class NewDesignTypeOptions(
  *   a single-catalog host still asks what is being made.
  * - A brand that narrows the catalogs (`ui-builder-catalogs`): every catalog in the row, nothing
  *   folded away — the host already chose what to offer.
- * - Otherwise the [isPrimary] catalogs in the row, the rest behind "Other design types…".
+ * - Otherwise the [isPrimary] catalogs in the row, the rest behind "Other design types…". When no
+ *   catalog asks for the row, the first [FALLBACK_PRIMARY_COUNT] (in published order) fill it, so
+ *   the question is never asked over an empty row.
+ *
+ * Catalogs that publish the same label (typically several falling back to one `platformLabel`) are
+ * told apart by their id ([newDesignTypeLabels]).
  */
 fun newDesignTypeOptions(
   catalogs: List<UiBuilderNewDesignCatalog>,
@@ -58,13 +63,45 @@ fun newDesignTypeOptions(
       )
   }
   val narrowed = brand?.catalogs.orEmpty().isNotEmpty()
-  val (primary, other) = catalogs.partition { narrowed || it.isPrimary }
-  return NewDesignTypeOptions(primary.map(::newDesignTypeChoice), other)
+  val labeled = newDesignTypeLabels(catalogs)
+  val (primary, other) =
+    when {
+      narrowed -> catalogs to emptyList()
+      catalogs.none { it.isPrimary } ->
+        catalogs.take(FALLBACK_PRIMARY_COUNT) to catalogs.drop(FALLBACK_PRIMARY_COUNT)
+      else -> catalogs.partition { it.isPrimary }
+    }
+  return NewDesignTypeOptions(
+    primary = primary.map { newDesignTypeChoice(it).copy(title = labeled.getValue(it.systemId)) },
+    other = other.map { it.copy(label = labeled.getValue(it.systemId)) },
+  )
+}
+
+/**
+ * Each catalog's label in the type picker, keyed by system id: its published label, or — when two
+ * or more catalogs publish the same one — that label followed by the catalog's id in words, so four
+ * catalogs falling back to "Mobile" read as "Mobile · M3 Catalog", "Mobile · Compose Foundation"…
+ */
+fun newDesignTypeLabels(catalogs: List<UiBuilderNewDesignCatalog>): Map<String, String> {
+  val counts = catalogs.groupingBy { it.label.trim().lowercase() }.eachCount()
+  return catalogs.associate { catalog ->
+    val shared = (counts[catalog.label.trim().lowercase()] ?: 0) > 1
+    val named = newDesignTitleOf(catalog.systemId)
+    catalog.systemId to
+      when {
+        !shared -> catalog.label
+        named.equals(catalog.label, ignoreCase = true) -> named
+        else -> "${catalog.label} · $named"
+      }
+  }
 }
 
 /** A type card uses the catalog's published label and description. */
 fun newDesignTypeChoice(catalog: UiBuilderNewDesignCatalog): NewDesignTypeChoice =
   NewDesignTypeChoice(catalog.systemId, catalog.label, catalog.description)
+
+/** How many catalogs fill the type row when none of them asks for it (one full row of cards). */
+const val FALLBACK_PRIMARY_COUNT = 3
 
 /**
  * The template groups a catalog offers as separate targets, in the order its templates first name

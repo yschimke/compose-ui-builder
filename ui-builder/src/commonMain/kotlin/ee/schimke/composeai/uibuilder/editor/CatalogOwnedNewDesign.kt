@@ -67,7 +67,8 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
             supportingText =
               card?.string("supportingText")
                 ?: if (declared.isEmpty()) "An empty starting point for this catalog."
-                else "A starting point published by $systemId.",
+                // Says nothing the card's title and thumbnail do not; the card draws no line.
+                else "",
             group = card?.string("group"),
           )
         },
@@ -122,7 +123,10 @@ private const val TEMPLATES = "templates"
 private const val PLATFORM_LABEL = "platformLabel"
 private const val NEW_DESIGN = "newDesign"
 
-private fun titleOf(id: String): String =
+private fun titleOf(id: String): String = newDesignTitleOf(id)
+
+/** An id in words: `m3-catalog` reads "M3 Catalog". */
+internal fun newDesignTitleOf(id: String): String =
   id.split('-', '_', '.').filter(String::isNotEmpty).joinToString(" ") { word ->
     word.replaceFirstChar(Char::uppercaseChar)
   }
