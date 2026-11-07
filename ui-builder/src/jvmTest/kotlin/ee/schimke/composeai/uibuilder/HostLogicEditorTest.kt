@@ -20,6 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /** Host logic is one document value: set, removed and undone like any other edit. */
@@ -83,6 +84,30 @@ class HostLogicEditorTest {
     )
     // A design without host logic says nothing about it, so its document hash is unchanged.
     assertNull(document.toDesignDocumentV1().hostLogic)
+  }
+
+  @Test
+  fun `a host input survives the wire document, so the editor can read back what it stored`() {
+    val withInput =
+      document.copy(
+        stateVariables =
+          JsonObject(
+            document.stateVariables +
+              ("calc.display" to
+                Json.parseToJsonElement(
+                    """{"type":"text","valueType":"string","nullable":false,"initialValue":"0",
+                      "persistence":"host"}""",
+                  )
+                  .jsonObject),
+          ),
+        hostLogic = HostLogic.encode("export function init() {} export function onAction() {}"),
+      )
+    val wire = withInput.toDesignDocumentV1()
+    assertEquals(withInput.stateVariables, wire.toUiBuilderDocument().stateVariables)
+    assertEquals(
+      mapOf("calc.display" to HostLogic.hostInputs(withInput).getValue("calc.display")),
+      HostLogic.hostInputs(wire.toUiBuilderDocument()),
+    )
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
