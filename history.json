@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "0cd9bffe015fe4c7be8a9d77acd2a14550958f95",
+    "generatedFrom": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -2126,6 +2126,13 @@
             "path": "renders/ui-builder/UiBuilderCommentPinsOverMarkupPreview-0019b7e0.png",
             "versions": [
                 {
+                    "blob": "a8f68107210cb8a13f90907fb71c8f1362624557",
+                    "commit": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
+                    "date": "2026-11-07T10:15:47Z",
+                    "sourceSha": "d2283a2c",
+                    "commits": 1
+                },
+                {
                     "blob": "0fd6fadc569614a0314e35d2570e9723cdd89358",
                     "commit": "5b5d325476e7b637fb9b0cda49fd18d514e921ba",
                     "date": "2026-10-23T13:26:02Z",
@@ -2217,7 +2224,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 13,
+            "observations": 14,
             "unstable": false,
             "flapCount": 1
         },
@@ -2573,6 +2580,13 @@
             "path": "renders/ui-builder/UiBuilderBoardBeforePreview-009f1e6e.png",
             "versions": [
                 {
+                    "blob": "b251ccfe6df5c8db3879aa7d975d85fa97866b5d",
+                    "commit": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
+                    "date": "2026-11-07T10:15:47Z",
+                    "sourceSha": "d2283a2c",
+                    "commits": 1
+                },
+                {
                     "blob": "3177433ebde71c1c86da5c8283844e4491617d5a",
                     "commit": "5b5d325476e7b637fb9b0cda49fd18d514e921ba",
                     "date": "2026-10-23T13:26:02Z",
@@ -2671,13 +2685,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 14,
+            "observations": 15,
             "unstable": false,
             "flapCount": 1
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderBoardPreview": {
             "path": "renders/ui-builder/UiBuilderBoardPreview-4f265e12.png",
             "versions": [
+                {
+                    "blob": "75948c4a3a0fd3a1bc65d30f1e4b0e329e635e40",
+                    "commit": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
+                    "date": "2026-11-07T10:15:47Z",
+                    "sourceSha": "d2283a2c",
+                    "commits": 1
+                },
                 {
                     "blob": "507b6d86307f052568e4a383d36864de15333743",
                     "commit": "5b5d325476e7b637fb9b0cda49fd18d514e921ba",
@@ -2784,7 +2805,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 15,
+            "observations": 16,
             "unstable": false,
             "flapCount": 1
         },
@@ -3112,6 +3133,13 @@
             "path": "renders/ui-builder/UiBuilderDevicePresetPhonePreview-2ea74f41.png",
             "versions": [
                 {
+                    "blob": "e51e665a234ae731676ed896736851d5739c6f62",
+                    "commit": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
+                    "date": "2026-11-07T10:15:47Z",
+                    "sourceSha": "d2283a2c",
+                    "commits": 1
+                },
+                {
                     "blob": "27f6834bbbf46dabdaca4bb8a98aa5ef9e8c8e24",
                     "commit": "5b5d325476e7b637fb9b0cda49fd18d514e921ba",
                     "date": "2026-10-23T13:26:02Z",
@@ -3175,13 +3203,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 9,
+            "observations": 10,
             "unstable": false,
             "flapCount": 1
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderDevicePresetTabletPreview": {
             "path": "renders/ui-builder/UiBuilderDevicePresetTabletPreview-77ad3db2.png",
             "versions": [
+                {
+                    "blob": "f377fa08f5906479f0f83acb66ef2e5dfd13f63b",
+                    "commit": "bd4d211bd026c3021581c37dc808110d68ee9dcf",
+                    "date": "2026-11-07T10:15:47Z",
+                    "sourceSha": "d2283a2c",
+                    "commits": 1
+                },
                 {
                     "blob": "1ac09deddf20b4bc2650bd910359c7e67432d905",
                     "commit": "5b5d325476e7b637fb9b0cda49fd18d514e921ba",
@@ -3253,7 +3288,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 10,
+            "observations": 11,
             "unstable": false,
             "flapCount": 1
         },
