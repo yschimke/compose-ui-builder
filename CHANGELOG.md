@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.127.0](https://github.com/yschimke/compose-ui-builder/compare/v3.126.0...v3.127.0) (2026-11-07)
+
+
+### Features
+
+* a hostAction action that hands an event to the host ([#1137](https://github.com/yschimke/compose-ui-builder/issues/1137)) ([1360745](https://github.com/yschimke/compose-ui-builder/commit/1360745411fe65a0b27419ddf6436e56dbbd1c3d))
+* author a host action in the behaviour inspector ([#1144](https://github.com/yschimke/compose-ui-builder/issues/1144)) ([02e330f](https://github.com/yschimke/compose-ui-builder/commit/02e330f0c5ef7e8c184c871768f22d913b7c8a7e))
+* download a bitmap-font .rc for Wear and launcher widgets ([#1122](https://github.com/yschimke/compose-ui-builder/issues/1122)) ([4890260](https://github.com/yschimke/compose-ui-builder/commit/4890260f33ab9fa8717db91603e19949fca0ef7d))
+* download a bitmap-font .rc for Wear and launcher widgets ([#1122](https://github.com/yschimke/compose-ui-builder/issues/1122)) ([2431fca](https://github.com/yschimke/compose-ui-builder/commit/2431fca1deb2727ace818e3333ebce9f8ec5d25e))
+* **export:** read empty-container lambda rules from released layout signatures ([#1138](https://github.com/yschimke/compose-ui-builder/issues/1138)) ([1cb17e6](https://github.com/yschimke/compose-ui-builder/commit/1cb17e6f06c2ec8ab2f5a2d6bf0187ebb9d1e2f5))
+* **export:** write a remote text's font family, letter spacing and line height ([#1104](https://github.com/yschimke/compose-ui-builder/issues/1104)) ([674139f](https://github.com/yschimke/compose-ui-builder/commit/674139f8c23f3e7f7ab27de9950fe2cf3c2ca53b))
+* **new-design:** ask for the device first ([#1140](https://github.com/yschimke/compose-ui-builder/issues/1140)) ([4a65368](https://github.com/yschimke/compose-ui-builder/commit/4a653681686e06af1f7618d8ce3f4b71b0a2616c))
+* **new-design:** template grid and More options fold ([#1136](https://github.com/yschimke/compose-ui-builder/issues/1136)) ([430453f](https://github.com/yschimke/compose-ui-builder/commit/430453ff52ccd6050da9f45770c5931ac0626372))
+* **ui-builder:** preview a Large Wear widget as a Pixel Watch tile ([#1135](https://github.com/yschimke/compose-ui-builder/issues/1135)) ([d2283a2](https://github.com/yschimke/compose-ui-builder/commit/d2283a2cce228c94867235d2c54f627abcfd2532))
+
+
+### Bug Fixes
+
+* **deps:** update androidx-compose to v1.0.0-alpha23 ([#1096](https://github.com/yschimke/compose-ui-builder/issues/1096)) ([b81b8cc](https://github.com/yschimke/compose-ui-builder/commit/b81b8cc80c3257c0188b7e98aee3d60496b9b375))
+* **deps:** update compose-ai-tools to v2.86.0 ([#1115](https://github.com/yschimke/compose-ui-builder/issues/1115)) ([1611ba1](https://github.com/yschimke/compose-ui-builder/commit/1611ba1911159e95dd370efe64dc8ea6a9ce93d7))
+* **deps:** update dependency ee.schimke.composeai:compose-ai-tools-bom to v2.85.0 ([#1105](https://github.com/yschimke/compose-ui-builder/issues/1105)) ([ca61d1e](https://github.com/yschimke/compose-ui-builder/commit/ca61d1e0c5450afd68c40c56b4e9c6fbe3056857))
+* **deps:** update dependency ee.schimke.composeai:compose-ai-tools-bom to v2.87.0 ([#1130](https://github.com/yschimke/compose-ui-builder/issues/1130)) ([b8f49cd](https://github.com/yschimke/compose-ui-builder/commit/b8f49cd4e6abd2db1850c8c7ebc73eb927906630))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.40.0 ([#1145](https://github.com/yschimke/compose-ui-builder/issues/1145)) ([6a745ad](https://github.com/yschimke/compose-ui-builder/commit/6a745ad0153517fc5f6a4f092241b5500895632f))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.23.0 ([#1106](https://github.com/yschimke/compose-ui-builder/issues/1106)) ([7a4c810](https://github.com/yschimke/compose-ui-builder/commit/7a4c8104be58bffb75ec36921a04aef6e9eada09))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.24.0 ([#1117](https://github.com/yschimke/compose-ui-builder/issues/1117)) ([3305f31](https://github.com/yschimke/compose-ui-builder/commit/3305f318042ccddd490119945a3cc77d5cf4b14a))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.25.0 ([#1121](https://github.com/yschimke/compose-ui-builder/issues/1121)) ([256bf78](https://github.com/yschimke/compose-ui-builder/commit/256bf781c8b11602ddb91f9cc336e0e75502a7c3))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.26.0 ([#1128](https://github.com/yschimke/compose-ui-builder/issues/1128)) ([eb4e59f](https://github.com/yschimke/compose-ui-builder/commit/eb4e59ffa49f0a5442cb4d64743ac94832ad34bd))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.27.0 ([#1142](https://github.com/yschimke/compose-ui-builder/issues/1142)) ([8e255af](https://github.com/yschimke/compose-ui-builder/commit/8e255af7c6e4d6281ad8955ab30dd4a2eda71fba))
+* **deps:** update dependency io.github.classgraph:classgraph to v4.8.200 ([#1109](https://github.com/yschimke/compose-ui-builder/issues/1109)) ([4d96aa9](https://github.com/yschimke/compose-ui-builder/commit/4d96aa97d64c767e26c812b7c0bff54efc008680))
+* **deps:** update dependency io.github.classgraph:classgraph to v5 ([#1060](https://github.com/yschimke/compose-ui-builder/issues/1060)) ([4b9ed3d](https://github.com/yschimke/compose-ui-builder/commit/4b9ed3ddb9dfad32b1b38c18eb6e18625287c23f))
+* **deps:** update dependency io.github.classgraph:classgraph to v5.0.2 ([#1118](https://github.com/yschimke/compose-ui-builder/issues/1118)) ([d798363](https://github.com/yschimke/compose-ui-builder/commit/d798363e10efb0ce808de85df507db3784ad7785))
+* **deps:** update flexpress to v0.3.0 ([#1123](https://github.com/yschimke/compose-ui-builder/issues/1123)) ([54b7522](https://github.com/yschimke/compose-ui-builder/commit/54b7522f4f2dad68debc089ea17abf8e8cd331c9))
+* **deps:** update flexpress to v0.4.0 ([#1139](https://github.com/yschimke/compose-ui-builder/issues/1139)) ([8d30dd9](https://github.com/yschimke/compose-ui-builder/commit/8d30dd95b257a890de928ed2b1aa22ea53a76cd4))
+* draw a design's named faces on the Remote Compose canvas ([#1124](https://github.com/yschimke/compose-ui-builder/issues/1124)) ([a23a777](https://github.com/yschimke/compose-ui-builder/commit/a23a7776758611e3a9a1de23d6b24fd611717eb0))
+* **export:** write a content lambda for empty remote containers that need one ([#1127](https://github.com/yschimke/compose-ui-builder/issues/1127)) ([f58a521](https://github.com/yschimke/compose-ui-builder/commit/f58a521d5301d16f897b8cafdbbb12e10121495d))
+* **new-design:** never show an empty type row or identical type labels ([#1134](https://github.com/yschimke/compose-ui-builder/issues/1134)) ([ec89fea](https://github.com/yschimke/compose-ui-builder/commit/ec89fea58677295aaacf5298fa11b892e08bdea0))
+* send the same host-action decimal everywhere, and survive the log's fade-out ([#1141](https://github.com/yschimke/compose-ui-builder/issues/1141)) ([5ad24a1](https://github.com/yschimke/compose-ui-builder/commit/5ad24a19576abf2d418e24962eec4ecaac063498))
+
 ## [3.126.0](https://github.com/yschimke/compose-ui-builder/compare/v3.125.0...v3.126.0) (2026-11-04)
 
 
