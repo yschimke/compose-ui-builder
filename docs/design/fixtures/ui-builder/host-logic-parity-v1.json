@@ -43,6 +43,11 @@
       "loadError": "host logic must export a function named onAction"
     },
     {
+      "name": "a program that declares its functions without exporting them does not load",
+      "source": "function init() { return {}; }\nfunction onAction() { return {}; }\n",
+      "loadError": "host logic must export a function named init"
+    },
+    {
       "name": "a program that is not JavaScript does not load",
       "source": "this is not ( javascript",
       "loadError": "expecting"
