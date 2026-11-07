@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.130.0](https://github.com/yschimke/compose-ui-builder/compare/v3.129.0...v3.130.0) (2026-11-07)
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.89.0 ([#1162](https://github.com/yschimke/compose-ui-builder/issues/1162)) ([ffc2365](https://github.com/yschimke/compose-ui-builder/commit/ffc2365da489807d053927ade59244f7f6bf4d21))
+* read back a stored design that declares a host input ([#1164](https://github.com/yschimke/compose-ui-builder/issues/1164)) ([0122f67](https://github.com/yschimke/compose-ui-builder/commit/0122f67de4f16e88ada1fa672058e06cc68c8586))
+
 ## [3.129.0](https://github.com/yschimke/compose-ui-builder/compare/v3.128.0...v3.129.0) (2026-11-07)
 
 
