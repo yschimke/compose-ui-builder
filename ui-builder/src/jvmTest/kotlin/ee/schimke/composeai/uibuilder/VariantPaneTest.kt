@@ -18,8 +18,15 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderVariantPane
+import ee.schimke.composeai.uibuilder.editor.WATCH_SCREEN_DP
+import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_HEADER_BOTTOM_DP
+import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_DP
+import ee.schimke.composeai.uibuilder.editor.WATCH_TILE_ICON_TOP_DP
+import ee.schimke.composeai.uibuilder.editor.WatchScreenShape
+import ee.schimke.composeai.uibuilder.editor.offersWearTilePane
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.variantPanes
+import ee.schimke.composeai.uibuilder.editor.wearTilePanes
 import ee.schimke.composeai.uibuilder.editor.wearWidgetPreviewPanes
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -31,8 +38,10 @@ import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.export.newDocument
 import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -118,6 +127,71 @@ class VariantPaneTest {
       ),
       panes.map { it.wearWidgetHostShape },
     )
+  }
+
+  private fun wearWidget(size: WearWidgetScaffoldSize): UiBuilderDocument =
+    blankUiBuilderDocument("widget-preview", JsonObject(emptyMap()), JsonObject(emptyMap()))
+      .copy(
+        roots = listOf("widget"),
+        nodes = mapOf("widget" to UiBuilderNode("widget", size.componentId, slots = emptyMap())),
+      )
+
+  /** Tile-compat: a host without partial-height widgets shows a Large one as a tile page. */
+  @Test
+  fun `a large widget also previews as a Pixel Watch tile with the app icon above it`() {
+    val widget = wearWidget(WearWidgetScaffoldSize.Large)
+
+    // An opt-in compare pane, never one of the widget's own host panes.
+    assertTrue(
+      widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large).none { it.watchScreen != null },
+    )
+    val tile = widget.wearTilePanes().single()
+
+    val screen = assertNotNull(tile.watchScreen)
+    assertTrue(screen.tileCompat)
+    assertEquals(WatchScreenShape.Round, screen.shape)
+    assertEquals(216f to 124f, screen.frameWidthDp to screen.frameHeightDp)
+    assertEquals(widget, tile.document)
+    // Centred, the container clears the system's icon slot and its 26dp corners clear the screen.
+    val top = (WATCH_SCREEN_DP - screen.frameHeightDp) / 2f
+    assertTrue(top >= WATCH_TILE_ICON_TOP_DP + WATCH_TILE_ICON_DP + WATCH_TILE_HEADER_BOTTOM_DP)
+    val r = screen.frameCornerRadiusDp
+    val dx = screen.frameWidthDp / 2f - r
+    val dy = WATCH_SCREEN_DP / 2f - (top + r)
+    assertTrue(sqrt(dx * dx + dy * dy) + r <= WATCH_SCREEN_DP / 2f, "top corners clip")
+    val bottomDy = top + screen.frameHeightDp - r - WATCH_SCREEN_DP / 2f
+    assertTrue(sqrt(dx * dx + bottomDy * bottomDy) + r <= WATCH_SCREEN_DP / 2f, "bottom clips")
+  }
+
+  @Test
+  fun `a small widget gets no tile pane`() {
+    val widget = wearWidget(WearWidgetScaffoldSize.Small)
+
+    assertFalse(widget.offersWearTilePane())
+    assertEquals(emptyList(), widget.wearTilePanes())
+  }
+
+  @Test
+  fun `an adaptive widget's tile pane draws its Large resolution`() {
+    val adaptive =
+      AdaptiveWearWidget.newDocument("adaptive", JsonObject(emptyMap()), JsonObject(emptyMap()))
+
+    val tile = adaptive.wearTilePanes().single()
+
+    assertEquals(AdaptiveWearWidget.resolve(adaptive, WearWidgetScaffoldSize.Large), tile.document)
+  }
+
+  @Test
+  fun `the tile toggle is off by default, flips, and survives a document arriving`() {
+    val widget = wearWidget(WearWidgetScaffoldSize.Large)
+    val initial = reducer.initial(widget, selectedNodeId = null)
+    assertFalse(initial.wearTilePane)
+
+    val on = reducer.reduce(initial, UiBuilderEditorEvent.ToggleWearTilePane)
+
+    assertTrue(on.wearTilePane)
+    assertFalse(reducer.reduce(on, UiBuilderEditorEvent.ToggleWearTilePane).wearTilePane)
+    assertTrue(reducer.reconciled(on, widget).wearTilePane)
   }
 
   @Test

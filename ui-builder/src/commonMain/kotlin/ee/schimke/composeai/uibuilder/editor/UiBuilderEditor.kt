@@ -1458,8 +1458,9 @@ fun UiBuilderEditor(
     }
   // The design on approximate Wear watches, when asked for: after everything else in the strip.
   val wearScreenPanes =
-    remember(drawnDocument, state.wearScreenPanes) {
-      if (state.wearScreenPanes) drawnDocument.wearScreenPanes() else emptyList()
+    remember(drawnDocument, state.wearScreenPanes, state.wearTilePane) {
+      (if (state.wearScreenPanes) drawnDocument.wearScreenPanes() else emptyList()) +
+        (if (state.wearTilePane) drawnDocument.wearTilePanes() else emptyList())
     }
   // A dedicated Preview view has no canvas beside it, so its first frame is the current design. A
   // widget's preview is its host panes, so the watches join those rather than the device strip.

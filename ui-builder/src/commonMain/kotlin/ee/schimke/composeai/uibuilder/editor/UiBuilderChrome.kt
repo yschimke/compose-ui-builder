@@ -1133,7 +1133,9 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
         style = MaterialTheme.typography.labelSmall,
       )
     }
-    Row(
+    // Wraps: a design can offer more ways of looking than fit across the inspector, and a squeezed
+    // chip is drawn empty and cannot be hit.
+    FlowRow(
       Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp),
       horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
