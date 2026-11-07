@@ -9,13 +9,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import ee.schimke.composeai.uibuilder.export.HostLogic
+import ee.schimke.composeai.uibuilder.export.HostLogicRun
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasHostAction
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 
 /** Where a design's host logic stands on the canvas. */
 sealed interface HostLogicStatus {
@@ -56,9 +55,8 @@ class HostLogicController internal constructor(private val engine: HostLogicEngi
   var state: JsonElement by mutableStateOf(JsonNull)
     private set
 
-  private var program: HostLogicProgram? = null
+  private var run: HostLogicRun? = null
   private var document: UiBuilderDocument? = null
-  private var calls = 0
 
   /**
    * Loads [document]'s host logic, replacing any program already loaded, and runs `init`. A design
@@ -67,7 +65,7 @@ class HostLogicController internal constructor(private val engine: HostLogicEngi
   suspend fun load(document: UiBuilderDocument) {
     close()
     this.document = document
-    values = initialValues(document)
+    values = HostLogicRun.initialValues(document)
     state = JsonNull
     val source = HostLogic.of(document)?.source
     status =
@@ -80,7 +78,7 @@ class HostLogicController internal constructor(private val engine: HostLogicEngi
     engine
       .load(source)
       .onSuccess { loaded ->
-        program = loaded
+        run = HostLogicRun(document, loaded)
         reset()
       }
       .onFailure { status = HostLogicStatus.Failed(it.message ?: "host logic did not load") }
@@ -89,62 +87,35 @@ class HostLogicController internal constructor(private val engine: HostLogicEngi
   /** The design changed without its program changing: later calls see its current declarations. */
   fun update(document: UiBuilderDocument) {
     this.document = document
+    run?.document = document
   }
 
   /** Starts the program again from `init`, with every host input at its initial value. */
   fun reset() {
-    val document = document ?: return
-    val program = program ?: return
-    values = initialValues(document)
-    state = JsonNull
-    calls = 0
-    apply(program.call("init", HostLogic.initArguments(document, values), now(), seed()))
+    val run = run ?: return
+    show(run, run.reset())
   }
 
   /** A node fired [action]: the program answers it, and the values it sets are drawn. */
   fun onAction(action: CanvasHostAction) {
-    val document = document ?: return
-    val program = program ?: return
-    apply(
-      program.call(
-        "onAction",
-        HostLogic.actionArguments(document, state, action.name, action.value, values),
-        now(),
-        seed(),
-      ),
-    )
+    val run = run ?: return
+    show(run, run.onAction(action.name, action.value))
   }
 
   fun close() {
-    program?.close()
-    program = null
+    run?.close()
+    run = null
   }
 
-  private fun apply(result: Result<String>) {
-    val document = document ?: return
-    result
-      .onFailure { status = HostLogicStatus.Failed(it.message ?: "host logic failed") }
-      .onSuccess { json ->
-        when (val step = HostLogic.step(document, json)) {
-          is HostLogic.Step.Ok -> {
-            state = step.state
-            values = values + step.values
-            status = HostLogicStatus.Running
-          }
-          is HostLogic.Step.Failed -> status = HostLogicStatus.Failed(step.message)
-        }
+  private fun show(run: HostLogicRun, step: HostLogic.Step) {
+    state = run.state
+    values = run.values
+    status =
+      when (step) {
+        is HostLogic.Step.Ok -> HostLogicStatus.Running
+        is HostLogic.Step.Failed -> HostLogicStatus.Failed(step.message)
       }
   }
-
-  private fun now(): Long = document?.let(HostLogic::now) ?: 0L
-
-  /** A different seed per call, the same sequence from every reset: reproducible, not constant. */
-  private fun seed(): Int = ++calls
-
-  private fun initialValues(document: UiBuilderDocument): Map<String, String?> =
-    HostLogic.hostInputs(document).mapValues { (_, declaration) ->
-      (declaration["initialValue"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.contentOrNull
-    }
 }
 
 /**

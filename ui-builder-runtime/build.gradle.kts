@@ -38,6 +38,9 @@ dependencies {
   api(platform(libs.composeai.tools.bom))
   api(libs.composeai.screen.model)
   implementation(libs.kotlinx.serialization.json)
+  // The host-logic simulator's engine: QuickJS compiled to JVM bytecode, pure Java, budgeted per
+  // call. Not `api`: the simulator's surface is JSON and Kotlin types only.
+  implementation(libs.quickjs4j)
   // Shared binding semantics, so the browser and service accept the same state reads. `api` because
   // the executor's Builder names `CatalogOwnership`.
   api(project(":ui-builder-export"))
@@ -107,6 +110,7 @@ tasks.withType<Test>().configureEach {
       rootProject.fileTree("docs/design/fixtures/ui-builder") {
         include("*-capabilities-v1.json")
         include("slot-acceptance-v1.json")
+        include("host-logic-parity-v1.json")
       },
     )
     .withPropertyName("uiBuilderGoldenFixtures")

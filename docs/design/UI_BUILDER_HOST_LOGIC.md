@@ -1,6 +1,7 @@
 # Host logic: a design that carries its own host
 
-Status: **proposal**, with its first slice ([the action](#the-action)) implemented. It continues
+Status: **proposal**, with slices 1 and 2 ([the action](#the-action), the canvas runtime)
+and slice 3's engine ([On the server](#on-the-server)) implemented. It continues
 [#750](https://github.com/yschimke/compose-ui-builder/issues/750) (host-bound Remote Compose
 designs) and builds on [host inputs](UI_BUILDER_REMOTE_COMPOSE.md#host-inputs).
 
@@ -129,10 +130,11 @@ network round trip per key press is the wrong latency for a calculator.
 
 So: **one runtime, two source languages**.
 
-1. The runtime is a JS sandbox, QuickJS-on-Wasm. The same engine runs in the browser (on the
-   editor's main thread, budgeted; see [On the canvas](#on-the-canvas)) and, in slice 3, on the
-   server (the same Wasm under a Wasm runtime), so the canvas and the simulator cannot disagree
-   about arithmetic, string formatting or iteration order.
+1. The runtime is a JS sandbox, QuickJS. It runs in the browser as Wasm (on the editor's main
+   thread, budgeted; see [On the canvas](#on-the-canvas)) and on the server compiled to JVM
+   bytecode (quickjs4j; see [On the server](#on-the-server)). They are two builds of one
+   interpreter, so the canvas and the simulator agree about arithmetic, string formatting and
+   iteration order, and one fixture of answers holds them to it.
 2. `language: "javascript"` ships first. TypeScript's type syntax comes with the server compile,
    which strips types, bundles into one module, checks that `init` and `onAction` are exported,
    and checks every literal host-input name against the design's declarations.
@@ -207,8 +209,8 @@ CanvasHostAction (a node's hostAction fired)
   evaluation — what a call is handed, what of its answer is drawn — is `HostLogic` in
   `:ui-builder-export`, so engines cannot disagree about it. wasmJs implements the engine with
   QuickJS (`assets/host-logic`), imported the first time a design with host logic opens. The JVM
-  hosts (desktop, IntelliJ) have none yet and say so in the panel: running the same QuickJS there
-  means a Wasm runtime on the JVM, which is its own change.
+  hosts (desktop, IntelliJ) have none yet and say so in the panel; the server's JVM engine
+  ([On the server](#on-the-server)) is what they would use.
 - QuickJS runs on the main thread rather than in a Worker. Every call is bounded by the interrupt
   budget, so a runaway loop costs at most 200 ms and is reported, and a call is synchronous, so
   the values are drawn in the same frame as the press. The CSP is why it is an interpreter at all:
@@ -223,10 +225,35 @@ CanvasHostAction (a node's hostAction fired)
 
 ### On the server
 
-The same module runs headless for `simulate_action` (#750 item 10): an agent sends a sequence of
+The same reducer runs headless for `simulate_action` (#750 item 10): an agent sends a sequence of
 actions and gets back the private state and pushed values after each, plus renders if asked. That
 turns "the calculator works" into evidence an agent can produce without a browser, and into a
 scenario fixture a test can assert.
+
+- `HostLogicSimulator` in `:ui-builder-runtime` is the server's whole engine: `check(document)` for
+  `check_design` (the stored program, loading, both exports, and `init`'s answer) and the digest
+  the compile route serves it by, and `simulate(document, actions)`. A run is driven by the same
+  `HostLogicRun` (`:ui-builder-export`) the canvas's controller drives, so the calls, their order,
+  their seeds and the checks on every answer are one piece of code.
+- The engine is QuickJS compiled ahead of time to JVM bytecode
+  ([quickjs4j](https://github.com/roastedroot/quickjs4j), Javy's build): pure Java, no native code,
+  no Wasm runtime to start, no `fetch`, file system or timers. Its prelude is the browser engine's,
+  so the clock and the seeded `Math.random()` are the same.
+- `docs/design/fixtures/ui-builder/host-logic-parity-v1.json` is the set of answers both engines
+  are held to (`HostLogicParityTest` on the JVM, `host-logic-engine.test.mjs` in the browser): a
+  reducer, every way of reading the time, the seeded sequence, how each kind of throw is worded, the
+  load refusals and the runaway loop. The two builds word a few interpreter errors differently
+  (`'fetch' is not defined`), so an error answer is a substring both contain.
+- Limits: 16 MiB of linear memory (the browser's 8 MiB heap plus the interpreter) and 1 s per call,
+  generous beside the browser's 200 ms because a cold JVM interprets the engine before it compiles
+  it. A call that overruns is interrupted, which leaves that interpreter unusable, so the program is
+  loaded again on a fresh one for its next call; a reducer keeps nothing but the state it hands
+  back, so nothing is lost. A simulation stops at an overrun rather than paying the budget per
+  action, and sends at most 200 actions.
+- The program's exports are read from its module scope, where `export function init` and
+  `export const onAction = …` declare them. The browser reads the module namespace instead, so the
+  forms that rename (`export { reduce as onAction }`, `export default`) work there and not here;
+  write the two exports as declarations.
 
 ### In the export
 
@@ -283,8 +310,10 @@ and not on Wear, which has no host.
    the server's reducer, `HostLogicEngine` with the QuickJS engine, the canvas drawing the values,
    and the Screen › Host logic panel with Reset host and the error surface. *This repo and
    contracts.*
-3. **Server compile and simulate**: the compile route keyed by digest, diagnostics into
-   `check_design`, `simulate_action`. *compose-preview-server*, against the slice 2 wire shape.
+3. **Server compile and simulate**: `HostLogicSimulator` and its JVM engine in
+   `:ui-builder-runtime` (*this repo*), then the compile route keyed by digest, diagnostics into
+   `check_design`, and `simulate_action` (*compose-preview-server*). TypeScript's type stripping
+   is still to come.
 4. **Export**: `host/logic.mjs` and the manifest entries. *This repo.*
 5. **Kotlin**: the published `HostLogic` API, server-side Kotlin/JS compile into the same runtime,
    and the Kotlin reference host adapter in the export. *Both.*

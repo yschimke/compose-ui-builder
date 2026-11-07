@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.hostlogic
 
+import ee.schimke.composeai.uibuilder.export.HostLogicProgram
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

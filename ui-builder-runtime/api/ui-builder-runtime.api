@@ -79,6 +79,42 @@ public final class ee/schimke/composeai/uibuilder/host/PublishedCatalogStore$Loa
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/hostlogic/HostLogicCheck {
+	public final fun getDiagnostics ()Ljava/util/List;
+	public final fun getDigest ()Ljava/lang/String;
+	public final fun toJson ()Lkotlinx/serialization/json/JsonObject;
+}
+
+public final class ee/schimke/composeai/uibuilder/hostlogic/HostLogicDiagnostic {
+	public final fun getField ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun toJson ()Lkotlinx/serialization/json/JsonObject;
+}
+
+public final class ee/schimke/composeai/uibuilder/hostlogic/HostLogicSimulation {
+	public final fun getSteps ()Ljava/util/List;
+	public final fun getStopped ()Ljava/lang/String;
+	public final fun toJson ()Lkotlinx/serialization/json/JsonObject;
+}
+
+public final class ee/schimke/composeai/uibuilder/hostlogic/HostLogicSimulator {
+	public static final field INSTANCE Lee/schimke/composeai/uibuilder/hostlogic/HostLogicSimulator;
+	public static final field MAX_ACTIONS I
+	public final fun check (Lee/schimke/composeai/uibuilder/export/UiBuilderDocument;)Lee/schimke/composeai/uibuilder/hostlogic/HostLogicCheck;
+	public final fun digest (Lkotlinx/serialization/json/JsonObject;)Ljava/lang/String;
+	public final fun simulate (Lee/schimke/composeai/uibuilder/export/UiBuilderDocument;Ljava/util/List;)Lee/schimke/composeai/uibuilder/hostlogic/HostLogicSimulation;
+}
+
+public final class ee/schimke/composeai/uibuilder/hostlogic/HostLogicStep {
+	public final fun getAction ()Ljava/lang/String;
+	public final fun getError ()Ljava/lang/String;
+	public final fun getSet ()Ljava/util/Map;
+	public final fun getState ()Lkotlinx/serialization/json/JsonElement;
+	public final fun getValue ()Lkotlinx/serialization/json/JsonPrimitive;
+	public final fun getValues ()Ljava/util/Map;
+	public final fun toJson ()Lkotlinx/serialization/json/JsonObject;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Z)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V

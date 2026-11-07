@@ -1,0 +1,59 @@
+{
+  "schema": "ui-builder-host-logic-parity-v1",
+  "about": "Programs, calls and the answers every host-logic engine must give for them: the browser's (assets/host-logic/engine.mjs, scripts/ui-builder-web-smoke/host-logic-engine.test.mjs) and the JVM's (ui-builder-runtime, HostLogicParityTest). An answer is either `result`, compared as JSON, or `error`, a substring of the message: the two QuickJS builds word some interpreter errors differently, and the substring is what both say. docs/design/UI_BUILDER_HOST_LOGIC.md.",
+  "cases": [
+    {
+      "name": "a reducer answers each action from the state it is handed",
+      "source": "export function init(env) { return { state: { n: 0 }, values: { count: \"0\" } }; }\nexport function onAction(state, action) {\n  const n = state.n + (action.value ?? 1);\n  return { state: { n }, values: { count: String(n) } };\n}\n",
+      "calls": [
+        { "function": "init", "arguments": [{}], "now": 0, "seed": 1, "result": { "state": { "n": 0 }, "values": { "count": "0" } } },
+        { "function": "onAction", "arguments": [{ "n": 0 }, { "name": "add", "value": 2 }, {}], "now": 0, "seed": 2, "result": { "state": { "n": 2 }, "values": { "count": "2" } } },
+        { "function": "onAction", "arguments": [{ "n": 2 }, { "name": "add" }, {}], "now": 0, "seed": 3, "result": { "state": { "n": 3 }, "values": { "count": "3" } } }
+      ]
+    },
+    {
+      "name": "every way of reading the time reads the design's clock",
+      "source": "export function init() {\n  return { now: Date.now(), made: +new Date(), viaCtor: +new (new Date().constructor)(), text: Date().slice(0, 15), epoch: new Date(0).getTime() };\n}\nexport function onAction() {}\n",
+      "calls": [
+        { "function": "init", "arguments": [{}], "now": 1715860800000, "seed": 1, "result": { "now": 1715860800000, "made": 1715860800000, "viaCtor": 1715860800000, "text": "Thu May 16 2024", "epoch": 0 } }
+      ]
+    },
+    {
+      "name": "randomness is the seeded sequence",
+      "source": "export function init() { return [Math.random(), Math.random()]; }\nexport function onAction() {}\n",
+      "calls": [
+        { "function": "init", "arguments": [{}], "now": 0, "seed": 1, "result": [0.6270739405881613, 0.002735721180215478] },
+        { "function": "init", "arguments": [{}], "now": 0, "seed": 7, "result": [0.011704753153026104, 0.06195825757458806] }
+      ]
+    },
+    {
+      "name": "what a program throws is said the same way",
+      "source": "export function init(env) {\n  if (env.kind === \"type\") throw new TypeError(\"bad\");\n  if (env.kind === \"text\") throw \"boom\";\n  if (env.kind === \"number\") throw 42;\n  if (env.kind === \"object\") throw { reason: 1 };\n  return fetch(\"https://example.com\");\n}\nexport function onAction() {}\n",
+      "calls": [
+        { "function": "init", "arguments": [{ "kind": "type" }], "now": 0, "seed": 1, "error": "TypeError: bad" },
+        { "function": "init", "arguments": [{ "kind": "text" }], "now": 0, "seed": 1, "error": "boom" },
+        { "function": "init", "arguments": [{ "kind": "number" }], "now": 0, "seed": 1, "error": "host logic threw 42" },
+        { "function": "init", "arguments": [{ "kind": "object" }], "now": 0, "seed": 1, "error": "host logic threw an object that is not an Error" },
+        { "function": "init", "arguments": [{}], "now": 0, "seed": 1, "error": "fetch" }
+      ]
+    },
+    {
+      "name": "a program missing an export does not load",
+      "source": "export function init() {}\n",
+      "loadError": "host logic must export a function named onAction"
+    },
+    {
+      "name": "a program that is not JavaScript does not load",
+      "source": "this is not ( javascript",
+      "loadError": "expecting"
+    },
+    {
+      "name": "a call that runs forever is interrupted",
+      "source": "export function init() { for (;;) {} }\nexport function onAction() { return { values: {} }; }\n",
+      "calls": [
+        { "function": "init", "arguments": [{}], "now": 0, "seed": 1, "error": "interrupted" },
+        { "function": "onAction", "arguments": [null, { "name": "next" }, {}], "now": 0, "seed": 2, "result": { "values": {} } }
+      ]
+    }
+  ]
+}
