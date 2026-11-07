@@ -836,7 +836,7 @@
     "functionName": "UiBuilderNewDesignPhonePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignPhonePreview-eff465c5.png",
-    "sha256": "c02dbc0afc797b8e26bfac1dde6466fbbac25d035401524206918d3c616f99e5",
+    "sha256": "306df35dbaf39687ff51c2659ffd7150b703894f164bc66c38ef586b3767818f",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPreview": {
@@ -844,7 +844,7 @@
     "functionName": "UiBuilderNewDesignPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignPreview-7e7db055.png",
-    "sha256": "7371a275f1545e1cb66b88b81b9b230da4d222395c9d6caf7bebcba9c3148220",
+    "sha256": "df9737e3131d88aaf6bb8e06988d165de9cb08f37738421a1f352a364f7b57e9",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderPreviewModePreview": {
