@@ -3306,9 +3306,21 @@ internal class RemoteContentEmitter(
     val pad = INDENT.repeat(depth)
     val children = node.slots["children"].orEmpty()
     if (children.isEmpty()) {
-      return (pad + if (arguments.isEmpty()) "$symbol()" else call(symbol, arguments, pad)).split(
-        "\n",
-      )
+      // Only two calls compile without a content lambda: `RemoteFitBox` (its `content` defaults)
+      // and the spacer overload `RemoteBox(modifier)`. A `RemoteBox` with a `contentAlignment`, and
+      // every other container, requires one, so an empty cell writes an empty lambda.
+      val lambdaOptional =
+        symbol == "RemoteFitBox" ||
+          (symbol == "RemoteBox" && arguments.all { it.startsWith(MODIFIER_ARGUMENT) })
+      if (lambdaOptional) {
+        return (pad + if (arguments.isEmpty()) "$symbol()" else call(symbol, arguments, pad)).split(
+          "\n",
+        )
+      }
+      val head =
+        if (arguments.isEmpty()) symbol
+        else call(symbol, arguments, pad, trailing = EMPTY_LAMBDA.length)
+      return "$pad$head$EMPTY_LAMBDA".split("\n")
     }
     val head =
       if (arguments.isEmpty()) "$symbol {"
@@ -4963,6 +4975,9 @@ internal class RemoteContentEmitter(
 
     /** What [container] appends after a call that takes children. */
     const val OPENING_BRACE = " {"
+
+    /** What [container] appends to an empty container whose call requires a content lambda. */
+    const val EMPTY_LAMBDA = " {}"
 
     /** The first Lottie animation's constant; a second one is suffixed. */
     const val LOTTIE_CONSTANT = "LOTTIE_ANIMATION"
