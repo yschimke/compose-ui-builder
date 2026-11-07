@@ -604,6 +604,12 @@ object RemoteDocumentJsonExporter {
     }
 
     fun action(action: JsonObject?, path: String): JsonObject? {
+      if (action != null && HostActions.isHostAction(action)) {
+        // The authoring JSON vocabulary this lane writes has no host-action operation; the Remote
+        // Kotlin export writes one (`hostAction(…)`).
+        errors += "$path: a host action is exported by the Remote Kotlin lane, not the JSON one"
+        return null
+      }
       val variable = action?.get("variable")?.jsonPrimitive?.contentOrNull
       val kind = stateKinds[variable]
       if (variable == null || kind == null) {

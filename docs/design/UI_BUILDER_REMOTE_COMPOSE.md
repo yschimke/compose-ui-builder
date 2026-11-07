@@ -505,8 +505,10 @@ and pushes by name into the running document.
 - The initial value is what the document shows until the host pushes one, and what the canvas
   previews.
 - A host input is read-only to the design: a control bound to one reads it and writes nothing
-  back, and an action that writes one is refused at export. Interaction goes to the host as a host
-  action instead.
+  back, and an action that writes one is refused at export. Interaction goes to the host as a
+  [host action](UI_BUILDER_HOST_LOGIC.md#the-action) instead
+  (`{"type": "hostAction", "name": "light.s0.toggle"}`, exported as `hostAction("light.s0.toggle".rs)`),
+  and the host answers by pushing the input.
 
 ## Theme and other player services
 

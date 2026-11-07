@@ -292,6 +292,7 @@ internal class RemoteContentEmitter(
   private var usesRemoteInt = false
   private var usesLambdaAction = false
   private var usesCombinedAction = false
+  private var usesHostAction = false
 
   /** Callables the record-driven fallback wrote, so their imports are the ones it used. */
   private val usedComponentImports = mutableSetOf<String>()
@@ -1168,11 +1169,13 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing. Every action
-   * is a state write, so all become one `valueChange` (verified by wear-m3-catalog's
-   * `RemoteActionVocabularyProbe`). The event key is the parameter without `on`.
+   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing. A state
+   * write becomes a `valueChange` (verified by wear-m3-catalog's `RemoteActionVocabularyProbe`) and
+   * a [HostActions] action a `hostAction`; several combine. The event key is the parameter without
+   * `on`.
    *
-   * Refused: `selectOrClear` (assigns null), undeclared variables, and `toggle` on a non-boolean.
+   * Refused: `selectOrClear` (assigns null), undeclared variables, `toggle` on a non-boolean, and a
+   * host action [HostActions.issue] refuses.
    */
   private fun actionExpression(node: UiBuilderNode, parameter: TargetParameter): String? {
     val event = parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() }
@@ -1321,6 +1324,9 @@ internal class RemoteContentEmitter(
     operand: String? = null,
   ): String? {
     val kind = action?.plainString("type")
+    if (action != null && HostActions.isHostAction(action)) {
+      return hostActionExpression(node, event, action)
+    }
     val variable = action?.plainString("variable")
     if (action == null || kind == null || variable == null) {
       refusals += "the `$event` binding on `${node.id}` is not an action naming a variable"
@@ -1407,6 +1413,32 @@ internal class RemoteContentEmitter(
     }
     usesValueChange = true
     return "valueChange($target, $written)"
+  }
+
+  /**
+   * `hostAction("calc.key".rs, "7".rs)`: the event goes to the host by name, with its one value,
+   * and writes nothing in the document. The player delivers it as a named host action, which is
+   * what the canvas dispatches and a host's handler receives.
+   */
+  private fun hostActionExpression(
+    node: UiBuilderNode,
+    event: String,
+    action: JsonObject,
+  ): String? {
+    HostActions.issue(action)?.let {
+      refusals += "the `$event` host action on `${node.id}`: $it"
+      return null
+    }
+    val name = remoteLiteral("string", JsonPrimitive(HostActions.name(action)!!)) ?: return null
+    val value =
+      when (val value = HostActions.value(action)) {
+        null -> null
+        is HostActions.Value.Text -> remoteLiteral("string", value.json)
+        is HostActions.Value.Integer -> remoteLiteral("int", value.json)
+        is HostActions.Value.Decimal -> remoteLiteral("float", value.json)
+      }
+    usesHostAction = true
+    return if (value == null) "hostAction($name)" else "hostAction($name, $value)"
   }
 
   /** Reads and writes must name the same mutable, even when a selector has no local action. */
@@ -4242,6 +4274,7 @@ internal class RemoteContentEmitter(
     if (usesRemoteBoolean) imports += "androidx.compose.remote.creation.compose.state.rb"
     if (usesCombinedAction)
       imports += "androidx.compose.remote.creation.compose.action.combinedAction"
+    if (usesHostAction) imports += "androidx.compose.remote.creation.compose.action.hostAction"
     if (usesLambdaAction) {
       imports += "androidx.compose.remote.creation.compose.action.lambdaAction"
     }

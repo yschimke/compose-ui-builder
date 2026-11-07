@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -78,6 +79,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderHostActions
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNavigator
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
@@ -127,6 +129,7 @@ import ee.schimke.composeai.uibuilder.reference.encodeReferencePng
 import ee.schimke.composeai.uibuilder.reference.facts
 import ee.schimke.composeai.uibuilder.reference.flattenReference
 import ee.schimke.composeai.uibuilder.reference.measureAgainstReference
+import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasHostAction
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
@@ -225,6 +228,12 @@ fun UiBuilderEditor(
   catalogRecord: ComponentRecordFile? = null,
   pageDestinations: List<UiBuilderPageDestination> = emptyList(),
   onNavigatePage: (String) -> Unit = {},
+  /**
+   * A node on the canvas fired a host action (`{"type": "hostAction"}`): what a host feeding the
+   * exported document would receive. The editor shows it either way; a host embedding the editor
+   * may also answer it by pushing its host inputs.
+   */
+  onHostAction: (CanvasHostAction) -> Unit = {},
   onStateChanged: (UiBuilderEditorState) -> Unit = {},
   onCanvasMetrics: (Int, Int, Float) -> Unit = { _, _, _ -> },
   onCanvasBoundsChanged: (Rect) -> Unit = {},
@@ -646,6 +655,18 @@ fun UiBuilderEditor(
   // in the same editor cancels the old offer explicitly: left up, it would name a node in a design
   // that is no longer on screen, and its action would undo through the old design's state.
   val undoSnackbarHost = remember(document.id) { SnackbarHostState() }
+  // What the canvas sent to the host; see [HostActionLog]. Per design, like the undo offer.
+  var hostActionLog by remember(document.id) { mutableStateOf(emptyList<CanvasHostAction>()) }
+  var hostActionsFired by remember(document.id) { mutableIntStateOf(0) }
+  val currentOnHostAction = rememberUpdatedState(onHostAction)
+  val sendHostAction: (CanvasHostAction) -> Unit =
+    remember(document.id) {
+      { action ->
+        hostActionLog = appendHostAction(hostActionLog, action)
+        hostActionsFired++
+        currentOnHostAction.value(action)
+      }
+    }
   var undoSnackbarJob by remember(document.id) { mutableStateOf<Job?>(null) }
   DisposableEffect(document.id) { onDispose { undoSnackbarJob?.cancel() } }
   LaunchedEffect(document.revision, authoritativeGeneration) {
@@ -2500,6 +2521,7 @@ fun UiBuilderEditor(
     LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
     LocalUiBuilderPageDestinations provides pageDestinations.filter { it.designId != document.id },
     LocalUiBuilderNavigator provides onNavigatePage,
+    LocalUiBuilderHostActions provides sendHostAction,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
     LocalUiBuilderAssetBytes provides { digest -> assetBytesByDigest[digest] },
@@ -3173,6 +3195,17 @@ fun UiBuilderEditor(
         // Over everything rather than in a Scaffold slot: the editor's chrome is its own Column and
         // a Scaffold around it would own insets it already handles. Lifted clear of the status bar,
         // and of the dock on a phone, so the offer never covers the control it would compete with.
+        // Bottom start, clear of the undo offer at bottom centre and lifted the same way.
+        HostActionLog(
+          log = hostActionLog,
+          fired = hostActionsFired,
+          modifier =
+            Modifier.align(Alignment.BottomStart)
+              .padding(start = 12.dp)
+              .padding(
+                bottom = viewportInsets.bottom + if (compact) MOBILE_DOCK_HEIGHT + 8.dp else 40.dp,
+              ),
+        )
         SnackbarHost(
           undoSnackbarHost,
           Modifier.align(Alignment.BottomCenter)

@@ -83,6 +83,7 @@ fun CanvasDocumentScope.RenderCanvasNode(
       applyModifier = applyModifier,
       onBounds = ::recordNodeBounds,
       onSemanticAction = ::registerSemanticAction,
+      onHostAction = ::sendHostAction,
     )
   val renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit = { child, next ->
     RenderCanvasNode(

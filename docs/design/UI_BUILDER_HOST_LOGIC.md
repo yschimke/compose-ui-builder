@@ -1,6 +1,6 @@
 # Host logic: a design that carries its own host
 
-Status: **proposal**. Nothing here is implemented yet. It continues
+Status: **proposal**, with its first slice ([the action](#the-action)) implemented. It continues
 [#750](https://github.com/yschimke/compose-ui-builder/issues/750) (host-bound Remote Compose
 designs) and builds on [host inputs](UI_BUILDER_REMOTE_COMPOSE.md#host-inputs).
 
@@ -37,8 +37,9 @@ init(env)                     -> { state, values }
 onAction(state, action, env)  -> { state, values }
 ```
 
-- `action` is `{ name: string, args: object }`: the host action's name and its metadata, which is
-  what Remote Compose's `HostAction` carries.
+- `action` is `{ name: string, value?: string | number }`: the host action's name and its one
+  value, which is exactly what Remote Compose's named `hostAction` carries (see
+  [The action](#the-action)). A host that needs two arguments names two actions.
 - `state` is the host's **private** state. It is never in the document and never pushed. For the
   calculator: the accumulator, the pending operator, whether the next digit starts a new number.
 - `values` is a partial map from **host input names** to new values. Only state variables declared
@@ -66,7 +67,7 @@ The document gains one host input, click bindings on the keys, and a `hostLogic`
 "nodes": {
   "display":  { "properties": { "text": { "type": "state", "variable": "calc.display" } } },
   "key-1-2":  { "eventBindings": { "click": [
-                  { "type": "hostAction", "name": "calc.key", "args": { "key": "1" } } ] } }
+                  { "type": "hostAction", "name": "calc.key", "value": "1" } ] } }
 },
 "hostLogic": {
   "language": "javascript",
@@ -81,7 +82,7 @@ export function init(env) {
 
 export function onAction(s, action, env) {
   if (action.name !== "calc.key") return { state: s, values: {} };
-  const k = action.args.key;
+  const k = action.value;
   let { acc, op, fresh } = s;
   let shown = env.values["calc.display"];
   if (/^[0-9]$/.test(k)) {
@@ -110,7 +111,7 @@ const apply = (a, op, b) =>
 ```
 
 Clicking `1`, `+`, `2`, `=` on the canvas then shows `1`, `1`, `2`, `3`, and the event log shows
-each `calc.key` with its `args`, the private state after it, and the values pushed.
+each `calc.key` with its value, the private state after it, and the values pushed.
 
 ## The language: JavaScript first, Kotlin compiled to the same runtime
 
@@ -189,10 +190,10 @@ A `HostLogicRuntime` sits between the player and the canvas's state:
 
 ```text
 RcPlayerEvent.HostNamedAction / HostActionMetadata
-    -> HostLogicRuntime.onAction(name, args)        (Worker, budgeted)
+    -> HostLogicRuntime.onAction(name, value)       (Worker, budgeted)
     -> values: { "calc.display": "3" }
     -> canvas state: host inputs updated           (the player's named-value holder)
-    -> event log: action, args, private state, values, time taken
+    -> event log: action, value, private state, values, time taken
 ```
 
 - Host inputs stay read-only **to the design**. The runtime is the only writer, which is exactly
@@ -225,19 +226,45 @@ manifest describes. The export bundle gains:
 The completeness review's rule holds: a reference host is a reference host. An export with host
 logic is "interactive with its stand-in host", not "has a production backend".
 
-## Prerequisite: an action that *is* a host action
+## The action
 
-The worked example's `{ "type": "hostAction", "name": …, "args": … }` does not exist yet.
-`RemoteContentEmitter.actionExpression` only knows actions that write a variable (`set`, `toggle`,
-`increment`, …) and refuses anything without one. #750 item 3 adds it: export as Remote Compose
-`HostAction` with the name and `args` as metadata, play on the canvas through the existing
-`bindingName` path, and log it. That is useful on its own — it is what any fed design needs — and
-host logic cannot be built before it.
+Host logic answers host actions, so the first slice is the action itself (#750 item 3), and it is
+useful without any host logic: it is what every fed design needs.
+
+```json
+{ "type": "hostAction", "name": "calc.key", "value": "7" }
+```
+
+Its shape is Remote Compose's own. The released `remote-creation-compose` has `hostAction(name)` and
+`hostAction(name, value)` for a `RemoteString`, `RemoteInt` or `RemoteFloat` value, and the player
+delivers a named action with that one value. So the design action has a `name` and at most one
+`value` — text, a whole number that fits an `Int`, or a finite decimal — rather than an argument
+map the wire cannot carry. A flag is refused (there is no public Boolean overload; send `1` or
+`0`), and so, for now, is a formula or a state read. `HostActions` in `:ui-builder-export` is the
+one reading of it every lane shares.
+
+| Lane | What a host action becomes |
+| --- | --- |
+| Remote Kotlin (`remote-m3`) | `hostAction("calc.key".rs, "7".rs)`, in order with any state writes in one `combinedAction` |
+| Remote authoring JSON | Refused by name: that vocabulary has no host-action operation |
+| Compose screen (`m3`) | `onHostAction("calc.key", "7")`, a callback parameter the screen's caller implements, as `onNavigatePage` is |
+| Wear Compose (`wear-m3`) | Refused by name: a Wear screen has no host feeding it |
+| Canvas | Reported, in order with the writes around it, as a `CanvasHostAction`; the editor shows what was sent and passes it to an embedding host through `onHostAction`. Nothing in the design changes |
+
+A host action is also a protocol action, and the protocol's set is closed: `DesignActionV1` in
+`ui-builder-protocol` is a sealed type with no host action in it. Until a release adds one
+(`HostActionV1`, `@SerialName("hostAction")`, `name: String`, `value: JsonPrimitive? = null`), the
+editor cannot submit a host action as an edit and a server cannot store one, so the behaviour
+inspector does not offer it yet. Everything above works on a document that already carries one — a
+design file, a fixture, an MCP edit to a local design — and the inspector entry lands with the
+protocol bump.
 
 ## Slices
 
 1. **`hostAction` action** (#750 item 3): document shape, Remote Compose export, Compose export
-   (a callback parameter), canvas dispatch and event log, behaviour inspector entry. *This repo.*
+   (a callback parameter), canvas dispatch and event log. *This repo; done.* Then `HostActionV1`
+   in `ui-builder-protocol` (*compose-preview-contracts*), and with its release the behaviour
+   inspector entry here.
 2. **`hostLogic` field and canvas runtime** (JavaScript): document field and editor operation,
    `HostLogicRuntime` interface, wasmJs Worker + QuickJS implementation, Reset host, error surface.
    Compilation is local type-stripping in this slice, so it can be tried without a server change.

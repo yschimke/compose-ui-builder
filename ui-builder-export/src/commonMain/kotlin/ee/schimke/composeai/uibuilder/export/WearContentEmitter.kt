@@ -1669,6 +1669,11 @@ internal class WearContentEmitter(
       return null
     }
     if (type == "navigatePage") return refuse("navigates pages, and a Wear screen is one page")
+    if (type == HostActions.TYPE)
+      return refuse(
+        "is a host action, which a Remote Compose document sends to the host that feeds it; " +
+          "a Wear Compose screen has no host to send it to",
+      )
     if (type !in WEAR_CLICK_ACTIONS) return refuse("has no Wear Compose lowering")
     val variable =
       (action["variable"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull

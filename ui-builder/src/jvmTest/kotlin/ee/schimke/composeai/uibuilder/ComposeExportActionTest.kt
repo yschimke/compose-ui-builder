@@ -136,6 +136,36 @@ class ComposeExportActionTest {
   }
 
   @Test
+  fun `a host action is handed to the screen's caller, which is the host`() {
+    fun hostAction(name: String, value: JsonPrimitive?) =
+      JsonObject(
+        buildMap {
+          put("type", JsonPrimitive("hostAction"))
+          put("name", JsonPrimitive(name))
+          if (value != null) put("value", value)
+        },
+      )
+    val source =
+      exportOf(
+        listOf(
+          hostAction("calc.key", JsonPrimitive("7")),
+          hostAction("calc.digit", JsonPrimitive(7)),
+          hostAction("calc.clear", null),
+        ),
+      )
+
+    assertTrue(
+      source.contains("onHostAction: (name: String, value: Any?) -> Unit = { _, _ -> }"),
+      source,
+    )
+    assertTrue(source.contains("onHostAction(\"calc.key\", \"7\")"), source)
+    assertTrue(source.contains("onHostAction(\"calc.digit\", 7)"), source)
+    assertTrue(source.contains("onHostAction(\"calc.clear\", null)"), source)
+    assertFalse(source.contains("onNavigatePage"), source)
+    assertFalse(source.contains("Unsupported action hostAction"), source)
+  }
+
+  @Test
   fun `an assignment a declared type cannot hold is refused rather than emitted`() {
     // `eventBindings` arrives from other clients too; `expanded` is declared `bool`, and values it
     // can't hold must be refused (export validation doesn't read `stateVariables`).
