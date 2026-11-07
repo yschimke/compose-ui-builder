@@ -3,6 +3,7 @@
 // read the real clock. The editor calls it on its main thread, so a case that hangs here would
 // freeze the editor.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { callHostLogic, disposeHostLogic, loadHostLogic } from '../../assets/host-logic/engine.mjs';
 
@@ -95,4 +96,30 @@ test('a load that fails releases what it allocated', async () => {
     await assert.rejects(loadHostLogic("const a = 'x'.repeat(1 << 20); export function init() {}", ''));
   }
   assert.deepEqual(await init('return { ok: true }'), { ok: true });
+});
+
+test('the engine gives the answers every host-logic engine must (host-logic-parity-v1.json)', async () => {
+  // The JVM engine (ui-builder-runtime's HostLogicParityTest) is held to the same answers.
+  const fixture = JSON.parse(
+    readFileSync(new URL('../../docs/design/fixtures/ui-builder/host-logic-parity-v1.json', import.meta.url)),
+  );
+  for (const parity of fixture.cases) {
+    if (parity.loadError) {
+      await assert.rejects(loadHostLogic(parity.source, ''), (error) => error.message.includes(parity.loadError), parity.name);
+      continue;
+    }
+    const session = await loadHostLogic(parity.source, '');
+    try {
+      for (const call of parity.calls) {
+        const answer = () => callHostLogic(session, call.function, JSON.stringify(call.arguments), call.now, call.seed);
+        if ('error' in call) {
+          assert.throws(answer, (error) => error.message.includes(call.error), `${parity.name}: ${call.error}`);
+        } else {
+          assert.deepEqual(JSON.parse(answer()), call.result, parity.name);
+        }
+      }
+    } finally {
+      disposeHostLogic(session);
+    }
+  }
 });

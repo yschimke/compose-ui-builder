@@ -1,10 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.HostLogic
+import ee.schimke.composeai.uibuilder.export.HostLogicProgram
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.hostlogic.HostLogicController
 import ee.schimke.composeai.uibuilder.hostlogic.HostLogicEngine
-import ee.schimke.composeai.uibuilder.hostlogic.HostLogicProgram
 import ee.schimke.composeai.uibuilder.hostlogic.HostLogicStatus
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasHostAction
 import kotlin.test.Test

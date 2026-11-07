@@ -265,6 +265,10 @@ composeai-contracts = "3.41.0"
 rc-players = "2.27.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.12.0"
+# QuickJS (Javy's build) compiled ahead of time to JVM bytecode: the host-logic engine
+# `ui-builder-runtime`'s simulator runs a design's program on, with no native code and no Wasm
+# runtime to load. docs/design/UI_BUILDER_HOST_LOGIC.md, "On the server".
+quickjs4j = "0.1.1"
 ktor = "3.6.1"
 # The Model Context Protocol Kotlin SDK, behind `:mcp`. Same version compose-ai-tools' `:mcp` was
 # on when the module moved here (compose-ai-tools#5176) — a move is not the moment to also change
@@ -380,6 +384,7 @@ composeai-rc-player-edit = { module = "ee.schimke.composeai:rc-player-edit" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+quickjs4j = { module = "io.roastedroot:quickjs4j", version.ref = "quickjs4j" }
 kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
 kotlin-compose-compiler-plugin-embeddable = { module = "org.jetbrains.kotlin:kotlin-compose-compiler-plugin-embeddable", version.ref = "kotlin" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
