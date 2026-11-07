@@ -103,6 +103,7 @@ Auto-generated from `main`. Browse inline or compare against PR branches.
 | `UiBuilderNativeOverlayPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNativeOverlayPreview-14daa051.png" width="150" /> |
 | `UiBuilderNativeRenderPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNativeRenderPreview-f573ca58.png" width="150" /> |
 | `UiBuilderNavigationActionPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNavigationActionPreview-29521779.png" width="150" /> |
+| `UiBuilderNewDesignPhonePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNewDesignPhonePreview-eff465c5.png" width="150" /> |
 | `UiBuilderNewDesignPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderNewDesignPreview-7e7db055.png" width="150" /> |
 | `UiBuilderPreviewModePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderPreviewModePreview-2241e963.png" width="150" /> |
 | `UiBuilderRemoteComposePalettePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderRemoteComposePalettePreview-0a85c982.png" width="150" /> |
