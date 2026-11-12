@@ -265,7 +265,7 @@ composeai-contracts = "3.42.0"
 # of a `time.*` RemoteCanvas needs once time runs. 2.4.0 plays shared elements and a component's own
 # enter/exit across a StateLayout switch (rc-players#604, rc-players#606). 2.25.0 converts text to
 # embedded bitmap fonts (`coreTextAsBitmapFonts`), which the widget export's bitmap-font option uses.
-rc-players = "2.33.0"
+rc-players = "3.1.2"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.13.0"
 # QuickJS (Javy's build) compiled ahead of time to JVM bytecode: the host-logic engine
