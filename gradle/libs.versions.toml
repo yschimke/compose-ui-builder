@@ -267,7 +267,7 @@ composeai-contracts = "3.42.0"
 # embedded bitmap fonts (`coreTextAsBitmapFonts`), which the widget export's bitmap-font option uses.
 rc-players = "2.33.0"
 kotlinx-coroutines = "1.11.0"
-kotlinx-serialization = "1.12.0"
+kotlinx-serialization = "1.13.0"
 # QuickJS (Javy's build) compiled ahead of time to JVM bytecode: the host-logic engine
 # `ui-builder-runtime`'s simulator runs a design's program on, with no native code and no Wasm
 # runtime to load. docs/design/UI_BUILDER_HOST_LOGIC.md, "On the server".
