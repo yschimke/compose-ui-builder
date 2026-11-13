@@ -258,7 +258,7 @@ composeai-preview-daemon = "3.27.7"
 # 3.42.0 names a host input's persistence (`"persistence": "host"`, contracts #220). Before it, the
 # editor could not read back a stored design that declared a host input: decoding the server's
 # snapshot as DesignDocumentV1 refused the value the editor itself writes.
-composeai-contracts = "3.42.0"
+composeai-contracts = "3.43.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 # 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
