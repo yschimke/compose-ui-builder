@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.131.0](https://github.com/yschimke/compose-ui-builder/compare/v3.130.0...v3.131.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.90.0 ([#1189](https://github.com/yschimke/compose-ui-builder/issues/1189)) ([f465f43](https://github.com/yschimke/compose-ui-builder/commit/f465f43c62fcc667906edd37b76697e0bb275201))
+* **deps:** update compose-ai-tools to v2.90.1 ([#1196](https://github.com/yschimke/compose-ui-builder/issues/1196)) ([38de552](https://github.com/yschimke/compose-ui-builder/commit/38de5528a1a3a2eb90220f347c69cffb74343674))
+* **deps:** update compose-ai-tools to v2.91.0 ([#1199](https://github.com/yschimke/compose-ui-builder/issues/1199)) ([7592f03](https://github.com/yschimke/compose-ui-builder/commit/7592f03d58a6e0f33c283dec8c4666ac1106e3d8))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.43.0 ([#1146](https://github.com/yschimke/compose-ui-builder/issues/1146)) ([c5aef65](https://github.com/yschimke/compose-ui-builder/commit/c5aef652d46e95b4ae2f0d202e7196677b806d52))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.27.4 ([#1175](https://github.com/yschimke/compose-ui-builder/issues/1175)) ([36a29ab](https://github.com/yschimke/compose-ui-builder/commit/36a29ab201e11fef354c93e0ddced0941476a7ca))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.27.5 ([#1187](https://github.com/yschimke/compose-ui-builder/issues/1187)) ([83ce513](https://github.com/yschimke/compose-ui-builder/commit/83ce513532c14967185b789529fb28bd96c9cc04))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.27.7 ([#1194](https://github.com/yschimke/compose-ui-builder/issues/1194)) ([945d09f](https://github.com/yschimke/compose-ui-builder/commit/945d09f75c118695c82f4ef7c3a140ebfbb6e1c0))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.28.0 ([#1165](https://github.com/yschimke/compose-ui-builder/issues/1165)) ([54a1a63](https://github.com/yschimke/compose-ui-builder/commit/54a1a63373c8da8517931bc9da5a3f0aaa1471b8))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.29.0 ([#1167](https://github.com/yschimke/compose-ui-builder/issues/1167)) ([47629cc](https://github.com/yschimke/compose-ui-builder/commit/47629ccb3b125a3f422756a72e00e82c755bceb0))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.31.1 ([#1176](https://github.com/yschimke/compose-ui-builder/issues/1176)) ([110231a](https://github.com/yschimke/compose-ui-builder/commit/110231ad3d3190dd6ec253c2096bf7e2d7158fb6))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.32.0 ([#1178](https://github.com/yschimke/compose-ui-builder/issues/1178)) ([ae9d926](https://github.com/yschimke/compose-ui-builder/commit/ae9d9260daa871528011ace572b97a961fe4e2b9))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.32.1 ([#1181](https://github.com/yschimke/compose-ui-builder/issues/1181)) ([d2663e1](https://github.com/yschimke/compose-ui-builder/commit/d2663e128e036b3a772392052a3ffebf1a2e6540))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.33.0 ([#1183](https://github.com/yschimke/compose-ui-builder/issues/1183)) ([50a014e](https://github.com/yschimke/compose-ui-builder/commit/50a014e17b78bd5b266d777d9c1b99389c26720d))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v3 ([#1197](https://github.com/yschimke/compose-ui-builder/issues/1197)) ([c29149b](https://github.com/yschimke/compose-ui-builder/commit/c29149b6a7bf81681a3689878f061faa33b5580c))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v3.1.3 ([#1201](https://github.com/yschimke/compose-ui-builder/issues/1201)) ([61f97ff](https://github.com/yschimke/compose-ui-builder/commit/61f97ff3bf65ca0dabcec111ed6da8c229993071))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v3.2.0 ([#1204](https://github.com/yschimke/compose-ui-builder/issues/1204)) ([2206a96](https://github.com/yschimke/compose-ui-builder/commit/2206a96362252dc2e1c439d2b23718bf916f6fe3))
+* **deps:** update dependency org.jetbrains.kotlinx:kotlinx-serialization-json to v1.13.0 ([#1192](https://github.com/yschimke/compose-ui-builder/issues/1192)) ([89003a6](https://github.com/yschimke/compose-ui-builder/commit/89003a6e0c2cffeb382a036b3f2c14c80eb8b428))
+* **deps:** update dependency org.robolectric:robolectric to v4.18 ([#1205](https://github.com/yschimke/compose-ui-builder/issues/1205)) ([878ac58](https://github.com/yschimke/compose-ui-builder/commit/878ac583eb0baf6aee3d6f8c9fa54f8ec9c86ceb))
+
 ## [3.130.0](https://github.com/yschimke/compose-ui-builder/compare/v3.129.0...v3.130.0) (2026-11-07)
 
 
