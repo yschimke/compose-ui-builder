@@ -283,8 +283,8 @@ the text is a literal, as before.
   printable into text. `selectOrClear` keeps a literal: its value is compared as well as written.
 - **Canvas.** Evaluated when the action runs, over the state as earlier actions in the same event
   left it, at the canvas clock.
-- **Remote Kotlin.** `valueChange(x, (x + 40.rf))`: the player computes it on the watch when the
-  click lands. An increment is `valueChange(x, (x + amount))`.
+- **Remote Kotlin.** `valueChangeAction(x, (x + 40.rf))`: the player computes it on the watch when the
+  click lands. An increment is `valueChangeAction(x, (x + amount))`.
 - **Compose and JSON.** Refused with a located `TODO`, as computed values are there.
 
 ### Loop rows
@@ -321,7 +321,7 @@ canvas stand-in and the Remote emitter.
 | `draw/polyline` | `count` (2–256, a literal), `index` (a name, `i` when absent), `pointXDp` `pointYDp` (formulas reading `@i`), `closed` + paint | `remotePath { for (i in 0 until count) { moveTo/lineTo(RemoteOffset(x, y)) } }` then `drawPath`: one segment per point, written when the document is, each coordinate a live expression |
 | `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` (start/center/end), `verticalAlign` (top/center/bottom) | `drawAnchoredText`, `align` as `panX` -1/0/1 and `verticalAlign` as `panY` 1/0/-1 (the player's vertical sign is the reverse) |
 | `draw/group` | `translateXDp` `translateYDp` `rotate` `scale` `pivotXDp` `pivotYDp`; its own `ops` | `withTransform({ … }) { … }` |
-| `draw/clip` | box, or `pathData` in a viewport; `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, or `withTransform({ scale(in); clipPath(path); scale(out) }) { … }`; `ClipOp.Difference` when excluding |
+| `draw/clip` | box, or `pathData` in a viewport; `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, or `withTransform({ scale(in) }) { clipPath(path) { withTransform({ scale(out) }) { … } } }`; an excluding clip is refused, as alpha24 has no `ClipOp` |
 | `draw/text-circle` | `text`, `centerXDp` `centerYDp` `radiusDp`, `angle` (270 is the top), `textSizeSp` + colour | `drawTextOnCircle`, centred on the angle, reading clockwise outside the circle |
 | `draw/text-path` | `text`, `pathData` in dp, `startDp` `offsetDp`, `textSizeSp` + colour | `drawTextOnPath`, inside a one-dp scale so the path is in dp and the glyphs keep their size |
 | `draw/morph` | `pathData`, `toPathData`, `progress` (0–1), viewport + paint | `drawTweenPath(from, to, tween = progress, paint)`, scaled to the canvas |

@@ -500,7 +500,7 @@ and pushes by name into the running document.
 
 - The Remote Compose export declares it as a named value in the User domain under its declared
   name, verbatim (`RemoteString.createNamedRemoteString("light.s0.name", "Kitchen",
-  RemoteState.Domain.User)`), never as an anonymous `rememberMutableRemote…`. The name is the
+  RemoteState.Domain.User)`), never as an anonymous `remember { MutableRemote…(…) }`. The name is the
   contract the host pushes by, so it is not mangled into an identifier; only the Kotlin local is.
 - The initial value is what the document shows until the host pushes one, and what the canvas
   previews.

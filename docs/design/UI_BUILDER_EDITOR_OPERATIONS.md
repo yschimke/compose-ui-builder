@@ -462,7 +462,7 @@ once. One rule, `TwoWayStateBinding` in `ui-builder-export`, serves every lane:
 | Canvas (host and SDK `CanvasNodeScope.changeBoundState`) | write the new value, then dispatch `checkedChange` |
 | Compose export | `onCheckedChange = { notify = it; <checkedChange actions> }` |
 | Wear export | the design's `var notify by remember { mutableStateOf(…) }`, shared by every row bound to it, and `onCheckedChange = { notify = it }` |
-| Remote Compose export | `val notify = rememberMutableRemoteBoolean(…)` and `onCheckedChange = valueChange(notify, !notify)` ahead of the `checkedChange` actions |
+| Remote Compose export | `val notify = remember { MutableRemoteBoolean(…) }` and `onCheckedChange = valueChangeAction(notify, !notify)` ahead of the `checkedChange` actions |
 
 A `stateEquals` comparison is not a variable the control holds and is never written back.
 

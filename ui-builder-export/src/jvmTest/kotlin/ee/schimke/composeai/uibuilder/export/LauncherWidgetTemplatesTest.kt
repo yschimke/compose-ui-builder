@@ -65,6 +65,8 @@ class LauncherWidgetTemplatesTest {
       )
     assertIs<RecordFreeExport.Generated.Emitted>(generated, generated.toString())
     val source = generated.source
+    // experiments/remote-export-compile compiles it.
+    File("build/remote-call-proof").apply { mkdirs() }.resolve("HelloWidget.kt").writeText(source)
     assertContains(source, "class HelloWidget : RemoteComposeWidget() {")
     assertContains(source, "text = \"Hello, World!\".rs")
     assertContains(source, "@Preview(name = \"3x1\", widthDp = 203, heightDp = 102)")

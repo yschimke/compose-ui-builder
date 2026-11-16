@@ -288,10 +288,13 @@ jobs:
           :ui-builder-export:jvmTest :ui-builder:jvmTest :ui-builder-runtime:test
           :ui-builder:compileKotlinWasmJs
       # The export tests above write the Remote Kotlin they assert on under
-      # `ui-builder-export/build/*-proof`. Compile it against the released AndroidX libraries a
-      # consumer builds it with, so an API the emitter assumes is checked by kotlinc.
-      - name: Compile the exported Remote Kotlin
-        run: ./gradlew -p experiments/remote-export-compile compileDebugKotlin
+      # `ui-builder-export/build/*-proof`. Compile it with kotlinc, so an API the emitter assumes is
+      # checked against the library rather than read from its sources. The exporter writes the
+      # Remote Compose alpha24 API, which no release carries yet, so this compiles against the
+      # androidx.dev snapshot build pinned in experiments/remote-export-compile/settings.gradle.kts.
+      # TODO(alpha24): drop the flag once 1.0.0-alpha24 is the release default there.
+      - name: Compile the exported Remote Kotlin (alpha24, androidx.dev snapshot)
+        run: ./gradlew -p experiments/remote-export-compile -Pcomposeai.remoteCompose=snapshot compileDebugKotlin
 
   # The shipped Wasm editor, opened in a real browser. Every other job proves the editor on the JVM;
   # this is the one that would notice the page itself failing to start (Skiko on WebGL, the Wasm

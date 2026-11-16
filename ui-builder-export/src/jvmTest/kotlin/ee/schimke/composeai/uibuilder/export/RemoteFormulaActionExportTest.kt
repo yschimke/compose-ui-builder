@@ -52,8 +52,8 @@ class RemoteFormulaActionExportTest {
         )
         .source
 
-    assertContains(source, "valueChange(x, (x + 40.rf))")
-    assertContains(source, "valueChange(label, (count.toRemoteString() + \" taps\".rs))")
+    assertContains(source, "valueChangeAction(x, (x + 40.rf))")
+    assertContains(source, "valueChangeAction(label, (count.toRemoteString() + \" taps\".rs))")
     assertContains(source, "combinedAction(")
   }
 
@@ -68,7 +68,7 @@ class RemoteFormulaActionExportTest {
         )
         .source
 
-    assertContains(source, "valueChange(count, (count + (count + 1.ri)))")
+    assertContains(source, "valueChangeAction(count, (count + (count + 1.ri)))")
   }
 
   @Test

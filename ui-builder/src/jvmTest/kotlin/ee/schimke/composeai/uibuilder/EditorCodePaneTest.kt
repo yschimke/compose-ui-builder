@@ -73,7 +73,7 @@ class EditorCodePaneTest {
         UiBuilderEditorReducer(remoteCatalog).generatedCode(document),
       )
     assertTrue("RemoteStateLayout" in code.kotlin, code.kotlin)
-    assertTrue(".clickable(valueChange(page, 20.ri))" in code.kotlin, code.kotlin)
+    assertTrue(".clickable(valueChangeAction(page, 20.ri))" in code.kotlin, code.kotlin)
     assertFalse("WearWidget" in code.kotlin, code.kotlin)
   }
 
@@ -110,7 +110,7 @@ class EditorCodePaneTest {
         )
         .source
     assertEquals(expected, code)
-    assertTrue("valueChange(page, actionValue0.ri)" in code)
+    assertTrue("valueChangeAction(page, actionValue0.ri)" in code)
     assertTrue("clickable(capture0(argument1))" in code)
   }
 

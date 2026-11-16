@@ -74,7 +74,7 @@ class RemoteHostInputExportTest {
     )
     assertContains(source, "import androidx.compose.remote.creation.compose.state.RemoteState")
     assertContains(source, "import androidx.compose.remote.creation.compose.state.RemoteString")
-    assertFalse("rememberMutableRemoteString" in source, source)
+    assertFalse("MutableRemoteString" in source, source)
   }
 
   @Test
@@ -82,7 +82,7 @@ class RemoteHostInputExportTest {
     val result = export()
     val source = assertIs<WearWidgetCodeExporter.Result.Emitted>(result, result.toString()).source
 
-    assertFalse("valueChange(light_s0_is_on" in source, source)
+    assertFalse("valueChangeAction(light_s0_is_on" in source, source)
   }
 
   @Test

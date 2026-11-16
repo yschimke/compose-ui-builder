@@ -80,7 +80,7 @@ class RemoteExpressionExportTest {
       source,
       "((count + 1.ri).toRemoteString() + \" items\".rs + on.select(\"!\".rs, \"\".rs))",
     )
-    assertContains(source, "val count = rememberMutableRemoteInt(3)")
+    assertContains(source, "val count = remember { MutableRemoteInt(3) }")
     assertContains(source, "androidx.compose.remote.creation.compose.state.ri")
   }
 

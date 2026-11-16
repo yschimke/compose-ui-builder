@@ -81,17 +81,20 @@ class RemoteDrawingPathExportTest {
   fun `a path clip scales into its viewport, clips, and scales back out`() {
     val source = exported(clip, "PathClip")
 
+    // `clipPath` is a draw-scope block in alpha24, so the scale back out is a transform inside it.
     assertContains(
       source,
-      "withTransform({ scale(96.rdp.toPx() / 24.rf, 96.rdp.toPx() / 24.rf); " +
-        "clipPath(remotePathOf(\"M12 2 L22 22 L2 22 Z\")); " +
-        "scale(24.rf / 96.rdp.toPx(), 24.rf / 96.rdp.toPx()) }) {",
+      "withTransform({ scale(96.rdp.toPx() / 24.rf, 96.rdp.toPx() / 24.rf, " +
+        "RemoteOffset(0.rf, 0.rf)) }) {\n" +
+        "            clipPath(remotePathOf(\"M12 2 L22 22 L2 22 Z\")) {\n" +
+        "                withTransform({ scale(24.rf / 96.rdp.toPx(), 24.rf / 96.rdp.toPx(), " +
+        "RemoteOffset(0.rf, 0.rf)) }) {",
     )
     assertContains(source, "import androidx.compose.remote.creation.RemotePath")
   }
 
   @Test
-  fun `an excluding path clip is a Difference`() {
+  fun `an excluding path clip is refused`() {
     val excluded =
       clip.copy(
         nodes =
@@ -108,7 +111,10 @@ class RemoteDrawingPathExportTest {
                 )),
       )
 
-    assertContains(exported(excluded, "PathClipOut"), "Z\"), ClipOp.Difference); ")
+    // alpha24's draw scope only intersects its clip: `ClipOp` is gone from `clipPath`.
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(WearWidgetCodeExporter.export(excluded))
+    assertTrue(refused.reasons.any { "lens.exclude" in it }, refused.reasons.toString())
   }
 
   @Test

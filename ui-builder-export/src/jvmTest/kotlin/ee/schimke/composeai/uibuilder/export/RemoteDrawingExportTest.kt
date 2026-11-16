@@ -47,9 +47,9 @@ class RemoteDrawingExportTest {
   fun `a stroked arc with a defaulted box is inset by half its stroke`() {
     val source = exported()
 
-    assertContains(source, "style = PaintingStyle.Stroke")
+    assertContains(source, "style = RemotePaintingStyle.Stroke")
     assertContains(source, "strokeWidth = 8.rdp.toPx()")
-    assertContains(source, "strokeCap = StrokeCap.Round")
+    assertContains(source, "strokeCap = RemoteStrokeCap.Round")
     assertContains(source, "topLeft = RemoteOffset((8.rdp.toPx() / 2.rf), (8.rdp.toPx() / 2.rf))")
     assertContains(source, "size = RemoteSize((96.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf)")
     assertTrue("import androidx.compose.remote.creation.compose.state.ri\n" !in source, source)
@@ -72,7 +72,7 @@ class RemoteDrawingExportTest {
       source,
       "rotate(((RemoteTime().Seconds() % 60.rf) * 6.rf), RemoteOffset((96.rdp.toPx() / 2.rf), (96.rdp.toPx() / 2.rf)))",
     )
-    assertContains(source, "val progress = rememberMutableRemoteFloat(0.65f)")
+    assertContains(source, "val progress = remember { MutableRemoteFloat(0.65f) }")
   }
 
   @Test
@@ -154,7 +154,8 @@ class RemoteDrawingExportTest {
     assertContains(
       source,
       "withTransform({ translate(((96.rdp.toPx() - 200.rdp.toPx() * $scale) / 2.rf), " +
-        "((96.rdp.toPx() - 100.rdp.toPx() * $scale) / 2.rf)); scale($scale, $scale) }) {",
+        "((96.rdp.toPx() - 100.rdp.toPx() * $scale) / 2.rf)); " +
+        "scale($scale, $scale, RemoteOffset(0.rf, 0.rf)) }) {",
     )
     // The operations' whole canvas is the viewport: the defaulted arc box spans 200 × 100 units.
     assertContains(source, "size = RemoteSize((200.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf)")
@@ -182,7 +183,8 @@ class RemoteDrawingExportTest {
 
     assertContains(
       source("stretch"),
-      "withTransform({ scale((96.rdp.toPx() / 200.rdp.toPx()), (96.rdp.toPx() / 100.rdp.toPx())) })",
+      "withTransform({ scale((96.rdp.toPx() / 200.rdp.toPx()), (96.rdp.toPx() / 100.rdp.toPx()), " +
+        "RemoteOffset(0.rf, 0.rf)) })",
     )
     val filled = source("fill")
     assertContains(filled, "withTransform({ clipRect(0.rf, 0.rf, 96.rdp.toPx(), 96.rdp.toPx()); ")
@@ -292,7 +294,7 @@ class RemoteDrawingExportTest {
         needleTo("canvas.height - 4", canvasModifiers = """[{"type":"fillMaxSize"}]"""),
         "MeasuredWidget.kt",
       )
-    assertContains(measured, "((height / 1.rdp.toPx()) - 4.rf).asRemoteDp().toPx()")
+    assertContains(measured, "((size.height / 1.rdp.toPx()) - 4.rf).asRemoteDp().toPx()")
   }
 
   @Test
@@ -343,14 +345,15 @@ class RemoteDrawingExportTest {
           File("build/draw-proof").apply { mkdirs() }.resolve("PaintWidget.kt").writeText(it)
         }
 
-    assertContains(source, "strokeJoin = StrokeJoin.Round")
-    assertContains(source, "blendMode = BlendMode.Multiply")
+    assertContains(source, "strokeJoin = RemoteStrokeJoin.Round")
+    assertContains(source, "blendMode = RemoteBlendMode.Multiply")
     assertTrue(
-      "androidx.compose.ui.graphics.StrokeJoin" in
+      "androidx.compose.remote.creation.compose.state.RemoteStrokeJoin" in
         source.lines().map { it.removePrefix("import ") },
     )
     assertTrue(
-      "androidx.compose.ui.graphics.BlendMode" in source.lines().map { it.removePrefix("import ") },
+      "androidx.compose.remote.creation.compose.state.RemoteBlendMode" in
+        source.lines().map { it.removePrefix("import ") },
     )
     // Three stops, in order: a hex literal, the theme role read above the canvas, a hex with alpha.
     val read = Regex("""val (\w+) = RemoteMaterialTheme\.colorScheme\.primary""").find(source)

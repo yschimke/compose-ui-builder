@@ -48,7 +48,7 @@ class RemotePageIndicatorExportTest {
     assertContains(source, "selectedColor = RemoteMaterialTheme.colorScheme.primary")
     // alpha13's indicator takes it, and the canvas draws it: the export keeps what the author set.
     assertContains(source, "backgroundColor = Color(0x80000000).rc")
-    assertContains(source, "val page = rememberMutableRemoteInt(1)")
+    assertContains(source, "val page = remember { MutableRemoteInt(1) }")
     assertContains(
       source,
       "import androidx.wear.compose.remote.material3.rememberRemotePageIndicatorState",
