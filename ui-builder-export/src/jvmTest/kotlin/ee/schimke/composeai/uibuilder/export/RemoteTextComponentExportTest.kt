@@ -56,7 +56,7 @@ class RemoteTextComponentExportTest {
     assertTrue(refusals.isEmpty(), refusals.toString())
     assertContains(source, "style = RemoteMaterialTheme.typography.bodyMedium")
     assertContains(source, "fontSize = 17.rsp")
-    assertContains(source, "textAlign = TextAlign.Center")
+    assertContains(source, "textAlign = RemoteTextAlign.Center")
     assertContains(source, "color = RemoteMaterialTheme.colorScheme.onSurface")
     assertContains(source, "maxLines = 2")
   }

@@ -74,9 +74,9 @@ class RemoteScopedSourceExportTest {
     assertContains(result.source, "RemoteArrangement.spacedBy(argument0.rdp)")
     assertContains(
       result.source,
-      "capture0: androidx.compose.remote.creation.compose.action.Action",
+      "capture0: androidx.compose.remote.creation.compose.action.RemoteAction",
     )
-    assertContains(result.source, "valueChange(page, 10.ri)")
+    assertContains(result.source, "valueChangeAction(page, 10.ri)")
     assertContains(result.source, "RemoteBox(modifier = modifier)")
     val output =
       File(root, "experiments/remote-state-selection/build/scoped-projection-source/remote").apply {
@@ -117,7 +117,7 @@ class RemoteScopedSourceExportTest {
     assertEquals(2, Regex("capture0: \\(kotlin.Int\\) ->").findAll(result.source).count())
     assertContains(result.source, "capture0 = capture0")
     assertContains(result.source, "clickable(capture0(argument1))")
-    assertContains(result.source, "valueChange(page, actionValue0.ri)")
+    assertContains(result.source, "valueChangeAction(page, actionValue0.ri)")
     val output =
       File(root, "experiments/remote-state-selection/build/bound-action-production-source/remote")
         .apply { mkdirs() }
@@ -181,7 +181,7 @@ class RemoteScopedSourceExportTest {
       }
     assertContains(
       exported(document).source,
-      "combinedAction(valueChange(page, actionValue0.ri), valueChange(page, 10.ri))",
+      "combinedAction(valueChangeAction(page, actionValue0.ri), valueChangeAction(page, 10.ri))",
     )
   }
 
@@ -252,7 +252,7 @@ class RemoteScopedSourceExportTest {
         )
       assertContains(
         result.source,
-        "($type) -> androidx.compose.remote.creation.compose.action.Action",
+        "($type) -> androidx.compose.remote.creation.compose.action.RemoteAction",
       )
       File(output, "${kind}Actions.kt").writeText(result.source)
     }
@@ -270,7 +270,10 @@ class RemoteScopedSourceExportTest {
             ),
         )
       }
-    assertContains(exported(document).source, "clickable(valueChange(page, uiRow0.argument0.ri))")
+    assertContains(
+      exported(document).source,
+      "clickable(valueChangeAction(page, uiRow0.argument0.ri))",
+    )
   }
 
   @Test
@@ -348,7 +351,7 @@ class RemoteScopedSourceExportTest {
     assertContains(source, "private fun Pair(")
     assertContains(source, "private fun Inner(")
     assertContains(source, "capture0 = capture0")
-    assertEquals(1, Regex("valueChange\\(page, 10.ri\\)").findAll(source).count())
+    assertEquals(1, Regex("valueChangeAction\\(page, 10.ri\\)").findAll(source).count())
   }
 
   @Test
@@ -390,7 +393,7 @@ class RemoteScopedSourceExportTest {
             },
           )
           .source
-      assertContains(source, "clickable(valueChange(page, 10.ri))")
+      assertContains(source, "clickable(valueChangeAction(page, 10.ri))")
       val click = fixture().nodes.getValue("red").eventBindings.getValue("click")
       val longPress =
         exported(
@@ -399,7 +402,7 @@ class RemoteScopedSourceExportTest {
             },
           )
           .source
-      assertContains(longPress, "onLongClick = valueChange(page, 10.ri)")
+      assertContains(longPress, "onLongClick = valueChangeAction(page, 10.ri)")
     }
   }
 

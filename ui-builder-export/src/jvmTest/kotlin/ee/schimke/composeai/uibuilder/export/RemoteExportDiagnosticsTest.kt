@@ -222,8 +222,10 @@ class RemoteExportDiagnosticsTest {
         ),
       )
 
-    assertTrue("overflow = TextOverflow.Ellipsis" in emitted.source, emitted.source)
-    assertTrue("import androidx.compose.ui.text.style.TextOverflow" in emitted.source)
+    assertTrue("overflow = RemoteTextOverflow.Ellipsis" in emitted.source, emitted.source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.text.RemoteTextOverflow" in emitted.source,
+    )
     assertEquals(emptyList(), emitted.diagnostics)
   }
 

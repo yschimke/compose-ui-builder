@@ -55,7 +55,7 @@ class RemoteClockTemplatesTest {
       assertContains(source, "RemoteCanvas(")
       assertContains(source, "loop(")
       assertContains(source, "RemoteTime()")
-      assertTrue("rememberMutableRemote" !in source, source)
+      assertTrue("MutableRemote" !in source, source)
     }
   }
 

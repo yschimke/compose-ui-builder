@@ -82,7 +82,7 @@ def generate(document, remote, profile="repetition"):
 
     def setter(variable):
         state = state_names[variable]
-        return ("{ value -> valueChange(" + state + ", value.ri) }") if remote else (
+        return ("{ value -> valueChangeAction(" + state + ", value.ri) }") if remote else (
             "{ value -> " + state + " = value }")
 
     def action(id, scope, handlers):
@@ -97,7 +97,7 @@ def generate(document, remote, profile="repetition"):
                 parts.append(f"{handlers[variable]}({value})")
             else:
                 state = state_names[variable]
-                parts.append(f"valueChange({state}, {value}.ri)" if remote else f"{state} = {value}")
+                parts.append(f"valueChangeAction({state}, {value}.ri)" if remote else f"{state} = {value}")
         if not remote:
             return "{ " + "; ".join(parts) + " }"
         return parts[0] if len(parts) == 1 else "combinedAction(" + ", ".join(parts) + ")"
@@ -219,14 +219,14 @@ def generate(document, remote, profile="repetition"):
     for key, declaration in document["stateVariables"].items():
         assert declaration["valueType"] == "int" and not declaration["nullable"]
         value = integer(declaration["initialValue"])
-        line(1, f"val {state_names[key]} = rememberMutableRemoteInt({value})" if remote else
+        line(1, f"val {state_names[key]} = remember {{ MutableRemoteInt({value}) }}" if remote else
              f"var {state_names[key]} by remember {{ mutableIntStateOf({value}) }}")
     for root in document["roots"]:
         emit(root, 1, {}, {})
     line(0, "}")
     for key, definition in definitions.items():
         args = [f"argument{i}: {type}" for i, type in enumerate(parameters[key].values())]
-        args += [f"callback{i}: (Int) -> " + ("Action" if remote else "Unit") for i, _ in enumerate(callbacks[key])]
+        args += [f"callback{i}: (Int) -> " + ("RemoteAction" if remote else "Unit") for i, _ in enumerate(callbacks[key])]
         args += [f"modifier: {modifier}"]
         line(0, annotation)
         line(0, "private fun " + component_names[key] + "(" + ", ".join(args) + ") {")

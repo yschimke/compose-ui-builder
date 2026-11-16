@@ -121,7 +121,7 @@ class RemoteStateSelectionExportTest {
           ),
         )
       assertContains(emitted.source, "RemoteStateLayout(")
-      assertContains(emitted.source, "val page = rememberMutableRemote")
+      assertContains(emitted.source, "val page = remember { MutableRemote")
       assertContains(emitted.source, "RemoteModifier.padding(")
       assertContains(emitted.source, ".createReference()")
       File(output, "$name.kt").writeText(emitted.source)
@@ -207,7 +207,9 @@ class RemoteStateSelectionExportTest {
                 }
                 .build(),
               TargetParameter.Builder(name = "onClick", type = "Action")
-                .also { b -> b.typeFqn = "androidx.compose.remote.creation.compose.action.Action" }
+                .also { b ->
+                  b.typeFqn = "androidx.compose.remote.creation.compose.action.RemoteAction"
+                }
                 .build(),
             )
           builder_.slots = emptyList()
@@ -238,9 +240,12 @@ class RemoteStateSelectionExportTest {
       val source = emitter.emit("control", 1).joinToString("\n")
       assertTrue(refusals.isEmpty(), refusals.toString())
       assertContains(source, "enabled = page")
-      assertContains(source, "onClick = valueChange(page, !page)")
+      assertContains(source, "onClick = valueChangeAction(page, !page)")
       assertFalse(".clickable(" in source, source)
-      assertEquals(listOf("val page = rememberMutableRemoteBoolean(false)"), emitter.stateLocals())
+      assertEquals(
+        listOf("val page = remember { MutableRemoteBoolean(false) }"),
+        emitter.stateLocals(),
+      )
     }
   }
 
@@ -266,7 +271,7 @@ class RemoteStateSelectionExportTest {
           InlineRemoteContentExporter.export(doc, "remote"),
         )
         .source
-    assertContains(source, "val page = rememberMutableRemoteString(\"Ready\")")
+    assertContains(source, "val page = remember { MutableRemoteString(\"Ready\") }")
     assertContains(source, "text = page")
     val wrong = doc.copy(stateVariables = document("int", listOf(JsonPrimitive(10))).stateVariables)
     assertIs<InlineRemoteContentExporter.Result.Refused>(

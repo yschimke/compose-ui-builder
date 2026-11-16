@@ -303,7 +303,7 @@ internal class RemoteContentEmitter(
    */
   private val stateWrites = linkedMapOf<String, String>()
 
-  /** `val <name> = rememberMutableRemote…(<initial>)` for each variable an action wrote to. */
+  /** `val <name> = remember { MutableRemote…(<initial>) }` for each variable an action wrote to. */
   fun stateLocals(): List<String> = stateWrites.values.toList()
 
   /**
@@ -1080,7 +1080,7 @@ internal class RemoteContentEmitter(
             node.modifierExpression(
               pad,
               modifierClick =
-                record.parameters.none { it.name == "onClick" && it.typeFqn == ACTION_FQN },
+                record.parameters.none { it.name == "onClick" && it.typeFqn.isActionType() },
             )
           authored != null -> remoteValue(node, parameter, authored)
           parameter.typeFqn == REMOTE_BORDER_STROKE_FQN && node.has(BORDER_COLOR_PROPERTY) ->
@@ -1088,7 +1088,7 @@ internal class RemoteContentEmitter(
           REMOTE_COLOR_BUNDLES[parameter.typeFqn]?.roles?.any { node.has(it) } == true ->
             colorBundle(node, REMOTE_COLOR_BUNDLES.getValue(parameter.typeFqn.orEmpty()))
               ?: return emptyList()
-          parameter.typeFqn == ACTION_FQN &&
+          parameter.typeFqn.isActionType() &&
             (!parameter.hasDefault ||
               eventActions(
                   node,
@@ -1170,9 +1170,9 @@ internal class RemoteContentEmitter(
 
   /**
    * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing. A state
-   * write becomes a `valueChange` (verified by wear-m3-catalog's `RemoteActionVocabularyProbe`) and
-   * a [HostActions] action a `hostAction`; several combine. The event key is the parameter without
-   * `on`.
+   * write becomes a `valueChangeAction` (verified by wear-m3-catalog's
+   * `RemoteActionVocabularyProbe`) and a [HostActions] action a `hostAction`; several combine. The
+   * event key is the parameter without `on`.
    *
    * Refused: `selectOrClear` (assigns null), undeclared variables, `toggle` on a non-boolean, and a
    * host action [HostActions.issue] refuses.
@@ -1370,7 +1370,7 @@ internal class RemoteContentEmitter(
         }
       if (written != null) {
         usesValueChange = true
-        return "valueChange($target, $written)"
+        return "valueChangeAction($target, $written)"
       }
     }
     val written =
@@ -1412,7 +1412,7 @@ internal class RemoteContentEmitter(
       return null
     }
     usesValueChange = true
-    return "valueChange($target, $written)"
+    return "valueChangeAction($target, $written)"
   }
 
   /**
@@ -1508,7 +1508,9 @@ internal class RemoteContentEmitter(
     }
     val factory = stateFactory(expectedType) ?: return null
     stateWrites.getOrPut(variable) {
-      "val $target = $factory(${remoteInitial(expectedType, initial)})"
+      // `remember { MutableRemote…(…) }`, the spelling alpha24 keeps: the `rememberMutableRemote…`
+      // helpers are deprecated in alpha23 and gone after it.
+      "val $target = remember { $factory(${remoteInitial(expectedType, initial)}) }"
     }
     return target
   }
@@ -1611,10 +1613,10 @@ internal class RemoteContentEmitter(
 
   private fun stateFactory(valueType: String): String? =
     when (valueType) {
-      "bool" -> "rememberMutableRemoteBoolean"
-      "int" -> "rememberMutableRemoteInt"
-      "float" -> "rememberMutableRemoteFloat"
-      "string" -> "rememberMutableRemoteString"
+      "bool" -> "MutableRemoteBoolean"
+      "int" -> "MutableRemoteInt"
+      "float" -> "MutableRemoteFloat"
+      "string" -> "MutableRemoteString"
       else -> null
     }
 
@@ -2081,8 +2083,8 @@ internal class RemoteContentEmitter(
       UiExpressions.Op.HOURS_UNTIL -> countdown(expr, "Hours")
       UiExpressions.Op.LERP ->
         if (expr.kind == UiValueKind.COLOR) {
-          usedComponentImports += "$REMOTE_STATE_PACKAGE.tween"
-          "tween(${args[0]}, ${args[1]}, ${f(2)})"
+          usedComponentImports += "$REMOTE_STATE_PACKAGE.lerp"
+          "lerp(${args[0]}, ${args[1]}, ${f(2)})"
         } else math("lerp", f(0), f(1), f(2))
       UiExpressions.Op.TO_INT ->
         if (kinds[0] == UiValueKind.INT) args[0] else "${args[0]}.toRemoteInt()"
@@ -2341,17 +2343,18 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * The transform that draws [viewport]'s units on a canvas of [canvas]'s size: `RemoteCanvas`'s
-   * `scale` is about the origin, so `fit` and `fill` centre with a translate first. `fill` clips
-   * what overflows the canvas.
+   * The transform that draws [viewport]'s units on a canvas of [canvas]'s size: the scale is about
+   * the origin (`RemoteDrawTransform.scale` defaults to the centre, so the pivot is written), and
+   * `fit` and `fill` centre with a translate first. `fill` clips what overflows the canvas.
    */
   private fun viewportTransform(viewport: UiDrawing.Viewport, canvas: CanvasExtent): String {
     usesRemoteFloat = true
+    usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteOffset"
     val width = "${viewport.width.dpLiteral()}.toPx()"
     val height = "${viewport.height.dpLiteral()}.toPx()"
     val sx = "(${canvas.width} / $width)"
     val sy = "(${canvas.height} / $height)"
-    if (viewport.mode == "stretch") return "withTransform({ scale($sx, $sy) })"
+    if (viewport.mode == "stretch") return "withTransform({ scale($sx, $sy, $ORIGIN) })"
     val pick = if (viewport.mode == "fill") "max" else "min"
     usedComponentImports += "$REMOTE_STATE_PACKAGE.$pick"
     val scale = "$pick($sx, $sy)"
@@ -2360,7 +2363,7 @@ internal class RemoteContentEmitter(
     val clip =
       if (viewport.mode == "fill") "clipRect(0.rf, 0.rf, ${canvas.width}, ${canvas.height}); "
       else ""
-    return "withTransform({ ${clip}translate($x, $y); scale($scale, $scale) })"
+    return "withTransform({ ${clip}translate($x, $y); scale($scale, $scale, $ORIGIN) })"
   }
 
   /**
@@ -2391,7 +2394,9 @@ internal class RemoteContentEmitter(
   private var canvasExtent: CanvasExtent? = null
 
   private val extent: CanvasExtent
-    get() = canvasExtent ?: CanvasExtent("width", "height")
+    // `size`, not `width`/`height`: `RemoteDrawTransform` (a `withTransform` block's receiver) has
+    // only `size`, and its DSL marker hides the draw scope's own members.
+    get() = canvasExtent ?: CanvasExtent("size.width", "size.height")
 
   private fun UiBuilderNode.statedExtent(): CanvasExtent {
     var width: Float? = null
@@ -2408,10 +2413,10 @@ internal class RemoteContentEmitter(
       }
     }
     return CanvasExtent(
-      width?.let { "${it.dpLiteral()}.toPx()" } ?: "width",
-      height?.let { "${it.dpLiteral()}.toPx()" } ?: "height",
-      width?.floatLiteral() ?: inDp("width"),
-      height?.floatLiteral() ?: inDp("height"),
+      width?.let { "${it.dpLiteral()}.toPx()" } ?: "size.width",
+      height?.let { "${it.dpLiteral()}.toPx()" } ?: "size.height",
+      width?.floatLiteral() ?: inDp("size.width"),
+      height?.floatLiteral() ?: inDp("size.height"),
     )
   }
 
@@ -2647,8 +2652,10 @@ internal class RemoteContentEmitter(
     hoisted: MutableList<String>,
   ): List<String> {
     usesRemoteFloat = true
-    fun children() =
-      node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, depth + 1, hoisted) }
+    fun children(nesting: Int = 1) =
+      node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap {
+        drawOperation(it, depth + nesting, hoisted)
+      }
     fun block(head: String, parameter: String = "") =
       listOf("$pad$head {$parameter") + children() + listOf("$pad}")
     return when (node.componentId) {
@@ -2671,7 +2678,14 @@ internal class RemoteContentEmitter(
               "give it a literal, or put the operations under a draw/if"
           return emptyList()
         }
-        val exclude = authoredExclude?.boolOrNull() == true
+        if (authoredExclude?.boolOrNull() == true) {
+          // alpha24's `RemoteDrawScope` clips by intersection only: `ClipOp` is gone from both
+          // `clipRect` and `clipPath`, so an excluding clip has no spelling.
+          refusals +=
+            "nodes.${node.id}.exclude: an excluding clip has no Remote Compose spelling; the " +
+              "draw scope only intersects its clip"
+          return emptyList()
+        }
         val clipPath = node.properties["pathData"]?.stringOrNull()?.takeIf { it.isNotBlank() }
         if (clipPath != null) {
           // Scale into the path's viewport, clip, and scale back out, so the clip has the
@@ -2679,23 +2693,17 @@ internal class RemoteContentEmitter(
           usesRemotePath = true
           val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
           val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
-          val op =
-            if (exclude) {
-              usedComponentImports += "androidx.compose.ui.graphics.ClipOp"
-              ", ClipOp.Difference"
-            } else ""
-          return block(
-            "withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / " +
-              "$viewportHeight); clipPath(remotePathOf(\"${clipPath.escaped()}\")$op); " +
-              "scale($viewportWidth / ${extent.width}, $viewportHeight / ${extent.height}) })",
-          )
+          // `clipPath` is a block of the draw scope, not a step of a transform, so the scale out
+          // is a transform inside it.
+          return listOf(
+            "${pad}withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / " +
+              "$viewportHeight, $ORIGIN) }) {",
+            "$pad${INDENT}clipPath(remotePathOf(\"${clipPath.escaped()}\")) {",
+            "$pad$INDENT${INDENT}withTransform({ scale($viewportWidth / ${extent.width}, " +
+              "$viewportHeight / ${extent.height}, $ORIGIN) }) {",
+          ) + children(nesting = 3) + listOf("$pad$INDENT$INDENT}", "$pad$INDENT}", "$pad}")
         }
-        val op =
-          if (exclude) {
-            usedComponentImports += "androidx.compose.ui.graphics.ClipOp"
-            ", clipOp = ClipOp.Difference"
-          } else ""
-        block("clipRect(${x ?: "0.rf"}, ${y ?: "0.rf"}, $right, $bottom$op)")
+        block("clipRect(${x ?: "0.rf"}, ${y ?: "0.rf"}, $right, $bottom)")
       }
       UiDrawing.IF -> {
         val authored = node.properties["condition"]
@@ -2905,8 +2913,8 @@ internal class RemoteContentEmitter(
     val colour = drawColor(node, hoisted)
     val lines = mutableListOf("color = $colour")
     if (stroked || operation.componentId == "draw/line") {
-      usedComponentImports += "androidx.compose.ui.graphics.PaintingStyle"
-      lines += "style = PaintingStyle.Stroke"
+      usedComponentImports += "$REMOTE_STATE_PACKAGE.RemotePaintingStyle"
+      lines += "style = RemotePaintingStyle.Stroke"
       val width = node.drawPx("strokeWidthDp") ?: (1f.dpLiteral() + ".toPx()")
       lines +=
         if (operation.componentId == "draw/path" || operation.componentId == UiDrawing.MORPH) {
@@ -2919,23 +2927,23 @@ internal class RemoteContentEmitter(
         } else "strokeWidth = $width"
     }
     node.properties["strokeCap"]?.stringOrNull()?.let { cap ->
-      usedComponentImports += "androidx.compose.ui.graphics.StrokeCap"
-      lines += "strokeCap = StrokeCap.${cap.replaceFirstChar { it.uppercaseChar() }}"
+      usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteStrokeCap"
+      lines += "strokeCap = RemoteStrokeCap.${cap.replaceFirstChar { it.uppercaseChar() }}"
     }
     node.properties["strokeJoin"]?.stringOrNull()?.let { join ->
       if (join !in UiDrawing.STROKE_JOINS) {
         refusals += "nodes.${node.id}.strokeJoin: `$join` is not one of ${UiDrawing.STROKE_JOINS}"
       } else {
-        usedComponentImports += "androidx.compose.ui.graphics.StrokeJoin"
-        lines += "strokeJoin = StrokeJoin.${join.replaceFirstChar { it.uppercaseChar() }}"
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteStrokeJoin"
+        lines += "strokeJoin = RemoteStrokeJoin.${join.replaceFirstChar { it.uppercaseChar() }}"
       }
     }
     node.properties["blendMode"]?.stringOrNull()?.let { mode ->
       if (mode !in UiDrawing.BLEND_MODES) {
         refusals += "nodes.${node.id}.blendMode: `$mode` is not one of ${UiDrawing.BLEND_MODES}"
       } else {
-        usedComponentImports += "androidx.compose.ui.graphics.BlendMode"
-        lines += "blendMode = BlendMode.${mode.replaceFirstChar { it.uppercaseChar() }}"
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteBlendMode"
+        lines += "blendMode = RemoteBlendMode.${mode.replaceFirstChar { it.uppercaseChar() }}"
       }
     }
     when (operation.componentId) {
@@ -3827,9 +3835,10 @@ internal class RemoteContentEmitter(
       ?.let { axes ->
         usesFontVariation = true
         arguments +=
-          "fontVariationSettings = FontVariation.Settings(" +
+          "fontVariationSettings = RemoteFontVariation.Settings(" +
             axes.joinToString(", ") {
-              "FontVariation.Setting(\"${it.tag.escaped()}\", ${FontSettings.number(it.value)}f)"
+              "RemoteFontVariation.Setting(\"${it.tag.escaped()}\", " +
+                "${FontSettings.number(it.value)}f.rf)"
             } +
             ")"
       }
@@ -3838,7 +3847,7 @@ internal class RemoteContentEmitter(
       ?.takeIf { it.isNotEmpty() }
       ?.let {
         usesTextAlign = true
-        arguments += "textAlign = TextAlign.${it.replaceFirstChar(Char::uppercaseChar)}"
+        arguments += "textAlign = RemoteTextAlign.${it.replaceFirstChar(Char::uppercaseChar)}"
       }
     node.properties["maxLines"]?.intOrNull()?.let { arguments += "maxLines = $it" }
     node.properties["overflow"]
@@ -3847,10 +3856,14 @@ internal class RemoteContentEmitter(
       ?.let { overflow ->
         val member = TEXT_OVERFLOW_MEMBERS[overflow]
         if (member == null) {
-          notWritten(node, "overflow", "`$overflow` is not a `TextOverflow` this export names")
+          notWritten(
+            node,
+            "overflow",
+            "`$overflow` is not a `RemoteTextOverflow` this export names",
+          )
         } else {
           usesTextOverflow = true
-          arguments += "overflow = TextOverflow.$member"
+          arguments += "overflow = RemoteTextOverflow.$member"
         }
       }
     // Offered on `m3/text` but with no lowering here yet: said on the node rather than dropped.
@@ -4066,7 +4079,7 @@ internal class RemoteContentEmitter(
       return null
     }
     val argument = imageBitmap(node, key, "the image `${node.id}`") ?: return null
-    val arguments = mutableListOf("remoteBitmap = $argument")
+    val arguments = mutableListOf("bitmap = $argument")
     val description = node.properties["contentDescription"]?.stringOrNull().orEmpty()
     arguments +=
       if (description.isEmpty()) "contentDescription = null"
@@ -4077,7 +4090,7 @@ internal class RemoteContentEmitter(
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     // Always written: the builder's default is `crop` but upstream's is `Fit`.
     usesContentScale = true
-    arguments += "contentScale = ContentScale.${node.contentScale()}"
+    arguments += "contentScale = RemoteContentScale.${node.contentScale()}"
     return call("RemoteImage", arguments, pad)
   }
 
@@ -4279,9 +4292,11 @@ internal class RemoteContentEmitter(
       imports += "androidx.compose.remote.creation.compose.action.lambdaAction"
     }
     if (stateWrites.isNotEmpty()) {
-      if (usesValueChange) imports += "androidx.compose.remote.creation.compose.action.valueChange"
+      if (usesValueChange)
+        imports += "androidx.compose.remote.creation.compose.action.valueChangeAction"
       stateWrites.values.forEach { declaration ->
-        val factory = declaration.substringAfter("= ").substringBefore('(')
+        val factory =
+          declaration.substringAfter("= ").removePrefix("remember { ").substringBefore('(')
         if ('.' in factory) {
           // `RemoteString.createNamedRemoteString(…, RemoteState.Domain.User)`: a host input.
           val type = factory.substringBefore('.')
@@ -4289,6 +4304,7 @@ internal class RemoteContentEmitter(
           imports += "androidx.compose.remote.creation.compose.state.RemoteState"
         } else {
           imports += "androidx.compose.remote.creation.compose.state.$factory"
+          imports += "androidx.compose.runtime.remember"
         }
       }
     }
@@ -4322,10 +4338,17 @@ internal class RemoteContentEmitter(
     }
     imports += "androidx.compose.runtime.Composable"
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
-    if (usesContentScale) imports += "androidx.compose.ui.layout.ContentScale"
-    if (usesTextAlign) imports += "androidx.compose.ui.text.style.TextAlign"
-    if (usesTextOverflow) imports += "androidx.compose.ui.text.style.TextOverflow"
-    if (usesFontVariation) imports += "androidx.compose.ui.text.font.FontVariation"
+    if (usesContentScale) {
+      imports += "androidx.compose.remote.creation.compose.layout.RemoteContentScale"
+    }
+    if (usesTextAlign) imports += "androidx.compose.remote.creation.compose.text.RemoteTextAlign"
+    if (usesTextOverflow) {
+      imports += "androidx.compose.remote.creation.compose.text.RemoteTextOverflow"
+    }
+    if (usesFontVariation) {
+      imports += "androidx.compose.remote.creation.compose.text.RemoteFontVariation"
+      imports += "androidx.compose.remote.creation.compose.state.rf"
+    }
     if (usesLocalTextStyle) imports += "androidx.wear.compose.remote.material3.LocalRemoteTextStyle"
     // Widget-only imports; inline remote content in a screen needs none of these.
     if (widget != null) {
@@ -4684,8 +4707,8 @@ internal class RemoteContentEmitter(
               "$where.semantics.role: `$role` is not one of ${RemoteModifierVocabulary.ROLES}"
             return emptyList()
           }
-          usedComponentImports += "androidx.compose.ui.semantics.Role"
-          "role = Role.$role"
+          usedComponentImports += "$modifierPackage.RemoteRole"
+          "role = RemoteRole.$role"
         } else "$key = $value"
       }
     val clear = arguments["clear"] == "true"
@@ -5145,7 +5168,19 @@ private fun kotlinx.serialization.json.JsonElement.numberValue(): Float? =
 /** The parameter names and types the record-driven fallback in [RemoteContentEmitter] knows. */
 private const val MODIFIER_PARAMETER = "modifier"
 
-private const val ACTION_FQN = "androidx.compose.remote.creation.compose.action.Action"
+/** The origin as a pivot: `RemoteDrawTransform`'s `scale` and `rotate` default to the centre. */
+private const val ORIGIN = "RemoteOffset(0.rf, 0.rf)"
+
+private const val ACTION_FQN = "androidx.compose.remote.creation.compose.action.RemoteAction"
+
+/**
+ * The action type before `RemoteAction`, which component records captured from the alpha13-era
+ * remote-material3 still name. Read as [ACTION_FQN]; never written.
+ */
+private const val LEGACY_ACTION_FQN = "androidx.compose.remote.creation.compose.action.Action"
+
+private fun String?.isActionType(): Boolean = this == ACTION_FQN || this == LEGACY_ACTION_FQN
+
 private const val REMOTE_STRING_FQN = "androidx.compose.remote.creation.compose.state.RemoteString"
 private const val REMOTE_BOOLEAN_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteBoolean"

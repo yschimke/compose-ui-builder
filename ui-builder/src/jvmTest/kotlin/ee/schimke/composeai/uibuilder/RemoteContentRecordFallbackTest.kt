@@ -264,12 +264,11 @@ class RemoteContentRecordFallbackTest {
         )
         .source
 
-    assertTrue("val expanded = rememberMutableRemoteBoolean(false)" in source, source)
-    assertTrue("RemoteButton(onClick = valueChange(expanded, !expanded)) {" in source, source)
+    assertTrue("val expanded = remember { MutableRemoteBoolean(false) }" in source, source)
+    assertTrue("RemoteButton(onClick = valueChangeAction(expanded, !expanded)) {" in source, source)
     assertTrue("import androidx.compose.remote.creation.compose.action.valueChange" in source)
     assertTrue(
-      "import androidx.compose.remote.creation.compose.state.rememberMutableRemoteBoolean" in
-        source,
+      "import androidx.compose.remote.creation.compose.state.MutableRemoteBoolean" in source,
       source,
     )
     // The absent-binding default is gone from this widget: nothing here binds nothing.
@@ -321,9 +320,9 @@ class RemoteContentRecordFallbackTest {
   fun `a checkbox bound to a flag writes it back on change`() {
     val source = checkboxSource(JsonObject(emptyMap()))
 
-    assertTrue("val notify = rememberMutableRemoteBoolean(true)" in source, source)
+    assertTrue("val notify = remember { MutableRemoteBoolean(true) }" in source, source)
     assertTrue("checked = notify" in source, source)
-    assertTrue("onCheckedChange = valueChange(notify, !notify)" in source, source)
+    assertTrue("onCheckedChange = valueChangeAction(notify, !notify)" in source, source)
     assertTrue("lambdaAction" !in source, source)
   }
 
@@ -335,7 +334,7 @@ class RemoteContentRecordFallbackTest {
         buildJsonObject { put("checkedChange", JsonArray(listOf(action("toggle", "notify")))) },
       )
     assertTrue("combinedAction" !in source, source)
-    assertEquals(1, Regex("valueChange\\(notify, !notify\\)").findAll(source).count(), source)
+    assertEquals(1, Regex("valueChangeAction\\(notify, !notify\\)").findAll(source).count(), source)
   }
 
   /** `increment` adds in the player: `count + 1` is `RemoteInt.plus`, not a baked-in literal. */
@@ -387,9 +386,9 @@ class RemoteContentRecordFallbackTest {
         .source
 
     val ints = sourceFor("int", JsonPrimitive(0), null)
-    assertTrue("RemoteButton(onClick = valueChange(count, count + 1)) {" in ints, ints)
+    assertTrue("RemoteButton(onClick = valueChangeAction(count, count + 1)) {" in ints, ints)
     val floats = sourceFor("float", JsonPrimitive(0.5), JsonPrimitive(0.25))
-    assertTrue("valueChange(count, count + 0.25f)" in floats, floats)
+    assertTrue("valueChangeAction(count, count + 0.25f)" in floats, floats)
   }
 
   /** An assignment carries the design's value as a Remote value of the declared type. */
@@ -432,8 +431,8 @@ class RemoteContentRecordFallbackTest {
         )
         .source
 
-    assertTrue("val page = rememberMutableRemoteInt(0)" in source, source)
-    assertTrue("RemoteButton(onClick = valueChange(page, 2.ri)) {" in source, source)
+    assertTrue("val page = remember { MutableRemoteInt(0) }" in source, source)
+    assertTrue("RemoteButton(onClick = valueChangeAction(page, 2.ri)) {" in source, source)
   }
 
   @Test
@@ -479,7 +478,8 @@ class RemoteContentRecordFallbackTest {
       )
     val source = assertIs<WearWidgetCodeExporter.Result.Emitted>(result).source
     assertTrue(
-      "combinedAction(valueChange(page, 2.ri), valueChange(expanded, !expanded))" in source,
+      "combinedAction(valueChangeAction(page, 2.ri), valueChangeAction(expanded, !expanded))" in
+        source,
       source,
     )
     assertTrue(

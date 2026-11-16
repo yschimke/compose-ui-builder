@@ -888,10 +888,10 @@ built with forever. The design names an asset **key**; the generated code takes 
 fun NowPlayingWidgetContent(albumArt: RemoteImageBitmap) {
     RemoteRow(modifier = RemoteModifier.fillMaxSize()) {
         RemoteImage(
-            remoteBitmap = albumArt,
+            bitmap = albumArt,
             contentDescription = "Album art".rs,
             modifier = RemoteModifier.size(60.rdp, 60.rdp).clip(RemoteRoundedCornerShape(8.rdp)),
-            contentScale = ContentScale.Crop,
+            contentScale = RemoteContentScale.Crop,
         )
         …
     }

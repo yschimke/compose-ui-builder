@@ -94,7 +94,7 @@ class RemoteHostActionExportTest {
         proof = "HostActionCombinedWidget.kt",
       )
 
-    assertContains(source, "combinedAction(valueChange(presses, presses + 1), ")
+    assertContains(source, "combinedAction(valueChangeAction(presses, presses + 1), ")
     assertContains(source, "hostAction(\"calc.key\".rs, \"+\".rs))")
   }
 

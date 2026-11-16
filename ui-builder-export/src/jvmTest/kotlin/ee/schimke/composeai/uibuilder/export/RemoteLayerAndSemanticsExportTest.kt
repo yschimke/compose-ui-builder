@@ -75,9 +75,9 @@ class RemoteLayerAndSemanticsExportTest {
     assertContains(
       source,
       "semantics(mergeDescendants = true) { contentDescription = " +
-        "(count.toRemoteString() + \" unread\".rs); role = Role.Button }",
+        "(count.toRemoteString() + \" unread\".rs); role = RemoteRole.Button }",
     )
-    assertContains(source, "import androidx.compose.ui.semantics.Role")
+    assertContains(source, "import androidx.compose.remote.creation.compose.modifier.RemoteRole")
     assertContains(
       source,
       "import androidx.compose.remote.creation.compose.modifier.contentDescription",

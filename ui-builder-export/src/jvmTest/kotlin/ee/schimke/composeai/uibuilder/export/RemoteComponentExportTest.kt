@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -111,12 +112,18 @@ class RemoteComponentExportTest {
     val result = InlineRemoteContentExporter.exportComponents(card)
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    proof("ActionParameter.kt", source)
     assertTrue(
-      "onCardClick: androidx.compose.remote.creation.compose.action.Action" in source,
+      "onCardClick: androidx.compose.remote.creation.compose.action.RemoteAction" in source,
       source,
     )
     assertTrue("onClick = onCardClick" in source, source)
     assertFalse("lambdaAction {}" in source, source)
+  }
+
+  /** Under `build/remote-call-proof`, which experiments/remote-export-compile compiles. */
+  private fun proof(name: String, source: String) {
+    File("build/remote-call-proof").apply { mkdirs() }.resolve(name).writeText(source)
   }
 
   private fun remoteDocument(components: String, nodes: String) =
@@ -425,13 +432,14 @@ class RemoteComponentExportTest {
       )
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
+    proof("ColourLerp.kt", source)
     assertTrue("on: androidx.compose.remote.creation.compose.state.RemoteFloat" in source, source)
     assertTrue(
-      "containerColor = tween(RemoteMaterialTheme.colorScheme.primary, " +
+      "containerColor = lerp(RemoteMaterialTheme.colorScheme.primary, " +
         "RemoteMaterialTheme.colorScheme.primaryDim, on)" in source,
       source,
     )
-    assertTrue("import androidx.compose.remote.creation.compose.state.tween" in source, source)
+    assertTrue("import androidx.compose.remote.creation.compose.state.lerp" in source, source)
   }
 
   @Test
@@ -457,7 +465,7 @@ class RemoteComponentExportTest {
     val source =
       assertIs<InlineRemoteContentExporter.Result.Emitted>(result, result.toString()).source
     assertTrue(
-      "tween(Color(0x00000000).rc, RemoteMaterialTheme.colorScheme.primary, on)" in source,
+      "lerp(Color(0x00000000).rc, RemoteMaterialTheme.colorScheme.primary, on)" in source,
       source,
     )
     assertFalse("colorScheme.transparent" in source, source)

@@ -59,7 +59,7 @@ def generate(document, remote):
         for item in actions:
             assert item["type"] == "set"
             state, value = state_names[item["variable"]], integer(item["value"])
-            parts.append(f"valueChange({state}, {value}.ri)" if remote else f"{state} = {value}")
+            parts.append(f"valueChangeAction({state}, {value}.ri)" if remote else f"{state} = {value}")
         if not remote:
             return "{ " + "; ".join(parts) + " }"
         return parts[0] if len(parts) == 1 else "combinedAction(" + ", ".join(parts) + ")"
@@ -179,14 +179,14 @@ def generate(document, remote):
     for key, declaration in document["stateVariables"].items():
         assert declaration["valueType"] == "int" and not declaration["nullable"]
         value = integer(declaration["initialValue"])
-        line(1, f"val {state_names[key]} = rememberMutableRemoteInt({value})" if remote else
+        line(1, f"val {state_names[key]} = remember {{ MutableRemoteInt({value}) }}" if remote else
              f"var {state_names[key]} by remember {{ mutableIntStateOf({value}) }}")
     for root in document["roots"]:
         emit(root, 1, {}, {})
     line(0, "}")
     for key, definition in definitions.items():
         args = [f"argument{i}: Float" for i, _ in enumerate(parameters[key])]
-        args += [f"callback{i}: " + ("Action" if remote else "() -> Unit") for i, _ in enumerate(callbacks[key])]
+        args += [f"callback{i}: " + ("RemoteAction" if remote else "() -> Unit") for i, _ in enumerate(callbacks[key])]
         args += [f"modifier: {modifier}"]
         line(0, annotation)
         line(0, "private fun " + component_names[key] + "(" + ", ".join(args) + ") {")

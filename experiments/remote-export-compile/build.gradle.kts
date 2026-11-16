@@ -6,10 +6,23 @@ plugins {
   id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
 }
 
-// The versions remote-m3-catalog, the builder's Remote consumer, pins.
-val composeRemote = providers.gradleProperty("composeRemote").orElse("1.0.0-alpha21")
-val wearComposeRemote = providers.gradleProperty("wearComposeRemote").orElse("1.0.0-alpha13")
-val glanceWear = providers.gradleProperty("glanceWear").orElse("1.0.0-alpha20")
+// `-Pcomposeai.remoteCompose=snapshot` (see settings.gradle.kts) resolves all three groups from one
+// androidx.dev build, as `1.0.0-SNAPSHOT`; the release defaults are the versions remote-m3-catalog,
+// the builder's Remote consumer, pins. The exporter writes alpha24 spellings, which only the
+// snapshot lane carries until 1.0.0-alpha24 is released.
+// TODO(alpha24): move these defaults to 1.0.0-alpha24 (and its wear-compose-remote / glance-wear
+// pair) when it ships, and compile CI on the release lane again.
+val snapshotLane =
+  providers.gradleProperty("composeai.remoteCompose").orNull?.trim()?.lowercase() == "snapshot"
+val composeRemote =
+  if (snapshotLane) providers.provider { "1.0.0-SNAPSHOT" }
+  else providers.gradleProperty("composeRemote").orElse("1.0.0-alpha21")
+val wearComposeRemote =
+  if (snapshotLane) providers.provider { "1.0.0-SNAPSHOT" }
+  else providers.gradleProperty("wearComposeRemote").orElse("1.0.0-alpha13")
+val glanceWear =
+  if (snapshotLane) providers.provider { "1.0.0-SNAPSHOT" }
+  else providers.gradleProperty("glanceWear").orElse("1.0.0-alpha20")
 
 android {
   namespace = "proof.export"
@@ -22,6 +35,14 @@ kotlin { jvmToolchain(21) }
 
 dependencies {
   implementation("androidx.compose.remote:remote-creation-compose:${composeRemote.get()}")
+  // After alpha23 the state types (`RemoteFloat`, `MutableRemoteInt`, `rf`, `lerp`, …) moved into
+  // their own artifact. remote-creation-compose depends on it, but the export imports from it
+  // directly, so it is named.
+  if (snapshotLane) {
+    implementation("androidx.compose.remote:remote-creation-expression:${composeRemote.get()}")
+  }
+  // A launcher widget's preview is `RemoteContentPreview`.
+  implementation("androidx.compose.remote:remote-tooling-preview:${composeRemote.get()}")
   implementation("androidx.wear.compose.remote:remote-material3:${wearComposeRemote.get()}")
   implementation("androidx.glance.wear:wear:${glanceWear.get()}")
   implementation("androidx.glance.wear:wear-core:${glanceWear.get()}")
@@ -47,9 +68,16 @@ abstract class StageProofSources : DefaultTask() {
         val pkg = "proof.${directory.name.replace("-", "")}.${file.nameWithoutExtension.lowercase()}"
         val target = root.resolve(pkg.replace('.', '/')).resolve(file.name)
         target.parentFile.mkdirs()
-        target.writeText(
-          file.readLines().joinToString("\n") { if (it.startsWith("package ")) "package $pkg" else it }
-        )
+        val lines = file.readLines()
+        // A components export carries no package: give it one after its file annotations.
+        val packaged =
+          if (lines.any { it.startsWith("package ") })
+            lines.map { if (it.startsWith("package ")) "package $pkg" else it }
+          else {
+            val at = lines.indexOfLast { it.startsWith("@file:") } + 1
+            lines.take(at) + listOf("", "package $pkg") + lines.drop(at)
+          }
+        target.writeText(packaged.joinToString("\n"))
         count++
       }
     }
@@ -62,7 +90,7 @@ abstract class StageProofSources : DefaultTask() {
 val stageProofSources by
   tasks.registering(StageProofSources::class) {
     val export = rootDir.resolve("../../ui-builder-export/build")
-    proofs.from(listOf("draw-proof", "remote-call-proof").map(export::resolve))
+    proofs.from(listOf("draw-proof", "remote-call-proof", "remote-state-selection").map(export::resolve))
     output.set(layout.buildDirectory.dir("proof-sources"))
   }
 

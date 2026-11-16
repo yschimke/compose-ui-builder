@@ -137,9 +137,9 @@ class RemoteContentVocabularyTest {
     val source = emitted(widgetWith(image("album-art", description = "Album art")))
 
     assertTrue("RemoteImage(" in source, source)
-    assertTrue("remoteBitmap = albumArt" in source, source)
+    assertTrue("bitmap = albumArt" in source, source)
     assertTrue("contentDescription = \"Album art\".rs" in source, source)
-    assertTrue("contentScale = ContentScale.Crop" in source, source)
+    assertTrue("contentScale = RemoteContentScale.Crop" in source, source)
     assertTrue("fun HelloWidgetContent(albumArt: RemoteImageBitmap)" in source, source)
     assertTrue("private val albumArt: RemoteImageBitmap = ImageBitmap(1, 1).rb," in source, source)
     assertTrue("HelloWidgetContent(albumArt = albumArt)" in source, source)
@@ -147,7 +147,10 @@ class RemoteContentVocabularyTest {
       "import androidx.compose.remote.creation.compose.layout.RemoteImage" in source,
       source,
     )
-    assertTrue("import androidx.compose.ui.layout.ContentScale" in source, source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.layout.RemoteContentScale" in source,
+      source,
+    )
   }
 
   /** Two nodes drawing one asset are one picture, so they are one parameter. */

@@ -61,7 +61,7 @@ class RemoteDrawingControlExportTest {
   }
 
   @Test
-  fun `a clip is a clipRect over its box, and excluding flips it`() {
+  fun `a clip is a clipRect over its box, and excluding is refused`() {
     val source = exported()
 
     assertContains(
@@ -69,10 +69,10 @@ class RemoteDrawingControlExportTest {
       "clipRect(0.rf, 48.rdp.toPx(), 96.rdp.toPx(), (48.rdp.toPx() + 48.rdp.toPx())) {",
     )
 
-    val excluded =
-      exported(document().withProperties("window", "exclude" to """{"type":"bool","value":true}"""))
-    assertContains(excluded, ", clipOp = ClipOp.Difference) {")
-    assertContains(excluded, "import androidx.compose.ui.graphics.ClipOp")
+    // alpha24's draw scope only intersects its clip: `ClipOp` is gone from `clipRect`.
+    val refused =
+      refusals(document().withProperties("window", "exclude" to """{"type":"bool","value":true}"""))
+    assertTrue(refused.any { "window.exclude" in it }, refused.toString())
   }
 
   @Test
@@ -80,7 +80,7 @@ class RemoteDrawingControlExportTest {
     val source = exported()
 
     assertContains(source, "drawConditionally(alarmOn) {")
-    assertContains(source, "val alarmOn = rememberMutableRemoteBoolean(true)")
+    assertContains(source, "val alarmOn = remember { MutableRemoteBoolean(true) }")
   }
 
   @Test

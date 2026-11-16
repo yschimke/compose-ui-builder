@@ -82,8 +82,8 @@ class FontSettingsExportTest {
       )
     val source = emitted.source
     assertTrue(
-      "fontVariationSettings = FontVariation.Settings(FontVariation.Setting(\"wght\", 650f))" in
-        source,
+      "fontVariationSettings = RemoteFontVariation.Settings(" +
+        "RemoteFontVariation.Setting(\"wght\", 650f.rf))" in source,
       source,
     )
     assertTrue(
@@ -91,7 +91,10 @@ class FontSettingsExportTest {
         source,
       source,
     )
-    assertTrue("import androidx.compose.ui.text.font.FontVariation" in source, source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.text.RemoteFontVariation" in source,
+      source,
+    )
   }
 
   private fun wearSource(text: UiBuilderNode, host: Map<String, String> = emptyMap()): String {
