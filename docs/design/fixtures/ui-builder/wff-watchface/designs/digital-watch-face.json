@@ -1,0 +1,286 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "digital-watch-face",
+  "title": "Digital watch face",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "wff-watchface",
+    "catalogRevision": "wff-v1",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 227,
+    "heightDp": 227,
+    "density": 2.0,
+    "theme": "dark",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T10:08:32Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:wearos_large_round"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "scene"
+  ],
+  "nodes": {
+    "scene": {
+      "id": "scene",
+      "componentId": "wff/scene",
+      "properties": {
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "clipShape": {
+          "type": "string",
+          "value": "CIRCLE"
+        },
+        "backgroundColor": {
+          "type": "string",
+          "value": "#ff000000"
+        },
+        "clockType": {
+          "type": "string",
+          "value": "DIGITAL"
+        },
+        "previewTime": {
+          "type": "string",
+          "value": "10:08:32"
+        },
+        "wffVersion": {
+          "type": "int",
+          "value": 2
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "ring",
+          "title",
+          "clock",
+          "steps"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "ring": {
+      "id": "ring",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "ellipse"
+        },
+        "x": {
+          "type": "int",
+          "value": 15
+        },
+        "y": {
+          "type": "int",
+          "value": 15
+        },
+        "width": {
+          "type": "int",
+          "value": 420
+        },
+        "height": {
+          "type": "int",
+          "value": 420
+        },
+        "strokeColor": {
+          "type": "string",
+          "value": "#ff4285f4"
+        },
+        "strokeWidth": {
+          "type": "int",
+          "value": 6
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "variants": [
+          "ring-ambient"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "ring-ambient": {
+      "id": "ring-ambient",
+      "componentId": "wff/variant",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "value": "AMBIENT"
+        },
+        "target": {
+          "type": "string",
+          "value": "alpha"
+        },
+        "value": {
+          "type": "int",
+          "value": 0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "title": {
+      "id": "title",
+      "componentId": "wff/part-text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "WEAR"
+        },
+        "x": {
+          "type": "int",
+          "value": 125
+        },
+        "y": {
+          "type": "int",
+          "value": 70
+        },
+        "width": {
+          "type": "int",
+          "value": 200
+        },
+        "height": {
+          "type": "int",
+          "value": 50
+        },
+        "fontSize": {
+          "type": "int",
+          "value": 32
+        },
+        "color": {
+          "type": "string",
+          "value": "#ff9aa0a6"
+        },
+        "align": {
+          "type": "string",
+          "value": "CENTER"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "clock": {
+      "id": "clock",
+      "componentId": "wff/digital-clock",
+      "properties": {
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 150
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 150
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "texts": [
+          "time"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "time": {
+      "id": "time",
+      "componentId": "wff/time-text",
+      "properties": {
+        "format": {
+          "type": "string",
+          "value": "hh:mm"
+        },
+        "hourFormat": {
+          "type": "string",
+          "value": "SYNC_TO_DEVICE"
+        },
+        "align": {
+          "type": "string",
+          "value": "CENTER"
+        },
+        "fontSize": {
+          "type": "int",
+          "value": 104
+        },
+        "color": {
+          "type": "string",
+          "value": "#ffffffff"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "steps": {
+      "id": "steps",
+      "componentId": "wff/complication-slot",
+      "properties": {
+        "slotId": {
+          "type": "int",
+          "value": 0
+        },
+        "supportedTypes": {
+          "type": "string",
+          "value": "SHORT_TEXT"
+        },
+        "x": {
+          "type": "int",
+          "value": 160
+        },
+        "y": {
+          "type": "int",
+          "value": 320
+        },
+        "width": {
+          "type": "int",
+          "value": 130
+        },
+        "height": {
+          "type": "int",
+          "value": 70
+        },
+        "boundsType": {
+          "type": "string",
+          "value": "RECTANGLE"
+        },
+        "defaultSystemProvider": {
+          "type": "string",
+          "value": "STEP_COUNT"
+        },
+        "defaultSystemProviderType": {
+          "type": "string",
+          "value": "SHORT_TEXT"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    }
+  }
+}

@@ -30,6 +30,9 @@ public object CatalogExportRouting {
   /** A host-owned Lovelace config, exported through JSON only. */
   public const val LOVELACE: String = "lovelace-config"
 
+  /** A Wear OS Watch Face Format watch face: WFF XML (`WatchFaceXmlExporter`), never Compose. */
+  public const val WATCH_FACE: String = "wff-watchface"
+
   /**
    * A phone launcher widget: `LauncherWidgetCodeExporter`'s `RemoteComposeWidget`, rooted on the
    * catalog's own screen root and previewed at its `frame.geometry.sizesDp`, whatever the root is
@@ -52,6 +55,7 @@ public object CatalogExportRouting {
       (REMOTE_COMPOSE to V1) to UiBuilderCatalogPlatform.REMOTE_COMPOSE,
       (A2UI to V1) to UiBuilderCatalogPlatform.A2UI,
       (LOVELACE to V1) to UiBuilderCatalogPlatform.LOVELACE,
+      (WATCH_FACE to V1) to UiBuilderCatalogPlatform.WATCH_FACE,
       (LAUNCHER_WIDGET to V1) to UiBuilderCatalogPlatform.REMOTE_COMPOSE,
     )
 
@@ -103,11 +107,18 @@ public object CatalogExportRouting {
   public fun exportsCompose(route: Route, builtIn: () -> Boolean): Boolean =
     when (route) {
       is Route.ComponentRecords -> true
-      is Route.RecordFree -> route.platform != UiBuilderCatalogPlatform.LOVELACE
-      is Route.BuiltIn -> route.platform != UiBuilderCatalogPlatform.LOVELACE && builtIn()
+      is Route.RecordFree -> !route.platform.isDataDocument()
+      is Route.BuiltIn -> !route.platform.isDataDocument() && builtIn()
       Route.NotDeclared,
       is Route.Unsupported -> false
     }
+
+  /**
+   * Whether [this] platform's output is a data document (Lovelace JSON, WFF XML) rather than
+   * Compose source, so Compose export is never offered for it.
+   */
+  public fun UiBuilderCatalogPlatform.isDataDocument(): Boolean =
+    this == UiBuilderCatalogPlatform.LOVELACE || this == UiBuilderCatalogPlatform.WATCH_FACE
 
   /**
    * The platform `RecordFreeExport.generate` is asked as. An owned catalog is routed by its

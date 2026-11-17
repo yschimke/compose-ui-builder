@@ -1,0 +1,960 @@
+{
+  "$comment": "Hand-authored published catalog for the Watch Face Format (WFF) target. It states builtins only: every component mirrors a WFF element, with WFF attribute names as property names, positioned in px of the WatchFace's width x height (default 450 x 450). The exporter is WatchFaceXmlExporter in :ui-builder-export. The templates are the two documents under wff-watchface/designs/.",
+  "schema": "compose-ui-builder-catalog/v1",
+  "catalog": {
+    "id": "wff-watchface",
+    "title": "Wear OS watch face (WFF)",
+    "platform": "watchface",
+    "platformLabel": "Watch face",
+    "module": "catalog",
+    "variant": "commonMain"
+  },
+  "record": null,
+  "statusSemantics": {
+    "composeSourceExport": {
+      "adapter": "wff-watchface",
+      "version": 1
+    },
+    "platform": "watchface",
+    "platformLabel": "Watch face",
+    "componentIdPrefix": "wff/",
+    "previewSurfaces": {
+      "wasm": {
+        "fidelity": "approximate",
+        "backend": "remote-compose",
+        "reason": "The fast section plays the face as a Remote Compose document in the browser, several devices side by side. It is a different program from the watch's face runtime, so spacing, fonts and complications are an impression; check the Android Watch Face runtime preview."
+      },
+      "native": {
+        "fidelity": "authoritative",
+        "backend": "android-dwf",
+        "reason": "A real Android Declarative Watch Face runtime, streamed from a daemon: the same WFF XML or DWF bundle this catalog exports."
+      }
+    },
+    "componentMenu": {
+      "groupOrder": [
+        "Scene",
+        "Layout",
+        "Draw",
+        "Clocks",
+        "Complications",
+        "Ambient"
+      ],
+      "components": {
+        "wff/scene": {
+          "group": "Scene"
+        },
+        "wff/group": {
+          "group": "Layout"
+        },
+        "wff/part-draw": {
+          "group": "Draw"
+        },
+        "wff/part-image": {
+          "group": "Draw"
+        },
+        "wff/part-text": {
+          "group": "Draw"
+        },
+        "wff/analog-clock": {
+          "group": "Clocks"
+        },
+        "wff/clock-hand": {
+          "group": "Clocks"
+        },
+        "wff/digital-clock": {
+          "group": "Clocks"
+        },
+        "wff/time-text": {
+          "group": "Clocks"
+        },
+        "wff/complication-slot": {
+          "group": "Complications"
+        },
+        "wff/variant": {
+          "group": "Ambient"
+        }
+      }
+    },
+    "frame": {
+      "adapter": "frame/round-screen",
+      "seedDevice": "id:wearos_large_round"
+    },
+    "code": null,
+    "templates": [
+      "ui-builder/designs/analog-watch-face.json",
+      "ui-builder/designs/digital-watch-face.json"
+    ],
+    "assetRegistry": null,
+    "builtins": {
+      "wff/scene": {
+        "role": "screen-root",
+        "displayName": "Watch face",
+        "group": "Scene",
+        "canvas": "frame/round-screen",
+        "traits": [
+          "WffScene",
+          "ScreenContent"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffDrawable",
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "width",
+            "jsonType": "integer",
+            "required": false,
+            "notes": "The WatchFace width in px. Default 450."
+          },
+          {
+            "name": "height",
+            "jsonType": "integer",
+            "required": false,
+            "notes": "The WatchFace height in px. Default 450."
+          },
+          {
+            "name": "clipShape",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WatchFace clipShape.",
+            "allowedValues": [
+              "CIRCLE",
+              "RECTANGLE",
+              "NONE"
+            ]
+          },
+          {
+            "name": "backgroundColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Scene backgroundColor, #RRGGBB or #AARRGGBB."
+          },
+          {
+            "name": "clockType",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Metadata CLOCK_TYPE; inferred from the clock elements when absent.",
+            "allowedValues": [
+              "ANALOG",
+              "DIGITAL"
+            ]
+          },
+          {
+            "name": "previewTime",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Metadata PREVIEW_TIME, e.g. 10:08:32."
+          },
+          {
+            "name": "wffVersion",
+            "jsonType": "integer",
+            "required": false,
+            "notes": "The Watch Face Format version the XML targets (1-4). Default 2. Declare the same value in the manifest.",
+            "allowedValues": [
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/group": {
+        "role": "element",
+        "displayName": "Group",
+        "group": "Layout",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffDrawable",
+              "WffVariant"
+            ]
+          },
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "name",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Group name (WFF `name`)."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/part-draw": {
+        "role": "element",
+        "displayName": "PartDraw",
+        "group": "Draw",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "shape",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The shape drawn: an Ellipse or a Rectangle.",
+            "allowedValues": [
+              "ellipse",
+              "rectangle"
+            ]
+          },
+          {
+            "name": "fillColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Fill colour, #RRGGBB or #AARRGGBB."
+          },
+          {
+            "name": "strokeColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Stroke colour."
+          },
+          {
+            "name": "strokeWidth",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Stroke thickness in px."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/part-image": {
+        "role": "element",
+        "displayName": "PartImage",
+        "group": "Draw",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "resource",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The bitmap resource to draw (WFF `Image resource`). Required to export."
+          },
+          {
+            "name": "tintColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Tint colour (WFF `tintColor`)."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/part-text": {
+        "role": "element",
+        "displayName": "PartText",
+        "group": "Draw",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "text",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The text drawn (WFF `Template`)."
+          },
+          {
+            "name": "fontSize",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Font size in px."
+          },
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Text colour."
+          },
+          {
+            "name": "family",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Font family; SYNC_TO_DEVICE by default."
+          },
+          {
+            "name": "align",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Text alignment.",
+            "allowedValues": [
+              "START",
+              "CENTER",
+              "END"
+            ]
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/analog-clock": {
+        "role": "element",
+        "displayName": "AnalogClock",
+        "group": "Clocks",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "hands": {
+            "acceptedTraits": [
+              "WffClockHand"
+            ]
+          },
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/clock-hand": {
+        "role": "element",
+        "displayName": "ClockHand",
+        "group": "Clocks",
+        "canvas": "placeholder",
+        "traits": [
+          "WffClockHand"
+        ],
+        "slots": {
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "type",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Which hand: HourHand, MinuteHand or SecondHand.",
+            "allowedValues": [
+              "hour",
+              "minute",
+              "second"
+            ]
+          },
+          {
+            "name": "resource",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The bitmap resource of the hand. Required to export."
+          },
+          {
+            "name": "tintColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Tint colour (WFF `tintColor`)."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/digital-clock": {
+        "role": "element",
+        "displayName": "DigitalClock",
+        "group": "Clocks",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "texts": {
+            "acceptedTraits": [
+              "WffTimeText"
+            ]
+          },
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/time-text": {
+        "role": "element",
+        "displayName": "TimeText",
+        "group": "Clocks",
+        "canvas": "placeholder",
+        "traits": [
+          "WffTimeText"
+        ],
+        "slots": {
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "format",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The time format, e.g. hh:mm (WFF `format`)."
+          },
+          {
+            "name": "hourFormat",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `hourFormat`.",
+            "allowedValues": [
+              "SYNC_TO_DEVICE",
+              "12",
+              "24"
+            ]
+          },
+          {
+            "name": "align",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Text alignment.",
+            "allowedValues": [
+              "START",
+              "CENTER",
+              "END"
+            ]
+          },
+          {
+            "name": "fontSize",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Font size in px."
+          },
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Text colour."
+          },
+          {
+            "name": "family",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Font family; SYNC_TO_DEVICE by default."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/complication-slot": {
+        "role": "element",
+        "displayName": "ComplicationSlot",
+        "group": "Complications",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable"
+        ],
+        "slots": {
+          "variants": {
+            "acceptedTraits": [
+              "WffVariant"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Left edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Top edge in px of the face, relative to the parent. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Width in px. Defaults to the scene's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Height in px. Defaults to the scene's height."
+          },
+          {
+            "name": "pivotX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the width (WFF `pivotX`)."
+          },
+          {
+            "name": "pivotY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation pivot, 0..1 of the height (WFF `pivotY`)."
+          },
+          {
+            "name": "angle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Rotation in degrees about the pivot (WFF `angle`)."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "slotId",
+            "jsonType": "integer",
+            "required": false,
+            "notes": "The slot's id (WFF `slotId`). Required to export."
+          },
+          {
+            "name": "supportedTypes",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Space separated complication types, e.g. `SHORT_TEXT RANGED_VALUE`. Required to export."
+          },
+          {
+            "name": "boundsType",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The slot's bounding shape.",
+            "allowedValues": [
+              "OVAL",
+              "RECTANGLE"
+            ]
+          },
+          {
+            "name": "defaultSystemProvider",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `defaultSystemProvider`, e.g. WATCH_BATTERY."
+          },
+          {
+            "name": "defaultSystemProviderType",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `defaultSystemProviderType`; the first supported type when absent."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/variant": {
+        "role": "element",
+        "displayName": "Variant",
+        "group": "Ambient",
+        "canvas": "placeholder",
+        "traits": [
+          "WffVariant"
+        ],
+        "slots": {},
+        "properties": [
+          {
+            "name": "mode",
+            "jsonType": "string",
+            "required": false,
+            "notes": "When the override applies.",
+            "allowedValues": [
+              "AMBIENT"
+            ]
+          },
+          {
+            "name": "target",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The attribute of the parent element to override, e.g. alpha."
+          },
+          {
+            "name": "value",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The value in that mode."
+          }
+        ],
+        "modifierCapabilities": []
+      }
+    },
+    "components": {}
+  },
+  "diagnostics": []
+}

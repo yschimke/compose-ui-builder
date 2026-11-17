@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Watch Face Format version 2: declare the same value in the manifest (com.google.wear.watchface.format.version). -->
+<WatchFace width="450" height="450" clipShape="CIRCLE">
+  <Metadata key="CLOCK_TYPE" value="DIGITAL"/>
+  <Metadata key="PREVIEW_TIME" value="10:08:32"/>
+  <Scene backgroundColor="#ff000000">
+    <PartDraw x="15" y="15" width="420" height="420">
+      <Ellipse x="0" y="0" width="420" height="420">
+        <Stroke color="#ff4285f4" thickness="6"/>
+      </Ellipse>
+      <Variant mode="AMBIENT" target="alpha" value="0"/>
+    </PartDraw>
+    <PartText x="125" y="70" width="200" height="50">
+      <Text align="CENTER">
+        <Font family="SYNC_TO_DEVICE" size="32" color="#ff9aa0a6">
+          <Template>WEAR</Template>
+        </Font>
+      </Text>
+    </PartText>
+    <DigitalClock x="0" y="150" width="450" height="150">
+      <TimeText format="hh:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER">
+        <Font family="SYNC_TO_DEVICE" size="104" color="#ffffffff"/>
+      </TimeText>
+    </DigitalClock>
+    <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="160" y="320" width="130" height="70">
+      <BoundingBox x="0" y="0" width="130" height="70"/>
+      <DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/>
+    </ComplicationSlot>
+  </Scene>
+</WatchFace>
