@@ -49,7 +49,7 @@
           "value": "CIRCLE"
         },
         "backgroundColor": {
-          "type": "string",
+          "type": "color",
           "value": "#ff000000"
         },
         "clockType": {
@@ -101,7 +101,7 @@
           "value": 420
         },
         "strokeColor": {
-          "type": "string",
+          "type": "color",
           "value": "#ff4285f4"
         },
         "strokeWidth": {
@@ -130,8 +130,8 @@
           "value": "alpha"
         },
         "value": {
-          "type": "int",
-          "value": 0
+          "type": "string",
+          "value": "0"
         }
       },
       "modifiers": [],
@@ -167,7 +167,7 @@
           "value": 32
         },
         "color": {
-          "type": "string",
+          "type": "color",
           "value": "#ff9aa0a6"
         },
         "align": {
@@ -229,7 +229,7 @@
           "value": 104
         },
         "color": {
-          "type": "string",
+          "type": "color",
           "value": "#ffffffff"
         }
       },

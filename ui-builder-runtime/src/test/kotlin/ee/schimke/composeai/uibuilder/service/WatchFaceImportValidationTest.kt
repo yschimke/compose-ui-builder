@@ -87,4 +87,17 @@ class WatchFaceImportValidationTest {
       )
     }
   }
+
+  @Test
+  fun `both shipped templates validate, property by property, against the published catalog`() {
+    for (name in listOf("analog-watch-face", "digital-watch-face")) {
+      assertValid(
+        name,
+        Json.decodeFromString(
+          UiBuilderDocument.serializer(),
+          File(repo, "docs/design/fixtures/ui-builder/wff-watchface/designs/$name.json").readText(),
+        ),
+      )
+    }
+  }
 }
