@@ -183,14 +183,9 @@
               1,
               2,
               3,
-              4
+              4,
+              5
             ]
-          },
-          {
-            "name": "wffAttrOrder",
-            "jsonType": "string",
-            "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           },
           {
             "name": "verbatim",
@@ -199,10 +194,10 @@
             "notes": "Set by import: the WatchFace frame is held in this document (`face` slots, `faceAttrOrder`), so no version comment or Metadata is generated."
           },
           {
-            "name": "faceAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the WatchFace attribute names in the order the face wrote them."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -286,10 +281,10 @@
             "notes": "Group name (WFF `name`)."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -388,10 +383,10 @@
             "notes": "Stroke thickness in px."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -474,10 +469,10 @@
             "notes": "Tint colour (WFF `tintColor`)."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -583,10 +578,10 @@
             ]
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -663,10 +658,10 @@
             "notes": "Opacity 0..255 (WFF `alpha`)."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -760,10 +755,10 @@
             "notes": "Tint colour (WFF `tintColor`)."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -840,10 +835,10 @@
             "notes": "Opacity 0..255 (WFF `alpha`)."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -912,10 +907,10 @@
             "notes": "Font family; SYNC_TO_DEVICE by default."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -1020,10 +1015,10 @@
             "notes": "WFF `defaultSystemProviderType`; the first supported type when absent."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []
@@ -1060,10 +1055,10 @@
             "notes": "The value in that mode."
           },
           {
-            "name": "wffAttrOrder",
+            "name": "wffExtras",
             "jsonType": "string",
             "required": false,
-            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set."
           }
         ],
         "modifierCapabilities": []

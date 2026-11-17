@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.export.wff.WffText
 import ee.schimke.composeai.uibuilder.export.wff.WffXmlParser
 import ee.schimke.composeai.uibuilder.export.wff.WffXmlWriter
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -191,7 +192,7 @@ object WatchFaceXmlExporter {
       }
       return spec
         .write(id, props, children, width, height) { why -> refuse(id, component, why) }
-        ?.let { props.arrange(it, ATTR_ORDER, "", appendExplicit = true) }
+        ?.let { props.arrange(it, ATTR_ORDER, "") }
     }
 
     val sceneChildren =
@@ -247,7 +248,7 @@ object WatchFaceXmlExporter {
           ),
           FACE_ATTR_ORDER,
           "face:",
-          appendExplicit = false,
+          mapOf("width" to "width", "height" to "height", "clipShape" to "clipShape"),
         )
     } else {
       val clipShape = scene.string("clipShape") ?: "CIRCLE"
@@ -298,8 +299,7 @@ object WatchFaceXmlExporter {
     scene: Props,
     attributes: List<Pair<String, String>>,
     children: List<WffNode>,
-  ): WffElement =
-    scene.arrange(el("Scene", attributes, children), ATTR_ORDER, "", appendExplicit = false)
+  ): WffElement = scene.arrange(el("Scene", attributes, children), ATTR_ORDER, "")
 
   /** A [RAW] node's `xml`, parsed back: exactly one element or comment, or a refusal. */
   private fun rawNode(id: String, node: UiBuilderNode, reasons: MutableList<String>): WffNode? {
@@ -370,7 +370,9 @@ object WatchFaceXmlExporter {
    * (`font:weight`), which is how attributes this vocabulary has no property for survive.
    */
   internal const val ATTR_ORDER = "wffAttrOrder"
+  internal const val EXTRAS = "wffExtras"
   internal const val FACE_ATTR_ORDER = "faceAttrOrder"
+  private val FONT_SOURCES = mapOf("family" to "family", "size" to "fontSize", "color" to "color")
 
   private fun Props.bounds(sceneWidth: Int, sceneHeight: Int): List<Pair<String, String>> =
     listOfNotNull(
@@ -420,13 +422,18 @@ object WatchFaceXmlExporter {
                   ),
                   "strokeAttrOrder",
                   "stroke:",
-                  false,
+                  mapOf("color" to "strokeColor", "thickness" to "strokeWidth"),
                 ),
               )
             }
             props.string("fillColor")?.let {
               add(
-                props.arrange(el("Fill", listOf("color" to it)), "fillAttrOrder", "fill:", false),
+                props.arrange(
+                  el("Fill", listOf("color" to it)),
+                  "fillAttrOrder",
+                  "fill:",
+                  mapOf("color" to "fillColor"),
+                ),
               )
             }
           }
@@ -445,7 +452,7 @@ object WatchFaceXmlExporter {
                 ),
                 "shapeAttrOrder",
                 "shape:",
-                false,
+                emptyMap(),
               ),
             ) + children,
           )
@@ -466,7 +473,7 @@ object WatchFaceXmlExporter {
                 el("Image", listOf("resource" to resource) + tint),
                 "imageAttrOrder",
                 "image:",
-                false,
+                mapOf("resource" to "resource", "tintColor" to "tintColor"),
               ),
             ) + children,
           )
@@ -486,7 +493,7 @@ object WatchFaceXmlExporter {
               ),
               "fontAttrOrder",
               "font:",
-              false,
+              FONT_SOURCES,
             )
           el(
             "PartText",
@@ -500,7 +507,7 @@ object WatchFaceXmlExporter {
                 ),
                 "textAttrOrder",
                 "text:",
-                false,
+                mapOf("align" to "align"),
               ),
             ) + children,
           )
@@ -568,7 +575,7 @@ object WatchFaceXmlExporter {
               ),
               "fontAttrOrder",
               "font:",
-              false,
+              FONT_SOURCES,
             )
           // TimeText sits inside its DigitalClock's box; a bare bounds attribute is not WFF.
           el("TimeText", attributes, listOf(font) + children)
@@ -604,7 +611,10 @@ object WatchFaceXmlExporter {
                 ),
                 "policyAttrOrder",
                 "policy:",
-                false,
+                mapOf(
+                  "defaultSystemProvider" to "defaultSystemProvider",
+                  "defaultSystemProviderType" to "defaultSystemProviderType",
+                ),
               )
             }
           el(
@@ -619,7 +629,7 @@ object WatchFaceXmlExporter {
                 ),
                 "boundsAttrOrder",
                 "bounds:",
-                false,
+                emptyMap(),
               ),
               policy,
             ) + children,
@@ -642,8 +652,34 @@ object WatchFaceXmlExporter {
 
   /** Literal property reads; a binding or any non-literal value is refused by name. */
   internal class Props(val node: UiBuilderNode, val reasons: MutableList<String>) {
+    /** The strings of the node's `wffExtras` property: what has no property of its own. */
+    private val extras: Map<String, String> by lazy {
+      val encoded =
+        ((node.properties[EXTRAS] as? JsonObject)?.get("value") as? JsonPrimitive)?.contentOrNull
+      if (encoded == null) emptyMap()
+      else
+        try {
+          (Json.parseToJsonElement(encoded) as? JsonObject)
+            ?.mapNotNull { (key, value) ->
+              (value as? JsonPrimitive)?.contentOrNull?.let { key to it }
+            }
+            ?.toMap() ?: emptyMap()
+        } catch (e: Exception) {
+          emptyMap()
+        }
+    }
+
+    /** A property's encoded value: its own, else the string held in `wffExtras`. */
+    private fun encoded(name: String): JsonElement? =
+      node.properties[name]
+        ?: extras[name]?.let {
+          JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(it)))
+        }
+
+    fun has(name: String): Boolean = encoded(name) != null
+
     private fun scalar(name: String): JsonPrimitive? {
-      val raw: JsonElement = node.properties[name] ?: return null
+      val raw: JsonElement = encoded(name) ?: return null
       val wrapper = raw as? JsonObject
       val type = (wrapper?.get("type") as? JsonPrimitive)?.contentOrNull
       val value = wrapper?.get("value") as? JsonPrimitive
@@ -656,7 +692,7 @@ object WatchFaceXmlExporter {
     }
 
     private fun typeOf(name: String): String? =
-      (((node.properties[name] as? JsonObject)?.get("type")) as? JsonPrimitive)?.contentOrNull
+      (((encoded(name) as? JsonObject)?.get("type")) as? JsonPrimitive)?.contentOrNull
 
     fun string(name: String): String? = scalar(name)?.contentOrNull?.takeIf { it.isNotEmpty() }
 
@@ -683,30 +719,35 @@ object WatchFaceXmlExporter {
 
     fun bool(name: String): Boolean? = scalar(name)?.booleanOrNull
 
-    /** Applies the document's attribute order to [element]; see [ATTR_ORDER]. */
+    /**
+     * Applies the document's attribute order to [element]; see [ATTR_ORDER]. An attribute the order
+     * does not list is still written, after the listed ones, when the property it is computed from
+     * is set: [sources] names that property per attribute (the attribute's own name on an element
+     * with no [prefix]). That keeps a property set after import.
+     */
     fun arrange(
       element: WffElement,
       orderProperty: String,
       prefix: String,
-      appendExplicit: Boolean,
+      sources: Map<String, String> = emptyMap(),
     ): WffElement {
-      if (!node.properties.containsKey(orderProperty)) return element
+      if (!has(orderProperty)) return element
       val order = text(orderProperty).orEmpty().split(' ').filter { it.isNotEmpty() }
       val computed = element.attributes.associate { it.name to it.value }
       val listed = order.mapNotNull { name ->
         (computed[name] ?: text(prefix + name))?.let { WffAttribute(name, it) }
       }
-      val explicit =
-        if (appendExplicit)
-          element.attributes.filter {
-            it.name !in order && node.properties.containsKey(prefix + it.name)
-          }
-        else emptyList()
-      return element.copy(attributes = listed + explicit)
+      val added =
+        element.attributes.filter { attribute ->
+          attribute.name !in order &&
+            (sources[attribute.name] ?: attribute.name.takeIf { prefix.isEmpty() })?.let(::has) ==
+              true
+        }
+      return element.copy(attributes = listed + added)
     }
   }
 
-  private val LITERAL_TYPES = setOf("string", "enum", "int", "float", "bool")
+  private val LITERAL_TYPES = setOf("string", "enum", "int", "float", "bool", "color")
 
   internal fun formatNumber(value: Double): String =
     if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()

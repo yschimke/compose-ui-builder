@@ -210,4 +210,90 @@ class WatchFaceXmlImporterTest {
       assertIs<WatchFaceXmlImporter.Result.Failed>(WatchFaceXmlImporter.import(bad), bad)
     }
   }
+
+  @Test
+  fun `a property set after import is written even though the face never had the attribute`() {
+    val template =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        File(fixtures, "designs/analog-watch-face.json").readText(),
+      )
+    val result = imported(exported(template).xml)
+    val dial =
+      result.document.nodes.values.first {
+        it.componentId == WatchFaceXmlExporter.PART_IMAGE && "dial" in it.properties.toString()
+      }
+    assertTrue(!exported(result.document).xml.contains("tintColor=\"#ff00ff00\""))
+    val tinted =
+      result.document.copy(
+        nodes =
+          result.document.nodes +
+            (dial.id to
+              dial.copy(
+                properties =
+                  JsonObject(
+                    dial.properties +
+                      ("tintColor" to
+                        buildJsonObject {
+                          put("type", "string")
+                          put("value", "#ff00ff00")
+                        }),
+                  ),
+              )),
+      )
+    assertTrue(
+      exported(tinted).xml.contains("<Image resource=\"dial\" tintColor=\"#ff00ff00\"/>"),
+      exported(tinted).xml,
+    )
+  }
+
+  @Test
+  fun `imported nodes carry only properties the published catalog declares`() {
+    val catalog =
+      Json.parseToJsonElement(
+        File(fixtures.parentFile, "wff-watchface-published-v1.json").readText(),
+      ) as JsonObject
+    val builtins =
+      ((catalog["statusSemantics"] as JsonObject)["builtins"] as JsonObject).mapValues {
+        (it.value as JsonObject)["properties"] as kotlinx.serialization.json.JsonArray
+      }
+    // The importer's table is the catalog.
+    assertEquals(builtins.keys, WatchFaceCatalogShape.DECLARED.keys)
+    for ((component, properties) in builtins) {
+      val declared = WatchFaceCatalogShape.DECLARED.getValue(component)
+      assertEquals(
+        properties
+          .map { (it as JsonObject)["name"]!!.let { n -> (n as JsonPrimitive).content } }
+          .toSet(),
+        declared.keys,
+        component,
+      )
+      properties.forEach { property ->
+        val obj = property as JsonObject
+        val name = (obj["name"] as JsonPrimitive).content
+        assertEquals(
+          (obj["jsonType"] as JsonPrimitive).content,
+          declared.getValue(name).type,
+          "$component.$name",
+        )
+        assertEquals(
+          (obj["allowedValues"] as? kotlinx.serialization.json.JsonArray)
+            ?.map { (it as JsonPrimitive).content }
+            ?.toSet()
+            .orEmpty(),
+          declared.getValue(name).allowed,
+          "$component.$name",
+        )
+      }
+    }
+    for (name in samples) {
+      for (node in imported(sample(name)).document.nodes.values) {
+        val declared = WatchFaceCatalogShape.DECLARED.getValue(node.componentId)
+        assertTrue(
+          node.properties.keys.all { it in declared },
+          "$name ${node.id} ${node.properties.keys}",
+        )
+      }
+    }
+  }
 }

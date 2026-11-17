@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.export.wff.WffNode
 import ee.schimke.composeai.uibuilder.export.wff.WffParseException
 import ee.schimke.composeai.uibuilder.export.wff.WffText
 import ee.schimke.composeai.uibuilder.export.wff.WffXmlParser
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -109,6 +110,80 @@ object WatchFaceXmlImporter {
     return literal("string", JsonPrimitive(value))
   }
 
+  private fun componentOf(tag: String): String? =
+    when (tag) {
+      "Group" -> WatchFaceXmlExporter.GROUP
+      "AnalogClock" -> WatchFaceXmlExporter.ANALOG_CLOCK
+      "DigitalClock" -> WatchFaceXmlExporter.DIGITAL_CLOCK
+      "HourHand",
+      "MinuteHand",
+      "SecondHand" -> WatchFaceXmlExporter.CLOCK_HAND
+      "Variant" -> WatchFaceXmlExporter.VARIANT
+      "TimeText" -> WatchFaceXmlExporter.TIME_TEXT
+      "PartText" -> WatchFaceXmlExporter.PART_TEXT
+      "PartImage" -> WatchFaceXmlExporter.PART_IMAGE
+      "PartDraw" -> WatchFaceXmlExporter.PART_DRAW
+      "ComplicationSlot" -> WatchFaceXmlExporter.COMPLICATION_SLOT
+      else -> null
+    }
+
+  /**
+   * A node's properties as the catalog declares them. A value goes in a property of its own when
+   * the catalog declares one that accepts it; anything else (an attribute with no property, a value
+   * of the wrong kind or outside the allowed values, the attribute orders) is held in the declared
+   * `wffExtras` string, which the exporter reads back wherever the property is absent.
+   */
+  private class Sink(component: String) {
+    private val declared = WatchFaceCatalogShape.DECLARED.getValue(component)
+    private val props = linkedMapOf<String, JsonElement>()
+    private val extras = linkedMapOf<String, String>()
+
+    fun put(name: String, value: String): Boolean {
+      if (name in props || name in extras) return false
+      val property = declared[name]
+      val literal =
+        when (property?.type) {
+          // The service refuses a colour written as `string`: it is a `color` of a drawable value.
+          "string" ->
+            if (PropertyValueKinds.isColour(name)) {
+              if (value.isNotEmpty() && PropertyValueKinds.isDrawableColour(value))
+                literal("color", JsonPrimitive(value))
+              else null
+            } else literal("string", JsonPrimitive(value))
+          "number",
+          "integer" ->
+            typed(value).takeIf {
+              val type = (it["type"] as JsonPrimitive).content
+              type == "int" || (type == "float" && property.type == "number")
+            }
+          else -> null
+        }
+      if (literal != null && (property!!.allowed.isEmpty() || value in property.allowed))
+        props[name] = literal
+      else extras[name] = value
+      return true
+    }
+
+    fun order(key: String, attributes: List<WffAttribute>) {
+      extras[key] = attributes.joinToString(" ") { it.name }
+    }
+
+    fun finish(): LinkedHashMap<String, JsonElement> {
+      if (extras.isNotEmpty())
+        props[WatchFaceXmlExporter.EXTRAS] =
+          literal(
+            "string",
+            JsonPrimitive(
+              Json.encodeToString(
+                JsonObject.serializer(),
+                JsonObject(extras.mapValues { JsonPrimitive(it.value) }),
+              ),
+            ),
+          )
+      return props
+    }
+  }
+
   private class Candidate(
     val component: String,
     val props: LinkedHashMap<String, JsonElement>,
@@ -142,20 +217,24 @@ object WatchFaceXmlImporter {
       if (sceneElement.children.any { it is WffText || it is WffCData })
         return Result.Failed(listOf("Scene: text content is not Watch Face Format"))
 
-      val props = linkedMapOf<String, JsonElement>()
-      face.attributes.forEach { attribute ->
+      val sink = Sink(WatchFaceXmlExporter.SCENE)
+      for (attribute in face.attributes) {
         val name =
           if (attribute.name in setOf("width", "height", "clipShape")) attribute.name
           else "face:${attribute.name}"
-        props[name] = typed(attribute.value)
+        sink.put(name, attribute.value)
       }
-      props[FACE_ATTR_ORDER] = order(face.attributes)
+      sink.order(FACE_ATTR_ORDER, face.attributes)
       for (attribute in sceneElement.attributes) {
-        if (attribute.name in RESERVED_SCENE || attribute.name in setOf("wffVersion", "verbatim"))
+        if (
+          attribute.name in RESERVED_SCENE ||
+            attribute.name in setOf("wffVersion", "verbatim") ||
+            !sink.put(attribute.name, attribute.value)
+        )
           return Result.Failed(listOf("Scene: attribute `${attribute.name}` is not supported"))
-        props[attribute.name] = typed(attribute.value)
       }
-      props[ATTR_ORDER] = order(sceneElement.attributes)
+      sink.order(ATTR_ORDER, sceneElement.attributes)
+      val props = sink.finish()
       props["wffVersion"] = literal("int", JsonPrimitive(options.wffVersion))
       props["verbatim"] = literal("bool", JsonPrimitive(true))
 
@@ -240,9 +319,6 @@ object WatchFaceXmlImporter {
     }
 
     fun newId() = "n${++counter}"
-
-    fun order(attributes: List<WffAttribute>): JsonObject =
-      literal("string", JsonPrimitive(attributes.joinToString(" ") { it.name }))
 
     fun raw(node: WffNode): String {
       val id = newId()
@@ -356,18 +432,15 @@ object WatchFaceXmlImporter {
     // ---- Element to node ---------------------------------------------------------------------
 
     private fun candidate(e: WffElement): Candidate? {
-      val props = linkedMapOf<String, JsonElement>()
+      val component = componentOf(e.name) ?: return null
+      val sink = Sink(component)
 
-      fun put(name: String, value: String): Boolean {
-        if (name in props) return false
-        props[name] = typed(value)
-        return true
-      }
+      fun put(name: String, value: String): Boolean = sink.put(name, value)
 
       /** Every attribute of [e], as a property named as it is, and their order. */
       fun top(): Boolean {
         if (!e.attributes.all { put(it.name, it.value) }) return false
-        props[ATTR_ORDER] = order(e.attributes)
+        sink.order(ATTR_ORDER, e.attributes)
         return true
       }
 
@@ -389,7 +462,7 @@ object WatchFaceXmlImporter {
           val name = named[attribute.name] ?: "$prefix:${attribute.name}"
           if (!put(name, attribute.value)) return false
         }
-        props[key] = order(element.attributes)
+        sink.order(key, element.attributes)
         return true
       }
 
@@ -412,24 +485,24 @@ object WatchFaceXmlImporter {
               "AnalogClock" -> WatchFaceXmlExporter.ANALOG_CLOCK
               else -> WatchFaceXmlExporter.DIGITAL_CLOCK
             }
-          if (!top()) null else rest(0)?.let { Candidate(component, props, it) }
+          if (!top()) null else rest(0)?.let { Candidate(component, sink.finish(), it) }
         }
         "HourHand",
         "MinuteHand",
         "SecondHand" -> {
           val type = e.name.removeSuffix("Hand").lowercase()
           if (!top() || !put("type", type)) null
-          else rest(0)?.let { Candidate(WatchFaceXmlExporter.CLOCK_HAND, props, it) }
+          else rest(0)?.let { Candidate(WatchFaceXmlExporter.CLOCK_HAND, sink.finish(), it) }
         }
         "Variant" ->
           if (e.children.isEmpty() && top())
-            Candidate(WatchFaceXmlExporter.VARIANT, props, emptyList())
+            Candidate(WatchFaceXmlExporter.VARIANT, sink.finish(), emptyList())
           else null
         "TimeText" -> {
           val font = child(0, "Font") ?: return null
           val fonts = mapOf("family" to "family", "size" to "fontSize", "color" to "color")
           if (!top() || !inner(font, "fontAttrOrder", "font", fonts)) null
-          else rest(1)?.let { Candidate(WatchFaceXmlExporter.TIME_TEXT, props, it) }
+          else rest(1)?.let { Candidate(WatchFaceXmlExporter.TIME_TEXT, sink.finish(), it) }
         }
         "PartText" -> {
           val text = child(0, "Text") ?: return null
@@ -452,13 +525,13 @@ object WatchFaceXmlImporter {
               !put("text", (content.singleOrNull() as? WffText)?.text.orEmpty())
           )
             null
-          else rest(1)?.let { Candidate(WatchFaceXmlExporter.PART_TEXT, props, it) }
+          else rest(1)?.let { Candidate(WatchFaceXmlExporter.PART_TEXT, sink.finish(), it) }
         }
         "PartImage" -> {
           val image = child(0, "Image") ?: return null
           val named = mapOf("resource" to "resource", "tintColor" to "tintColor")
           if (!top() || !inner(image, "imageAttrOrder", "image", named)) null
-          else rest(1)?.let { Candidate(WatchFaceXmlExporter.PART_IMAGE, props, it) }
+          else rest(1)?.let { Candidate(WatchFaceXmlExporter.PART_IMAGE, sink.finish(), it) }
         }
         "PartDraw" -> {
           val shape = child(0, "Ellipse", "Rectangle") ?: return null
@@ -488,7 +561,7 @@ object WatchFaceXmlImporter {
               fills.any { !inner(it, "fillAttrOrder", "fill", mapOf("color" to "fillColor")) }
           )
             null
-          else rest(1)?.let { Candidate(WatchFaceXmlExporter.PART_DRAW, props, it) }
+          else rest(1)?.let { Candidate(WatchFaceXmlExporter.PART_DRAW, sink.finish(), it) }
         }
         "ComplicationSlot" -> {
           val box = child(0, "BoundingOval", "BoundingBox") ?: return null
@@ -507,7 +580,7 @@ object WatchFaceXmlImporter {
             null
           else
             rest(if (policy != null) 2 else 1)?.let {
-              Candidate(WatchFaceXmlExporter.COMPLICATION_SLOT, props, it)
+              Candidate(WatchFaceXmlExporter.COMPLICATION_SLOT, sink.finish(), it)
             }
         }
         else -> null

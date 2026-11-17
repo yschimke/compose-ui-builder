@@ -2345,6 +2345,16 @@ class UiBuilderEditorReducer(
   // Total: a malformed property fails `toProtocolDocument`, and the panel must report rather than
   // throw. The capability diagnostics already name that fault.
   runCatching {
+    // A watch face is written by `WatchFaceXmlExporter`, whose refusals are the issues: there is no
+    // component record for the record gate to ask, so a valid face must not reach it.
+    if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE) {
+      return@runCatching when (val result = WatchFaceXmlExporter.export(document)) {
+        is WatchFaceXmlExporter.Result.Emitted ->
+          ExportOutcome(dedicated = true, reasons = emptyList())
+        is WatchFaceXmlExporter.Result.Refused ->
+          ExportOutcome(dedicated = true, reasons = result.reasons)
+      }
+    }
     when (
       val recordFree =
         RecordFreeExport.generate(

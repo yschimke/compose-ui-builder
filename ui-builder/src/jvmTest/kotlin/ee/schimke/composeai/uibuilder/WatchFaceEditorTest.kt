@@ -43,7 +43,7 @@ class WatchFaceEditorTest {
     Json.decodeFromString(
       UiBuilderDocument.serializer(),
       """{"schema":"compose-ui-builder-document/v1-candidate","id":"face","title":"Face",
-        "revision":0,"catalogPin":{"systemId":"wff-watchface"},"environment":{},
+        "revision":0,"catalogPin":{"systemId":"wff-watchface","catalogRevision":"synthetic","capabilityDigest":"synthetic","nativeRuntimeId":"candidate"},"environment":{"widthDp":227,"heightDp":227,"density":2.0,"theme":"dark","dynamicColor":false,"locale":"en-US","fontScale":1,"layoutDirection":"ltr","windowPosture":"flat","browserZoomPercent":100,"fixedTime":"2024-05-16T10:08:32Z","animations":"settled","networkAccess":false,"exportDevices":["id:wearos_large_round"]},
         "stateVariables":{},"roots":["scene"],"nodes":{
           "scene":{"id":"scene","componentId":"wff/scene","slots":{"content":[${nodes.joinToString { "\"$it\"" }}]}},
           "hello":{"id":"hello","componentId":"wff/part-text",
@@ -71,6 +71,23 @@ class WatchFaceEditorTest {
       refused.reasons.any { it.startsWith("nodes.hello (`m3/text`)") },
       refused.reasons.toString(),
     )
+  }
+
+  @Test
+  fun `a valid watch face has no issues, a refused one reports the exporter's reasons`() {
+    assertEquals(emptyList(), reducer.problems(document("hello")))
+    val foreign =
+      document("hello").let {
+        it.copy(
+          nodes = it.nodes + ("hello" to it.nodes.getValue("hello").copy(componentId = "m3/text")),
+        )
+      }
+    val problems = reducer.problems(foreign)
+    assertTrue(
+      problems.any { it.message.startsWith("nodes.hello (`m3/text`)") },
+      problems.toString(),
+    )
+    assertTrue(problems.none { "component record" in it.message }, problems.toString())
   }
 
   @Test
