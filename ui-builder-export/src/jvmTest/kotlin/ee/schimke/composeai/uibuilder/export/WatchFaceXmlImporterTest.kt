@@ -355,4 +355,41 @@ class WatchFaceXmlImporterTest {
       )
     assertTrue(Regex("""<ComplicationSlot [^>]*alpha="0">""").containsMatchIn(exported(edited).xml))
   }
+
+  @Test
+  fun `scene previewTime and clockType rewrite the preserved Metadata, or add it`() {
+    val digital =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        File(fixtures, "designs/digital-watch-face.json").readText(),
+      )
+    val result = imported(exported(digital).xml)
+    fun set(document: UiBuilderDocument, name: String, value: String): UiBuilderDocument {
+      val scene = document.nodes.getValue("scene")
+      return document.copy(
+        nodes =
+          document.nodes +
+            ("scene" to
+              scene.copy(
+                properties =
+                  JsonObject(
+                    scene.properties +
+                      (name to
+                        buildJsonObject {
+                          put("type", "string")
+                          put("value", value)
+                        }),
+                  ),
+              )),
+      )
+    }
+    val xml = exported(set(result.document, "previewTime", "12:34:56")).xml
+    assertTrue("""<Metadata key="PREVIEW_TIME" value="12:34:56"/>""" in xml, xml)
+    assertTrue("10:08:32" !in xml)
+    assertTrue("""<Metadata key="CLOCK_TYPE" value="DIGITAL"/>""" in xml)
+    // No Metadata at all: added at the start of the face.
+    val bare = imported("<WatchFace width=\"450\" height=\"450\"><Scene/></WatchFace>")
+    val added = exported(set(bare.document, "clockType", "ANALOG")).xml
+    assertTrue("""<Metadata key="CLOCK_TYPE" value="ANALOG"/>""" in added, added)
+  }
 }

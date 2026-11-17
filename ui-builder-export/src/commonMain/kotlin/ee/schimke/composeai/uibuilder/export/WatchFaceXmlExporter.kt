@@ -244,7 +244,9 @@ object WatchFaceXmlExporter {
           el(
             "WatchFace",
             faceAttributes,
-            faceBefore + sceneElement(scene, sceneAttributes, sceneChildren) + faceAfter,
+            withMetadata(faceBefore, scene) +
+              sceneElement(scene, sceneAttributes, sceneChildren) +
+              faceAfter,
           ),
           FACE_ATTR_ORDER,
           "face:",
@@ -300,6 +302,31 @@ object WatchFaceXmlExporter {
     attributes: List<Pair<String, String>>,
     children: List<WffNode>,
   ): WffElement = scene.arrange(el("Scene", attributes, children), ATTR_ORDER, "")
+
+  /**
+   * An imported face keeps its `<Metadata>` as raw nodes; the scene's `clockType` and
+   * `previewTime`, when set, are written into the matching `<Metadata key="…">` (its `value`), or
+   * added after the last one. A face that never set them is written as it was.
+   */
+  private fun withMetadata(before: List<WffNode>, scene: Props): List<WffNode> {
+    var nodes = before
+    for ((key, property) in listOf("CLOCK_TYPE" to "clockType", "PREVIEW_TIME" to "previewTime")) {
+      val value = if (scene.has(property)) scene.string(property) else null
+      if (value == null) continue
+      fun isKey(node: WffNode) =
+        node is WffElement && node.name == "Metadata" && node.attr("key") == key
+      nodes =
+        if (nodes.any(::isKey))
+          nodes.map { if (isKey(it)) (it as WffElement).withAttribute("value", value) else it }
+        else {
+          val last = nodes.indexOfLast { it is WffElement && it.name == "Metadata" }
+          nodes.take(last + 1) +
+            el("Metadata", listOf("key" to key, "value" to value)) +
+            nodes.drop(last + 1)
+        }
+    }
+    return nodes
+  }
 
   /** A [RAW] node's `xml`, parsed back: exactly one element or comment, or a refusal. */
   private fun rawNode(id: String, node: UiBuilderNode, reasons: MutableList<String>): WffNode? {
@@ -412,6 +439,8 @@ object WatchFaceXmlExporter {
               else ->
                 return@ElementSpec refuse("shape `$shape` is not ellipse or rectangle").let { null }
             }
+          if (props.has("strokeWidth") && !props.has("strokeColor"))
+            refuse("strokeWidth: a stroke needs a strokeColor")
           val shapeChildren = buildList {
             props.string("strokeColor")?.let {
               add(
@@ -597,6 +626,8 @@ object WatchFaceXmlExporter {
             bounds
               .filter { it.first in setOf("width", "height") }
               .let { listOf("x" to "0", "y" to "0") + it }
+          if (props.has("defaultSystemProviderType") && !props.has("defaultSystemProvider"))
+            refuse("defaultSystemProviderType: a provider policy needs a defaultSystemProvider")
           val policy =
             props.string("defaultSystemProvider")?.let {
               props.arrange(
