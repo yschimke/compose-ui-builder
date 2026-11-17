@@ -1,0 +1,8 @@
+The XML files in this directory (res/raw/watchface.xml and res/xml/watch_face_info.xml of
+SimpleAnalog, SimpleDigital, Complications, Flavors, Weather, PhotosMulti and PhotosMask) are copied
+unmodified from the Watch Face Format samples in
+https://github.com/android/wear-os-samples
+
+Copyright 2024 Google LLC. Licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0). Binary resources (drawables) are not copied.
+They are used only as round-trip and validation fixtures.

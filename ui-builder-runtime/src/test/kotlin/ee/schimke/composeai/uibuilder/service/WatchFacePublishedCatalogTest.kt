@@ -30,14 +30,14 @@ class WatchFacePublishedCatalogTest {
       .catalog
 
   @Test
-  fun `the published file composes into the eleven WFF elements`() {
+  fun `the published file composes into the twelve WFF elements`() {
     val catalog = composed()
     assertEquals("wff-watchface", catalog.benchmark.catalogSystemId)
     assertEquals(
       UiBuilderCatalogPlatform.WATCH_FACE,
       UiBuilderCatalogPlatform.from(catalog.statusSemantics),
     )
-    assertEquals(11, catalog.components.size, catalog.components.map { it.componentId }.toString())
+    assertEquals(12, catalog.components.size, catalog.components.map { it.componentId }.toString())
     assertTrue(catalog.components.all { it.componentId.startsWith("wff/") })
   }
 

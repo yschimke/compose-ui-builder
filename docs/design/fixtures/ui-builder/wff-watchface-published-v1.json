@@ -1,5 +1,5 @@
 {
-  "$comment": "Hand-authored published catalog for the Watch Face Format (WFF) target. It states builtins only: every component mirrors a WFF element, with WFF attribute names as property names, positioned in px of the WatchFace's width x height (default 450 x 450). The exporter is WatchFaceXmlExporter in :ui-builder-export. The templates are the two documents under wff-watchface/designs/.",
+  "$comment": "Hand-authored published catalog for the Watch Face Format (WFF) target. It states builtins only: every component mirrors a WFF element, with WFF attribute names as property names, positioned in px of the WatchFace's width x height (default 450 x 450). The exporter is WatchFaceXmlExporter and the importer WatchFaceXmlImporter, both in :ui-builder-export; wff/raw carries what import cannot model. The templates are the two documents under wff-watchface/designs/.",
   "schema": "compose-ui-builder-catalog/v1",
   "catalog": {
     "id": "wff-watchface",
@@ -37,7 +37,8 @@
         "Draw",
         "Clocks",
         "Complications",
-        "Ambient"
+        "Ambient",
+        "Raw XML"
       ],
       "components": {
         "wff/scene": {
@@ -72,6 +73,9 @@
         },
         "wff/variant": {
           "group": "Ambient"
+        },
+        "wff/raw": {
+          "group": "Raw XML"
         }
       }
     },
@@ -99,7 +103,28 @@
           "content": {
             "acceptedTraits": [
               "WffDrawable",
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
+            ]
+          },
+          "prolog": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          },
+          "face": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          },
+          "faceAfter": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          },
+          "epilog": {
+            "acceptedTraits": [
+              "WffRaw"
             ]
           }
         },
@@ -160,6 +185,24 @@
               3,
               4
             ]
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+          },
+          {
+            "name": "verbatim",
+            "jsonType": "boolean",
+            "required": false,
+            "notes": "Set by import: the WatchFace frame is held in this document (`face` slots, `faceAttrOrder`), so no version comment or Metadata is generated."
+          },
+          {
+            "name": "faceAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the WatchFace attribute names in the order the face wrote them."
           }
         ],
         "modifierCapabilities": []
@@ -176,12 +219,14 @@
           "content": {
             "acceptedTraits": [
               "WffDrawable",
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           },
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -239,6 +284,12 @@
             "jsonType": "string",
             "required": false,
             "notes": "Group name (WFF `name`)."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -254,7 +305,8 @@
         "slots": {
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -334,6 +386,12 @@
             "jsonType": "number",
             "required": false,
             "notes": "Stroke thickness in px."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -349,7 +407,8 @@
         "slots": {
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -413,6 +472,12 @@
             "jsonType": "string",
             "required": false,
             "notes": "Tint colour (WFF `tintColor`)."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -428,7 +493,8 @@
         "slots": {
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -515,6 +581,12 @@
               "CENTER",
               "END"
             ]
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -530,12 +602,14 @@
         "slots": {
           "hands": {
             "acceptedTraits": [
-              "WffClockHand"
+              "WffClockHand",
+              "WffRaw"
             ]
           },
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -587,6 +661,12 @@
             "jsonType": "number",
             "required": false,
             "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -602,7 +682,8 @@
         "slots": {
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -677,6 +758,12 @@
             "jsonType": "string",
             "required": false,
             "notes": "Tint colour (WFF `tintColor`)."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -692,12 +779,14 @@
         "slots": {
           "texts": {
             "acceptedTraits": [
-              "WffTimeText"
+              "WffTimeText",
+              "WffRaw"
             ]
           },
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -749,6 +838,12 @@
             "jsonType": "number",
             "required": false,
             "notes": "Opacity 0..255 (WFF `alpha`)."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -764,7 +859,8 @@
         "slots": {
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -814,6 +910,12 @@
             "jsonType": "string",
             "required": false,
             "notes": "Font family; SYNC_TO_DEVICE by default."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -829,7 +931,8 @@
         "slots": {
           "variants": {
             "acceptedTraits": [
-              "WffVariant"
+              "WffVariant",
+              "WffRaw"
             ]
           }
         },
@@ -915,6 +1018,12 @@
             "jsonType": "string",
             "required": false,
             "notes": "WFF `defaultSystemProviderType`; the first supported type when absent."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
           }
         ],
         "modifierCapabilities": []
@@ -949,6 +1058,31 @@
             "jsonType": "string",
             "required": false,
             "notes": "The value in that mode."
+          },
+          {
+            "name": "wffAttrOrder",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: the attribute names of this element in the order the face wrote them, space separated. When set it is authoritative (an unlisted attribute is not written); attributes without a property here are read from the property of the same name."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/raw": {
+        "role": "element",
+        "displayName": "Raw XML",
+        "group": "Raw XML",
+        "canvas": "placeholder",
+        "traits": [
+          "WffRaw"
+        ],
+        "slots": {},
+        "properties": [
+          {
+            "name": "xml",
+            "jsonType": "string",
+            "required": true,
+            "notes": "One element subtree or comment in canonical XML, written back verbatim at this position. Holds what has no wff/ element (Metadata, UserConfigurations, BitmapFonts, Condition, Transform, gradients, unknown future elements) and the comments of an imported face."
           }
         ],
         "modifierCapabilities": []

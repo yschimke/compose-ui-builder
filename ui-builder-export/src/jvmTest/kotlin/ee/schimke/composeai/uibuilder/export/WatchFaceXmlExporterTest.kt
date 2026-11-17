@@ -205,6 +205,7 @@ class WatchFaceXmlExporterTest {
         WatchFaceXmlExporter.TIME_TEXT,
         WatchFaceXmlExporter.COMPLICATION_SLOT,
         WatchFaceXmlExporter.VARIANT,
+        WatchFaceXmlExporter.RAW,
       ),
       builtins,
     )
