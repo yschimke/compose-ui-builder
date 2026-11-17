@@ -27,7 +27,7 @@ import kotlinx.serialization.json.doubleOrNull
  * attribute names as property names, positioned absolutely in pixels of the face's `width` ×
  * `height` (the [SCENE] node's properties, 450 × 450 unless stated).
  *
- * The WFF version (1–4, [DEFAULT_WFF_VERSION] = 2) is the `wffVersion` property of the [SCENE]
+ * The WFF version (1–5, [DEFAULT_WFF_VERSION] = 2) is the `wffVersion` property of the [SCENE]
  * node, or [Options.wffVersion] when the host states one. It is a node property, not an
  * `environment` entry, because `DesignEnvironmentV1` (compose-preview-contracts) is a closed type
  * that drops unknown keys on the wire.
@@ -61,7 +61,7 @@ object WatchFaceXmlExporter {
   const val RAW = "wff/raw"
 
   const val DEFAULT_WFF_VERSION = 2
-  val WFF_VERSIONS: IntRange = 1..4
+  val WFF_VERSIONS: IntRange = 1..5
   const val DEFAULT_SIZE = 450
 
   /** What a host may state about one export. */

@@ -178,7 +178,7 @@
             "name": "wffVersion",
             "jsonType": "integer",
             "required": false,
-            "notes": "The Watch Face Format version the XML targets (1-4). Default 2. Declare the same value in the manifest.",
+            "notes": "The Watch Face Format version the XML targets (1-5). Default 2. Declare the same value in the manifest.",
             "allowedValues": [
               1,
               2,
