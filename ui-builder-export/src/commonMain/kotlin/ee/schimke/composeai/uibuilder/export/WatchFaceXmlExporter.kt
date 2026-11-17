@@ -619,8 +619,7 @@ object WatchFaceXmlExporter {
             }
           el(
             "ComplicationSlot",
-            listOf("slotId" to slotId.toString(), "supportedTypes" to types.trim()) +
-              bounds.filter { it.first in setOf("x", "y", "width", "height") },
+            listOf("slotId" to slotId.toString(), "supportedTypes" to types.trim()) + bounds,
             listOfNotNull(
               props.arrange(
                 el(

@@ -296,4 +296,63 @@ class WatchFaceXmlImporterTest {
       }
     }
   }
+
+  @Test
+  fun `complication slot pivot, angle and alpha are written, in order and when set after import`() {
+    val template =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        File(fixtures, "designs/analog-watch-face.json").readText(),
+      )
+    // Written straight from a design.
+    val battery = template.nodes.getValue("battery")
+    fun number(name: String, value: Int) =
+      name to
+        buildJsonObject {
+          put("type", "int")
+          put("value", value)
+        }
+    val direct =
+      template.copy(
+        nodes =
+          template.nodes +
+            ("battery" to
+              battery.copy(
+                properties =
+                  JsonObject(
+                    battery.properties +
+                      mapOf(number("alpha", 0), number("angle", 90), number("pivotX", 1)),
+                  ),
+              )),
+      )
+    assertTrue(
+      Regex(
+          """<ComplicationSlot slotId="\d+" supportedTypes="[^"]*" x="\d+" y="\d+" width="\d+" height="\d+" pivotX="1" angle="90" alpha="0">""",
+        )
+        .containsMatchIn(exported(direct).xml),
+      exported(direct).xml,
+    )
+    // Imported with them, then exported again: exact.
+    val xml = exported(direct).xml
+    assertEquals(xml, exported(imported(xml).document).xml)
+    assertTrue(
+      imported(xml).document.nodes.values.any {
+        it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT
+      },
+    )
+    // Set after import on a slot that never had it.
+    val result = imported(exported(template).xml)
+    val slot =
+      result.document.nodes.values.first {
+        it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT
+      }
+    val edited =
+      result.document.copy(
+        nodes =
+          result.document.nodes +
+            (slot.id to
+              slot.copy(properties = JsonObject(slot.properties + mapOf(number("alpha", 0))))),
+      )
+    assertTrue(Regex("""<ComplicationSlot [^>]*alpha="0">""").containsMatchIn(exported(edited).xml))
+  }
 }
