@@ -51,6 +51,8 @@ internal fun composeFoundationCatalog(
     .build()
 }
 
+internal const val WATCH_FACE_PLATFORM = "watchface"
+
 private const val MOBILE_PLATFORM = CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM
 
 /**
@@ -100,6 +102,9 @@ private val FOUNDATION_CURATIONS =
     // A2UI is a closed vocabulary and neither A2UI exporter handles `layout/`, `shape/` or
     // `asset/`, so offer nothing rather than components that cannot be exported.
     "a2ui" to FoundationCuration(ids = emptyList(), menu = { JsonObject(emptyMap()) }),
+    // A Watch Face Format face is its own closed vocabulary (`wff/`); no Compose layout, shape or
+    // image component can be written into WFF XML, so none is donated.
+    WATCH_FACE_PLATFORM to FoundationCuration(ids = emptyList(), menu = { JsonObject(emptyMap()) }),
     // A Remote Compose document body. No `shape/radial-gradient`: the emitter only writes linear
     // gradient chains.
     "remote-compose" to

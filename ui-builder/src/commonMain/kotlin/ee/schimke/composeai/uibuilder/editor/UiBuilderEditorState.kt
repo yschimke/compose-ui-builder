@@ -59,6 +59,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.WidgetAssetBytes
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
@@ -451,6 +452,12 @@ class UiBuilderEditorReducer(
             RejectionCode.INVALID_PROPERTY,
             "Use the entity picker for Home Assistant values",
           )
+        else if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE)
+          state.rejected(
+            state.operationSequence + 1,
+            RejectionCode.INVALID_PROPERTY,
+            "A watch face has no design state: its values come from the watch",
+          )
         else
           state.apply(
             state.operationSequence + 1,
@@ -818,7 +825,11 @@ class UiBuilderEditorReducer(
     nodeId: String,
     propertyName: String,
   ): Boolean {
-    if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE) return false
+    if (
+      catalog.platform == UiBuilderCatalogPlatform.LOVELACE ||
+        catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE
+    )
+      return false
     if (state.document.nodes[nodeId] == null) return false
     return state.document.stateVariables.keys.any { variable ->
       val candidate =
@@ -2191,6 +2202,12 @@ class UiBuilderEditorReducer(
           EditorGeneratedCode.Refused(result.reasons)
       }
     }
+    if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE) {
+      return when (val result = WatchFaceXmlExporter.export(document)) {
+        is WatchFaceXmlExporter.Result.Emitted -> EditorGeneratedCode.Source(result.xml)
+        is WatchFaceXmlExporter.Result.Refused -> EditorGeneratedCode.Refused(result.reasons)
+      }
+    }
     return screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
   }
 
@@ -2328,6 +2345,16 @@ class UiBuilderEditorReducer(
   // Total: a malformed property fails `toProtocolDocument`, and the panel must report rather than
   // throw. The capability diagnostics already name that fault.
   runCatching {
+    // A watch face is written by `WatchFaceXmlExporter`, whose refusals are the issues: there is no
+    // component record for the record gate to ask, so a valid face must not reach it.
+    if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE) {
+      return@runCatching when (val result = WatchFaceXmlExporter.export(document)) {
+        is WatchFaceXmlExporter.Result.Emitted ->
+          ExportOutcome(dedicated = true, reasons = emptyList())
+        is WatchFaceXmlExporter.Result.Refused ->
+          ExportOutcome(dedicated = true, reasons = result.reasons)
+      }
+    }
     when (
       val recordFree =
         RecordFreeExport.generate(

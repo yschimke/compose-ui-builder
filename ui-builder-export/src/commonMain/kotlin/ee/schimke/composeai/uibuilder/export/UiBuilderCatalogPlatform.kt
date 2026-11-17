@@ -35,7 +35,13 @@ enum class UiBuilderCatalogPlatform(
   A2UI("a2ui", "A2UI"),
 
   /** A host-owned Home Assistant dashboard config. */
-  LOVELACE("lovelace", "Home Assistant dashboard");
+  LOVELACE("lovelace", "Home Assistant dashboard"),
+
+  /**
+   * A Wear OS Watch Face Format (WFF) watch face: an XML document the watch's face runtime draws,
+   * exported through `WatchFaceXmlExporter` and never as Compose source.
+   */
+  WATCH_FACE("watchface", "Watch face");
 
   companion object {
     const val KEY: String = "platform"

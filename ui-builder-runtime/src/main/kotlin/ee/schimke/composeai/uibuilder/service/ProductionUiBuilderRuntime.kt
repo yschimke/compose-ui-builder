@@ -364,7 +364,11 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                   catalog.exportCapabilities
                     .newBuilder()
                     .also {
-                      it.composeCode = catalog.platform != "lovelace" && composeExportFor(systemId)
+                      // Lovelace JSON and WFF XML are data documents: never Compose source.
+                      it.composeCode =
+                        catalog.platform != "lovelace" &&
+                          catalog.platform != WATCH_FACE_PLATFORM &&
+                          composeExportFor(systemId)
                     }
                     .build(),
                   json =

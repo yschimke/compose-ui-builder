@@ -95,7 +95,9 @@ fun UiBuilderCatalogPlatform.relevantDeviceGroups(): List<String> =
     UiBuilderCatalogPlatform.A2UI,
     UiBuilderCatalogPlatform.LOVELACE -> listOf("Phones", "Foldables", "Tablets")
     // A widget body is drawn on a watch, so the widget catalog wants the watch frames too.
+    // A watch face is drawn on the watch's round screen.
     UiBuilderCatalogPlatform.WEAR,
+    UiBuilderCatalogPlatform.WATCH_FACE,
     UiBuilderCatalogPlatform.REMOTE_COMPOSE -> listOf("Wear OS")
   }
 
