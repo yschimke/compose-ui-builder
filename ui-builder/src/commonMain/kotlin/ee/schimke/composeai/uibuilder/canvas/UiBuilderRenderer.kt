@@ -192,6 +192,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.export.UiTimeText
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostSpec
@@ -739,6 +740,12 @@ private fun RenderNode(
       }
     }
 
+    // Watch face elements: a placeholder drawn from each node's absolute bounds, until the Remote
+    // Compose player preview draws the face.
+    if (node.componentId.startsWith(WatchFaceXmlExporter.PREFIX)) {
+      WatchFaceCanvas(document, document.nodes[node.id] ?: node, measured, child)
+      return@RenderCanvasNode
+    }
     if (node.componentId.startsWith("lovelace/")) {
       LovelaceCanvas(document, document.nodes[node.id] ?: node, measured, child) {
         ReportUndrawn(UiBuilderUndrawnNode.STAND_IN)

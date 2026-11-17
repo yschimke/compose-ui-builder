@@ -2316,6 +2316,7 @@ fun UiBuilderEditor(
     if (state.document.isWearWidget()) "Wear widget · Remote Compose"
     else if (catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) "Remote Compose source"
     else if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE) "Lovelace JSON"
+    else if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE) "Watch Face Format XML"
     else if (catalog.platform == UiBuilderCatalogPlatform.A2UI) "A2UI messages · Compose"
     else "Compose export · ${ScreenExportGate.PACKAGE_NAME}"
   val propertyFields = reducer.propertyFields(state)

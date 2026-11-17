@@ -162,7 +162,8 @@ data class NewDesignDevice(val id: String, val label: String) {
  * The device a catalog's designs are for: its `newDesign.device` when it says, else inferred.
  * - A label naming a device the platform cannot ("Glasses", "Home Assistant") is taken at its word.
  * - Otherwise the platform decides: Remote Compose documents are widgets (watch or launcher), A2UI
- *   surfaces are agent UI, Lovelace configs are smart home, Wear is a watch, the rest a phone.
+ *   surfaces are agent UI, Lovelace configs are smart home, Wear and watch faces are a watch, the
+ *   rest a phone.
  *
  * The inference is a stopgap for catalogs that publish no `device`; a catalog that does is never
  * second-guessed.
@@ -182,6 +183,7 @@ val UiBuilderNewDesignCatalog.newDesignDevice: NewDesignDevice
           UiBuilderCatalogPlatform.REMOTE_COMPOSE -> NewDesignDevice.WIDGET
           UiBuilderCatalogPlatform.A2UI -> NewDesignDevice.AGENT
           UiBuilderCatalogPlatform.LOVELACE -> NewDesignDevice.SMART_HOME
+          UiBuilderCatalogPlatform.WATCH_FACE -> NewDesignDevice.WATCH
           UiBuilderCatalogPlatform.MOBILE -> NewDesignDevice.PHONE
         }
     }

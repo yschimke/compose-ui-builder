@@ -259,6 +259,7 @@ internal fun PinnedDesignCanvas(
    */
   frameCompanion: Boolean =
     LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
+      LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WATCH_FACE.wireValue &&
       LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.MOBILE.wireValue,
   /**
    * The extent, or the device frame with its scroller popped out; see [EditorCanvasView]. Only
@@ -287,7 +288,12 @@ internal fun PinnedDesignCanvas(
   // A watch at its frame is a round screen, and the square frame's corners are not part of it: the
   // scaffold clips itself, and without this the editor's surface showed in the four corners.
   val roundFrame =
-    deviceView && LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue
+    deviceView &&
+      LocalUiBuilderCatalogPlatform.current in
+        setOf(
+          UiBuilderCatalogPlatform.WEAR.wireValue,
+          UiBuilderCatalogPlatform.WATCH_FACE.wireValue,
+        )
   // The container the selection scrolls inside, which is what comes out beside the frame. It
   // follows the selection and nothing else: select outside it and it goes back in.
   val scrollers = LocalUiBuilderCatalogScrollers.current
