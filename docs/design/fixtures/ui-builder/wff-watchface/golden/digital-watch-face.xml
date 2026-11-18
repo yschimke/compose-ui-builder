@@ -10,10 +10,10 @@
       </Ellipse>
       <Variant mode="AMBIENT" target="alpha" value="0"/>
     </PartDraw>
-    <PartText x="125" y="70" width="200" height="50">
+    <PartText x="125" y="78" width="200" height="50">
       <Text align="CENTER">
         <Font family="SYNC_TO_DEVICE" size="32" color="#ff9aa0a6">
-          <Template>%s<Parameter expression="[DAY_OF_WEEK_S]"/></Template>
+          <Template>%s %d<Parameter expression="[DAY_OF_WEEK_S]"/><Parameter expression="[DAY]"/></Template>
         </Font>
       </Text>
     </PartText>
@@ -22,10 +22,15 @@
         <Font family="SYNC_TO_DEVICE" size="104" color="#ffffffff"/>
       </TimeText>
     </DigitalClock>
-    <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="160" y="320" width="130" height="70">
+    <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="160" y="318" width="130" height="70">
       <BoundingBox x="0" y="0" width="130" height="70"/>
       <DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/>
       <Complication type="SHORT_TEXT">
+        <PartDraw x="0" y="0" width="130" height="70">
+          <RoundRectangle x="0" y="0" width="130" height="70" cornerRadiusX="24" cornerRadiusY="24">
+            <Fill color="#26ffffff"/>
+          </RoundRectangle>
+        </PartDraw>
         <PartText x="0" y="0" width="130" height="70">
           <Text align="CENTER">
             <Font family="SYNC_TO_DEVICE" size="24" color="#ffffffff">

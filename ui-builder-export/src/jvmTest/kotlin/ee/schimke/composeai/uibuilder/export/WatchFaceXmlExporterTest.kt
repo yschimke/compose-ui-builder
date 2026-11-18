@@ -32,6 +32,16 @@ class WatchFaceXmlExporterTest {
       File(root, "designs/$name.json").readText(),
     )
 
+  /**
+   * The analog face as it was drawn from bitmaps: an `AnalogClock` with three hands and a dial
+   * image. The published template draws with shapes now, and these tests need the bitmap elements.
+   */
+  private fun bitmapTemplate(): UiBuilderDocument =
+    Json.decodeFromString(
+      UiBuilderDocument.serializer(),
+      File(root, "fixtures/bitmap-analog-watch-face.json").readText(),
+    )
+
   private fun emitted(
     document: UiBuilderDocument,
     options: WatchFaceXmlExporter.Options = WatchFaceXmlExporter.Options(),
@@ -120,7 +130,7 @@ class WatchFaceXmlExporterTest {
 
   @Test
   fun `a hand outside an analog clock, a missing resource and bindings are refused`() {
-    val document = template("analog-watch-face")
+    val document = bitmapTemplate()
     val misplaced =
       document.copy(
         nodes =

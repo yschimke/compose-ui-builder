@@ -118,6 +118,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderOverlayPassesInput
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvas.isRoundWatchFace
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.capability.LocalUiBuilderCatalogScrollers
@@ -618,7 +619,9 @@ internal fun PinnedDesignCanvas(
                   if (dropHovered) Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
                   else Modifier,
                 ),
-              shape = if (roundFrame) CircleShape else RoundedCornerShape(0.dp),
+              shape =
+                if (roundFrame || document.isRoundWatchFace()) CircleShape
+                else RoundedCornerShape(0.dp),
               color =
                 if (canvasRenderer == null) MaterialTheme.colorScheme.surface
                 else Color.Transparent,
@@ -1547,7 +1550,7 @@ internal fun ConstrainedFramePane(
           compositingStrategy =
             if (deviceRenderer == null) CompositingStrategy.Offscreen else CompositingStrategy.Auto
         },
-      shape = RoundedCornerShape(0.dp),
+      shape = if (document.isRoundWatchFace()) CircleShape else RoundedCornerShape(0.dp),
       color = if (deviceRenderer == null) MaterialTheme.colorScheme.surface else Color.Transparent,
       shadowElevation = 0.dp,
     ) {

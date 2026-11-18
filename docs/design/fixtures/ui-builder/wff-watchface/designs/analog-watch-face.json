@@ -69,27 +69,1171 @@
       "slots": {
         "content": [
           "dial",
-          "battery",
-          "clock"
+          "bezel",
+          "track",
+          "tick-0",
+          "tick-1",
+          "tick-2",
+          "tick-3",
+          "tick-4",
+          "tick-5",
+          "tick-6",
+          "tick-7",
+          "tick-8",
+          "tick-9",
+          "tick-10",
+          "tick-11",
+          "complication",
+          "hour-hand",
+          "minute-hand",
+          "second-hand",
+          "cap",
+          "cap-dot"
         ]
       },
       "eventBindings": {}
     },
     "dial": {
       "id": "dial",
-      "componentId": "wff/part-image",
+      "componentId": "wff/part-draw",
       "properties": {
-        "resource": {
+        "shape": {
           "type": "string",
-          "value": "dial"
+          "value": "ellipse"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ff0e1319"
         }
       },
       "modifiers": [],
       "slots": {},
       "eventBindings": {}
     },
-    "battery": {
-      "id": "battery",
+    "bezel": {
+      "id": "bezel",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "ellipse"
+        },
+        "x": {
+          "type": "int",
+          "value": 9
+        },
+        "y": {
+          "type": "int",
+          "value": 9
+        },
+        "width": {
+          "type": "int",
+          "value": 432
+        },
+        "height": {
+          "type": "int",
+          "value": 432
+        },
+        "strokeColor": {
+          "type": "color",
+          "value": "#ff2a3441"
+        },
+        "strokeWidth": {
+          "type": "int",
+          "value": 6
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "track": {
+      "id": "track",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "ellipse"
+        },
+        "x": {
+          "type": "int",
+          "value": 44
+        },
+        "y": {
+          "type": "int",
+          "value": 44
+        },
+        "width": {
+          "type": "int",
+          "value": 362
+        },
+        "height": {
+          "type": "int",
+          "value": 362
+        },
+        "strokeColor": {
+          "type": "color",
+          "value": "#ff1a222c"
+        },
+        "strokeWidth": {
+          "type": "int",
+          "value": 2
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-0": {
+      "id": "tick-0",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-0"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 0
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-0-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-0-mark": {
+      "id": "tick-0-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 216
+        },
+        "y": {
+          "type": "int",
+          "value": 20
+        },
+        "width": {
+          "type": "int",
+          "value": 18
+        },
+        "height": {
+          "type": "int",
+          "value": 46
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ff4fc3f7"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 4
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 4
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-1": {
+      "id": "tick-1",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-1"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 30
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-1-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-1-mark": {
+      "id": "tick-1-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-2": {
+      "id": "tick-2",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-2"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 60
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-2-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-2-mark": {
+      "id": "tick-2-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-3": {
+      "id": "tick-3",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-3"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 90
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-3-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-3-mark": {
+      "id": "tick-3-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 216
+        },
+        "y": {
+          "type": "int",
+          "value": 20
+        },
+        "width": {
+          "type": "int",
+          "value": 18
+        },
+        "height": {
+          "type": "int",
+          "value": 46
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ff4fc3f7"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 4
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 4
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-4": {
+      "id": "tick-4",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-4"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 120
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-4-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-4-mark": {
+      "id": "tick-4-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-5": {
+      "id": "tick-5",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-5"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 150
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-5-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-5-mark": {
+      "id": "tick-5-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-6": {
+      "id": "tick-6",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-6"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 180
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-6-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-6-mark": {
+      "id": "tick-6-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 216
+        },
+        "y": {
+          "type": "int",
+          "value": 20
+        },
+        "width": {
+          "type": "int",
+          "value": 18
+        },
+        "height": {
+          "type": "int",
+          "value": 46
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ff4fc3f7"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 4
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 4
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-7": {
+      "id": "tick-7",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-7"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 210
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-7-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-7-mark": {
+      "id": "tick-7-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-8": {
+      "id": "tick-8",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-8"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 240
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-8-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-8-mark": {
+      "id": "tick-8-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-9": {
+      "id": "tick-9",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-9"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 270
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-9-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-9-mark": {
+      "id": "tick-9-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 216
+        },
+        "y": {
+          "type": "int",
+          "value": 20
+        },
+        "width": {
+          "type": "int",
+          "value": 18
+        },
+        "height": {
+          "type": "int",
+          "value": 46
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ff4fc3f7"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 4
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 4
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-10": {
+      "id": "tick-10",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-10"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 300
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-10-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-10-mark": {
+      "id": "tick-10-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "tick-11": {
+      "id": "tick-11",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "tick-11"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        },
+        "angle": {
+          "type": "int",
+          "value": 330
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "tick-11-mark"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "tick-11-mark": {
+      "id": "tick-11-mark",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 220
+        },
+        "y": {
+          "type": "int",
+          "value": 22
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        },
+        "height": {
+          "type": "int",
+          "value": 28
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffcfd8dc"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 3
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "complication": {
+      "id": "complication",
       "componentId": "wff/complication-slot",
       "properties": {
         "slotId": {
@@ -102,19 +1246,19 @@
         },
         "x": {
           "type": "int",
-          "value": 160
+          "value": 155
         },
         "y": {
           "type": "int",
-          "value": 290
+          "value": 288
         },
         "width": {
           "type": "int",
-          "value": 130
+          "value": 140
         },
         "height": {
           "type": "int",
-          "value": 80
+          "value": 60
         },
         "boundsType": {
           "type": "string",
@@ -132,179 +1276,13 @@
       "modifiers": [],
       "slots": {
         "variants": [
-          "battery-complication"
+          "complication-short"
         ]
       },
       "eventBindings": {}
     },
-    "clock": {
-      "id": "clock",
-      "componentId": "wff/analog-clock",
-      "properties": {},
-      "modifiers": [],
-      "slots": {
-        "hands": [
-          "hour",
-          "minute",
-          "second"
-        ]
-      },
-      "eventBindings": {}
-    },
-    "hour": {
-      "id": "hour",
-      "componentId": "wff/clock-hand",
-      "properties": {
-        "type": {
-          "type": "string",
-          "value": "hour"
-        },
-        "resource": {
-          "type": "string",
-          "value": "hour_hand"
-        },
-        "x": {
-          "type": "int",
-          "value": 215
-        },
-        "y": {
-          "type": "int",
-          "value": 125
-        },
-        "width": {
-          "type": "int",
-          "value": 20
-        },
-        "height": {
-          "type": "int",
-          "value": 100
-        },
-        "pivotX": {
-          "type": "float",
-          "value": 0.5
-        },
-        "pivotY": {
-          "type": "float",
-          "value": 1.0
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {}
-    },
-    "minute": {
-      "id": "minute",
-      "componentId": "wff/clock-hand",
-      "properties": {
-        "type": {
-          "type": "string",
-          "value": "minute"
-        },
-        "resource": {
-          "type": "string",
-          "value": "minute_hand"
-        },
-        "x": {
-          "type": "int",
-          "value": 219
-        },
-        "y": {
-          "type": "int",
-          "value": 70
-        },
-        "width": {
-          "type": "int",
-          "value": 12
-        },
-        "height": {
-          "type": "int",
-          "value": 155
-        },
-        "pivotX": {
-          "type": "float",
-          "value": 0.5
-        },
-        "pivotY": {
-          "type": "float",
-          "value": 1.0
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {}
-    },
-    "second": {
-      "id": "second",
-      "componentId": "wff/clock-hand",
-      "properties": {
-        "type": {
-          "type": "string",
-          "value": "second"
-        },
-        "resource": {
-          "type": "string",
-          "value": "second_hand"
-        },
-        "x": {
-          "type": "int",
-          "value": 223
-        },
-        "y": {
-          "type": "int",
-          "value": 50
-        },
-        "width": {
-          "type": "int",
-          "value": 4
-        },
-        "height": {
-          "type": "int",
-          "value": 175
-        },
-        "pivotX": {
-          "type": "float",
-          "value": 0.5
-        },
-        "pivotY": {
-          "type": "float",
-          "value": 1.0
-        },
-        "tintColor": {
-          "type": "color",
-          "value": "#ffff5252"
-        }
-      },
-      "modifiers": [],
-      "slots": {
-        "variants": [
-          "second-ambient"
-        ]
-      },
-      "eventBindings": {}
-    },
-    "second-ambient": {
-      "id": "second-ambient",
-      "componentId": "wff/variant",
-      "properties": {
-        "mode": {
-          "type": "string",
-          "value": "AMBIENT"
-        },
-        "target": {
-          "type": "string",
-          "value": "alpha"
-        },
-        "value": {
-          "type": "string",
-          "value": "0"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {}
-    },
-    "battery-complication": {
-      "id": "battery-complication",
+    "complication-short": {
+      "id": "complication-short",
       "componentId": "wff/complication",
       "properties": {
         "type": {
@@ -315,13 +1293,55 @@
       "modifiers": [],
       "slots": {
         "content": [
-          "battery-text"
+          "complication-back",
+          "complication-text"
         ]
       },
       "eventBindings": {}
     },
-    "battery-text": {
-      "id": "battery-text",
+    "complication-back": {
+      "id": "complication-back",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 140
+        },
+        "height": {
+          "type": "int",
+          "value": 60
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#26ffffff"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 22
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 22
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "complication-text": {
+      "id": "complication-text",
       "componentId": "wff/part-text",
       "properties": {
         "text": {
@@ -342,15 +1362,15 @@
         },
         "width": {
           "type": "int",
-          "value": 130
+          "value": 140
         },
         "height": {
           "type": "int",
-          "value": 80
+          "value": 60
         },
         "fontSize": {
           "type": "int",
-          "value": 24
+          "value": 30
         },
         "color": {
           "type": "color",
@@ -359,6 +1379,376 @@
         "align": {
           "type": "string",
           "value": "CENTER"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "hour-hand": {
+      "id": "hour-hand",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "hour-hand"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "hour-hand-angle",
+          "hour-hand-body"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "hour-hand-angle": {
+      "id": "hour-hand-angle",
+      "componentId": "wff/raw",
+      "properties": {
+        "xml": {
+          "type": "string",
+          "value": "<Transform target=\"angle\" value=\"[HOUR_0_11] * 30 + [MINUTE] * 0.5\"/>"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "hour-hand-body": {
+      "id": "hour-hand-body",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 210
+        },
+        "y": {
+          "type": "int",
+          "value": 118
+        },
+        "width": {
+          "type": "int",
+          "value": 30
+        },
+        "height": {
+          "type": "int",
+          "value": 124
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffffffff"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 15
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 15
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "minute-hand": {
+      "id": "minute-hand",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "minute-hand"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "minute-hand-angle",
+          "minute-hand-body"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "minute-hand-angle": {
+      "id": "minute-hand-angle",
+      "componentId": "wff/raw",
+      "properties": {
+        "xml": {
+          "type": "string",
+          "value": "<Transform target=\"angle\" value=\"[MINUTE] * 6 + [SECOND] * 0.1\"/>"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "minute-hand-body": {
+      "id": "minute-hand-body",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 215
+        },
+        "y": {
+          "type": "int",
+          "value": 50
+        },
+        "width": {
+          "type": "int",
+          "value": 20
+        },
+        "height": {
+          "type": "int",
+          "value": 192
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffe3f2fd"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 10
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 10
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "second-hand": {
+      "id": "second-hand",
+      "componentId": "wff/group",
+      "properties": {
+        "name": {
+          "type": "string",
+          "value": "second-hand"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 0.5
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "second-hand-angle",
+          "second-hand-body"
+        ],
+        "variants": [
+          "second-hand-ambient"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "second-hand-angle": {
+      "id": "second-hand-angle",
+      "componentId": "wff/raw",
+      "properties": {
+        "xml": {
+          "type": "string",
+          "value": "<Transform target=\"angle\" value=\"[SECOND_MILLISECOND] * 6\"/>"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "second-hand-body": {
+      "id": "second-hand-body",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 222
+        },
+        "y": {
+          "type": "int",
+          "value": 36
+        },
+        "width": {
+          "type": "int",
+          "value": 6
+        },
+        "height": {
+          "type": "int",
+          "value": 238
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffff5252"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "second-hand-ambient": {
+      "id": "second-hand-ambient",
+      "componentId": "wff/variant",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "value": "AMBIENT"
+        },
+        "target": {
+          "type": "string",
+          "value": "alpha"
+        },
+        "value": {
+          "type": "string",
+          "value": "0"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "cap": {
+      "id": "cap",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "ellipse"
+        },
+        "x": {
+          "type": "int",
+          "value": 203
+        },
+        "y": {
+          "type": "int",
+          "value": 203
+        },
+        "width": {
+          "type": "int",
+          "value": 44
+        },
+        "height": {
+          "type": "int",
+          "value": 44
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffffffff"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "cap-dot": {
+      "id": "cap-dot",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "ellipse"
+        },
+        "x": {
+          "type": "int",
+          "value": 213
+        },
+        "y": {
+          "type": "int",
+          "value": 213
+        },
+        "width": {
+          "type": "int",
+          "value": 24
+        },
+        "height": {
+          "type": "int",
+          "value": 24
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#ffff5252"
         }
       },
       "modifiers": [],
