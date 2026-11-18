@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.UiTimeText
 import kotlin.time.Clock
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -56,6 +57,29 @@ internal fun rememberLiveCanvasClock(document: UiBuilderDocument): UiExpressions
   var clock by remember(continuous) { mutableStateOf(wallClock(start, continuous)) }
   LaunchedEffect(continuous) {
     while (true) withFrameMillis { clock = wallClock(start, continuous) }
+  }
+  return clock
+}
+
+/**
+ * The real local clock, for a canvas that draws its own time (a watch face): null while [enabled]
+ * is false, else the clock now. With [continuous] it moves every frame, so a smooth second hand
+ * sweeps; without, once at each whole second, so a ticking one steps.
+ */
+@Composable
+fun rememberLiveWallClock(continuous: Boolean, enabled: Boolean = true): UiExpressions.Clock? {
+  if (!enabled) return null
+  var clock by remember(continuous) { mutableStateOf(wallClock(0L, continuous)) }
+  LaunchedEffect(continuous) {
+    if (continuous) {
+      while (true) withFrameMillis { clock = wallClock(0L, true) }
+    } else {
+      while (true) {
+        clock = wallClock(0L, false)
+        // To the next whole second, so the hand steps when the real second does.
+        delay(1000L - Clock.System.now().toEpochMilliseconds().mod(1000L) + 1L)
+      }
+    }
   }
   return clock
 }

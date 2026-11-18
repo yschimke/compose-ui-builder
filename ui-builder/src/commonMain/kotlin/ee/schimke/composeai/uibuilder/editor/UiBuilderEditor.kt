@@ -87,7 +87,9 @@ import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
+import ee.schimke.composeai.uibuilder.canvas.isWatchFace
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
+import ee.schimke.composeai.uibuilder.canvas.withWffAmbient
 import ee.schimke.composeai.uibuilder.canvas.withWffConfigurationSelection
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
@@ -1544,6 +1546,8 @@ fun UiBuilderEditor(
           variantPanes + wearScreenPanes
         else -> listOf(drawnDocument.currentFramePane()) + variantPanes + wearScreenPanes
       }
+      // A watch face is shown Interactive and Ambient side by side.
+      .withWffAmbientTwins(drawnDocument)
     }
   // Panes the preview draws as given: a catalog's, or any list with the watches in it, which a
   // widget's own host panes would otherwise replace.
@@ -1559,9 +1563,10 @@ fun UiBuilderEditor(
       wearScreenPanes,
     ) {
       val resizable = documentBackedPreview == null
-      (drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
-        ?: drawnDocument.widgetPreviewPanes(resizable)
-        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes
+      ((drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
+          ?: drawnDocument.widgetPreviewPanes(resizable)
+          ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes)
+        .withWffAmbientTwins(drawnDocument)
     }
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
   // letting time run in a preview is not an edit to the design.
@@ -1768,6 +1773,11 @@ fun UiBuilderEditor(
             ),
           )
       }
+  // A watch face's editing canvas draws Interactive or Ambient, whichever the toggle says; editor
+  // state rather than the document's, since looking at a mode is not an edit.
+  var canvasAmbient by remember { mutableStateOf(false) }
+  val canvasDocument =
+    remember(drawnDocument, canvasAmbient) { drawnDocument.withWffAmbient(canvasAmbient) }
   val designCanvasBody: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     DisposableEffect(Unit) {
       canvasesShown++
@@ -1775,7 +1785,7 @@ fun UiBuilderEditor(
     }
     CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
       PinnedDesignCanvas(
-        document = drawnDocument,
+        document = canvasDocument,
         selectedNodeId = state.selectedNodeId,
         onNodeSelected = { selectNodeForEditing(it) },
         onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
@@ -2046,6 +2056,13 @@ fun UiBuilderEditor(
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     Box(modifier) {
       designCanvas(Modifier.fillMaxSize(), alignment)
+      if (drawnDocument.isWatchFace()) {
+        WffAmbientToggle(
+          ambient = canvasAmbient,
+          onAmbientChange = { canvasAmbient = it },
+          modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+        )
+      }
       if (state.tunables.isNotEmpty() && state.revisionPeek == null) {
         TunePanel(
           document = state.document,
