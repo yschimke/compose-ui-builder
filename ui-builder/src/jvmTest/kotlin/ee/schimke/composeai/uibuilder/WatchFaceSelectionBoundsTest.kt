@@ -21,6 +21,8 @@ import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A rotated part's reported box wraps the part as drawn. The canvas rotates a group with a graphics
@@ -35,8 +37,15 @@ class WatchFaceSelectionBoundsTest {
       .first { it.isDirectory }
 
   private fun snapshotOf(name: String, side: Int): UiBuilderInspectionSnapshot {
+    // Frozen at the template's preview time: with no `fixedTime` a face follows the real clock.
     val document =
       Json.decodeFromString(UiBuilderDocument.serializer(), File(designs, "$name.json").readText())
+        .let {
+          it.copy(
+            environment =
+              JsonObject(it.environment + ("fixedTime" to JsonPrimitive("2024-05-16T10:08:32Z"))),
+          )
+        }
     var snapshot: UiBuilderInspectionSnapshot? = null
     val px = side * 2
     val scene =
