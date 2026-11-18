@@ -33,7 +33,8 @@ class WatchFaceColourOptionRenderTest {
           "scene":{"id":"scene","componentId":"wff/scene","properties":{
             "width":{"type":"int","value":450},"height":{"type":"int","value":450},
             "clipShape":{"type":"string","value":"NONE"}},
-            "slots":{"content":["dot"]}},
+            "slots":{"content":["dot"],"face":["uc"]}},
+          "uc":{"id":"uc","componentId":"wff/user-configurations","slots":{"content":["cfg"]}},
           "dot":{"id":"dot","componentId":"wff/part-draw","properties":{
             "shape":{"type":"string","value":"rectangle"},
             "x":{"type":"int","value":100},"y":{"type":"int","value":100},
