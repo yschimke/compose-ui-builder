@@ -51,17 +51,17 @@ internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
   }
 
 /**
- * [node] as the watch draws it at [preview]'s time and in its mode: its transforms applied (see
- * [wffTransformed]), then, in ambient, the `<Variant mode="AMBIENT" target value>` children, each
- * replacing the property its `target` names (a number when `value` evaluates to one, else the
- * text).
+ * [node] as the watch draws it at [preview]'s time and in its mode: its expression-valued numbers
+ * evaluated ([wffResolvedNumbers]), its transforms applied ([wffTransformed]), then, in ambient,
+ * the `<Variant mode="AMBIENT" target value>` children, each replacing the property its `target`
+ * names (a number when `value` evaluates to one, else the text).
  */
 internal fun wffNodeIn(
   document: UiBuilderDocument,
   node: UiBuilderNode,
   preview: WffPreviewContext,
 ): UiBuilderNode {
-  val moved = wffTransformed(document, node, preview)
+  val moved = wffTransformed(document, wffResolvedNumbers(node, preview), preview)
   if (!preview.ambient) return moved
   var properties = moved.properties
   for (id in node.slots.values.flatten()) {

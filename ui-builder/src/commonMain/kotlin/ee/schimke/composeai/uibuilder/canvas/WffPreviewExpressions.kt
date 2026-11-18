@@ -87,30 +87,6 @@ internal class WffPreviewContext(
   }
 }
 
-/** What a complication slot shows: its `[COMPLICATION.TEXT]` and `[COMPLICATION.TITLE]`. */
-internal class WffComplicationSample(val text: String, val title: String = "") {
-  /** The one line a slot with nothing of its own draws. */
-  val line: String
-    get() = if (title.isEmpty()) text else "$text $title"
-
-  companion object {
-    val Default = WffComplicationSample("72", "bpm")
-
-    /** A believable value for what a slot's default provider supplies. */
-    fun forProvider(provider: String): WffComplicationSample =
-      when (provider) {
-        "WATCH_BATTERY" -> WffComplicationSample("85%", "")
-        "STEP_COUNT" -> WffComplicationSample("6,482", "")
-        "DAY_OF_WEEK" -> WffComplicationSample("Thu", "")
-        "DAY_AND_DATE" -> WffComplicationSample("Thu 16", "")
-        "TIME_AND_DATE" -> WffComplicationSample("10:08", "")
-        "UNREAD_NOTIFICATION_COUNT" -> WffComplicationSample("3", "")
-        "SUNRISE_SUNSET" -> WffComplicationSample("6:12", "")
-        else -> Default
-      }
-  }
-}
-
 /** A value an expression produces: a number or a string. */
 internal sealed interface WffValue {
   data class Num(val value: Double) : WffValue
@@ -194,6 +170,16 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "YEAR_S" -> s(two(year % 100))
     "COMPLICATION.TEXT" -> s(complication.text)
     "COMPLICATION.TITLE" -> s(complication.title)
+    "COMPLICATION.RANGED_VALUE_VALUE" -> complication.rangedValue?.let { WffValue.Num(it) }
+    "COMPLICATION.RANGED_VALUE_MIN" ->
+      complication.rangedValue?.let { WffValue.Num(complication.rangedMin) }
+    "COMPLICATION.RANGED_VALUE_MAX" ->
+      complication.rangedValue?.let { WffValue.Num(complication.rangedMax) }
+    "COMPLICATION.GOAL_PROGRESS_VALUE" -> complication.goalValue?.let { WffValue.Num(it) }
+    "COMPLICATION.GOAL_PROGRESS_TARGET_VALUE" -> complication.goalTarget?.let { WffValue.Num(it) }
+    "COMPLICATION.MONOCHROMATIC_IMAGE",
+    "COMPLICATION.SMALL_IMAGE",
+    "COMPLICATION.PHOTO_IMAGE" -> s("[${name}]")
     "BATTERY_PERCENT" -> n(85)
     "STEP_COUNT" -> n(6482)
     "HEART_RATE" -> n(72)

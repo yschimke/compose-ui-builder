@@ -4,8 +4,10 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlImporter
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * [node] with its `wff/transform` children applied at [preview]'s time, in document order: each
@@ -61,3 +63,66 @@ internal fun wffTransformed(
 
 /** What a target reads as when the node does not set it, for a `mode="BY"` transform. */
 private val WFF_UNSET_DEFAULTS = mapOf("alpha" to 255f, "scaleX" to 1f, "scaleY" to 1f)
+
+/** The numeric attributes a face may drive with an expression, such as a ranged value's arc. */
+private val WFF_NUMERIC_ATTRIBUTES =
+  setOf(
+    "x",
+    "y",
+    "width",
+    "height",
+    "angle",
+    "alpha",
+    "pivotX",
+    "pivotY",
+    "startAngle",
+    "endAngle",
+    "centerX",
+    "centerY",
+    "cornerRadiusX",
+    "cornerRadiusY",
+    "startX",
+    "startY",
+    "endX",
+    "endY",
+    "thickness",
+    "shapeWidth",
+    "shapeHeight",
+  )
+
+/**
+ * [node] with each numeric attribute that holds an expression evaluated at [preview]: an arc's
+ * `endAngle="[COMPLICATION.RANGED_VALUE_VALUE] * 3.6"`, a bar's `width`. An import keeps such a
+ * value in `wffExtras` (a number property cannot hold it), so both places are read. An expression
+ * the evaluator cannot read leaves the attribute as it was.
+ */
+internal fun wffResolvedNumbers(node: UiBuilderNode, preview: WffPreviewContext): UiBuilderNode {
+  val extras =
+    ((node.properties[WFF_EXTRAS] as? JsonObject)?.get("value") as? JsonPrimitive)
+      ?.contentOrNull
+      ?.let { runCatching { Json.parseToJsonElement(it) as? JsonObject }.getOrNull() }
+  var properties = node.properties
+  for (name in WFF_NUMERIC_ATTRIBUTES) {
+    val own = node.properties[name] as? JsonObject
+    val text =
+      if (own != null)
+        (own["value"] as? JsonPrimitive)?.contentOrNull?.takeIf {
+          (own["type"] as? JsonPrimitive)?.contentOrNull == "string"
+        }
+      else (extras?.get(name) as? JsonPrimitive)?.contentOrNull
+    if (text == null || '[' !in text && text.toDoubleOrNull() == null) continue
+    val value = evaluateWffExpression(text, preview)?.asNumber() ?: continue
+    properties =
+      JsonObject(
+        properties +
+          (name to
+            JsonObject(
+              mapOf("type" to JsonPrimitive("number"), "value" to JsonPrimitive(value)),
+            )),
+      )
+  }
+  return if (properties === node.properties) node else node.copy(properties = properties)
+}
+
+/** The `wffExtras` property an import keeps unmodelled values in (the exporter's `EXTRAS`). */
+private const val WFF_EXTRAS = "wffExtras"

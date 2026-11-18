@@ -152,6 +152,9 @@ internal fun WatchFaceCanvas(
               box = shapeBox(shape),
               cornerX = shape.float("cornerRadiusX"),
               cornerY = shape.float("cornerRadiusY"),
+              startAngle = shape.float("startAngle"),
+              endAngle = shape.float("endAngle", 360f),
+              clockwise = shape.string("direction") != "COUNTER_CLOCKWISE",
             )
           }
           .ifEmpty {
@@ -165,6 +168,9 @@ internal fun WatchFaceCanvas(
                 box = null,
                 cornerX = node.float("cornerRadiusX"),
                 cornerY = node.float("cornerRadiusY"),
+                startAngle = node.float("startAngle"),
+                endAngle = node.float("endAngle", 360f),
+                clockwise = node.string("direction") != "COUNTER_CLOCKWISE",
               ),
             )
           }
@@ -175,14 +181,29 @@ internal fun WatchFaceCanvas(
         },
       )
     }
-    WatchFaceXmlExporter.PART_IMAGE ->
-      Box(modifier.border(1.dp, Color(0x66FFFFFF)), contentAlignment = Alignment.Center) {
-        Text(
-          node.string("resource").ifEmpty { "image" },
-          color = Color(0x99FFFFFF),
-          fontSize = 10.sp,
-        )
-      }
+    WatchFaceXmlExporter.PART_IMAGE -> {
+      // A complication's image source draws the sample's placeholder picture.
+      val source = node.string("resource")
+      val image =
+        when (source) {
+          "[COMPLICATION.PHOTO_IMAGE]" ->
+            WffSampleImage.PHOTO.takeIf { preview.complication.image == WffSampleImage.PHOTO }
+          "[COMPLICATION.MONOCHROMATIC_IMAGE]",
+          "[COMPLICATION.SMALL_IMAGE]" -> preview.complication.image
+          else -> null
+        }
+      if (image != null) {
+        val tint = node.color("tintColor", Color.White)
+        Box(modifier.drawBehind { drawWffGlyph(image, tint, Offset.Zero, size) })
+      } else
+        Box(modifier.border(1.dp, Color(0x66FFFFFF)), contentAlignment = Alignment.Center) {
+          Text(
+            source.ifEmpty { "image" },
+            color = Color(0x99FFFFFF),
+            fontSize = 10.sp,
+          )
+        }
+    }
     WatchFaceXmlExporter.PART_TEXT -> {
       val text =
         remember(node, preview) {
@@ -243,35 +264,34 @@ internal fun WatchFaceCanvas(
       )
     }
     WatchFaceXmlExporter.COMPLICATION_SLOT -> {
-      // The slot's own complication (the one for its default type, else the first) draws what the
-      // face says to; a slot with none draws one line of sample data in its bounds.
+      // The sample the slot shows (the editor's pick, else its default provider and type) drawn by
+      // the slot's own `<Complication type>` for that type; a slot with none for it draws a tidy
+      // default, and `EMPTY` draws nothing.
       val variants =
         node.slots["variants"]
           .orEmpty()
           .mapNotNull { document.nodes[it] }
           .filter { it.componentId == WatchFaceXmlExporter.COMPLICATION }
-      val wanted = node.string("defaultSystemProviderType")
-      val drawn = variants.firstOrNull { it.string("type") == wanted } ?: variants.firstOrNull()
-      val sample = WffComplicationSample.forProvider(node.string("defaultSystemProvider"))
+      val picks = LocalWffComplicationPicks.current
+      val sample =
+        remember(node, picks) {
+          wffSlotSample(
+            node.id,
+            node.string("defaultSystemProvider"),
+            node.string("defaultSystemProviderType"),
+            node.string("supportedTypes").split(' ').filter { it.isNotBlank() },
+            picks,
+          )
+        }
+      val drawn = variants.firstOrNull { it.string("type") == sample.type }
       val context = remember(preview, sample) { preview.withComplication(sample) }
+      val side = minOf(node.float("width", 100f), node.float("height", 100f))
       CompositionLocalProvider(LocalWffPreview provides context) {
-        Box(
-          modifier.clipToBounds(),
-          contentAlignment = Alignment.Center,
-        ) {
-          if (drawn != null) child(drawn.id, Modifier.fillMaxSize())
-          else {
-            Box(
-              Modifier.fillMaxSize()
-                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(percent = 20)),
-            )
-            WffText(
-              Modifier.fillMaxSize(),
-              sample.line,
-              Color(0xCCFFFFFF),
-              (24f * face.dpPerPx).sp,
-              "CENTER",
-            )
+        Box(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
+          when {
+            sample.type == WffComplicationSample.EMPTY -> Unit
+            drawn != null -> child(drawn.id, Modifier.fillMaxSize())
+            else -> WffComplicationDefault(sample, side, face.dpPerPx, Modifier.fillMaxSize())
           }
         }
       }
@@ -295,7 +315,7 @@ internal fun WatchFaceCanvas(
 
 /** One line of face text in its box: clipped to it, never wrapped, aligned as WFF's `align`. */
 @Composable
-private fun WffText(
+internal fun WffText(
   modifier: Modifier,
   text: String,
   color: Color,
@@ -379,6 +399,10 @@ internal class WffShapeDrawing(
   /** The corner radii of a `round-rectangle`, px of the face. */
   val cornerX: Float = 0f,
   val cornerY: Float = 0f,
+  /** An `arc`'s angles, degrees clockwise from 12 o'clock, and its direction. */
+  val startAngle: Float = 0f,
+  val endAngle: Float = 360f,
+  val clockwise: Boolean = true,
 )
 
 /** A shape node's box: its own `x`/`y`/`width`/`height`, or an arc's from its centre. */
@@ -436,7 +460,19 @@ internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float)
     val inset = line.width / 2
     val topLeft = Offset(origin.x + inset, origin.y + inset)
     val inner = Size(extent.width - line.width, extent.height - line.width)
-    if (ellipse) drawOval(drawing.stroke, topLeft, inner, style = line)
+    if (shape == "arc") {
+      // WFF measures from 12 o'clock, Compose from 3; counter-clockwise sweeps the other way.
+      val sweep = drawing.endAngle - drawing.startAngle
+      drawArc(
+        drawing.stroke,
+        drawing.startAngle - 90f,
+        if (drawing.clockwise) sweep else -sweep,
+        useCenter = false,
+        topLeft = topLeft,
+        size = inner,
+        style = line,
+      )
+    } else if (ellipse) drawOval(drawing.stroke, topLeft, inner, style = line)
     else if (rounded)
       drawRoundRect(drawing.stroke, topLeft, inner, corner(drawing, pxPerWffPx), style = line)
     else drawRect(drawing.stroke, topLeft, inner, style = line)
