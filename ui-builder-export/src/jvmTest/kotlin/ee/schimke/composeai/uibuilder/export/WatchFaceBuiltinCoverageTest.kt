@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import ee.schimke.watchface.wff.WffXmlParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
@@ -278,22 +279,17 @@ class WatchFaceBuiltinCoverageTest {
   }
 
   @Test
-  fun `a property of another shape is refused rather than dropped`() {
+  fun `a property of another shape is left out rather than refusing the export`() {
     val imported =
       roundTrip(
         """<PartDraw x="0" y="0" width="40" height="40"><Ellipse x="0" y="0" width="40" height="40"><Fill color="#ff00ff00"/></Ellipse></PartDraw>""",
       )
     val shape = imported.nodes(WatchFaceXmlExporter.SHAPE).single()
-    val refused =
+    val result =
       WatchFaceXmlExporter.export(
         imported.document.set(shape, "startAngle", "int", JsonPrimitive(10)),
       )
-    assertTrue(
-      assertIs<WatchFaceXmlExporter.Result.Refused>(refused)
-        .reasons
-        .single()
-        .contains("startAngle"),
-    )
+    assertFalse("startAngle" in assertIs<WatchFaceXmlExporter.Result.Emitted>(result).xml)
   }
 
   private fun UiBuilderDocument.slot(node: UiBuilderNode, name: String) =

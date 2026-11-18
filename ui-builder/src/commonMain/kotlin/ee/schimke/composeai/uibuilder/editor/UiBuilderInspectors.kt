@@ -100,6 +100,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.CommentsInspector
@@ -499,7 +500,10 @@ private fun InspectorBody(
     // host's typefaces and default text style are shown in the Theme panel instead; `fields` still
     // keeps them for validation.
     val themePanelOwned = ownsThemePanelProperties(fields)
-    val listedFields = inspectorPropertyFields(fields)
+    // A Watch Face Format shape's other shapes' attributes (a round-rectangle's corner radii on an
+    // ellipse) do not apply and are not written, so they are not offered either.
+    val inapplicable = WatchFaceXmlExporter.inapplicableProperties(node, state.document)
+    val listedFields = inspectorPropertyFields(fields).filter { it.name !in inapplicable }
     fun shown(field: EditorPropertyField): Boolean =
       field.written ||
         field.required ||

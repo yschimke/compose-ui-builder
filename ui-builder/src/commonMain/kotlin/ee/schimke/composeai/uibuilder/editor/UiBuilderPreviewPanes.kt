@@ -97,6 +97,8 @@ internal fun GeneratedCodePane(
    */
   caption: String,
   modifier: Modifier = Modifier,
+  /** What a refusal says there is none of, in the generator's own words. */
+  noSource: String = "No Compose source",
 ) {
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -171,7 +173,7 @@ internal fun GeneratedCodePane(
         }
         is EditorGeneratedCode.Refused -> {
           Text(
-            "No Compose source · the export would refuse this design",
+            "$noSource · the export would refuse this design",
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.labelSmall,
           )

@@ -616,6 +616,14 @@ fun UiBuilderEditor(
    */
   onCommentOnNode: ((UiBuilderNodeComment) -> Unit)? = null,
 ) {
+  // The refusal's own heading names what could not be written, so a watch face is never told it
+  // has "no Compose source".
+  val generatedCodeNoSource =
+    when (catalog.platform) {
+      UiBuilderCatalogPlatform.WATCH_FACE -> "No Watch Face Format XML"
+      UiBuilderCatalogPlatform.LOVELACE -> "No Lovelace JSON"
+      else -> "No Compose source"
+    }
   require(availablePanes.isNotEmpty()) { "a UI Builder workspace must expose at least one pane" }
   val reducer =
     remember(catalog, catalogRecord, actorId, clientId, operationIdPrefix) {
@@ -1261,7 +1269,7 @@ fun UiBuilderEditor(
               if (code != null) {
                 editorScope.launch {
                   say(
-                    copyCodeSentence(code, layer) {
+                    copyCodeSentence(code, layer, generatedCodeNoSource) {
                       systemClipboard.setClipEntry(plainTextClipEntry(it))
                     },
                   )
@@ -3015,6 +3023,7 @@ fun UiBuilderEditor(
                             generatedCode,
                             generatedCodeCaption,
                             Modifier.fillMaxSize(),
+                            noSource = generatedCodeNoSource,
                           )
                         }
                       }
@@ -3193,10 +3202,12 @@ fun UiBuilderEditor(
                     GeneratedCodePane(
                       generatedCode,
                       generatedCodeCaption,
-                      Modifier.align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
-                        .padding(bottom = dockHeight),
+                      noSource = generatedCodeNoSource,
+                      modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                          .fillMaxWidth()
+                          .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
+                          .padding(bottom = dockHeight),
                     )
                   }
                   if (!viewportInsets.keyboardOpen) {
