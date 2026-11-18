@@ -48,12 +48,19 @@ internal object WffIntegerGeometry {
     var dy = 0.0
     for ((origin, extent, shift) in
       listOf(Triple("x", "width", true), Triple("y", "height", false))) {
+      val pivot = if (shift) "pivotX" else "pivotY"
       val start = part.literal(origin) ?: continue
       val size = part.literal(extent) ?: continue
       if (!fractional(start) && !fractional(size)) continue
       val whole = floor(start)
       val span = ceil(start + size) - whole
       next = next.withAttribute(origin, format(whole)).withAttribute(extent, format(span))
+      // The pivot is a fraction of the bounds, which just grew: keep the centre of rotation on the
+      // same pixel (0.5 when unset), but only when something rotates about it.
+      val rotates = part.attr("angle") != null || part.attr(pivot) != null
+      val fraction = if (part.attr(pivot) == null) 0.5 else part.literal(pivot)
+      if (rotates && fraction != null && span > 0)
+        next = next.withAttribute(pivot, format((fraction * size + (start - whole)) / span))
       if (shift) dx = start - whole else dy = start - whole
     }
     if (dx != 0.0 || dy != 0.0) next = next.withChildren(next.children.map { shifted(it, dx, dy) })

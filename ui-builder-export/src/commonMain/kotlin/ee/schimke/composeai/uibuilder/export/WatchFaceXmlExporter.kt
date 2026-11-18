@@ -350,7 +350,9 @@ object WatchFaceXmlExporter {
     val notes = mutableListOf<String>()
     val built =
       WffDocument(
-        WffIntegerGeometry.normalise(face, notes),
+        // Only the real export: an import's lossless round-trip check (lenient) must see the face
+        // as written.
+        if (options.lenient) face else WffIntegerGeometry.normalise(face, notes),
         generated + prolog.filterIsInstance<WffComment>(),
         epilog.filterIsInstance<WffComment>(),
       )

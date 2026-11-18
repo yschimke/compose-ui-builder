@@ -256,6 +256,35 @@ class WatchFaceXmlExporterTest {
     assertEquals(refused(bad), issues.map { it.message })
   }
 
+  @Test
+  fun `a rotated fractional part draw keeps its centre of rotation`() {
+    val round = template("digital-watch-face")
+    val moved =
+      listOf(
+          "x" to 10.9,
+          "y" to 20.0,
+          "width" to 10.0,
+          "height" to 30.0,
+          "angle" to 180.0,
+          "pivotX" to 0.0,
+        )
+        .fold(round) { d, (n, v) -> withProperty(d, "steps-back", n, "float", JsonPrimitive(v)) }
+    val xml = emitted(moved).xml
+    // X=10, W=ceil(20.9)-10=11; the centre stays at 10.9: (0*10 + 0.9) / 11
+    assertTrue("""<PartDraw x="10" y="20" width="11" height="30"""" in xml, xml)
+    val pivot = Regex("""pivotX="([0-9.]+)"""").find(xml)!!.groupValues[1].toDouble()
+    assertEquals(0.9 / 11, pivot, 1e-5)
+  }
+
+  @Test
+  fun `a fractional group imports losslessly and is only rounded on export`() {
+    val xml =
+      """<WatchFace width="450" height="450"><Scene><Group name="g" x="0.5" y="0" width="450" height="450"/></Scene></WatchFace>"""
+    val imported = WatchFaceXmlImporter.import(xml)
+    val document = assertIs<WatchFaceXmlImporter.Result.Imported>(imported).document
+    assertTrue(emitted(document).notes.isNotEmpty())
+  }
+
   private fun refusedOptions(document: UiBuilderDocument, options: WatchFaceXmlExporter.Options) =
     assertIs<WatchFaceXmlExporter.Result.Refused>(WatchFaceXmlExporter.export(document, options))
       .reasons
