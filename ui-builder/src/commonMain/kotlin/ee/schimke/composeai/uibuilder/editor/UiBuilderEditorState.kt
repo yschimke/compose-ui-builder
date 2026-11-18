@@ -1461,6 +1461,29 @@ class UiBuilderEditorReducer(
     }
   }
 
+  /**
+   * A watch-face colour that is a face colour option (`[CONFIGURATION.<id>.<n>]`): held in the
+   * node's `wffExtras` rather than as a property (see [commitWatchFaceColourReference]), so the
+   * inspector reads it from there when the property itself is unset.
+   */
+  private fun heldColourReference(
+    node: UiBuilderNode,
+    property: String,
+    control: EditorPropertyControl,
+  ): JsonPrimitive? {
+    if (
+      control != EditorPropertyControl.Color ||
+        catalog.platform != UiBuilderCatalogPlatform.WATCH_FACE
+    )
+      return null
+    val held =
+      ((node.properties[WATCH_FACE_EXTRAS] as? JsonObject)?.get("value") as? JsonPrimitive)
+        ?.contentOrNull ?: return null
+    return (runCatching { Json.parseToJsonElement(held) as? JsonObject }.getOrNull()?.get(property)
+        as? JsonPrimitive)
+      ?.takeIf { WFF_COLOUR_REFERENCE.matches(it.content) }
+  }
+
   private fun catalogPropertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
     val nodes = state.selection.mapNotNull(state.document.nodes::get)
     val node = nodes.lastOrNull() ?: return emptyList()
@@ -1536,7 +1559,9 @@ class UiBuilderEditorReducer(
           nodes
             .map {
               if (control == EditorPropertyControl.Unsupported) it.properties[property.name]
-              else (it.properties[property.name] as? JsonObject)?.get("value")
+              else
+                (it.properties[property.name] as? JsonObject)?.get("value")
+                  ?: heldColourReference(it, property.name, control)
             }
             .distinct()
         val mixed = encodedValues.size > 1
@@ -1557,9 +1582,19 @@ class UiBuilderEditorReducer(
             name = property.name,
             label = if (loopRows) "Rows" else property.name.humanLabel(),
             required = property.required,
-            written = nodes.any { property.name in it.properties },
+            written =
+              nodes.any {
+                property.name in it.properties ||
+                  heldColourReference(it, property.name, control) != null
+              },
             control = control,
-            value = if (mixed) "" else summary ?: value?.primitiveOrNull()?.content ?: "",
+            value =
+              if (mixed) ""
+              else
+                summary
+                  ?: value?.primitiveOrNull()?.content
+                  ?: heldColourReference(node, property.name, control)?.primitiveOrNull()?.content
+                  ?: "",
             choices =
               property.allowedValues.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } +
                 property.editor?.suggestedValues.orEmpty(),
@@ -5733,7 +5768,11 @@ class UiBuilderEditorReducer(
         operations += DesignOperation.RemoveNodeProperty(target.id, property)
     }
     if (operations.isEmpty()) return state
-    return state.apply(sequence, operations, selectionAfter = nodeId)
+    return state.apply(sequence, operations, selectionAfter = nodeId).let { edited ->
+      // One edit across a selection must not collapse that selection to the node whose chip was
+      // pressed, or the next edit would silently apply to one node.
+      if (targets.size > 1) edited.copy(selection = targets.map(UiBuilderNode::id)) else edited
+    }
   }
 
   /**

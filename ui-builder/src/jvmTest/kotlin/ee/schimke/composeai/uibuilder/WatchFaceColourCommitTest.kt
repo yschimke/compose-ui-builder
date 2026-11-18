@@ -53,12 +53,17 @@ class WatchFaceColourCommitTest {
       """{"schema":"compose-ui-builder-document/v1-candidate","id":"face","title":"Face",
         "revision":0,"catalogPin":{"systemId":"wff-watchface","catalogRevision":"synthetic","capabilityDigest":"synthetic","nativeRuntimeId":"candidate"},"environment":{"widthDp":227,"heightDp":227,"density":2.0,"theme":"dark","dynamicColor":false,"locale":"en-US","fontScale":1,"layoutDirection":"ltr","windowPosture":"flat","browserZoomPercent":100,"fixedTime":"2024-05-16T10:08:32Z","animations":"settled","networkAccess":false,"exportDevices":["id:wearos_large_round"]},
         "stateVariables":{},"roots":["scene"],"nodes":{
-          "scene":{"id":"scene","componentId":"wff/scene","slots":{"content":["dot"]}},
+          "scene":{"id":"scene","componentId":"wff/scene","slots":{"content":["dot","dot2"]}},
           "dot":{"id":"dot","componentId":"wff/part-draw","properties":{
             "shape":{"type":"string","value":"ellipse"},
             "x":{"type":"int","value":10},"y":{"type":"int","value":10},
             "width":{"type":"int","value":50},"height":{"type":"int","value":50},
-            "fillColor":{"type":"color","value":"#ffff0000"}}}}}""",
+            "fillColor":{"type":"color","value":"#ffff0000"}}},
+          "dot2":{"id":"dot2","componentId":"wff/part-draw","properties":{
+            "shape":{"type":"string","value":"ellipse"},
+            "x":{"type":"int","value":70},"y":{"type":"int","value":10},
+            "width":{"type":"int","value":50},"height":{"type":"int","value":50},
+            "fillColor":{"type":"color","value":"#ff0000ff"}}}}}""",
     )
 
   @Test
@@ -82,6 +87,54 @@ class WatchFaceColourCommitTest {
       assertIs<WatchFaceXmlExporter.Result.Emitted>(WatchFaceXmlExporter.export(edited.document))
         .xml
     assertTrue(xml.contains("""<Fill color="[CONFIGURATION.theme.0]""""), xml)
+  }
+
+  @Test
+  fun `the inspector reads a held reference back, so its chip stays selected`() {
+    val state = reducer.initial(document, selectedNodeId = "dot")
+    val before = reducer.propertyFields(state).first { it.name == "fillColor" }
+    assertEquals("#ffff0000", before.value)
+    val edited =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.CommitProperty("dot", "fillColor", "[CONFIGURATION.theme.0]"),
+      )
+    val after = reducer.propertyFields(edited).first { it.name == "fillColor" }
+    assertEquals("[CONFIGURATION.theme.0]", after.value)
+    assertTrue(after.written)
+  }
+
+  @Test
+  fun `a reference committed to a multi-selection keeps the selection and tells references apart`() {
+    val state =
+      reducer.initial(document, selectedNodeId = "dot").let {
+        it.copy(selection = listOf("dot", "dot2"))
+      }
+    val edited =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.CommitProperty("dot", "fillColor", "[CONFIGURATION.theme.1]"),
+      )
+    assertIs<CommandOutcome.Accepted>(edited.lastOutcome, edited.lastOutcome.toString())
+    assertEquals(setOf("dot", "dot2"), edited.selection.toSet())
+    for (id in listOf("dot", "dot2")) {
+      assertNull(edited.document.nodes.getValue(id).properties["fillColor"], id)
+    }
+    // Both hold the same reference, so the field agrees; a different one on one node is mixed.
+    assertEquals(
+      "[CONFIGURATION.theme.1]",
+      reducer.propertyFields(edited).first { it.name == "fillColor" }.value,
+    )
+    val single =
+      reducer.reduce(
+        edited.copy(selection = listOf("dot")),
+        UiBuilderEditorEvent.CommitProperty("dot", "fillColor", "[CONFIGURATION.theme.0]"),
+      )
+    val mixed =
+      reducer.propertyFields(single.copy(selection = listOf("dot", "dot2"))).first {
+        it.name == "fillColor"
+      }
+    assertTrue(mixed.mixed)
   }
 
   @Test
