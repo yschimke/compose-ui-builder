@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import ee.schimke.watchface.wff.WffXmlParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
@@ -278,22 +279,17 @@ class WatchFaceBuiltinCoverageTest {
   }
 
   @Test
-  fun `a property of another shape is refused rather than dropped`() {
+  fun `a property of another shape is left out rather than refusing the export`() {
     val imported =
       roundTrip(
         """<PartDraw x="0" y="0" width="40" height="40"><Ellipse x="0" y="0" width="40" height="40"><Fill color="#ff00ff00"/></Ellipse></PartDraw>""",
       )
     val shape = imported.nodes(WatchFaceXmlExporter.SHAPE).single()
-    val refused =
+    val result =
       WatchFaceXmlExporter.export(
         imported.document.set(shape, "startAngle", "int", JsonPrimitive(10)),
       )
-    assertTrue(
-      assertIs<WatchFaceXmlExporter.Result.Refused>(refused)
-        .reasons
-        .single()
-        .contains("startAngle"),
-    )
+    assertFalse("startAngle" in assertIs<WatchFaceXmlExporter.Result.Emitted>(result).xml)
   }
 
   private fun UiBuilderDocument.slot(node: UiBuilderNode, name: String) =
@@ -333,9 +329,10 @@ class WatchFaceBuiltinCoverageTest {
     assertEquals(1, imported.nodes(WatchFaceXmlExporter.BOOLEAN_CONFIGURATION).size)
     assertEquals(1, imported.nodes(WatchFaceXmlExporter.FLAVORS).size)
     assertEquals(2, imported.nodes(WatchFaceXmlExporter.FLAVOR_CONFIGURATION).size)
-    // The scene's own ListConfiguration selects a layout: it stays raw, and says so.
-    assertEquals(1, imported.raws())
-    assertTrue(imported.warnings.any { "ListConfiguration x1" in it }, imported.warnings.toString())
+    // The scene's own ListConfiguration selects a layout: a container node of its own, not raw.
+    assertEquals(0, imported.raws())
+    assertEquals(1, imported.nodes(WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION).size)
+    assertEquals(1, imported.nodes(WatchFaceXmlExporter.SCENE_LIST_OPTION).size)
 
     val color = imported.nodes(WatchFaceXmlExporter.COLOR_CONFIGURATION).single()
     val options = doc.slot(color, "options")

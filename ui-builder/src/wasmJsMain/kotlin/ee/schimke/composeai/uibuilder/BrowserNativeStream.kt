@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
+import ee.schimke.composeai.uibuilder.editor.WatchFaceDesiredControls
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.serialization.json.Json
@@ -31,7 +32,9 @@ import org.jetbrains.skia.Image
  * Reports page visibility on open and on change (`{"type":"visibility"}`), so the lane throttles a
  * hidden pane instead of tearing it down, and repaints from a keyframe on return.
  */
-internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeStream {
+internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
+
+  constructor(live: UiBuilderNativeLive) : this(nativeStreamUrl(live.sessionId, live.previewId))
 
   override var frame: UiBuilderNativeFrame? by mutableStateOf(null)
     private set
@@ -50,8 +53,10 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
   private val socket: JsAny? =
     try {
       openNativeStreamSocket(
-        url = nativeStreamUrl(live.sessionId, live.previewId),
+        url = url,
         onTextMessage = ::onMessage,
+        // Every open, a reconnect included: the whole desired state goes out.
+        onOpened = { controls.opened() },
         onClosed = {
           // Only a close before the first frame is a failure; afterwards the last frame stays.
           if (!closed && frame == null && failure == null) {
@@ -83,6 +88,18 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
       },
     )
   }
+
+  /**
+   * The controls a session should have, sent once the socket is open and again on every open, so a
+   * switch flipped during the handshake is not lost.
+   */
+  private val controls = WatchFaceDesiredControls { text ->
+    val open = socket
+    open != null && !closed && sendNativeStreamText(open, text)
+  }
+
+  /** Merges a `controls` patch into the desired state; see [WatchFaceDesiredControls]. */
+  fun sendControls(patch: String) = controls.set(patch)
 
   override fun close() {
     if (closed) return
@@ -156,6 +173,7 @@ internal fun nativeStreamUrl(sessionId: String, previewId: String): String =
 private fun openNativeStreamSocket(
   url: String,
   onTextMessage: (String) -> Unit,
+  onOpened: () -> Unit,
   onClosed: () -> Unit,
 ): JsAny =
   js(
@@ -165,7 +183,7 @@ private fun openNativeStreamSocket(
         if (socket.readyState !== 1) return;
         socket.send(JSON.stringify({ type: 'visibility', visible: !document.hidden }));
       }
-      socket.onopen = function () { if (document.hidden) reportVisibility(); };
+      socket.onopen = function () { if (document.hidden) reportVisibility(); onOpened(); };
       socket.onclose = function () {
         document.removeEventListener('visibilitychange', reportVisibility);
         onClosed();
@@ -177,7 +195,24 @@ private fun openNativeStreamSocket(
     })()""",
   )
 
-private fun sendNativeStreamText(socket: JsAny, text: String): Unit =
-  js("""(function () { if (socket.readyState === 1) socket.send(text); })()""")
+private fun sendNativeStreamText(socket: JsAny, text: String): Boolean =
+  js(
+    """(function () {
+      if (socket.readyState !== 1) return false;
+      socket.send(text);
+      return true;
+    })()""",
+  )
 
 private fun closeNativeStreamSocket(socket: JsAny): Unit = js("socket.close()")
+
+/** A same-origin session socket from its server-relative path, as the dwf-preview start returns. */
+internal fun sessionSocketUrl(socketPath: String): String =
+  js(
+    """(function () {
+      var url = new URL(socketPath, window.location.href);
+      if (url.protocol === 'http:') url.protocol = 'ws:';
+      if (url.protocol === 'https:') url.protocol = 'wss:';
+      return url.toString();
+    })()""",
+  )
