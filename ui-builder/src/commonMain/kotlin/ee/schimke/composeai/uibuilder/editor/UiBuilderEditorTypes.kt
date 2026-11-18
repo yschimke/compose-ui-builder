@@ -85,6 +85,16 @@ data class UiBuilderWatchFaceStart(
   /** Same-origin path of the watch-face tab that shows the session, or null on [failure]. */
   val pagePath: String? = null,
   val failure: String? = null,
+  /**
+   * The session's frames, drawn inline in the native pane, or null where the host cannot open a
+   * socket (the tab link is then the only way to see it). The pane closes it.
+   */
+  val stream: UiBuilderNativeStream? = null,
+  /**
+   * Sends one `controls` patch to the session: the JSON of its `controls` object, for example
+   * `{"ambient":true}`. Null with no [stream].
+   */
+  val sendControls: ((String) -> Unit)? = null,
 )
 
 /**

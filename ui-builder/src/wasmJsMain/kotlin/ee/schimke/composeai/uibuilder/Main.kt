@@ -3135,7 +3135,28 @@ internal suspend fun requestWatchFacePreview(
 
 @kotlinx.serialization.Serializable private class WatchFaceStartBody(val wffXml: String)
 
-@kotlinx.serialization.Serializable private class WatchFaceStarted(val pagePath: String)
+@kotlinx.serialization.Serializable
+private class WatchFaceStarted(val pagePath: String, val socketPath: String)
 
 @kotlinx.serialization.Serializable
 private class WatchFaceRefusal(val reasons: List<String> = emptyList())
+
+/**
+ * Why the host's real watch-face runtime cannot run, as `CODE: reason`, or null when it can. The
+ * status route is read-gated like the design itself; a failed read is no reason either way.
+ */
+internal suspend fun requestWatchFaceRuntimeStatus(designId: String): String? {
+  val body = fetchText("/api/ui-builder/v1/designs/$designId/dwf-preview/status")
+  val status = nativePreviewJson.decodeFromString(WatchFaceStatus.serializer(), body)
+  if (status.available) return null
+  return listOfNotNull(status.code, status.reason).joinToString(": ").ifBlank {
+    "the watch-face runtime is not available on this host"
+  }
+}
+
+@kotlinx.serialization.Serializable
+private class WatchFaceStatus(
+  val available: Boolean = false,
+  val code: String? = null,
+  val reason: String? = null,
+)

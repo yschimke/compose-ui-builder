@@ -31,7 +31,9 @@ import org.jetbrains.skia.Image
  * Reports page visibility on open and on change (`{"type":"visibility"}`), so the lane throttles a
  * hidden pane instead of tearing it down, and repaints from a keyframe on return.
  */
-internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeStream {
+internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
+
+  constructor(live: UiBuilderNativeLive) : this(nativeStreamUrl(live.sessionId, live.previewId))
 
   override var frame: UiBuilderNativeFrame? by mutableStateOf(null)
     private set
@@ -50,7 +52,7 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
   private val socket: JsAny? =
     try {
       openNativeStreamSocket(
-        url = nativeStreamUrl(live.sessionId, live.previewId),
+        url = url,
         onTextMessage = ::onMessage,
         onClosed = {
           // Only a close before the first frame is a failure; afterwards the last frame stays.
@@ -82,6 +84,12 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
         append(",\"pointerType\":\"mouse\"}")
       },
     )
+  }
+
+  /** One raw text message to the session, for a lane whose client messages are not input. */
+  fun sendText(text: String) {
+    val open = socket ?: return
+    if (!closed) sendNativeStreamText(open, text)
   }
 
   override fun close() {
@@ -181,3 +189,14 @@ private fun sendNativeStreamText(socket: JsAny, text: String): Unit =
   js("""(function () { if (socket.readyState === 1) socket.send(text); })()""")
 
 private fun closeNativeStreamSocket(socket: JsAny): Unit = js("socket.close()")
+
+/** A same-origin session socket from its server-relative path, as the dwf-preview start returns. */
+internal fun sessionSocketUrl(socketPath: String): String =
+  js(
+    """(function () {
+      var url = new URL(socketPath, window.location.href);
+      if (url.protocol === 'http:') url.protocol = 'ws:';
+      if (url.protocol === 'https:') url.protocol = 'wss:';
+      return url.toString();
+    })()""",
+  )
