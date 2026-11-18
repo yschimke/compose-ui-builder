@@ -1875,3 +1875,62 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderTrashedDesign
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/WatchFaceDesignCreationKt {
+	public static final fun createDesignFromWatchFaceXml (Lee/schimke/composeai/uibuilder/service/UiBuilderServicePort;Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun createDesignFromWatchFaceXml$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServicePort;Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateOptions {
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun getWffVersion ()I
+	public final fun newBuilder ()Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateOptions$Builder;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateOptions$Builder {
+	public fun <init> ()V
+	public final fun build ()Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateOptions;
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun getWffVersion ()I
+	public final fun setDesignId (Ljava/lang/String;)V
+	public final fun setTitle (Ljava/lang/String;)V
+	public final fun setWffVersion (I)V
+}
+
+public abstract interface class ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult {
+}
+
+public final class ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Created : ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult {
+	public fun <init> (Ljava/lang/String;JLjava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;JLjava/util/List;)Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Created;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Created;Ljava/lang/String;JLjava/util/List;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Created;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getRevision ()J
+	public final fun getWarnings ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Failed : ee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult {
+	public fun <init> (Ljava/util/List;Ljava/lang/Integer;Ljava/lang/Integer;Lee/schimke/composeai/uibuilder/protocol/ServiceErrorCodeV1;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/Integer;Ljava/lang/Integer;Lee/schimke/composeai/uibuilder/protocol/ServiceErrorCodeV1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun component4 ()Lee/schimke/composeai/uibuilder/protocol/ServiceErrorCodeV1;
+	public final fun copy (Ljava/util/List;Ljava/lang/Integer;Ljava/lang/Integer;Lee/schimke/composeai/uibuilder/protocol/ServiceErrorCodeV1;)Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Failed;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Failed;Ljava/util/List;Ljava/lang/Integer;Ljava/lang/Integer;Lee/schimke/composeai/uibuilder/protocol/ServiceErrorCodeV1;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/WatchFaceXmlCreateResult$Failed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCode ()Lee/schimke/composeai/uibuilder/protocol/ServiceErrorCodeV1;
+	public final fun getColumn ()Ljava/lang/Integer;
+	public final fun getLine ()Ljava/lang/Integer;
+	public final fun getReasons ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
