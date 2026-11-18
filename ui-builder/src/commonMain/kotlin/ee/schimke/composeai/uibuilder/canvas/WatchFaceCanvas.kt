@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -89,8 +90,20 @@ internal fun WatchFaceCanvas(
           "RECTANGLE" -> RoundedCornerShape(percent = 8)
           else -> RoundedCornerShape(0.dp)
         }
+      // The editing canvas draws the screen's shape (a faint outline, and the background inside
+      // it) but does not cut the parts to it, so content outside the circle can be seen and
+      // selected. The preview and the exports are cut.
+      val editing = LocalUiBuilderEditingCanvas.current
+      val background = node.color("backgroundColor", Color.Black)
       BoxWithConstraints(
-        modifier.clip(clip).background(node.color("backgroundColor", Color.Black)),
+        if (editing)
+          modifier.background(background, clip).drawWithContent {
+            drawContent()
+            if (clip == CircleShape) {
+              drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
+            }
+          }
+        else modifier.clip(clip).background(background),
       ) {
         val scale = maxWidth.value / width
         CompositionLocalProvider(

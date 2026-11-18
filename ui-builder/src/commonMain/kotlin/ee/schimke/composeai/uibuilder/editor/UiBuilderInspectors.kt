@@ -61,6 +61,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -83,6 +84,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.boardItemCount
@@ -100,6 +102,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.CommentsInspector
@@ -245,6 +248,8 @@ internal fun PropertyInspector(
       // Swatches in the property controls show the design's colours, not the editor chrome's.
       CompositionLocalProvider(
         LocalInspectorColorScheme provides inspectorColorScheme(themeSettings),
+        LocalInspectorColourConfigurations provides
+          remember(state.document) { watchFaceColourConfigurationReferences(state.document) },
       ) {
         InspectorBody(
           state = state,
@@ -2257,6 +2262,13 @@ private fun ColorPropertyControl(
   textField: @Composable () -> Unit,
 ) {
   val scheme = LocalInspectorColorScheme.current ?: MaterialTheme.colorScheme
+  // Watch Face Format has no Material roles: a face's colours are literals (or its own
+  // `ColorConfiguration` options), and a role name written into the XML is not a WFF colour.
+  val watchFace =
+    LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WATCH_FACE.wireValue
+  val roles = if (watchFace) emptyList() else field.choices
+  val configurationColours =
+    if (watchFace) LocalInspectorColourConfigurations.current else emptyList()
   // Only for one node with one value: a multi-selection's colours sit over different backgrounds,
   // and a single ratio for them all would be true of at most one.
   val contrast = if (field.nodeCount == 1 && !field.mixed) contrastOf(scheme) else null
@@ -2275,7 +2287,7 @@ private fun ColorPropertyControl(
     // A role this field does not list (another catalog's, or one only a different property takes)
     // would be refused, so it is not offered; a literal is drawable on any colour property.
     val recent = recentColours.filter {
-      (it.startsWith("#") || it in field.choices) && swatchColor(it, scheme) != null
+      (it.startsWith("#") || it in roles) && swatchColor(it, scheme) != null
     }
     if (recent.isNotEmpty()) {
       Text(
@@ -2285,7 +2297,7 @@ private fun ColorPropertyControl(
       )
       RecentColourRow(recent, field, scheme, commit)
     }
-    val tokens = field.choices.filter { swatchColor(it, scheme) != null }
+    val tokens = roles.filter { swatchColor(it, scheme) != null }
     if (tokens.isNotEmpty()) {
       Text(
         "Theme colours",
@@ -2293,6 +2305,33 @@ private fun ColorPropertyControl(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       ThemeRoleChips(tokens, field, scheme, commit)
+    }
+    if (configurationColours.isNotEmpty()) {
+      Text(
+        "Face colour options",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+          configurationColours.forEach { reference ->
+            val selected = reference == field.value
+            FilterChip(
+              selected = selected,
+              onClick = { commit(reference) },
+              label = { Text(reference, style = MaterialTheme.typography.labelMedium) },
+              modifier =
+                Modifier.semantics {
+                  contentDescription = "Use $reference for ${field.label.lowercase()}"
+                  this.selected = selected
+                },
+            )
+          }
+        }
+      }
     }
     Text(
       "Colours",
@@ -2697,3 +2736,27 @@ internal data class SuggestionPanel(
 internal const val WEAR_SCREEN_PANES_LABEL = "Wear panes"
 
 internal const val WEAR_TILE_PANE_LABEL = "Pixel Watch tile"
+
+/** The `[CONFIGURATION.<id>.<n>]` references a Watch Face Format face's colour options offer. */
+internal val LocalInspectorColourConfigurations =
+  staticCompositionLocalOf<List<String>> { emptyList() }
+
+/**
+ * For each `ColorConfiguration` of the face, one reference per colour slot of its first option
+ * (every option of a configuration defines the same slots): what a Fill or Stroke colour may name
+ * in place of a literal so the face follows the user's chosen option.
+ */
+internal fun watchFaceColourConfigurationReferences(document: UiBuilderDocument): List<String> =
+  document.nodes.values
+    .filter { it.componentId == WatchFaceXmlExporter.COLOR_CONFIGURATION }
+    .sortedBy { it.id }
+    .flatMap { configuration ->
+      val id = configuration.stringValue("id", "")
+      val slots =
+        configuration.slots["options"]
+          .orEmpty()
+          .firstNotNullOfOrNull { document.nodes[it]?.stringValue("colors", "")?.ifBlank { null } }
+          ?.split(' ', '\n')
+          ?.count { it.isNotBlank() } ?: 0
+      if (id.isEmpty()) emptyList() else (0 until slots).map { "[CONFIGURATION.$id.$it]" }
+    }
