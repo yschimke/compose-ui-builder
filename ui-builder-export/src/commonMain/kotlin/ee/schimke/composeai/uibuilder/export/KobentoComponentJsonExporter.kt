@@ -70,6 +70,12 @@ object KobentoComponentJsonExporter {
       val width = number(document.environment["widthDp"], "environment.widthDp", 360.0)
       val height = number(document.environment["heightDp"], "environment.heightDp", 640.0)
       if (width <= 0 || height <= 0) errors += "environment: the design needs a positive size"
+      // As RemoteDocumentJsonExporter: what the canvas applies and this lowering does not write is
+      // refused, so the export never shows a different arrangement or ground than the editor.
+      if (document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl")
+        errors += "environment.layoutDirection: RTL lowering is not available"
+      if (document.environment["background"]?.takeUnless { it is JsonNull } != null)
+        errors += "environment.background: background lowering is not available"
       val variables = buildJsonObject {
         document.stateVariables.entries
           .sortedBy { it.key }

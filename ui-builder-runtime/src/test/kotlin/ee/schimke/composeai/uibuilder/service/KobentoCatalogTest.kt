@@ -18,10 +18,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The Kobento catalog is data this build has never heard of: a `ui-builder.json` generated from a
- * snapshot of Kobento's component library (captured from `yschimke/kobento-catalog`), with
- * every component a builtin because none has a Kotlin call site. A design authored against it
- * validates in the runtime and exports as Kobento component JSON. See
- * `docs/design/UI_BUILDER_KOBENTO.md`.
+ * snapshot of Kobento's component library (captured from `yschimke/kobento-catalog`), with every
+ * component a builtin because none has a Kotlin call site. A design authored against it validates
+ * in the runtime and exports as Kobento component JSON. See `docs/design/UI_BUILDER_KOBENTO.md`.
  */
 class KobentoCatalogTest {
   private val fixtures: File =
@@ -245,6 +244,28 @@ class KobentoCatalogTest {
       listOf(
         "nodes.gauge.properties.value: system values are not lowered to Kobento yet",
         "nodes.warmer.eventBindings.click[0].amount: only a literal number is lowered to Kobento",
+      ),
+      refused.reasons,
+    )
+  }
+
+  @Test
+  fun `an RTL design or an environment background is refused`() {
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    val environment =
+      Json.parseToJsonElement(
+          """{"widthDp": 360, "heightDp": 320, "density": 1.0, "layoutDirection": "rtl",
+            "background": "#FF000000"}""",
+        )
+        .jsonObject
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(design.copy(environment = environment)),
+      )
+    assertEquals(
+      listOf(
+        "environment.layoutDirection: RTL lowering is not available",
+        "environment.background: background lowering is not available",
       ),
       refused.reasons,
     )
