@@ -92,10 +92,12 @@ internal fun WatchFaceCanvas(
         )
       val swaying = remember(document.nodes) { document.wffHasGyro() }
       // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
+      val settings = remember(document.nodes) { document.wffConfigurationDefaults() }
       val clock =
-        remember(node, fixedTime, live, swaying) {
-          live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
-            ?: WffPreviewContext.of(node.string("previewTime"), fixedTime)
+        remember(node, fixedTime, live, swaying, settings) {
+          (live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
+              ?: WffPreviewContext.of(node.string("previewTime"), fixedTime))
+            .withConfiguration(settings)
         }
       // Interactive and ambient cross-fade as the watch switches, rather than cut: while the
       // switch runs both are drawn, the mode being entered over the one being left.
@@ -336,13 +338,10 @@ internal fun WatchFaceCanvas(
         }
       }
     }
-    // A condition draws its first branch, the one a preview with no data takes.
+    // A condition draws the branch the watch would take: see [wffConditionBranch].
     WatchFaceXmlExporter.CONDITION ->
       Box(modifier) {
-        node.slots["branches"]
-          .orEmpty()
-          .firstOrNull { document.nodes[it]?.componentId != WatchFaceXmlExporter.RAW }
-          ?.let { id -> child(id, Modifier.fillMaxSize()) }
+        wffConditionBranch(document, node, preview)?.let { id -> child(id, Modifier.fillMaxSize()) }
       }
     WatchFaceXmlExporter.COMPARE,
     WatchFaceXmlExporter.DEFAULT,
