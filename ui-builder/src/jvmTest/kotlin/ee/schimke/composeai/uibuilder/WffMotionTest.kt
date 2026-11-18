@@ -24,6 +24,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.skia.Bitmap
 
 /**
@@ -55,6 +57,33 @@ class WffMotionTest {
     assertEquals(0f, flat.float("x"))
     val tilted = wffTransformed(document, group, WffPreviewContext().withTilt(4.0, 0.0))
     assertEquals(40f, tilted.float("x"))
+    // A gyro's alpha is the level the tilt gives the part, zero included; not an offset.
+    val fading =
+      document.copy(
+        nodes =
+          document.nodes +
+            ("tilt" to
+              document.nodes.getValue("tilt").let {
+                it.copy(
+                  properties =
+                    JsonObject(
+                      it.properties +
+                        ("alpha" to
+                          JsonObject(
+                            mapOf(
+                              "type" to JsonPrimitive("string"),
+                              "value" to JsonPrimitive("abs([ACCELEROMETER_ANGLE_X]) * 10"),
+                            ),
+                          )),
+                    ),
+                )
+              }),
+      )
+    assertEquals(
+      40f,
+      wffTransformed(fading, group, WffPreviewContext().withTilt(4.0, 0.0)).float("alpha"),
+    )
+    assertEquals(0f, wffTransformed(fading, group, WffPreviewContext()).float("alpha", 255f))
   }
 
   @Test

@@ -14,9 +14,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * adds to it with `mode="BY"`. A `<Transform>` held as `wff/raw` XML, as a design imported before
  * the transform had a builtin holds it, is read as the typed node an import would make of it.
  *
- * A `wff/gyro` then offsets the attributes it names (`x`, `y`, `scaleX`, `scaleY`, `angle`,
- * `alpha`) by its expressions of the tilt in [preview] ([WffPreviewContext.swaying] on a live
- * canvas, zero on a frozen one, where a flat watch leaves the part where it is).
+ * A `wff/gyro` then offsets the attributes it names (`x`, `y`, `scaleX`, `scaleY`, `angle`) by its
+ * expressions of the tilt in [preview], and sets `alpha` to its expression's level
+ * ([WffPreviewContext.swaying] on a live canvas, zero on a frozen one, where a flat watch leaves
+ * the part where it is).
  */
 internal fun wffTransformed(
   document: UiBuilderDocument,
@@ -67,10 +68,15 @@ internal fun wffTransformed(
   for (gyro in gyros) {
     for (name in WatchFaceXmlExporter.GYRO_ATTRIBUTES) {
       val expression = gyro.string(name).ifEmpty { null } ?: continue
-      val offset = evaluateWffExpression(expression, preview)?.asNumber() ?: continue
-      if (offset == 0.0) continue
+      val value = evaluateWffExpression(expression, preview)?.asNumber() ?: continue
+      // `alpha` is the transparency the tilt gives the part, 0 to 255; the rest are offsets.
+      if (name == "alpha") {
+        set(name, value.coerceIn(0.0, 255.0))
+        continue
+      }
+      if (value == 0.0) continue
       val current = node.copy(properties = properties)
-      set(name, current.float(name, wffUnsetDefault(document, name)) + offset)
+      set(name, current.float(name, wffUnsetDefault(document, name)) + value)
     }
   }
   return if (properties === node.properties) node else node.copy(properties = properties)
