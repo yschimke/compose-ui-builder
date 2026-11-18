@@ -423,7 +423,6 @@ object WatchFaceXmlImporter {
             put("layoutDirection", "ltr")
             put("windowPosture", "flat")
             put("browserZoomPercent", 100)
-            put("fixedTime", "2024-05-16T10:08:32Z")
             put("animations", "settled")
             put("networkAccess", false)
             put(

@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvas.isWatchFace
+import ee.schimke.composeai.uibuilder.canvas.withWffAmbient
 import ee.schimke.composeai.uibuilder.capability.CatalogPreview
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetGrid
@@ -507,10 +509,38 @@ internal fun UiBuilderVariantPane.mobileTabLabel(): String =
       id.startsWith(DEVICE_PANE_ID_PREFIX) ||
       id.startsWith(LAUNCHER_PANE_ID_PREFIX)
   )
-    label.substringBefore(" · ")
+    label.substringBefore(" · ") + if (id.endsWith(WFF_AMBIENT_PANE_ID_SUFFIX)) " · Ambient" else ""
   else label
 
 private const val CURRENT_FRAME_PANE_ID = "preview-current"
+
+/** What an ambient twin's id ends with; see [withWffAmbientTwins]. */
+internal const val WFF_AMBIENT_PANE_ID_SUFFIX = "-ambient"
+
+/**
+ * For a watch face, every pane followed by the same frame in ambient mode, so the preview shows
+ * Interactive and Ambient side by side: the ambient pane applies the design's `<Variant
+ * mode="AMBIENT">` overrides, hides what they make invisible and draws on black. Other designs have
+ * no ambient mode and are returned as they are.
+ */
+internal fun List<UiBuilderVariantPane>.withWffAmbientTwins(
+  document: UiBuilderDocument,
+): List<UiBuilderVariantPane> {
+  if (!document.isWatchFace()) return this
+  return flatMap { pane ->
+    listOf(
+      pane.copy(
+        label = "${pane.label} · Interactive",
+        document = pane.document.withWffAmbient(false),
+      ),
+      pane.copy(
+        id = pane.id + WFF_AMBIENT_PANE_ID_SUFFIX,
+        label = "${pane.label} · Ambient",
+        document = pane.document.withWffAmbient(true),
+      ),
+    )
+  }
+}
 
 private const val DEVICE_PANE_ID_PREFIX = "variant-device-"
 

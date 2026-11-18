@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -8,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.rcplayer.compose.LocalRcTimeSource
 import ee.schimke.composeai.rcplayer.runtime.RcTimeSnapshot
 import ee.schimke.composeai.rcplayer.runtime.RcTimeSource
@@ -35,6 +38,32 @@ internal fun PreviewTimeToggle(
         contentDescription = if (running) "Freeze preview time" else "Run preview time"
       },
   )
+}
+
+/**
+ * Interactive or Ambient, for a watch face's editing canvas: the mode the face is drawn in. The
+ * Preview pane shows both side by side; this is the one frame the author edits.
+ */
+@Composable
+internal fun WffAmbientToggle(
+  ambient: Boolean,
+  onAmbientChange: (Boolean) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    FilterChip(
+      selected = !ambient,
+      onClick = { onAmbientChange(false) },
+      label = { Text("Interactive") },
+      modifier = Modifier.semantics { contentDescription = "Draw the face interactive" },
+    )
+    FilterChip(
+      selected = ambient,
+      onClick = { onAmbientChange(true) },
+      label = { Text("Ambient") },
+      modifier = Modifier.semantics { contentDescription = "Draw the face ambient" },
+    )
+  }
 }
 
 /**
