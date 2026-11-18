@@ -82,6 +82,8 @@ internal fun WatchFaceCanvas(
             (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
           )
         }
+      val configurations =
+        remember(document) { WffConfigurationState(document.wffConfigurations()) }
       val clip =
         when (node.string("clipShape").ifEmpty { "CIRCLE" }) {
           "CIRCLE" -> CircleShape
@@ -90,12 +92,13 @@ internal fun WatchFaceCanvas(
           else -> RoundedCornerShape(0.dp)
         }
       BoxWithConstraints(
-        modifier.clip(clip).background(node.color("backgroundColor", Color.Black)),
+        modifier.clip(clip).background(node.wffColor("backgroundColor", Color.Black)),
       ) {
         val scale = maxWidth.value / width
         CompositionLocalProvider(
           LocalWffFace provides WffFace(width, height, scale),
           LocalWffPreview provides context,
+          LocalWffConfigurations provides configurations,
         ) {
           Box(Modifier.fillMaxSize()) {
             placed("content").forEach { id ->
@@ -129,8 +132,8 @@ internal fun WatchFaceCanvas(
             val strokeNode = paint(WatchFaceXmlExporter.STROKE)
             WffShapeDrawing(
               kind = shape.string("shape").ifEmpty { "ellipse" },
-              fill = fillNode?.color("color", Color.Unspecified) ?: Color.Unspecified,
-              stroke = strokeNode?.color("color", Color.Unspecified) ?: Color.Unspecified,
+              fill = fillNode?.wffColor("color", Color.Unspecified) ?: Color.Unspecified,
+              stroke = strokeNode?.wffColor("color", Color.Unspecified) ?: Color.Unspecified,
               strokeWidth = (strokeNode?.float("thickness", 1f) ?: 1f) * face.dpPerPx,
               ends = listOf("startX", "startY", "endX", "endY").map { shape.float(it) },
               box = shapeBox(shape),
@@ -142,8 +145,8 @@ internal fun WatchFaceCanvas(
             listOf(
               WffShapeDrawing(
                 kind = node.string("shape").ifEmpty { "ellipse" },
-                fill = node.color("fillColor", Color.Unspecified),
-                stroke = node.color("strokeColor", Color.Unspecified),
+                fill = node.wffColor("fillColor", Color.Unspecified),
+                stroke = node.wffColor("strokeColor", Color.Unspecified),
                 strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx,
                 ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) },
                 box = null,
@@ -179,7 +182,7 @@ internal fun WatchFaceCanvas(
       WffText(
         modifier,
         text,
-        node.color("color", Color.White),
+        node.wffColor("color", Color.White),
         (node.float("fontSize", 32f) * face.dpPerPx).sp,
         node.string("align"),
       )
@@ -192,14 +195,14 @@ internal fun WatchFaceCanvas(
           preview,
           twelveHour = node.string("hourFormat") == "12",
         ),
-        node.color("color", Color.White),
+        node.wffColor("color", Color.White),
         (node.float("fontSize", 48f) * face.dpPerPx).sp,
         node.string("align").ifEmpty { "CENTER" },
       )
     WatchFaceXmlExporter.ANALOG_CLOCK -> {
       val hands = node.slots["hands"].orEmpty().mapNotNull { document.nodes[it] }
       // Resolved here: a colour token needs the composition, the draw lambda has none.
-      val tints = hands.map { it.color("tintColor", Color.White) }
+      val tints = hands.map { it.wffColor("tintColor", Color.White) }
       Box(
         modifier.drawBehind {
           hands.forEachIndexed { index, hand ->
@@ -253,6 +256,34 @@ internal fun WatchFaceCanvas(
             )
           }
         }
+      }
+    }
+    // A configuration container draws the parts of the option selected now; the others are not
+    // drawn, as the watch does not draw them.
+    WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION,
+    WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION -> {
+      val state = LocalWffConfigurations.current
+      val options =
+        node.slots["options"]
+          .orEmpty()
+          .mapNotNull { document.nodes[it] }
+          .filter {
+            it.componentId == WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION ||
+              it.componentId == WatchFaceXmlExporter.SCENE_LIST_OPTION
+          }
+      val id = node.wffValue("id")
+      val shown =
+        state.selected(id)
+          ?: if (node.componentId == WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION) "TRUE"
+          else options.firstOrNull()?.wffValue("id")
+      Box(modifier) {
+        options
+          .firstOrNull { it.wffValue("id") == shown }
+          ?.slots
+          ?.get("content")
+          .orEmpty()
+          .filter { document.nodes[it]?.componentId != WatchFaceXmlExporter.RAW }
+          .forEach { childId -> child(childId, place(childId)) }
       }
     }
     // A condition draws its first branch, the one a preview with no data takes.

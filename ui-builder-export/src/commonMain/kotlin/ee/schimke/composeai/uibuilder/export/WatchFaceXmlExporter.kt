@@ -75,6 +75,18 @@ object WatchFaceXmlExporter {
   const val FLAVOR_CONFIGURATION = "wff/flavor-configuration"
 
   /**
+   * The configuration-driven containers of the `<Scene>`: a `BooleanConfiguration` or
+   * `ListConfiguration` holding one `BooleanOption` / `ListOption` per value, each holding the
+   * parts shown while that option is selected. They share their tag with the declarations under
+   * `<UserConfigurations>` ([BOOLEAN_CONFIGURATION], [LIST_CONFIGURATION]) and are told apart by
+   * where they sit.
+   */
+  const val SCENE_BOOLEAN_CONFIGURATION = "wff/scene-boolean-configuration"
+  const val SCENE_BOOLEAN_OPTION = "wff/scene-boolean-option"
+  const val SCENE_LIST_CONFIGURATION = "wff/scene-list-configuration"
+  const val SCENE_LIST_OPTION = "wff/scene-list-option"
+
+  /**
    * An element this vocabulary has no builtin for (or cannot write exactly), held as its canonical
    * XML in the `xml` property and written back verbatim at the same position. A comment is held the
    * same way.
@@ -447,6 +459,8 @@ object WatchFaceXmlExporter {
       DIGITAL_CLOCK,
       COMPLICATION_SLOT,
       CONDITION,
+      SCENE_BOOLEAN_CONFIGURATION,
+      SCENE_LIST_CONFIGURATION,
     )
   internal val SCENE_CONTENT = DRAWABLE + VARIANT
 
@@ -830,6 +844,12 @@ object WatchFaceXmlExporter {
           "complicationSlotIds",
         ),
       BOOLEAN_CONFIGURATION to simple("BooleanConfiguration", RAW_ONLY, *CONFIGURATION_ATTRIBUTES),
+      SCENE_BOOLEAN_CONFIGURATION to
+        simple("BooleanConfiguration", mapOf("options" to setOf(SCENE_BOOLEAN_OPTION)), "id"),
+      SCENE_BOOLEAN_OPTION to simple("BooleanOption", mapOf("content" to DRAWABLE), "id"),
+      SCENE_LIST_CONFIGURATION to
+        simple("ListConfiguration", mapOf("options" to setOf(SCENE_LIST_OPTION)), "id"),
+      SCENE_LIST_OPTION to simple("ListOption", mapOf("content" to DRAWABLE), "id"),
       FLAVORS to simple("Flavors", mapOf("content" to setOf(FLAVOR)), "defaultValue"),
       FLAVOR to
         simple(

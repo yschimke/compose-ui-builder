@@ -159,6 +159,10 @@ internal object WatchFaceCatalogShape {
           "complicationSlotIds",
         ) + EXTRAS,
       WatchFaceXmlExporter.BOOLEAN_CONFIGURATION to CONFIGURATION,
+      WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION to strings("id") + EXTRAS,
+      WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION to strings("id") + EXTRAS,
+      WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION to strings("id") + EXTRAS,
+      WatchFaceXmlExporter.SCENE_LIST_OPTION to strings("id") + EXTRAS,
       WatchFaceXmlExporter.FLAVORS to strings("defaultValue") + EXTRAS,
       WatchFaceXmlExporter.FLAVOR to
         strings("id", "displayName", "screenReaderText", "icon") + EXTRAS,

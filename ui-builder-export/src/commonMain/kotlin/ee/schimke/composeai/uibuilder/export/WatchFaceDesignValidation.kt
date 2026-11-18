@@ -431,6 +431,10 @@ object WatchFaceDesignValidation {
       WatchFaceXmlExporter.FLAVORS -> "Flavors"
       WatchFaceXmlExporter.FLAVOR -> "Flavor"
       WatchFaceXmlExporter.FLAVOR_CONFIGURATION -> "Configuration"
+      WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION -> "BooleanConfiguration"
+      WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION -> "BooleanOption"
+      WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION -> "ListConfiguration"
+      WatchFaceXmlExporter.SCENE_LIST_OPTION -> "ListOption"
       else -> null
     }
 

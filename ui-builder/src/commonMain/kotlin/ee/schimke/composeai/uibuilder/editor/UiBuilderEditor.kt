@@ -87,6 +87,8 @@ import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
+import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
+import ee.schimke.composeai.uibuilder.canvas.withWffConfigurationSelection
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
@@ -1471,9 +1473,15 @@ fun UiBuilderEditor(
       ?: draggedNodeId?.let { state.document.nodes[it]?.componentId }
   // What every design surface draws: the document, with each linked tunable's slider value in
   // place of what its targets hold. The same instance as the document while nothing is tuned.
+  // The watch-face configurations the author is previewing: editor state, not an edit. Drawn in
+  // place of each `defaultValue`; the design and its exported XML keep the author's own.
+  var wffConfigSelection by
+    remember(state.document.id) { mutableStateOf(emptyMap<String, String>()) }
   val drawnDocument =
-    remember(state.document, state.tunables, state.tunedValues) {
-      state.document.tuned(state.tunables, state.tunedValues)
+    remember(state.document, state.tunables, state.tunedValues, wffConfigSelection) {
+      state.document
+        .tuned(state.tunables, state.tunedValues)
+        .withWffConfigurationSelection(wffConfigSelection)
     }
   // The strip beside the design: claimed devices plus enabled unstored axes, computed from the
   // design.
@@ -1544,7 +1552,7 @@ fun UiBuilderEditor(
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
   // letting time run in a preview is not an edit to the design.
   var previewTimeRunning by remember { mutableStateOf(false) }
-  val previewPane: @Composable (Modifier) -> Unit = { modifier ->
+  val previewPaneBody: @Composable (Modifier) -> Unit = { modifier ->
     if (documentBackedPreview != null) {
       RemoteDocumentDesignPreviewPane(
         document = drawnDocument,
@@ -1569,6 +1577,24 @@ fun UiBuilderEditor(
         timeRunning = previewTimeRunning,
         onTimeRunningChange = { previewTimeRunning = it },
       )
+    }
+  }
+  val hasWffConfigurations =
+    remember(state.document) { state.document.wffConfigurations().isNotEmpty() }
+  val wffPicker: @Composable (Modifier) -> Unit = { pickerModifier ->
+    WffConfigurationPicker(
+      document = state.document,
+      selection = wffConfigSelection,
+      onSelect = { id, option -> wffConfigSelection = wffConfigSelection + (id to option) },
+      onReset = { wffConfigSelection = emptyMap() },
+      modifier = pickerModifier,
+    )
+  }
+  // A watch face's configurations are picked above the preview, beside the time controls.
+  val previewPane: @Composable (Modifier) -> Unit = { modifier ->
+    Column(modifier) {
+      wffPicker(Modifier.fillMaxWidth())
+      previewPaneBody(Modifier.weight(1f).fillMaxWidth())
     }
   }
   // One preview tab's frame, drawn alone and fitted to the screen, by whichever pane the catalog
@@ -1728,7 +1754,7 @@ fun UiBuilderEditor(
             ),
           )
       }
-  val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+  val designCanvasBody: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     DisposableEffect(Unit) {
       canvasesShown++
       onDispose { canvasesShown-- }
@@ -1985,6 +2011,20 @@ fun UiBuilderEditor(
         contentAlignment = alignment,
         modifier = modifier,
       )
+    }
+  }
+  // A watch face's configurations are also pickable on the editing canvas, along its bottom edge.
+  val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+    Box(modifier) {
+      designCanvasBody(Modifier.fillMaxSize(), alignment)
+      if (hasWffConfigurations)
+        Surface(
+          Modifier.align(Alignment.BottomCenter).padding(bottom = 36.dp),
+          shape = MaterialTheme.shapes.medium,
+          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        ) {
+          wffPicker(Modifier)
+        }
     }
   }
   // The Tune card floats over the canvas rather than sitting in a dock, so a slider and the design
