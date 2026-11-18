@@ -16,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
@@ -26,7 +25,6 @@ import androidx.compose.ui.layout.MultiMeasureLayout
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Constraints
@@ -249,15 +247,21 @@ fun CanvasDocumentHost(
         onStateSnapshot?.invoke(state.toMap())
       },
       recordBounds = { path, coordinates ->
-        val unit = coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
+        // The box the node covers on screen: its four corners through every transform above it,
+        // so a rotated part (a watch hand, a turned group) is wrapped rather than measured as an
+        // unrotated rectangle at its pre-rotation size.
+        val w = coordinates.size.width.toFloat()
+        val h = coordinates.size.height.toFloat()
+        val corners =
+          listOf(Offset.Zero, Offset(w, 0f), Offset(0f, h), Offset(w, h)).map {
+            coordinates.localToRoot(it)
+          }
         val bounds =
           Rect(
-            offset = coordinates.positionInRoot(),
-            size =
-              Size(
-                coordinates.size.width * unit.x,
-                coordinates.size.height * unit.y,
-              ),
+            corners.minOf { it.x },
+            corners.minOf { it.y },
+            corners.maxOf { it.x },
+            corners.maxOf { it.y },
           )
         lastMeasuredPath[path.nodeId] = path
         // Measured again, so whatever left before this was a recycle rather than a departure.

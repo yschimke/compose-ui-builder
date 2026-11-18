@@ -100,6 +100,27 @@ class WatchFaceDesignValidationTest {
       )
     assertTrue(colour.single().contains("tintColor"), colour.toString())
 
+    // A Material role is not a Watch Face Format colour: refused, never written into the XML.
+    val role =
+      reasons(
+        document()
+          .with(WatchFaceXmlExporter.CLOCK_HAND, "tintColor", "color", JsonPrimitive("primary")),
+      )
+    assertTrue(role.single().contains("tintColor"), role.toString())
+
+    // A colour option index that is not an Int is refused rather than left to fail later.
+    val hugeIndex =
+      reasons(
+        document()
+          .with(
+            WatchFaceXmlExporter.CLOCK_HAND,
+            "tintColor",
+            "string",
+            JsonPrimitive("[CONFIGURATION.theme.2147483648]"),
+          ),
+      )
+    assertTrue(hugeIndex.single().contains("tintColor"), hugeIndex.toString())
+
     // An expression is the format's own language: written as it is.
     val expression =
       document()

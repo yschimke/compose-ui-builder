@@ -161,7 +161,8 @@ internal class WffConfigurationState(configurations: List<WffConfiguration>) {
     val configuration = byId[match.groupValues[1]] ?: return null
     if (configuration.kind != WffConfigurationKind.COLOR) return null
     val option = selected(configuration.id)?.let(configuration::option) ?: return null
-    return option.colors.getOrNull(match.groupValues[2].toInt())
+    // An index that is not an Int cannot name a colour; it resolves to nothing, not an exception.
+    return match.groupValues[2].toIntOrNull()?.let(option.colors::getOrNull)
   }
 
   private companion object {
@@ -174,7 +175,9 @@ internal val LocalWffConfigurations = compositionLocalOf { WffConfigurationState
 /** A property of a watch face node, from the property itself or else the import's `wffExtras`. */
 internal fun UiBuilderNode.wffValue(name: String): String {
   val own = string(name)
-  if (own.isNotEmpty()) return own
+  // A property that is set, empty included, is authoritative: `wffExtras` only holds what the node
+  // has no property for, so a literal committed over a reference is not shadowed by a stale one.
+  if (own.isNotEmpty() || name in properties) return own
   val extras = string("wffExtras")
   if (extras.isEmpty()) return ""
   val parsed = runCatching { Json.parseToJsonElement(extras) as? JsonObject }.getOrNull()
