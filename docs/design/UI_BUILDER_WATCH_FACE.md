@@ -154,7 +154,7 @@ children (`Outline`), `Text` with comments.
 **Edits are checked where they are made.** The design service refuses, with the reason and the
 design's real revision: a raw node's `xml` that is not well formed, is not one element or comment,
 is not the element it replaces, is not allowed under its parent, or needs a later format version
-(`WatchFaceDesignValidation`, using the vendored `wff-core` 0.2.1 schema); deleting the scene
+(`WatchFaceDesignValidation`, using the `wff-core` schema); deleting the scene
 root or a node the schema requires (`UiBuilderCatalogExecutor.validateDelete`, from the schema's minimum
 occurrences: the last `ListOption` of a `ListConfiguration`); a negative size, a non-numeric number, a malformed colour; a duplicate `slotId`; a
 complication type newer than the face's version. The exporter asks the same questions and then
@@ -214,10 +214,8 @@ WFF has moved past version 4, so the target-version option is an open list sourc
 | 4 | Bundle and APK export, validator gate, `preview.png`; `ExportFormatV1` additions | watchface-tools, compose-preview-contracts, this repository |
 | 5 | Import, user configuration and flavor editing, expression editor | this repository |
 
-**The vendored `wff-core`.** `:ui-builder-export` carries a copy of `ee.schimke.watchface:wff-core`
-0.2.1 (the `export/wff` package, `internal`) rather than depending on it: 0.2.1's JVM jar is Java 21
-bytecode and this module's server floor is Java 17, so a consumer on Java 17 fails with
-`UnsupportedClassVersionError`. It goes when `wff-core` publishes for Java 17; the swap is the
-package name. The 0.2.1 validator is what judges an export (values, expressions, data sources and
-cardinality); the two shipped templates were completed to satisfy it (a complication body, a
-template parameter).
+**`wff-core` by coordinate.** `:ui-builder-export` depends on `ee.schimke.watchface:wff-core` (through
+`watchface-tools-bom`, version in `gradle/libs.versions.toml`) for the model, parser, writer, schema
+and validator. 0.3.1 is the first release whose JVM jar targets Java 17, this module's server
+floor. The validator judges an export (values, expressions, data sources and cardinality), and
+`WffSchema.mayRemoveChild` decides whether a node the schema requires may be deleted.

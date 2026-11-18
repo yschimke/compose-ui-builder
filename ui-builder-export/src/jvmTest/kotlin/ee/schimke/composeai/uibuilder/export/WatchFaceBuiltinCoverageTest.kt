@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
-import ee.schimke.composeai.uibuilder.export.wff.WffXmlParser
+import ee.schimke.watchface.wff.WffXmlParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
