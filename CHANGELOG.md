@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.133.0](https://github.com/yschimke/compose-ui-builder/compare/v3.132.0...v3.133.0) (2026-11-18)
+
+
+### Features
+
+* import PartDraw shapes, themes and flavors as builtins; refuse deleting required nodes ([#1247](https://github.com/yschimke/compose-ui-builder/issues/1247)) ([1734e8b](https://github.com/yschimke/compose-ui-builder/commit/1734e8b572c7bd1b6e90c1cb18258023218b2d8d))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.98.3 ([#1245](https://github.com/yschimke/compose-ui-builder/issues/1245)) ([b781ee3](https://github.com/yschimke/compose-ui-builder/commit/b781ee3cca7d0242442d06fea7dab2182523c143))
+* strip the byte order mark when parsing watch face XML; draw each shape in its own box ([#1249](https://github.com/yschimke/compose-ui-builder/issues/1249)) ([b6b64b5](https://github.com/yschimke/compose-ui-builder/commit/b6b64b588b9f493bddee9d4bddfa014dd4c4b791))
+
 ## [3.132.0](https://github.com/yschimke/compose-ui-builder/compare/v3.131.0...v3.132.0) (2026-11-18)
 
 
