@@ -29,6 +29,12 @@ object KobentoComponentJsonExporter {
     val componentSets: List<String> = emptyList(),
     /** `componentTheme`; null leaves Kobento's default (`auto`, light and dark). */
     val componentTheme: String? = null,
+    /**
+     * Per component id, the params Kobento fixes when it expands the call, so a state binding there
+     * would be frozen at its initial value. The catalog publishes these as
+     * `statusSemantics.kobento.staticParams`.
+     */
+    val staticParams: Map<String, Set<String>> = emptyMap(),
   )
 
   sealed interface Result {
@@ -266,7 +272,14 @@ object KobentoComponentJsonExporter {
       return single(
         name,
         buildJsonObject {
+          val static = options.staticParams[node.componentId].orEmpty()
           node.properties.forEach { (property, value) ->
+            if (
+              property in static && (value as? JsonObject)?.get("type") == JsonPrimitive("state")
+            ) {
+              errors += "$path.properties.$property: a static Kobento param cannot follow state"
+              return@forEach
+            }
             value(value, "$path.properties.$property")?.let { put(property, it) }
           }
           node.eventBindings.forEach { (event, actions) ->
@@ -316,7 +329,15 @@ object KobentoComponentJsonExporter {
           errors += "$path: component arguments are not lowered to Kobento yet"
           null
         }
-        else -> literal(value, path)
+        else -> {
+          // A comparison (`stateEquals`) or any other state-reading value has no Kobento lowering
+          // yet; reading its operand as a literal would drop the dependency.
+          val type = typed["type"]?.jsonPrimitive?.contentOrNull
+          if ("variable" in typed || type?.startsWith("state") == true) {
+            errors += "$path: $type values are not lowered to Kobento yet"
+            null
+          } else literal(value, path)
+        }
       }
     }
 

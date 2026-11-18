@@ -231,6 +231,14 @@ def published_of(snapshot: dict) -> dict:
                 "componentSets": snapshot["sets"],
                 "looks": LOOKS,
                 "clickable": clickable,
+                # Params fixed when a call is expanded: the exporter refuses state bound to them.
+                "staticParams": {
+                    PREFIX + kebab(c["name"]): sorted(
+                        p for p, spec in c["params"].items() if spec.get("static")
+                    )
+                    for c in snapshot["components"]
+                    if any(spec.get("static") for spec in c["params"].values())
+                },
             },
         },
     }

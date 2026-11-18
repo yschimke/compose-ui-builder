@@ -147,6 +147,66 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `state on a static param and a state comparison are refused`() {
+    val staticParams =
+      Json.parseToJsonElement(File(fixtures, "kobento-published-v1.json").readText())
+        .jsonObject
+        .getValue("statusSemantics")
+        .jsonObject
+        .getValue("kobento")
+        .jsonObject
+        .getValue("staticParams")
+        .jsonObject
+        .mapValues { (_, names) -> names.jsonArray.map { it.jsonPrimitive.content }.toSet() }
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    val gauge = design.nodes.getValue("gauge")
+    val warmer = design.nodes.getValue("warmer")
+    val properties = { node: kotlinx.serialization.json.JsonObject, extra: String ->
+      Json.parseToJsonElement(
+          node.toString().dropLast(1) + (if (node.isEmpty()) "" else ",") + extra + "}",
+        )
+        .jsonObject
+    }
+    val broken =
+      design.copy(
+        nodes =
+          design.nodes +
+            mapOf(
+              "gauge" to
+                gauge.copy(
+                  properties =
+                    properties(
+                      gauge.properties,
+                      """"size": {"type": "state", "variable": "target"}""",
+                    ),
+                ),
+              "warmer" to
+                warmer.copy(
+                  properties =
+                    properties(
+                      warmer.properties,
+                      """"fill": {"type": "stateEquals", "variable": "heating", "value": true}""",
+                    ),
+                ),
+            ),
+      )
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(
+          broken,
+          KobentoComponentJsonExporter.Options(staticParams = staticParams),
+        ),
+      )
+    assertEquals(
+      listOf(
+        "nodes.gauge.properties.size: a static Kobento param cannot follow state",
+        "nodes.warmer.properties.fill: stateEquals values are not lowered to Kobento yet",
+      ),
+      refused.reasons,
+    )
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =

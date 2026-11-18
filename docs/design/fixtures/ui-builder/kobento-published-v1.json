@@ -6980,7 +6980,633 @@
         "kobento/stepper",
         "kobento/switch",
         "kobento/tabs"
-      ]
+      ],
+      "staticParams": {
+        "kobento/activity-rings": [
+          "legend",
+          "rings",
+          "size"
+        ],
+        "kobento/adaptive-split": [
+          "gap",
+          "sideAt"
+        ],
+        "kobento/allocation-bar": [
+          "barHeight",
+          "decimals",
+          "fontSize",
+          "legend"
+        ],
+        "kobento/analog-clock": [
+          "fill",
+          "showDate",
+          "showSeconds",
+          "size"
+        ],
+        "kobento/avatar": [
+          "size"
+        ],
+        "kobento/badge": [
+          "max"
+        ],
+        "kobento/banner": [
+          "dismissible",
+          "kind"
+        ],
+        "kobento/bar-chart": [
+          "fill",
+          "height",
+          "width"
+        ],
+        "kobento/battery-indicator": [
+          "fontSize",
+          "showPercent",
+          "size"
+        ],
+        "kobento/big-number": [
+          "abbreviate",
+          "align",
+          "changeDecimals",
+          "decimals",
+          "fontSize",
+          "grouping",
+          "invert"
+        ],
+        "kobento/board": [
+          "action",
+          "colMax",
+          "colMin",
+          "columns",
+          "move",
+          "tabMin",
+          "wideAt"
+        ],
+        "kobento/button": [
+          "enabled",
+          "fill",
+          "style"
+        ],
+        "kobento/calendar-month": [
+          "chipTime",
+          "dayTargets",
+          "days",
+          "month",
+          "sideAt",
+          "weekly",
+          "year"
+        ],
+        "kobento/callouts": [
+          "aspect",
+          "fontSize",
+          "mode",
+          "parts",
+          "points"
+        ],
+        "kobento/cell-row": [
+          "style",
+          "values"
+        ],
+        "kobento/chart3-d": [
+          "annotate",
+          "autorotate",
+          "categories",
+          "colorBy",
+          "colorLabel",
+          "fill",
+          "fn",
+          "height",
+          "legend",
+          "points",
+          "resolution",
+          "series",
+          "sizeLabel",
+          "spin",
+          "stems",
+          "tilt",
+          "type",
+          "values",
+          "vars",
+          "x",
+          "xLabel",
+          "y",
+          "yLabel",
+          "z",
+          "zLabel"
+        ],
+        "kobento/chat-thread": [
+          "avatars",
+          "bubbleShare",
+          "conversations",
+          "listAt",
+          "listWidth",
+          "maxBubble",
+          "maxThread",
+          "messages",
+          "replies",
+          "replyAction"
+        ],
+        "kobento/checkbox": [
+          "maxLines"
+        ],
+        "kobento/choice-chips": [
+          "items",
+          "showLabel",
+          "style"
+        ],
+        "kobento/compact-number": [
+          "decimals",
+          "digits",
+          "fontSize",
+          "fontWeight",
+          "from",
+          "small"
+        ],
+        "kobento/comparison": [
+          "colMax",
+          "colMin",
+          "featured",
+          "labelMax",
+          "labelMin",
+          "options",
+          "rowHeight",
+          "rows"
+        ],
+        "kobento/cover-art": [
+          "radius",
+          "size",
+          "symbol"
+        ],
+        "kobento/dashboard-grid": [
+          "cards",
+          "gap",
+          "grow",
+          "maxColumns",
+          "minColumnWidth",
+          "padding"
+        ],
+        "kobento/date-label": [
+          "align",
+          "fontSize",
+          "format"
+        ],
+        "kobento/delta": [
+          "amountDecimals",
+          "arrow",
+          "decimals",
+          "fontSize",
+          "fontWeight",
+          "invert",
+          "style"
+        ],
+        "kobento/dialog": [
+          "dismissible",
+          "style"
+        ],
+        "kobento/digital-clock": [
+          "fontSize",
+          "format",
+          "showAmPm",
+          "showSeconds"
+        ],
+        "kobento/divider": [
+          "inset"
+        ],
+        "kobento/donut-chart": [
+          "decimals",
+          "fill",
+          "showTotal",
+          "size",
+          "thickness"
+        ],
+        "kobento/dropdown": [
+          "items"
+        ],
+        "kobento/equalizer": [
+          "size"
+        ],
+        "kobento/expandable-row": [
+          "compact",
+          "inset",
+          "padding",
+          "titleLines",
+          "titleWeight"
+        ],
+        "kobento/fab": [
+          "extended",
+          "position",
+          "size"
+        ],
+        "kobento/flow-diagram": [
+          "edges",
+          "fontSize",
+          "nodes",
+          "summary"
+        ],
+        "kobento/fretboard": [
+          "barre",
+          "chord",
+          "fingers",
+          "frets",
+          "labels",
+          "position",
+          "size"
+        ],
+        "kobento/gallery-grid": [
+          "aspect",
+          "gap",
+          "highlight",
+          "items",
+          "maxColumns",
+          "minColumns",
+          "minTile",
+          "radius",
+          "style",
+          "symbol"
+        ],
+        "kobento/gauge": [
+          "decimals",
+          "fill",
+          "size",
+          "thickness"
+        ],
+        "kobento/goal-bar": [
+          "goalAt",
+          "height",
+          "textSize"
+        ],
+        "kobento/graph-diagram": [
+          "directed",
+          "edges",
+          "groups",
+          "looks",
+          "nodes",
+          "style",
+          "theme"
+        ],
+        "kobento/icon": [
+          "filled",
+          "name",
+          "size"
+        ],
+        "kobento/icon-button": [
+          "enabled",
+          "size",
+          "style"
+        ],
+        "kobento/inputs-result": [
+          "gap",
+          "padding",
+          "sideAt"
+        ],
+        "kobento/label-value": [
+          "align",
+          "layout",
+          "size"
+        ],
+        "kobento/legend": [
+          "columns",
+          "format",
+          "labels",
+          "maxEntries",
+          "size"
+        ],
+        "kobento/line-chart": [
+          "area",
+          "extremes",
+          "fill",
+          "height",
+          "samples",
+          "thickness",
+          "yLabelWidth"
+        ],
+        "kobento/list-detail": [
+          "detailHeader",
+          "items",
+          "listMax",
+          "listMin",
+          "listShare",
+          "maxDetail",
+          "previewLines",
+          "wideAt"
+        ],
+        "kobento/list-item": [
+          "chevron",
+          "padding"
+        ],
+        "kobento/map-list": [
+          "borders",
+          "detail",
+          "hit",
+          "items",
+          "listMax",
+          "listMin",
+          "mapShare",
+          "region",
+          "states",
+          "wideAt"
+        ],
+        "kobento/math-plot": [
+          "fill",
+          "height",
+          "legend",
+          "markLabels",
+          "scrub",
+          "ticks"
+        ],
+        "kobento/meter-breakdown": [
+          "parts"
+        ],
+        "kobento/moon-phase": [
+          "size"
+        ],
+        "kobento/nav-shell": [
+          "destinations",
+          "drawerAt",
+          "header",
+          "pagePadding",
+          "railAt",
+          "scroll"
+        ],
+        "kobento/numbered-list": [
+          "fontSize",
+          "gap",
+          "items",
+          "marker",
+          "start"
+        ],
+        "kobento/pager": [
+          "count",
+          "pages",
+          "showDots"
+        ],
+        "kobento/pager-dots": [
+          "count"
+        ],
+        "kobento/piano-keys": [
+          "chord",
+          "height",
+          "inversion",
+          "notes",
+          "octave"
+        ],
+        "kobento/price-chart": [
+          "area",
+          "decimals",
+          "fill",
+          "height",
+          "marks",
+          "thickness",
+          "yAxis"
+        ],
+        "kobento/progress-bar": [
+          "height",
+          "overshoot"
+        ],
+        "kobento/progress-ring": [
+          "showLabel",
+          "size",
+          "thickness"
+        ],
+        "kobento/qr-placeholder": [
+          "size"
+        ],
+        "kobento/quote-row": [
+          "changeDecimals",
+          "compact",
+          "decimals",
+          "symbolWidth"
+        ],
+        "kobento/radio-group": [
+          "items",
+          "maxLines",
+          "showLabel"
+        ],
+        "kobento/ranked-list": [
+          "decimals",
+          "names",
+          "showBars"
+        ],
+        "kobento/rating": [
+          "interactive",
+          "max",
+          "size"
+        ],
+        "kobento/row-list": [
+          "belowHeight",
+          "check",
+          "detailsHeight",
+          "embedded",
+          "leadSize",
+          "maxColumns",
+          "maxRows",
+          "readOnly",
+          "rowHeight",
+          "rows",
+          "tileWidth",
+          "titleWeight",
+          "trailSpace",
+          "valueWeight"
+        ],
+        "kobento/sankey": [
+          "anim",
+          "decimals",
+          "dots",
+          "fill",
+          "height",
+          "particles",
+          "whole"
+        ],
+        "kobento/scaled-amount": [
+          "decimals",
+          "format",
+          "fractions",
+          "roundUp",
+          "rowHeight",
+          "step"
+        ],
+        "kobento/scene3-d": [
+          "assemble",
+          "autorotate",
+          "fill",
+          "floor",
+          "frame",
+          "hold",
+          "insetBottom",
+          "insetTop",
+          "light",
+          "objects",
+          "orbit",
+          "spin",
+          "stagger",
+          "style",
+          "tilt",
+          "tiltRange"
+        ],
+        "kobento/seek-bar": [
+          "barHeight",
+          "times"
+        ],
+        "kobento/skeleton": [
+          "height",
+          "shape",
+          "width"
+        ],
+        "kobento/sleep-stages": [
+          "lanes"
+        ],
+        "kobento/slider": [
+          "decimals",
+          "showValue",
+          "step"
+        ],
+        "kobento/snackbar": [
+          "duration"
+        ],
+        "kobento/sparkline": [
+          "fill",
+          "height",
+          "showDot",
+          "thickness",
+          "width"
+        ],
+        "kobento/split-flap": [
+          "align",
+          "bold",
+          "drum",
+          "fill",
+          "glyphWidth",
+          "height",
+          "jitter",
+          "speed",
+          "text",
+          "width"
+        ],
+        "kobento/stat-tile": [
+          "decimals",
+          "invert"
+        ],
+        "kobento/step-explainer": [
+          "atEnd",
+          "buttons",
+          "captionLines",
+          "controls",
+          "frame",
+          "inputHeight",
+          "inputWhen",
+          "interval",
+          "layout",
+          "loop",
+          "progress",
+          "steps",
+          "tappable"
+        ],
+        "kobento/stepper": [
+          "decimals"
+        ],
+        "kobento/steps": [
+          "orientation",
+          "showLabels",
+          "size",
+          "steps"
+        ],
+        "kobento/sweep-trace": [
+          "delay",
+          "fill",
+          "glow",
+          "head",
+          "height",
+          "sample",
+          "thickness",
+          "window"
+        ],
+        "kobento/swipe-stack": [
+          "buttons",
+          "cardHeight",
+          "cardWidth",
+          "radius"
+        ],
+        "kobento/tabs": [
+          "labels",
+          "style"
+        ],
+        "kobento/text-choice": [
+          "items"
+        ],
+        "kobento/text-field": [
+          "commitOnDone",
+          "height",
+          "maxLength",
+          "singleLine"
+        ],
+        "kobento/timeline-track": [
+          "colors",
+          "fontSize",
+          "items",
+          "lanes",
+          "legend"
+        ],
+        "kobento/transport-controls": [
+          "previous",
+          "size",
+          "skip"
+        ],
+        "kobento/trend-sparkline": [
+          "area",
+          "fill",
+          "height",
+          "invert",
+          "thickness",
+          "width"
+        ],
+        "kobento/two-columns": [
+          "gap",
+          "sideAt"
+        ],
+        "kobento/walkthrough": [
+          "autoplay",
+          "captionHeight",
+          "count",
+          "interval",
+          "loop",
+          "texts",
+          "titles"
+        ],
+        "kobento/weather-icon": [
+          "animate",
+          "condition",
+          "duration",
+          "look",
+          "morph",
+          "size"
+        ],
+        "kobento/world-map": [
+          "borders",
+          "cities",
+          "detail",
+          "fill",
+          "fit",
+          "height",
+          "highlight",
+          "labelSize",
+          "labels",
+          "legDistance",
+          "legend",
+          "legendDecimals",
+          "legs",
+          "markerSize",
+          "night",
+          "plane",
+          "ramp",
+          "region",
+          "routeFrom",
+          "routeTo",
+          "states",
+          "units",
+          "valueCountries",
+          "valueMax",
+          "valueMin"
+        ]
+      }
     }
   }
 }
