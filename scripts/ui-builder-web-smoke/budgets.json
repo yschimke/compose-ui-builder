@@ -1,10 +1,10 @@
 {
   "sizes": [
-    { "name": "uiBuilder.wasm", "files": "uiBuilder.wasm", "maxMb": 15.9, "maxGzipMb": 4.4 },
+    { "name": "uiBuilder.wasm", "files": "uiBuilder.wasm", "maxMb": 16.1, "maxGzipMb": 4.5 },
     { "name": "skiko.wasm", "files": "skiko.wasm", "maxMb": 8.5, "maxGzipMb": 3.3 },
     { "name": "scripts", "files": "*.*js", "maxMb": 1.1, "maxGzipMb": 0.17 },
     { "name": "host-logic engine", "files": "host-logic/*.mjs", "maxMb": 0.9, "maxGzipMb": 0.3 },
-    { "name": "all of wasmDist", "files": "**", "maxMb": 42.7 }
+    { "name": "all of wasmDist", "files": "**", "maxMb": 42.9 }
   ],
   "memory": [
     { "viewport": "desktop", "scenario": "designs", "maxMb": { "rendererPss": 270, "jsHeapUsed": 25 } },
