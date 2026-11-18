@@ -134,6 +134,10 @@ object KobentoComponentJsonExporter {
         errors += "$path: only bool, int and float state has a Kobento variable"
         return null
       }
+      if (kind == "int" && !exactInFloat(number)) {
+        errors += "$path: an int beyond ±$MAX_EXACT_FLOAT_INT is not exact in a Kobento float"
+        return null
+      }
       stateKinds[name] = kind!!
       return buildJsonObject {
         put("value", number.roundedNumber())
@@ -430,7 +434,10 @@ object KobentoComponentJsonExporter {
               kind == "bool" -> literal.booleanOrNull?.let { if (it) 1.0 else 0.0 }
               else -> literal.doubleOrNull
             }
-          if (number == null) {
+          if (number != null && kind == "int" && !exactInFloat(number)) {
+            errors += "$path: an int beyond ±$MAX_EXACT_FLOAT_INT is not exact in a Kobento float"
+            null
+          } else if (number == null) {
             errors += "$path: set needs a $kind literal"
             null
           } else
@@ -515,6 +522,16 @@ object KobentoComponentJsonExporter {
   private fun Double.roundedNumber(): JsonPrimitive =
     if (this == kotlin.math.floor(this) && kotlin.math.abs(this) < 1e15) JsonPrimitive(toLong())
     else JsonPrimitive(this)
+
+  /**
+   * Kobento variables are floats, so an int is exact only up to 2^24. Ints beyond that are refused
+   * rather than rounded. A counter that steps past it at run time still rounds: lowering int state
+   * to Kobento's integer resources is the follow-up.
+   */
+  private const val MAX_EXACT_FLOAT_INT: Int = 1 shl 24
+
+  private fun exactInFloat(value: Double): Boolean =
+    value == kotlin.math.floor(value) && kotlin.math.abs(value) <= MAX_EXACT_FLOAT_INT
 
   /** The property wrappers that hold a literal, as `UiExpressions.OPERAND_LITERALS` plus `enum`. */
   private val LITERAL_TYPES = setOf("string", "int", "float", "bool", "enum", "color")

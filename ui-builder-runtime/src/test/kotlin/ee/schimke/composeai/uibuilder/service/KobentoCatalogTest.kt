@@ -271,6 +271,50 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `an int a Kobento float cannot hold exactly is refused`() {
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    val warmer = design.nodes.getValue("warmer")
+    val broken =
+      design.copy(
+        stateVariables =
+          kotlinx.serialization.json.JsonObject(
+            design.stateVariables +
+              ("count" to
+                Json.parseToJsonElement(
+                    """{"type": "value", "valueType": "int", "initialValue": 16777217}""",
+                  )
+                  .jsonObject) +
+              ("small" to
+                Json.parseToJsonElement(
+                    """{"type": "value", "valueType": "int", "initialValue": 0}""",
+                  )
+                  .jsonObject),
+          ),
+        nodes =
+          design.nodes +
+            ("warmer" to
+              warmer.copy(
+                eventBindings =
+                  Json.parseToJsonElement(
+                      """{"click": [{"type": "set", "variable": "small", "value": -16777217}]}""",
+                    )
+                    .jsonObject,
+              )),
+      )
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(broken),
+      )
+    assertEquals(
+      listOf(
+        "stateVariables.count: an int beyond ±16777216 is not exact in a Kobento float",
+        "nodes.warmer.eventBindings.click[0]: an int beyond ±16777216 is not exact in a Kobento float",
+      ),
+      refused.reasons,
+    )
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =
