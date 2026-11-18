@@ -310,6 +310,33 @@ class WffAmbientTest {
   }
 
   @Test
+  fun `a clock hand is drawn at its ambient alpha`() {
+    val face =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema":"compose-ui-builder-document/v1-candidate","id":"face","title":"Face",
+          "revision":0,"catalogPin":{"systemId":"wff-watchface","catalogRevision":"synthetic","capabilityDigest":"synthetic","nativeRuntimeId":"candidate"},
+          "environment":{"widthDp":227,"heightDp":227,"density":2.0,"fixedTime":"2024-05-16T00:00:00Z","animations":"settled"},
+          "stateVariables":{},"roots":["scene"],"nodes":{
+            "scene":{"id":"scene","componentId":"wff/scene","properties":{"previewTime":{"type":"string","value":"00:00:00"}},"slots":{"content":["clock"]}},
+            "clock":{"id":"clock","componentId":"wff/analog-clock","properties":{},"slots":{"hands":["hand"]}},
+            "hand":{"id":"hand","componentId":"wff/clock-hand","properties":{"type":{"type":"string","value":"hour"},"resource":{"type":"string","value":"hand"},"x":{"type":"int","value":215},"y":{"type":"int","value":40},"width":{"type":"int","value":20},"height":{"type":"int","value":185},"tintColor":{"type":"color","value":"#ffffffff"}},"slots":{"variants":["dim"]}},
+            "dim":{"id":"dim","componentId":"wff/variant","properties":{"mode":{"type":"string","value":"AMBIENT"},"target":{"type":"string","value":"alpha"},"value":{"type":"string","value":"128"}},"slots":{}}}}""",
+      )
+    // A point on the hand, straight up from the centre.
+    val x = 227
+    val y = 227 - 100
+    val interactive = render(face).single().getColor(x, y)
+    val ambient = render(face.withWffAmbient(true)).single().getColor(x, y)
+    assertEquals(0xFFFFFFFF.toInt(), interactive)
+    val red = (ambient shr 16) and 0xFF
+    assertTrue(
+      red in 120..136,
+      "ambient hand at alpha 128 over black: ${Integer.toHexString(ambient)}",
+    )
+  }
+
+  @Test
   fun `ambient draws on black whatever the face's background is`() {
     val red =
       Json.decodeFromString(

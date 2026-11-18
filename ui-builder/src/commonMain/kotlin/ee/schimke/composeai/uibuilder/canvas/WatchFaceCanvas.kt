@@ -245,7 +245,11 @@ internal fun WatchFaceCanvas(
           .map { wffNodeIn(document, it, preview) }
           .filter { wffVisibleIn(it, preview) }
       // Resolved here: a colour token needs the composition, the draw lambda has none.
-      val tints = hands.map { it.color("tintColor", Color.White) }
+      // With each hand's alpha (an ambient variant's included), which the draw below applies.
+      val tints = hands.map { hand ->
+        val tint = hand.color("tintColor", Color.White)
+        tint.copy(alpha = tint.alpha * hand.float("alpha", 255f).coerceIn(0f, 255f) / 255f)
+      }
       Box(
         modifier.drawBehind {
           hands.forEachIndexed { index, hand ->
