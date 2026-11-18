@@ -1013,7 +1013,24 @@ internal sealed interface PropertyDraft {
   data class Invalid(val message: String) : PropertyDraft
 }
 
-internal fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
+/** `[CONFIGURATION.<id>.<n>]`: a Watch Face Format face's own colour option. */
+internal val WFF_COLOUR_REFERENCE = Regex("\\[CONFIGURATION\\.[A-Za-z0-9_.-]+\\.\\d+]")
+
+/** Whether [draft] is a face colour option whose colour index is a valid number. */
+internal fun isWffColourReference(draft: String): Boolean =
+  WFF_COLOUR_REFERENCE.matches(draft) &&
+    draft.substringBeforeLast(']').substringAfterLast('.').toIntOrNull() != null
+
+private val WFF_COLOUR_LITERAL = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")
+
+/** The property a Watch Face Format node holds what has no property of its own in. */
+internal const val WATCH_FACE_EXTRAS = "wffExtras"
+
+internal fun EditorPropertyField.parseDraft(
+  draft: String,
+  /** A watch-face colour is a literal: Material roles are not WFF colours, so none is accepted. */
+  watchFace: Boolean = false,
+): PropertyDraft {
   return when (control) {
     EditorPropertyControl.Text -> PropertyDraft.Valid(JsonPrimitive(draft))
     EditorPropertyControl.Boolean ->
@@ -1041,10 +1058,18 @@ internal fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
       val color = draft.trim()
       // Empty is the component's own default, which `startAccentColor` documents as "draws none";
       // clearing the field is how an author asks for it.
-      if (color.isEmpty() || PropertyValueKinds.isDrawableColour(color) || color in choices)
+      if (
+        color.isEmpty() ||
+          if (watchFace) WFF_COLOUR_LITERAL.matches(color)
+          else PropertyValueKinds.isDrawableColour(color) || color in choices
+      )
         PropertyDraft.Valid(JsonPrimitive(color))
       else
-        PropertyDraft.Invalid("$label must be #RRGGBB, #AARRGGBB, or a listed Material color token")
+        PropertyDraft.Invalid(
+          if (watchFace)
+            "$label must be #RRGGBB, #AARRGGBB, or a face colour option [CONFIGURATION.id.n]"
+          else "$label must be #RRGGBB, #AARRGGBB, or a listed Material color token",
+        )
     }
     EditorPropertyControl.List,
     EditorPropertyControl.Object ->
