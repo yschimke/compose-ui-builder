@@ -142,6 +142,9 @@ class WatchFaceEditCoverageTest {
           for (property in properties) {
             val name = (property["name"] as JsonPrimitive).content
             if (name == WatchFaceXmlExporter.EXTRAS) continue
+            // Another shape's attribute is not written, by design: the shape it belongs to is
+            // not this node's.
+            if (name in WatchFaceXmlExporter.inapplicableProperties(node, document)) continue
             // One allowed value: there is no different valid value to try.
             if ((property["allowedValues"] as? JsonArray)?.size == 1) continue
             val current =

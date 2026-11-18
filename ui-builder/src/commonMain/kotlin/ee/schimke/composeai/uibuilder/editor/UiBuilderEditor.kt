@@ -361,6 +361,12 @@ fun UiBuilderEditor(
    * design has no Compose to compile, so the native pane offers this instead of a render.
    */
   onStartWatchFacePreview: (suspend (wffXml: String) -> UiBuilderWatchFaceStart)? = null,
+  /**
+   * Why the host's real watch-face runtime cannot run (for example `DWF_RUNTIME_MISSING: …`), or
+   * null when it can. Asked when the native pane opens, so the reason is a banner rather than a
+   * failed start.
+   */
+  onWatchFaceRuntimeStatus: (suspend () -> String?)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   /**
@@ -621,6 +627,14 @@ fun UiBuilderEditor(
    */
   onCommentOnNode: ((UiBuilderNodeComment) -> Unit)? = null,
 ) {
+  // The refusal's own heading names what could not be written, so a watch face is never told it
+  // has "no Compose source".
+  val generatedCodeNoSource =
+    when (catalog.platform) {
+      UiBuilderCatalogPlatform.WATCH_FACE -> "No Watch Face Format XML"
+      UiBuilderCatalogPlatform.LOVELACE -> "No Lovelace JSON"
+      else -> "No Compose source"
+    }
   require(availablePanes.isNotEmpty()) { "a UI Builder workspace must expose at least one pane" }
   val reducer =
     remember(catalog, catalogRecord, actorId, clientId, operationIdPrefix) {
@@ -1266,7 +1280,7 @@ fun UiBuilderEditor(
               if (code != null) {
                 editorScope.launch {
                   say(
-                    copyCodeSentence(code, layer) {
+                    copyCodeSentence(code, layer, generatedCodeNoSource) {
                       systemClipboard.setClipEntry(plainTextClipEntry(it))
                     },
                   )
@@ -2214,6 +2228,7 @@ fun UiBuilderEditor(
             ?.kotlin
         },
         start = onStartWatchFacePreview,
+        status = onWatchFaceRuntimeStatus,
         modifier = paneModifier,
       )
     } else
@@ -3055,6 +3070,7 @@ fun UiBuilderEditor(
                             generatedCode,
                             generatedCodeCaption,
                             Modifier.fillMaxSize(),
+                            noSource = generatedCodeNoSource,
                           )
                         }
                       }
@@ -3233,10 +3249,12 @@ fun UiBuilderEditor(
                     GeneratedCodePane(
                       generatedCode,
                       generatedCodeCaption,
-                      Modifier.align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
-                        .padding(bottom = dockHeight),
+                      noSource = generatedCodeNoSource,
+                      modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                          .fillMaxWidth()
+                          .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
+                          .padding(bottom = dockHeight),
                     )
                   }
                   if (!viewportInsets.keyboardOpen) {

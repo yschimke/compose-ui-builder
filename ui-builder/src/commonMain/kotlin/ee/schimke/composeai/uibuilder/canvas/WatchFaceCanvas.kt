@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.canvas
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,11 +90,27 @@ internal fun WatchFaceCanvas(
           continuous = remember(document.nodes) { document.wffReadsSubSecond() } && !ambient,
           enabled = fixedTime.isBlank(),
         )
-      val context =
-        remember(node, fixedTime, live, ambient) {
-          (live?.let { WffPreviewContext.of(it) }
-              ?: WffPreviewContext.of(node.string("previewTime"), fixedTime))
-            .inMode(ambient)
+      val swaying = remember(document.nodes) { document.wffHasGyro() }
+      // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
+      val clock =
+        remember(node, fixedTime, live, swaying) {
+          live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
+            ?: WffPreviewContext.of(node.string("previewTime"), fixedTime)
+        }
+      // Interactive and ambient cross-fade as the watch switches, rather than cut: while the
+      // switch runs both are drawn, the mode being entered over the one being left.
+      val ambientShown by
+        animateFloatAsState(
+          if (ambient) 1f else 0f,
+          tween(WFF_AMBIENT_SWITCH_MILLIS),
+          label = "wff-ambient",
+        )
+      val layers =
+        when (ambientShown) {
+          0f -> listOf(false to 1f)
+          1f -> listOf(true to 1f)
+          else ->
+            listOf(!ambient to 1f, ambient to if (ambient) ambientShown else 1f - ambientShown)
         }
       val clip =
         when (node.string("clipShape").ifEmpty { "CIRCLE" }) {
@@ -104,19 +123,32 @@ internal fun WatchFaceCanvas(
       // in a landscape box it would be an ellipse, and its pixels would be drawn off-scale.
       BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val scale = minOf(maxWidth.value / width, maxHeight.value / height)
-        CompositionLocalProvider(
-          LocalWffFace provides WffFace(width, height, scale),
-          LocalWffPreview provides context,
-        ) {
-          Box(
-            Modifier.size((width * scale).dp, (height * scale).dp)
-              .clip(clip)
-              .background(
-                if (ambient) Color.Black else node.color("backgroundColor", Color.Black),
-              ),
-          ) {
-            placed("content").forEach { id ->
-              child(id, wffPlace(document, id, width, height, scale, context))
+        Box(Modifier.size((width * scale).dp, (height * scale).dp).clip(clip)) {
+          for ((layerAmbient, alpha) in layers) {
+            val context = remember(clock, layerAmbient) { clock.inMode(layerAmbient) }
+            CompositionLocalProvider(
+              LocalWffFace provides WffFace(width, height, scale),
+              LocalWffPreview provides context,
+            ) {
+              Box(
+                Modifier.matchParentSize()
+                  .graphicsLayer { this.alpha = alpha }
+                  .background(
+                    if (layerAmbient) Color.Black else node.color("backgroundColor", Color.Black),
+                  ),
+              ) {
+                node.slots["content"]
+                  .orEmpty()
+                  .filter { id ->
+                    val candidate = document.nodes[id]
+                    candidate != null &&
+                      candidate.componentId !in WFF_NOT_DRAWN &&
+                      wffVisibleIn(wffNodeIn(document, candidate, context), context)
+                  }
+                  .forEach { id ->
+                    child(id, wffPlace(document, id, width, height, scale, context))
+                  }
+              }
             }
           }
         }
@@ -382,6 +414,9 @@ private fun wffPlace(
       transformOrigin = TransformOrigin(target.float("pivotX", 0.5f), target.float("pivotY", 0.5f))
     }
 }
+
+/** How long the switch between interactive and ambient takes to fade across. */
+private const val WFF_AMBIENT_SWITCH_MILLIS = 400
 
 /**
  * What sits among a part's children but is not drawn as one: an override, the motion that drives

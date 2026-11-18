@@ -1949,6 +1949,11 @@ private fun LiveSessionApp(
         onOpenNativeStream = { live -> BrowserNativeStream(live) },
         // A Watch Face Format catalog's native backend is the real watch-face runtime, shown in its
         // own tab; the editor offers this instead of a compile.
+        onWatchFaceRuntimeStatus =
+          if (config.localStorage || !config.canWrite) null
+          else {
+            { requestWatchFaceRuntimeStatus(config.designId) }
+          },
         onStartWatchFacePreview =
           if (config.localStorage || !config.canWrite) null
           else
