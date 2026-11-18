@@ -121,7 +121,14 @@ class WatchFaceDesignCreationTest {
             service.createDesignFromWatchFaceXml(
               owner,
               xml,
-              WatchFaceXmlCreateOptions.Builder().apply { designId = name }.build(),
+              // The samples use elements up to version 4, and the export judges them at the version
+              // the design states.
+              WatchFaceXmlCreateOptions.Builder()
+                .apply {
+                  designId = name
+                  wffVersion = 5
+                }
+                .build(),
             )
           },
           name,
@@ -130,7 +137,10 @@ class WatchFaceDesignCreationTest {
       assertEquals(0L, created.revision)
       // The importer's own round trip (tree-equal to the input, see WatchFaceXmlImporterTest).
       val direct =
-        assertIs<WatchFaceXmlImporter.Result.Imported>(WatchFaceXmlImporter.import(xml)).document
+        assertIs<WatchFaceXmlImporter.Result.Imported>(
+            WatchFaceXmlImporter.import(xml, WatchFaceXmlImporter.Options(wffVersion = 5)),
+          )
+          .document
       assertEquals(
         (WatchFaceXmlExporter.export(direct) as WatchFaceXmlExporter.Result.Emitted).xml,
         exported(service, name),

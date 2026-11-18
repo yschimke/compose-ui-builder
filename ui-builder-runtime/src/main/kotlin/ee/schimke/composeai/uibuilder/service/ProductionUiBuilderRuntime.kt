@@ -12,6 +12,8 @@ import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.WatchFaceDesignValidation
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.propertyMatches
 import ee.schimke.composeai.uibuilder.export.stateBindingMatchesCatalog
@@ -688,6 +690,14 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           }
         }
     }
+    // What the catalog's declarations cannot say about a watch face: one scene root, values that
+    // can
+    // be written as Watch Face Format, a slot id used once.
+    if (systemId == WatchFaceXmlExporter.CATALOG_SYSTEM_ID) {
+      WatchFaceDesignValidation.check(uiDocument)?.let {
+        return issue(it.code, it.message, it.nodeId, it.field)
+      }
+    }
     return null
   }
 
@@ -704,7 +714,26 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     node: DesignNodeV1,
     property: String,
   ): UiBuilderCatalogIssue? =
-    validateWrite(catalog, node, property, pinnedAssetKeys = document.assets.keys)
+    watchFaceWriteIssue(catalog, document, node, property)
+      ?: validateWrite(catalog, node, property, pinnedAssetKeys = document.assets.keys)
+
+  /**
+   * The watch face rules for one write: a raw node's XML, a value Watch Face Format cannot hold.
+   */
+  private fun watchFaceWriteIssue(
+    catalog: CatalogCapabilityV1,
+    document: DesignDocumentV1,
+    node: DesignNodeV1,
+    property: String,
+  ): UiBuilderCatalogIssue? {
+    if (catalog.benchmark.catalogSystemId != WatchFaceXmlExporter.CATALOG_SYSTEM_ID) return null
+    return WatchFaceDesignValidation.checkWrite(
+        document.toUiBuilderDocument(),
+        node.toUiBuilderNode(),
+        property,
+      )
+      ?.let { issue(it.code, it.message, it.nodeId ?: node.id, it.field ?: property) }
+  }
 
   private fun validateWrite(
     catalog: CatalogCapabilityV1,
