@@ -480,4 +480,11 @@ class WatchFaceBuiltinCoverageTest {
         .trimIndent(),
     )
   }
+
+  @Test
+  fun `xml that starts with a byte order mark imports`() {
+    val xml = face("""<Group name="g" x="0" y="0" width="10" height="10"/>""")
+    val imported = import("\uFEFF" + xml)
+    assertEquals(WffXmlParser.parse(xml), WffXmlParser.parse(export(imported.document)))
+  }
 }

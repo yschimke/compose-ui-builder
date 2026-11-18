@@ -99,6 +99,7 @@ internal fun WatchFaceCanvas(
               stroke = strokeNode?.color("color", Color.Unspecified) ?: Color.Unspecified,
               strokeWidth = (strokeNode?.float("thickness", 1f) ?: 1f) * face.dpPerPx,
               ends = listOf("startX", "startY", "endX", "endY").map { shape.float(it) },
+              box = shapeBox(shape),
             )
           }
           .ifEmpty {
@@ -109,6 +110,7 @@ internal fun WatchFaceCanvas(
                 stroke = node.color("strokeColor", Color.Unspecified),
                 strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx,
                 ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) },
+                box = null,
               ),
             )
           }
@@ -244,7 +246,19 @@ private class WffShapeDrawing(
   val stroke: Color,
   val strokeWidth: Float,
   val ends: List<Float>,
+  /** x, y, width, height of the shape inside its part, px of the face; null for the whole part. */
+  val box: List<Float>?,
 )
+
+/** A shape node's box: its own `x`/`y`/`width`/`height`, or an arc's from its centre. */
+internal fun shapeBox(shape: UiBuilderNode): List<Float>? {
+  val width = shape.float("width", -1f)
+  val height = shape.float("height", -1f)
+  if (width < 0 || height < 0) return null
+  return if (shape.string("shape") == "arc")
+    listOf(shape.float("centerX") - width / 2, shape.float("centerY") - height / 2, width, height)
+  else listOf(shape.float("x"), shape.float("y"), width, height)
+}
 
 /** `hh:mm` and friends, filled with the preview time. */
 private fun previewTime(format: String): String =

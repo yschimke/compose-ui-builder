@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
+import ee.schimke.composeai.uibuilder.canvas.shapeBox
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.NewDesignDevice
@@ -11,6 +12,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.newDesignDevice
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -124,4 +126,31 @@ class WatchFaceEditorTest {
       )
     assertEquals(NewDesignDevice.WATCH, card.newDesignDevice)
   }
+
+  @Test
+  fun `a shape draws inside its own box, two rectangles apart`() {
+    fun rect(id: String, x: Int, y: Int) =
+      UiBuilderNode(
+        id,
+        "wff/shape",
+        kotlinx.serialization.json.JsonObject(
+          mapOf(
+            "shape" to prop("string", kotlinx.serialization.json.JsonPrimitive("rectangle")),
+            "x" to prop("int", kotlinx.serialization.json.JsonPrimitive(x)),
+            "y" to prop("int", kotlinx.serialization.json.JsonPrimitive(y)),
+            "width" to prop("int", kotlinx.serialization.json.JsonPrimitive(20)),
+            "height" to prop("int", kotlinx.serialization.json.JsonPrimitive(30)),
+          ),
+        ),
+      )
+    assertEquals(listOf(5f, 6f, 20f, 30f), shapeBox(rect("a", 5, 6)))
+    assertEquals(listOf(100f, 120f, 20f, 30f), shapeBox(rect("b", 100, 120)))
+    assertEquals(null, shapeBox(UiBuilderNode("c", "wff/shape")))
+  }
+
+  private fun prop(type: String, value: kotlinx.serialization.json.JsonPrimitive) =
+    buildJsonObject {
+      put("type", type)
+      put("value", value)
+    }
 }

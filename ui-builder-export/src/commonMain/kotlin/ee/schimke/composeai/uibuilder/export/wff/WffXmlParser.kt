@@ -24,7 +24,7 @@ internal object WffXmlParser {
   internal fun parseOrNull(xml: String): WffDocument? = runCatching { parse(xml) }.getOrNull()
 
   private fun normalizeInput(raw: String): String {
-    val s = if (raw.isNotEmpty() && raw[0] == '?') raw.substring(1) else raw
+    val s = if (raw.isNotEmpty() && raw[0] == '\uFEFF') raw.substring(1) else raw
     return if ('\r' in s) s.replace("\r\n", "\n").replace('\r', '\n') else s
   }
 
