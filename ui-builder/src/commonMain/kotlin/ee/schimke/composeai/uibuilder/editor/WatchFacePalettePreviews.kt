@@ -405,6 +405,53 @@ internal object WatchFacePalettePreviews {
                 ),
             ),
           )
+        Wff.TRANSFORM ->
+          // A hand the transform drives, held upright: a rotated layer reports no bounds to the
+          // tile.
+          put(
+            node(
+              Wff.GROUP,
+              bounds(0, 0, SIZE, SIZE) +
+                mapOf("pivotX" to string("0.5"), "pivotY" to string("0.5")),
+              mapOf(
+                "content" to
+                  listOf(
+                    node(
+                      Wff.TRANSFORM,
+                      mapOf("target" to string("angle"), "value" to string("0")),
+                    ),
+                    draw(
+                      shape(
+                        "round-rectangle",
+                        listOf(205, 60, 40, 180),
+                        fill = ACCENT,
+                        corner = 20,
+                      ),
+                    ),
+                  ),
+              ),
+            ),
+          )
+        Wff.GYRO ->
+          // The part the tilt moves, drawn as a flat watch holds it.
+          put(
+            draw(
+              shape("ellipse", listOf(95, 95, 260, 260), fill = WARM),
+              extra =
+                mapOf(
+                  "variants" to
+                    listOf(
+                      node(
+                        Wff.GYRO,
+                        mapOf(
+                          "x" to string("[ACCELEROMETER_ANGLE_X] * 2"),
+                          "y" to string("[ACCELEROMETER_ANGLE_Y] * 2"),
+                        ),
+                      ),
+                    ),
+                ),
+            ),
+          )
         Wff.CONDITION ->
           put(
             node(

@@ -93,7 +93,7 @@ class WffAmbientTest {
       analog.copy(
         nodes =
           analog.nodes.mapValues { (_, node) ->
-            if (node.componentId != "wff/raw") node
+            if (node.componentId != "wff/transform") node
             else
               node.copy(
                 properties =
@@ -106,7 +106,7 @@ class WffAmbientTest {
                             JsonPrimitive(
                               ((value as JsonObject)["value"] as JsonPrimitive)
                                 .content
-                                .replace("SECOND_MILLISECOND", "SECOND"),
+                                .replace("second-sweep", "second-ticking"),
                             ),
                         ),
                       )
@@ -137,8 +137,8 @@ class WffAmbientTest {
       wffVisibleIn(dimmed, ambient),
       "ambient hides it: alpha ${dimmed.properties["alpha"]}",
     )
-    // Only the targeted property changed.
-    assertEquals(owner.properties - "alpha", dimmed.properties - "alpha")
+    // Only the targeted property changed, besides the angle its transform drives in both modes.
+    assertEquals(interactive.properties - "alpha", dimmed.properties - "alpha")
   }
 
   @Test
@@ -188,7 +188,8 @@ class WffAmbientTest {
       }
     val untouched =
       wffNodeIn(doc.copy(nodes = doc.nodes + ("second-hand-ambient" to other)), owner, ambient)
-    assertEquals(owner, untouched)
+    // Moved by its transform, as interactive draws it, and not dimmed.
+    assertEquals(wffNodeIn(doc, owner, context), untouched)
   }
 
   @Test

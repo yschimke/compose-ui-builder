@@ -246,13 +246,19 @@ class WatchFaceEditValidationTest {
       <WatchFace width="450" height="450">
         <Scene>
           <Group name="g" x="0" y="0" width="450" height="450">
-            <Transform target="angle" value="1"/>
+            <PartDraw x="0" y="0" width="10" height="10">
+              <Rectangle x="0" y="0" width="10" height="10">
+                <Fill color="#ffffffff"/>
+                <Transform target="angle" value="1"/>
+              </Rectangle>
+            </PartDraw>
           </Group>
         </Scene>
       </WatchFace>
       """
         .trimIndent(),
     )
+    // A transform of a part is a `wff/transform`; one inside a shape is still held raw.
     val transform = nodeOf(WatchFaceXmlExporter.RAW)
     val notAllowed =
       refuse(
