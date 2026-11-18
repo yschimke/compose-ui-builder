@@ -554,6 +554,49 @@ class WatchFaceFidelityTest {
     assertEquals(10 * 227 / 450.0, tick.y, 0.6)
   }
 
+  @Test
+  fun `a scaled group is drawn scaled by the editor and both exports`() {
+    // The tick at 215..235 × 10..70, halved about the face's centre, lands at 220..230 × 117..147.
+    val face =
+      wffFace(
+        listOf("group"),
+        listOf(
+            wffNode(
+              "group",
+              "wff/group",
+              mapOf(
+                "x" to 0,
+                "y" to 0,
+                "width" to 450,
+                "height" to 450,
+                "scaleX" to 0.5,
+                "scaleY" to 0.5,
+                "pivotX" to 0.5,
+                "pivotY" to 0.5,
+              ),
+              mapOf("content" to listOf("tick")),
+            ),
+            wffNode(
+              "tick",
+              "wff/part-draw",
+              mapOf(
+                "x" to 215,
+                "y" to 10,
+                "width" to 20,
+                "height" to 60,
+                "shape" to "rectangle",
+                "fillColor" to "#ffffffff",
+              ),
+            ),
+          )
+          .joinToString(","),
+      )
+    for ((name, bitmap) in listOf("editor" to renderWffFace(face), "export" to export(face))) {
+      assertEquals(listOf(255, 255, 255, 255), bitmap.at(225f, 132f), "$name scaled tick")
+      assertEquals(listOf(255, 0, 0, 0), bitmap.at(225f, 40f), "$name unscaled place")
+    }
+  }
+
   // yschimke/watchface-tools#26
 
   @Test
