@@ -457,6 +457,25 @@ object KobentoComponentJsonExporter {
       }
 
     fun modifier(modifier: JsonObject?, path: String): List<JsonElement> {
+      // As RemoteDocumentJsonExporter: a field this lowering cannot write (a background's `shape`,
+      // say) is refused rather than dropped, so the export never draws something else.
+      val written =
+        when (modifier?.get("type")?.jsonPrimitive?.contentOrNull) {
+          "fillMaxSize",
+          "fillMaxWidth",
+          "fillMaxHeight" -> setOf("fraction")
+          "width" -> setOf("widthDp")
+          "height" -> setOf("heightDp")
+          "size" -> setOf("widthDp", "heightDp")
+          "padding" -> setOf("startDp", "topDp", "endDp", "bottomDp")
+          "background" -> setOf("color")
+          else -> null
+        }
+      if (written != null)
+        modifier!!
+          .entries
+          .filter { it.key != "type" && it.key !in written && it.value !is JsonNull }
+          .forEach { errors += "$path.${it.key}: modifier field lowering is not available" }
       fun dp(key: String): JsonPrimitive {
         val value = number(modifier?.get(key), "$path.$key", 0.0)
         if (value < 0) errors += "$path.$key: dimension must be non-negative"

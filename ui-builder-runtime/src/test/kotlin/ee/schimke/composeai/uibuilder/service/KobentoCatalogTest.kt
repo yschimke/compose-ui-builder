@@ -315,6 +315,31 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `a modifier field the lowering cannot write is refused`() {
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    val column = design.nodes.getValue("column")
+    val shaped =
+      column.copy(
+        modifiers =
+          Json.parseToJsonElement(
+              """[{"type": "background", "color": {"type": "color", "value": "#FF336699"},
+                "shape": "medium"}]""",
+            )
+            .jsonArray,
+      )
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(
+          design.copy(nodes = design.nodes + ("column" to shaped)),
+        ),
+      )
+    assertEquals(
+      listOf("nodes.column.modifiers[0].shape: modifier field lowering is not available"),
+      refused.reasons,
+    )
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =
