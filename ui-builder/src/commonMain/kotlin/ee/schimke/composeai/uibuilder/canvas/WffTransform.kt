@@ -144,7 +144,7 @@ internal fun wffResolvedNumbers(node: UiBuilderNode, preview: WffPreviewContext)
           (own["type"] as? JsonPrimitive)?.contentOrNull == "string"
         }
       else (extras?.get(name) as? JsonPrimitive)?.contentOrNull
-    if (text == null || '[' !in text && text.toDoubleOrNull() == null) continue
+    if (text.isNullOrBlank()) continue
     val value = evaluateWffExpression(text, preview)?.asNumber() ?: continue
     properties =
       JsonObject(

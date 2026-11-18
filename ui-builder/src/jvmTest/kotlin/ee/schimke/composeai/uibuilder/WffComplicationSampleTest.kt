@@ -20,7 +20,9 @@ import ee.schimke.composeai.uibuilder.canvas.WffComplicationSample
 import ee.schimke.composeai.uibuilder.canvas.WffPreviewContext
 import ee.schimke.composeai.uibuilder.canvas.WffSampleImage
 import ee.schimke.composeai.uibuilder.canvas.evaluateWffExpression
+import ee.schimke.composeai.uibuilder.canvas.float
 import ee.schimke.composeai.uibuilder.canvas.wffArcSweep
+import ee.schimke.composeai.uibuilder.canvas.wffResolvedNumbers
 import ee.schimke.composeai.uibuilder.canvas.wffSlotSample
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
@@ -238,6 +240,30 @@ class WffComplicationSampleTest {
   }
 
   private val accent = 0xFF4FC3F7.toInt()
+
+  @Test
+  fun `a numeric attribute holding constant arithmetic is evaluated`() {
+    // As an import keeps it: in `wffExtras`, since a number property cannot hold the text.
+    val arc =
+      ee.schimke.composeai.uibuilder.export.UiBuilderNode(
+        "arc",
+        "wff/shape",
+        JsonObject(
+          mapOf(
+            "wffExtras" to
+              JsonObject(
+                mapOf(
+                  "type" to JsonPrimitive("string"),
+                  "value" to JsonPrimitive("""{"endAngle":"90 + 180","startAngle":"0"}"""),
+                ),
+              ),
+          ),
+        ),
+      )
+    val resolved = wffResolvedNumbers(arc, WffPreviewContext())
+    assertEquals(270f, resolved.float("endAngle"))
+    assertEquals(0f, resolved.float("startAngle"))
+  }
 
   @Test
   fun `an arc reaches as far round as the ranged value`() {
