@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
@@ -221,5 +222,99 @@ class WatchFaceDesignValidationTest {
       WatchFaceDesignValidation.VALUE_ISSUE_CODE,
       WatchFaceDesignValidation.check(duplicate)?.code,
     )
+  }
+
+  /** [document] with its [nth] complication slot moved from the scene into the group. */
+  private fun UiBuilderDocument.slotInGroup(nth: Int = 1): UiBuilderDocument {
+    val slot = nodes.values.filter { it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT }[nth]
+    val scene = nodes.getValue(roots.single())
+    val group = nodes.values.single { it.componentId == WatchFaceXmlExporter.GROUP }
+    return copy(
+      nodes =
+        nodes +
+          (scene.id to
+            scene.copy(
+              slots = scene.slots + ("content" to scene.slots.getValue("content") - slot.id),
+            )) +
+          (group.id to
+            group.copy(
+              slots = group.slots + ("content" to group.slots.getValue("content") + slot.id),
+            )),
+    )
+  }
+
+  @Test
+  fun `a complication slot outside the scene's own content is refused by the design check`() {
+    // yschimke/watchface-tools#43 item 6: flagged where the edit is made, not only at export.
+    val nested = document().slotInGroup()
+    val slot =
+      nested.nodes.values.filter { it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT }[1]
+    val issue = assertNotNull(WatchFaceDesignValidation.check(nested))
+    assertEquals(WatchFaceDesignValidation.VALUE_ISSUE_CODE, issue.code)
+    assertEquals(slot.id, issue.nodeId)
+    assertTrue("directly in the `wff/scene`" in issue.message, issue.message)
+    assertTrue("(wff/group)" in issue.message, issue.message)
+    // The export already refused it, through wff-core's schema; the check now says so first.
+    assertTrue(
+      reasons(nested).any { "<ComplicationSlot> is not allowed inside <Group>" in it },
+      reasons(nested).toString(),
+    )
+  }
+
+  @Test
+  fun `a face with more than eight complication slots is refused`() {
+    val base = document()
+    val scene = base.nodes.getValue(base.roots.single())
+    val template =
+      base.nodes.values.first { it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT }
+    // Seven more slots, each with its own id: nine in all. Their children are shared, which the
+    // count does not care about.
+    val extra =
+      (2..8).map { n ->
+        template.copy(
+          id = "extra-$n",
+          properties =
+            JsonObject(
+              template.properties +
+                ("slotId" to
+                  buildJsonObject {
+                    put("type", "int")
+                    put("value", n)
+                  }),
+            ),
+          slots = emptyMap(),
+        )
+      }
+    val crowded =
+      base.copy(
+        nodes =
+          base.nodes +
+            extra.associateBy { it.id } +
+            (scene.id to
+              scene.copy(
+                slots =
+                  scene.slots +
+                    ("content" to scene.slots.getValue("content") + extra.map { it.id }),
+              )),
+      )
+    val issue = assertNotNull(WatchFaceDesignValidation.check(crowded))
+    assertEquals("extra-8", issue.nodeId)
+    assertTrue("at most 8 complication slots" in issue.message, issue.message)
+    // Eight is allowed.
+    val eight =
+      crowded.copy(nodes = crowded.nodes - "extra-8").let { doc ->
+        doc.copy(
+          nodes =
+            doc.nodes +
+              (scene.id to
+                scene.copy(
+                  slots =
+                    scene.slots +
+                      ("content" to
+                        scene.slots.getValue("content") + extra.map { it.id }.dropLast(1)),
+                )),
+        )
+      }
+    assertNull(WatchFaceDesignValidation.check(eight))
   }
 }

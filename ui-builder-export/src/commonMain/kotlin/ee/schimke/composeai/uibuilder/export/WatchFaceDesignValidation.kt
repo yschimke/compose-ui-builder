@@ -164,6 +164,9 @@ object WatchFaceDesignValidation {
   }
 
   /** The Watch Face Format version the design targets: its scene's `wffVersion`. */
+  /** How many `<ComplicationSlot>`s a face may have, as the format's reference says. */
+  internal const val MAX_COMPLICATION_SLOTS = 8
+
   internal fun versionOf(document: UiBuilderDocument): Int {
     val scene = document.roots.singleOrNull()?.let { document.nodes[it] }
     val value =
@@ -176,13 +179,44 @@ object WatchFaceDesignValidation {
 
   /**
    * The problems no node shows alone: the complication slots' ids and types. [version] is the
-   * format version they are judged at.
+   * format version they are judged at. Given [sceneContent], the ids directly under the scene, also
+   * where the slots are and how many: Watch Face Format has a `<ComplicationSlot>` only as a child
+   * of `<Scene>`, and at most [MAX_COMPLICATION_SLOTS] of them. [check] asks it, so an edit that
+   * nests a slot is refused where it is made; the export leaves placement to wff-core's schema,
+   * which refuses it in its own words.
    */
   internal fun slotIssues(
     nodes: List<UiBuilderNode>,
     version: Int,
+    sceneContent: Set<String>? = null,
   ): List<Triple<String, String?, String>> {
     val issues = mutableListOf<Triple<String, String?, String>>()
+    if (sceneContent != null) {
+      val slots = nodes.filter { it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT }
+      for (slot in slots) {
+        if (slot.id in sceneContent) continue
+        val parent = nodes.firstOrNull { node -> node.slots.values.any { slot.id in it } }
+        issues +=
+          Triple(
+            slot.id,
+            null,
+            "a `${WatchFaceXmlExporter.COMPLICATION_SLOT}` goes directly in the " +
+              "`${WatchFaceXmlExporter.SCENE}`'s content: Watch Face Format has " +
+              "`<ComplicationSlot>` nowhere else" +
+              (parent?.let { ", and this one is in `${it.id}` (${it.componentId})" }.orEmpty()) +
+              ". To switch slots by a configuration, put the slot in the scene and vary what it " +
+              "draws, or its `alpha`",
+          )
+      }
+      if (slots.size > MAX_COMPLICATION_SLOTS)
+        issues +=
+          Triple(
+            slots[MAX_COMPLICATION_SLOTS].id,
+            null,
+            "a watch face has at most $MAX_COMPLICATION_SLOTS complication slots; this one is " +
+              "number ${MAX_COMPLICATION_SLOTS + 1} of ${slots.size}",
+          )
+    }
     val byId = linkedMapOf<Long, MutableList<String>>()
     for (node in nodes) {
       if (node.componentId != WatchFaceXmlExporter.COMPLICATION_SLOT) continue
@@ -246,7 +280,9 @@ object WatchFaceDesignValidation {
         return Issue(VALUE_ISSUE_CODE, it.second, node.id, it.first)
       }
     }
-    slotIssues(nodes, versionOf(document)).firstOrNull()?.let { (id, field, message) ->
+    val sceneContent = root.slots["content"].orEmpty().toSet()
+    slotIssues(nodes, versionOf(document), sceneContent).firstOrNull()?.let { (id, field, message)
+      ->
       return Issue(VALUE_ISSUE_CODE, message, id, field)
     }
     return null
