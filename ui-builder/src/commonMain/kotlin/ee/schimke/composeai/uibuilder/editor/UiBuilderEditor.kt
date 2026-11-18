@@ -356,6 +356,12 @@ fun UiBuilderEditor(
    * design has no Compose to compile, so the native pane offers this instead of a render.
    */
   onStartWatchFacePreview: (suspend (wffXml: String) -> UiBuilderWatchFaceStart)? = null,
+  /**
+   * Why the host's real watch-face runtime cannot run (for example `DWF_RUNTIME_MISSING: …`), or
+   * null when it can. Asked when the native pane opens, so the reason is a banner rather than a
+   * failed start.
+   */
+  onWatchFaceRuntimeStatus: (suspend () -> String?)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   /**
@@ -2183,6 +2189,7 @@ fun UiBuilderEditor(
             ?.kotlin
         },
         start = onStartWatchFacePreview,
+        status = onWatchFaceRuntimeStatus,
         modifier = paneModifier,
       )
     } else
