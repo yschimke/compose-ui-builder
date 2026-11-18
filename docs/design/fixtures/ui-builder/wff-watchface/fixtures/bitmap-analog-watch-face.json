@@ -1,0 +1,369 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "analog-watch-face",
+  "title": "Analog watch face",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "wff-watchface",
+    "catalogRevision": "wff-v1",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 227,
+    "heightDp": 227,
+    "density": 2.0,
+    "theme": "dark",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T10:08:32Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:wearos_large_round"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "scene"
+  ],
+  "nodes": {
+    "scene": {
+      "id": "scene",
+      "componentId": "wff/scene",
+      "properties": {
+        "width": {
+          "type": "int",
+          "value": 450
+        },
+        "height": {
+          "type": "int",
+          "value": 450
+        },
+        "clipShape": {
+          "type": "string",
+          "value": "CIRCLE"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "value": "#ff000000"
+        },
+        "clockType": {
+          "type": "string",
+          "value": "ANALOG"
+        },
+        "previewTime": {
+          "type": "string",
+          "value": "10:08:32"
+        },
+        "wffVersion": {
+          "type": "int",
+          "value": 2
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "dial",
+          "battery",
+          "clock"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "dial": {
+      "id": "dial",
+      "componentId": "wff/part-image",
+      "properties": {
+        "resource": {
+          "type": "string",
+          "value": "dial"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "battery": {
+      "id": "battery",
+      "componentId": "wff/complication-slot",
+      "properties": {
+        "slotId": {
+          "type": "int",
+          "value": 0
+        },
+        "supportedTypes": {
+          "type": "string",
+          "value": "SHORT_TEXT RANGED_VALUE"
+        },
+        "x": {
+          "type": "int",
+          "value": 160
+        },
+        "y": {
+          "type": "int",
+          "value": 290
+        },
+        "width": {
+          "type": "int",
+          "value": 130
+        },
+        "height": {
+          "type": "int",
+          "value": 80
+        },
+        "boundsType": {
+          "type": "string",
+          "value": "RECTANGLE"
+        },
+        "defaultSystemProvider": {
+          "type": "string",
+          "value": "WATCH_BATTERY"
+        },
+        "defaultSystemProviderType": {
+          "type": "string",
+          "value": "SHORT_TEXT"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "variants": [
+          "battery-complication"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "clock": {
+      "id": "clock",
+      "componentId": "wff/analog-clock",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "hands": [
+          "hour",
+          "minute",
+          "second"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "hour": {
+      "id": "hour",
+      "componentId": "wff/clock-hand",
+      "properties": {
+        "type": {
+          "type": "string",
+          "value": "hour"
+        },
+        "resource": {
+          "type": "string",
+          "value": "hour_hand"
+        },
+        "x": {
+          "type": "int",
+          "value": 215
+        },
+        "y": {
+          "type": "int",
+          "value": 125
+        },
+        "width": {
+          "type": "int",
+          "value": 20
+        },
+        "height": {
+          "type": "int",
+          "value": 100
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "minute": {
+      "id": "minute",
+      "componentId": "wff/clock-hand",
+      "properties": {
+        "type": {
+          "type": "string",
+          "value": "minute"
+        },
+        "resource": {
+          "type": "string",
+          "value": "minute_hand"
+        },
+        "x": {
+          "type": "int",
+          "value": 219
+        },
+        "y": {
+          "type": "int",
+          "value": 70
+        },
+        "width": {
+          "type": "int",
+          "value": 12
+        },
+        "height": {
+          "type": "int",
+          "value": 155
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "second": {
+      "id": "second",
+      "componentId": "wff/clock-hand",
+      "properties": {
+        "type": {
+          "type": "string",
+          "value": "second"
+        },
+        "resource": {
+          "type": "string",
+          "value": "second_hand"
+        },
+        "x": {
+          "type": "int",
+          "value": 223
+        },
+        "y": {
+          "type": "int",
+          "value": 50
+        },
+        "width": {
+          "type": "int",
+          "value": 4
+        },
+        "height": {
+          "type": "int",
+          "value": 175
+        },
+        "pivotX": {
+          "type": "float",
+          "value": 0.5
+        },
+        "pivotY": {
+          "type": "float",
+          "value": 1.0
+        },
+        "tintColor": {
+          "type": "color",
+          "value": "#ffff5252"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "variants": [
+          "second-ambient"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "second-ambient": {
+      "id": "second-ambient",
+      "componentId": "wff/variant",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "value": "AMBIENT"
+        },
+        "target": {
+          "type": "string",
+          "value": "alpha"
+        },
+        "value": {
+          "type": "string",
+          "value": "0"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "battery-complication": {
+      "id": "battery-complication",
+      "componentId": "wff/complication",
+      "properties": {
+        "type": {
+          "type": "string",
+          "value": "SHORT_TEXT"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "battery-text"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "battery-text": {
+      "id": "battery-text",
+      "componentId": "wff/part-text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "%s"
+        },
+        "parameters": {
+          "type": "string",
+          "value": "[COMPLICATION.TEXT]"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 130
+        },
+        "height": {
+          "type": "int",
+          "value": 80
+        },
+        "fontSize": {
+          "type": "int",
+          "value": 24
+        },
+        "color": {
+          "type": "color",
+          "value": "#ffffffff"
+        },
+        "align": {
+          "type": "string",
+          "value": "CENTER"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    }
+  }
+}

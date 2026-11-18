@@ -144,7 +144,7 @@
       "properties": {
         "text": {
           "type": "string",
-          "value": "%s"
+          "value": "%s %d"
         },
         "x": {
           "type": "int",
@@ -152,7 +152,7 @@
         },
         "y": {
           "type": "int",
-          "value": 70
+          "value": 78
         },
         "width": {
           "type": "int",
@@ -176,7 +176,7 @@
         },
         "parameters": {
           "type": "string",
-          "value": "[DAY_OF_WEEK_S]"
+          "value": "[DAY_OF_WEEK_S]\n[DAY]"
         }
       },
       "modifiers": [],
@@ -259,7 +259,7 @@
         },
         "y": {
           "type": "int",
-          "value": 320
+          "value": 318
         },
         "width": {
           "type": "int",
@@ -302,6 +302,7 @@
       "modifiers": [],
       "slots": {
         "content": [
+          "steps-back",
           "steps-text"
         ]
       },
@@ -346,6 +347,47 @@
         "align": {
           "type": "string",
           "value": "CENTER"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "steps-back": {
+      "id": "steps-back",
+      "componentId": "wff/part-draw",
+      "properties": {
+        "shape": {
+          "type": "string",
+          "value": "round-rectangle"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 130
+        },
+        "height": {
+          "type": "int",
+          "value": 70
+        },
+        "fillColor": {
+          "type": "color",
+          "value": "#26ffffff"
+        },
+        "cornerRadiusX": {
+          "type": "int",
+          "value": 24
+        },
+        "cornerRadiusY": {
+          "type": "int",
+          "value": 24
         }
       },
       "modifiers": [],

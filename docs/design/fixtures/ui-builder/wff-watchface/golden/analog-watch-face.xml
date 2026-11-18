@@ -4,28 +4,157 @@
   <Metadata key="CLOCK_TYPE" value="ANALOG"/>
   <Metadata key="PREVIEW_TIME" value="10:08:32"/>
   <Scene backgroundColor="#ff000000">
-    <PartImage x="0" y="0" width="450" height="450">
-      <Image resource="dial"/>
-    </PartImage>
-    <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT RANGED_VALUE" x="160" y="290" width="130" height="80">
-      <BoundingBox x="0" y="0" width="130" height="80"/>
+    <PartDraw x="0" y="0" width="450" height="450">
+      <Ellipse x="0" y="0" width="450" height="450">
+        <Fill color="#ff0e1319"/>
+      </Ellipse>
+    </PartDraw>
+    <PartDraw x="9" y="9" width="432" height="432">
+      <Ellipse x="0" y="0" width="432" height="432">
+        <Stroke color="#ff2a3441" thickness="6"/>
+      </Ellipse>
+    </PartDraw>
+    <PartDraw x="44" y="44" width="362" height="362">
+      <Ellipse x="0" y="0" width="362" height="362">
+        <Stroke color="#ff1a222c" thickness="2"/>
+      </Ellipse>
+    </PartDraw>
+    <Group name="tick-0" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="0">
+      <PartDraw x="216" y="20" width="18" height="46">
+        <RoundRectangle x="0" y="0" width="18" height="46" cornerRadiusX="4" cornerRadiusY="4">
+          <Fill color="#ff4fc3f7"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-1" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="30">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-2" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="60">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-3" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="90">
+      <PartDraw x="216" y="20" width="18" height="46">
+        <RoundRectangle x="0" y="0" width="18" height="46" cornerRadiusX="4" cornerRadiusY="4">
+          <Fill color="#ff4fc3f7"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-4" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="120">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-5" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="150">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-6" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="180">
+      <PartDraw x="216" y="20" width="18" height="46">
+        <RoundRectangle x="0" y="0" width="18" height="46" cornerRadiusX="4" cornerRadiusY="4">
+          <Fill color="#ff4fc3f7"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-7" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="210">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-8" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="240">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-9" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="270">
+      <PartDraw x="216" y="20" width="18" height="46">
+        <RoundRectangle x="0" y="0" width="18" height="46" cornerRadiusX="4" cornerRadiusY="4">
+          <Fill color="#ff4fc3f7"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-10" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="300">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="tick-11" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5" angle="330">
+      <PartDraw x="220" y="22" width="10" height="28">
+        <RoundRectangle x="0" y="0" width="10" height="28" cornerRadiusX="3" cornerRadiusY="3">
+          <Fill color="#ffcfd8dc"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT RANGED_VALUE" x="155" y="288" width="140" height="60">
+      <BoundingBox x="0" y="0" width="140" height="60"/>
       <DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY" defaultSystemProviderType="SHORT_TEXT"/>
       <Complication type="SHORT_TEXT">
-        <PartText x="0" y="0" width="130" height="80">
+        <PartDraw x="0" y="0" width="140" height="60">
+          <RoundRectangle x="0" y="0" width="140" height="60" cornerRadiusX="22" cornerRadiusY="22">
+            <Fill color="#26ffffff"/>
+          </RoundRectangle>
+        </PartDraw>
+        <PartText x="0" y="0" width="140" height="60">
           <Text align="CENTER">
-            <Font family="SYNC_TO_DEVICE" size="24" color="#ffffffff">
+            <Font family="SYNC_TO_DEVICE" size="30" color="#ffffffff">
               <Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template>
             </Font>
           </Text>
         </PartText>
       </Complication>
     </ComplicationSlot>
-    <AnalogClock x="0" y="0" width="450" height="450">
-      <HourHand resource="hour_hand" x="215" y="125" width="20" height="100" pivotX="0.5" pivotY="1"/>
-      <MinuteHand resource="minute_hand" x="219" y="70" width="12" height="155" pivotX="0.5" pivotY="1"/>
-      <SecondHand resource="second_hand" x="223" y="50" width="4" height="175" pivotX="0.5" pivotY="1" tintColor="#ffff5252">
-        <Variant mode="AMBIENT" target="alpha" value="0"/>
-      </SecondHand>
-    </AnalogClock>
+    <Group name="hour-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
+      <Transform target="angle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
+      <PartDraw x="210" y="118" width="30" height="124">
+        <RoundRectangle x="0" y="0" width="30" height="124" cornerRadiusX="15" cornerRadiusY="15">
+          <Fill color="#ffffffff"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="minute-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
+      <Transform target="angle" value="[MINUTE] * 6 + [SECOND] * 0.1"/>
+      <PartDraw x="215" y="50" width="20" height="192">
+        <RoundRectangle x="0" y="0" width="20" height="192" cornerRadiusX="10" cornerRadiusY="10">
+          <Fill color="#ffe3f2fd"/>
+        </RoundRectangle>
+      </PartDraw>
+    </Group>
+    <Group name="second-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
+      <Transform target="angle" value="[SECOND_MILLISECOND] * 0.006"/>
+      <PartDraw x="222" y="36" width="6" height="238">
+        <Rectangle x="0" y="0" width="6" height="238">
+          <Fill color="#ffff5252"/>
+        </Rectangle>
+      </PartDraw>
+      <Variant mode="AMBIENT" target="alpha" value="0"/>
+    </Group>
+    <PartDraw x="203" y="203" width="44" height="44">
+      <Ellipse x="0" y="0" width="44" height="44">
+        <Fill color="#ffffffff"/>
+      </Ellipse>
+    </PartDraw>
+    <PartDraw x="213" y="213" width="24" height="24">
+      <Ellipse x="0" y="0" width="24" height="24">
+        <Fill color="#ffff5252"/>
+      </Ellipse>
+    </PartDraw>
   </Scene>
 </WatchFace>

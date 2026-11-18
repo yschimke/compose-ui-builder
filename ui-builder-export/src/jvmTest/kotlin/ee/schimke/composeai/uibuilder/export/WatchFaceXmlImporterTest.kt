@@ -104,7 +104,7 @@ class WatchFaceXmlImporterTest {
       assertEquals(xml, exported(result.document).xml, name)
       // The parts the exporter writes are taken back as nodes, not kept as XML.
       val components = result.document.nodes.values.map { it.componentId }.toSet()
-      assertTrue(WatchFaceXmlExporter.CLOCK_HAND in components || name.startsWith("digital"), name)
+      assertTrue(WatchFaceXmlExporter.GROUP in components || name.startsWith("digital"), name)
       assertTrue(WatchFaceXmlExporter.COMPLICATION_SLOT in components, name)
       assertTrue(WatchFaceXmlExporter.PART_TEXT in components || name.startsWith("analog"), name)
     }
@@ -228,7 +228,7 @@ class WatchFaceXmlImporterTest {
     val template =
       Json.decodeFromString(
         UiBuilderDocument.serializer(),
-        File(fixtures, "designs/analog-watch-face.json").readText(),
+        File(fixtures, "fixtures/bitmap-analog-watch-face.json").readText(),
       )
     val result = imported(exported(template).xml)
     val dial =
@@ -314,7 +314,7 @@ class WatchFaceXmlImporterTest {
     val template =
       Json.decodeFromString(
         UiBuilderDocument.serializer(),
-        File(fixtures, "designs/analog-watch-face.json").readText(),
+        File(fixtures, "fixtures/bitmap-analog-watch-face.json").readText(),
       )
     // Written straight from a design.
     val battery = template.nodes.getValue("battery")
