@@ -103,12 +103,19 @@ object KobentoComponentJsonExporter {
       val path = "stateVariables.$name"
       val declaration = value as? JsonObject
       val kind = declaration?.get("valueType")?.jsonPrimitive?.contentOrNull
-      val initial = declaration?.get("initialValue") as? JsonPrimitive
+      // A Kobento float has no null, so nullable state cannot keep its meaning.
+      if ((declaration?.get("nullable") as? JsonPrimitive)?.booleanOrNull == true) {
+        errors += "$path: nullable state has no Kobento variable"
+        return null
+      }
+      val initial =
+        declaration?.get("initialValue")?.takeUnless { it is JsonNull } as? JsonPrimitive
       val number: Double? =
-        when (kind) {
-          "bool" -> initial?.booleanOrNull?.let { if (it) 1.0 else 0.0 } ?: 0.0
-          "int",
-          "float" -> initial?.takeUnless { it.isString }?.doubleOrNull ?: 0.0
+        when {
+          // An absent initial value is the kind's zero, as in the other lanes.
+          initial == null -> if (kind in setOf("bool", "int", "float")) 0.0 else null
+          kind == "bool" -> initial.booleanOrNull?.let { if (it) 1.0 else 0.0 }
+          kind == "int" || kind == "float" -> initial.takeUnless { it.isString }?.doubleOrNull
           else -> null
         }
       if (number == null || !number.isFinite()) {

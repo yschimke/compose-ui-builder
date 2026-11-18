@@ -122,6 +122,31 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `nullable state is refused, not exported as zero`() {
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    val nullable =
+      design.copy(
+        stateVariables =
+          kotlinx.serialization.json.JsonObject(
+            design.stateVariables +
+              ("target" to
+                Json.parseToJsonElement(
+                    """{"type": "value", "valueType": "float", "nullable": true, "initialValue": null}""",
+                  )
+                  .jsonObject),
+          ),
+      )
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(nullable),
+      )
+    assertTrue(
+      "stateVariables.target: nullable state has no Kobento variable" in refused.reasons,
+      refused.reasons.toString(),
+    )
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =
