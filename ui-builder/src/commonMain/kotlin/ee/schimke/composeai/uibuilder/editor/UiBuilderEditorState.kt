@@ -3078,7 +3078,7 @@ class UiBuilderEditorReducer(
       watchFace &&
         edgeName == null &&
         field.control == EditorPropertyControl.Color &&
-        WFF_COLOUR_REFERENCE.matches(draft.trim())
+        isWffColourReference(draft.trim())
     ) {
       return commitWatchFaceColourReference(state, sequence, nodeId, baseName, draft.trim())
     }
@@ -3142,6 +3142,28 @@ class UiBuilderEditorReducer(
         )
       }
       operations += DesignOperation.SetProperty(target.id, baseName, encoded)
+      // A literal (or cleared) colour replaces a face colour option held in `wffExtras`: left
+      // there, the canvas would keep drawing it and the inspector would show nothing.
+      if (watchFace && field.control == EditorPropertyControl.Color && edgeName == null) {
+        heldColourReference(target, baseName, field.control)?.let {
+          val held =
+            (((target.properties[WATCH_FACE_EXTRAS] as? JsonObject)?.get("value") as? JsonPrimitive)
+                ?.contentOrNull
+                ?.let { text ->
+                  runCatching { Json.parseToJsonElement(text) as? JsonObject }.getOrNull()
+                })
+              ?.toMap()
+              .orEmpty() - baseName
+          operations +=
+            if (held.isEmpty()) DesignOperation.RemoveNodeProperty(target.id, WATCH_FACE_EXTRAS)
+            else
+              DesignOperation.SetProperty(
+                target.id,
+                WATCH_FACE_EXTRAS,
+                literal("string", JsonPrimitive(JsonObject(held).toString())),
+              )
+        }
+      }
     }
     if (operations.isEmpty()) return state
     return state

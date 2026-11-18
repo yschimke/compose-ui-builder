@@ -149,4 +149,37 @@ class WatchFaceColourCommitTest {
       reducer.reduce(state, UiBuilderEditorEvent.CommitProperty("dot", "fillColor", "#ff00ff00"))
     assertIs<CommandOutcome.Accepted>(literal.lastOutcome)
   }
+
+  @Test
+  fun `committing a literal or clearing the colour drops the held reference`() {
+    val withReference =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = "dot"),
+        UiBuilderEditorEvent.CommitProperty("dot", "fillColor", "[CONFIGURATION.theme.0]"),
+      )
+    for (replacement in listOf("#ff00ff00", "")) {
+      val edited =
+        reducer.reduce(
+          withReference,
+          UiBuilderEditorEvent.CommitProperty("dot", "fillColor", replacement),
+        )
+      assertIs<CommandOutcome.Accepted>(edited.lastOutcome, edited.lastOutcome.toString())
+      val dot = edited.document.nodes.getValue("dot")
+      assertNull(dot.properties["wffExtras"], "the reference is gone for `$replacement`")
+      assertEquals(
+        replacement,
+        dot.properties.getValue("fillColor").jsonObject.getValue("value").jsonPrimitive.content,
+      )
+    }
+  }
+
+  @Test
+  fun `a colour option index that is not an Int is refused, not rendered`() {
+    val edited =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = "dot"),
+        UiBuilderEditorEvent.CommitProperty("dot", "fillColor", "[CONFIGURATION.theme.2147483648]"),
+      )
+    assertIs<CommandOutcome.Rejected>(edited.lastOutcome, edited.lastOutcome.toString())
+  }
 }

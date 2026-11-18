@@ -89,4 +89,16 @@ class WatchFaceColourOptionRenderTest {
     val pixel = centre(document(missing))
     assert(pixel != green && pixel != red)
   }
+
+  @Test
+  fun `a property that is set wins over a stale held reference, and a huge index falls back`() {
+    val both =
+      """"fillColor":{"type":"color","value":"#ffff0000"},
+        "wffExtras":{"type":"string","value":"{\"fillColor\":\"[CONFIGURATION.theme.1]\"}"}"""
+    assertEquals(red, centre(document(both)))
+    val huge =
+      """"wffExtras":{"type":"string","value":"{\"fillColor\":\"[CONFIGURATION.theme.2147483648]\"}"}"""
+    val pixel = centre(document(huge))
+    assert(pixel != green && pixel != red)
+  }
 }

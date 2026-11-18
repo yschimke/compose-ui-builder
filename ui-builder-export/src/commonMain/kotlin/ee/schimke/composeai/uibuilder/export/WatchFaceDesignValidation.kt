@@ -59,6 +59,8 @@ object WatchFaceDesignValidation {
     )
 
   private val COLOR_LITERAL = Regex("#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
+
+  private val COLOUR_OPTION_INDEX = Regex("""\[CONFIGURATION\.[A-Za-z0-9_.-]+\.(\d+)]""")
   private val PLAIN_NUMBER = Regex("[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?")
 
   /** Layout and bookkeeping keys the importer keeps in a node's own properties or `wffExtras`. */
@@ -93,6 +95,13 @@ object WatchFaceDesignValidation {
    */
   private fun valueIssue(component: String, name: String, value: String): String? {
     val declared = WatchFaceCatalogShape.DECLARED[component]?.get(name) ?: return null
+    // A face colour option names a colour slot by index; one that is not an Int cannot be one.
+    if (PropertyValueKinds.isColour(name)) {
+      COLOUR_OPTION_INDEX.matchEntire(value)?.let { match ->
+        if (match.groupValues[1].toIntOrNull() == null)
+          return "$name is `$value`; the colour option index is not a valid number"
+      }
+    }
     if (isExpression(value) && declared.type != "boolean") {
       // Expressions are WFF's own language; only a colour must still be one that can be written.
       return null

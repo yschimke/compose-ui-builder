@@ -1016,6 +1016,11 @@ internal sealed interface PropertyDraft {
 /** `[CONFIGURATION.<id>.<n>]`: a Watch Face Format face's own colour option. */
 internal val WFF_COLOUR_REFERENCE = Regex("\\[CONFIGURATION\\.[A-Za-z0-9_.-]+\\.\\d+]")
 
+/** Whether [draft] is a face colour option whose colour index is a valid number. */
+internal fun isWffColourReference(draft: String): Boolean =
+  WFF_COLOUR_REFERENCE.matches(draft) &&
+    draft.substringBeforeLast(']').substringAfterLast('.').toIntOrNull() != null
+
 private val WFF_COLOUR_LITERAL = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")
 
 /** The property a Watch Face Format node holds what has no property of its own in. */

@@ -472,7 +472,9 @@ internal fun UiBuilderNode.wffColor(
   name: String,
   fallback: Color,
 ): Color {
-  if (string(name).isNotEmpty()) return color(name, fallback)
+  // A property that is set, empty included, is authoritative: a held reference is only for a
+  // colour the node has no property for.
+  if (name in properties) return color(name, fallback)
   val reference = heldColourReference(name) ?: return fallback
   return resolveColourOption(document, reference) ?: fallback
 }
@@ -508,7 +510,8 @@ private fun resolveColourOption(document: UiBuilderDocument, reference: String):
       ?: options.firstOrNull()
       ?: return null
   val literal =
-    chosen.string("colors").split(' ', '\n').filter { it.isNotBlank() }.getOrNull(index.toInt())
-      ?: return null
+    index.toIntOrNull()?.let { at ->
+      chosen.string("colors").split(' ', '\n').filter { it.isNotBlank() }.getOrNull(at)
+    } ?: return null
   return literal.takeIf { it.startsWith("#") }?.let { Color(parseArgb(it)) }
 }
