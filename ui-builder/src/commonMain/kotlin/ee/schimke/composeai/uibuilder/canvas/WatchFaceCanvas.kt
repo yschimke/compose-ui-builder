@@ -23,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -129,7 +131,21 @@ internal fun WatchFaceCanvas(
       CompositionLocalProvider(LocalWffConfigurations provides configurations) {
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
           val scale = minOf(maxWidth.value / width, maxHeight.value / height)
-          Box(Modifier.size((width * scale).dp, (height * scale).dp).clip(clip)) {
+          // The editing canvas draws the screen's shape (a faint outline, and the background
+          // inside it) but does not cut the parts to it, so content outside the circle can be
+          // seen and selected. The preview and the exports are cut.
+          val editing = LocalUiBuilderEditingCanvas.current
+          val face = Modifier.size((width * scale).dp, (height * scale).dp)
+          Box(
+            if (editing)
+              face.drawWithContent {
+                drawContent()
+                if (clip == CircleShape) {
+                  drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
+                }
+              }
+            else face.clip(clip),
+          ) {
             for ((layerAmbient, alpha) in layers) {
               // Ambient holds the wrist still: the sway is the interactive layer's only.
               val context =
@@ -140,13 +156,12 @@ internal fun WatchFaceCanvas(
                 LocalWffFace provides WffFace(width, height, scale),
                 LocalWffPreview provides context,
               ) {
+                val background =
+                  if (layerAmbient) Color.Black else node.wffColor("backgroundColor", Color.Black)
                 Box(
                   Modifier.matchParentSize()
                     .graphicsLayer { this.alpha = alpha }
-                    .background(
-                      if (layerAmbient) Color.Black
-                      else node.wffColor("backgroundColor", Color.Black),
-                    ),
+                    .background(background, if (editing) clip else RectangleShape),
                 ) {
                   node.slots["content"]
                     .orEmpty()

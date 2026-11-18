@@ -619,9 +619,10 @@ internal fun PinnedDesignCanvas(
                   if (dropHovered) Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
                   else Modifier,
                 ),
-              shape =
-                if (roundFrame || document.isRoundWatchFace()) CircleShape
-                else RoundedCornerShape(0.dp),
+              // A round watch face is not cut to the circle on the editing canvas: parts outside it
+              // stay visible and selectable (the face draws its own outline). The previews and
+              // thumbnails below keep the circular clip.
+              shape = if (roundFrame) CircleShape else RoundedCornerShape(0.dp),
               color =
                 if (canvasRenderer == null) MaterialTheme.colorScheme.surface
                 else Color.Transparent,
