@@ -887,6 +887,10 @@ class UiBuilderEditorReducer(
     // `getOrPut` treats a stored null as absent, so misses are cached explicitly.
     if (key in previewDocuments) return previewDocuments[key]
     return previewDocuments.getOrPut(key) {
+      // A watch face part cannot sit in the generic frame (it belongs on a `wff/scene`, many only
+      // inside a parent), so its picture is a small scene built for it.
+      if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE)
+        return@getOrPut WatchFacePalettePreviews.document(catalog, componentId, previewFrame)
       val state = initial(previewFrame, selectedNodeId = PREVIEW_FRAME_CELL_ID)
       val target = dropTarget(state, componentId)
       val inserted = target?.let {
