@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.134.0](https://github.com/yschimke/compose-ui-builder/compare/v3.133.0...v3.134.0) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.99.0 ([#1253](https://github.com/yschimke/compose-ui-builder/issues/1253)) ([815c1cc](https://github.com/yschimke/compose-ui-builder/commit/815c1cc6c572eb3ea205f1414d9d84c35091c693))
+* draw watch faces round and self-contained, with their text and complications filled ([#1255](https://github.com/yschimke/compose-ui-builder/issues/1255)) ([d9c6386](https://github.com/yschimke/compose-ui-builder/commit/d9c638660ca50f2faf351c5b85144a4533d2befe))
+
 ## [3.133.0](https://github.com/yschimke/compose-ui-builder/compare/v3.132.0...v3.133.0) (2026-11-18)
 
 
