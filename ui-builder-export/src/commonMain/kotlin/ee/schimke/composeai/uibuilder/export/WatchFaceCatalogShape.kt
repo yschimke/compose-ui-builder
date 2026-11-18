@@ -16,6 +16,8 @@ internal object WatchFaceCatalogShape {
 
   private val BOUNDS = numbers("x", "y", "width", "height", "pivotX", "pivotY", "angle", "alpha")
   private val EXTRAS = mapOf(WatchFaceXmlExporter.EXTRAS to Declared("string"))
+  private val CONFIGURATION: Map<String, Declared> =
+    strings("id", "displayName", "screenReaderText", "icon", "defaultValue", "highlight") + EXTRAS
   private val ALIGN = Declared("string", setOf("START", "CENTER", "END"))
 
   val DECLARED: Map<String, Map<String, Declared>> =
@@ -114,6 +116,54 @@ internal object WatchFaceCatalogShape {
       WatchFaceXmlExporter.DEFAULT to EXTRAS,
       WatchFaceXmlExporter.LAUNCH to strings("target") + EXTRAS,
       WatchFaceXmlExporter.COMPLICATION to strings("type") + EXTRAS,
+      WatchFaceXmlExporter.SHAPE to
+        mapOf(
+          "shape" to
+            Declared(
+              "string",
+              setOf("ellipse", "rectangle", "round-rectangle", "arc", "line"),
+            ),
+          "direction" to Declared("string", setOf("CLOCKWISE", "COUNTER_CLOCKWISE")),
+        ) +
+          numbers(
+            "x",
+            "y",
+            "width",
+            "height",
+            "cornerRadiusX",
+            "cornerRadiusY",
+            "centerX",
+            "centerY",
+            "startAngle",
+            "endAngle",
+            "startX",
+            "startY",
+            "endX",
+            "endY",
+          ) +
+          EXTRAS,
+      WatchFaceXmlExporter.FILL to strings("color") + EXTRAS,
+      WatchFaceXmlExporter.STROKE to strings("color") + numbers("thickness") + EXTRAS,
+      WatchFaceXmlExporter.USER_CONFIGURATIONS to EXTRAS,
+      WatchFaceXmlExporter.COLOR_CONFIGURATION to CONFIGURATION,
+      WatchFaceXmlExporter.COLOR_OPTION to
+        strings("id", "displayName", "screenReaderText", "icon", "colors") + EXTRAS,
+      WatchFaceXmlExporter.LIST_CONFIGURATION to CONFIGURATION,
+      WatchFaceXmlExporter.LIST_OPTION to
+        strings(
+          "id",
+          "displayName",
+          "screenReaderText",
+          "icon",
+          "childSettingIds",
+          "complicationSlotIds",
+        ) + EXTRAS,
+      WatchFaceXmlExporter.BOOLEAN_CONFIGURATION to CONFIGURATION,
+      WatchFaceXmlExporter.FLAVORS to strings("defaultValue") + EXTRAS,
+      WatchFaceXmlExporter.FLAVOR to
+        strings("id", "displayName", "screenReaderText", "icon") + EXTRAS,
+      WatchFaceXmlExporter.FLAVOR_CONFIGURATION to
+        strings("id", "optionId", "screenReaderText") + EXTRAS,
       WatchFaceXmlExporter.RAW to mapOf("xml" to Declared("string")),
     )
 }

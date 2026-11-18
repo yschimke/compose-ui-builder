@@ -30,7 +30,7 @@ import kotlinx.serialization.json.put
  * as the attribute, with the original order kept in `wffAttrOrder`), its children the node's slots.
  * An element is only taken as a builtin if the exporter writes exactly that element back, checked
  * per element; anything else, and every element without a builtin (`Metadata`,
- * `UserConfigurations`, `BitmapFonts`, `Condition`, `Transform`, gradients, future elements…), is
+ * `UserConfigurations`, `BitmapFonts`, `Condition`, `Transform`, gradients, future elements?), is
  * kept as a `wff/raw` node holding the element's canonical XML and written back verbatim at the
  * same position. Comments, the licence header included, are `wff/raw` nodes too: in the scene's
  * `prolog` and `epilog` slots outside the root, in `face` and `faceAfter` between the `<WatchFace>`
@@ -43,7 +43,6 @@ import kotlinx.serialization.json.put
  * XML carries no format version, so the caller states it ([Options.wffVersion]); it lands on the
  * scene as `wffVersion`.
  */
-// TODO: replace the vendored `wff` parser with ee.schimke.watchface:wff-core once published.
 object WatchFaceXmlImporter {
   data class Options(
     /** The Watch Face Format version the XML targets, held on the scene as `wffVersion`. */
@@ -100,6 +99,67 @@ object WatchFaceXmlImporter {
       "Default",
       "Launch",
       "Complication",
+      "Ellipse",
+      "Rectangle",
+      "RoundRectangle",
+      "Arc",
+      "Line",
+      "Fill",
+      "Stroke",
+      "UserConfigurations",
+      "ColorConfiguration",
+      "ColorOption",
+      "ListConfiguration",
+      "ListOption",
+      "BooleanConfiguration",
+      "Flavors",
+      "Flavor",
+      "Configuration",
+    )
+
+  /** The `wff/shape` element tags, and the kind each is. */
+  private val SHAPE_KINDS: Map<String, String> =
+    WatchFaceXmlExporter.SHAPE_TAGS.entries.associate { (kind, tag) -> tag to kind }
+
+  /** An element written as its attributes alone, with raw children, by tag. */
+  private val ATTRIBUTE_ELEMENTS: Map<String, String> =
+    mapOf(
+      "Fill" to WatchFaceXmlExporter.FILL,
+      "Stroke" to WatchFaceXmlExporter.STROKE,
+      "UserConfigurations" to WatchFaceXmlExporter.USER_CONFIGURATIONS,
+      "ColorConfiguration" to WatchFaceXmlExporter.COLOR_CONFIGURATION,
+      "ColorOption" to WatchFaceXmlExporter.COLOR_OPTION,
+      "ListConfiguration" to WatchFaceXmlExporter.LIST_CONFIGURATION,
+      "ListOption" to WatchFaceXmlExporter.LIST_OPTION,
+      "BooleanConfiguration" to WatchFaceXmlExporter.BOOLEAN_CONFIGURATION,
+      "Flavors" to WatchFaceXmlExporter.FLAVORS,
+      "Flavor" to WatchFaceXmlExporter.FLAVOR,
+      "Configuration" to WatchFaceXmlExporter.FLAVOR_CONFIGURATION,
+    )
+
+  /** Where a component's node sits: its parent's component and slot, up to the scene. */
+  private val PARENTS: Map<String, Pair<String, String>> =
+    mapOf(
+      WatchFaceXmlExporter.CLOCK_HAND to (WatchFaceXmlExporter.ANALOG_CLOCK to "hands"),
+      WatchFaceXmlExporter.TIME_TEXT to (WatchFaceXmlExporter.DIGITAL_CLOCK to "texts"),
+      WatchFaceXmlExporter.COMPARE to (WatchFaceXmlExporter.CONDITION to "branches"),
+      WatchFaceXmlExporter.DEFAULT to (WatchFaceXmlExporter.CONDITION to "branches"),
+      WatchFaceXmlExporter.COMPLICATION to (WatchFaceXmlExporter.COMPLICATION_SLOT to "variants"),
+      WatchFaceXmlExporter.LAUNCH to (WatchFaceXmlExporter.GROUP to "variants"),
+      WatchFaceXmlExporter.SHAPE to (WatchFaceXmlExporter.PART_DRAW to "content"),
+      WatchFaceXmlExporter.FILL to (WatchFaceXmlExporter.SHAPE to "content"),
+      WatchFaceXmlExporter.STROKE to (WatchFaceXmlExporter.SHAPE to "content"),
+      WatchFaceXmlExporter.COLOR_CONFIGURATION to
+        (WatchFaceXmlExporter.USER_CONFIGURATIONS to "content"),
+      WatchFaceXmlExporter.LIST_CONFIGURATION to
+        (WatchFaceXmlExporter.USER_CONFIGURATIONS to "content"),
+      WatchFaceXmlExporter.BOOLEAN_CONFIGURATION to
+        (WatchFaceXmlExporter.USER_CONFIGURATIONS to "content"),
+      WatchFaceXmlExporter.FLAVORS to (WatchFaceXmlExporter.USER_CONFIGURATIONS to "content"),
+      WatchFaceXmlExporter.COLOR_OPTION to (WatchFaceXmlExporter.COLOR_CONFIGURATION to "options"),
+      WatchFaceXmlExporter.LIST_OPTION to (WatchFaceXmlExporter.LIST_CONFIGURATION to "options"),
+      WatchFaceXmlExporter.FLAVOR to (WatchFaceXmlExporter.FLAVORS to "content"),
+      WatchFaceXmlExporter.FLAVOR_CONFIGURATION to (WatchFaceXmlExporter.FLAVOR to "content"),
     )
 
   private val RESERVED_SCENE = setOf("width", "height", "clipShape", "clockType", "previewTime")
@@ -141,7 +201,7 @@ object WatchFaceXmlImporter {
       "Default" -> WatchFaceXmlExporter.DEFAULT
       "Launch" -> WatchFaceXmlExporter.LAUNCH
       "Complication" -> WatchFaceXmlExporter.COMPLICATION
-      else -> null
+      else -> SHAPE_KINDS[tag]?.let { WatchFaceXmlExporter.SHAPE } ?: ATTRIBUTE_ELEMENTS[tag]
     }
 
   /**
@@ -266,8 +326,13 @@ object WatchFaceXmlImporter {
       props["verbatim"] = literal("bool", JsonPrimitive(true))
 
       val content = sceneElement.children.map { place(it, WatchFaceXmlExporter.SCENE_CONTENT) }
-      val before = face.children.subList(0, sceneIndex).map(::raw)
-      val after = face.children.subList(sceneIndex + 1, face.children.size).map(::raw)
+      // The user configurations are builtins; `<Metadata>`, `<BitmapFonts>` and comments are raw.
+      fun aroundScene(node: WffNode): String =
+        if (node is WffElement && node.name == "UserConfigurations")
+          place(node, WatchFaceXmlExporter.FACE_CONTENT)
+        else raw(node)
+      val before = face.children.subList(0, sceneIndex).map(::aroundScene)
+      val after = face.children.subList(sceneIndex + 1, face.children.size).map(::aroundScene)
       val slots = buildMap {
         if (parsed.prolog.isNotEmpty()) put(WatchFaceXmlExporter.PROLOG, parsed.prolog.map(::raw))
         if (before.isNotEmpty()) put(WatchFaceXmlExporter.FACE, before)
@@ -384,7 +449,10 @@ object WatchFaceXmlImporter {
           builtin(node, allowed)?.let {
             return it
           }
-          inexact.count("<${node.name}>: ${why ?: "the exporter writes it differently"}")
+          // The tag has a builtin only in another context (a scene's `ListConfiguration` selects a
+          // layout; the one under `UserConfigurations` declares options).
+          if (why?.startsWith("not valid here") == true) unmodelled.count(node.name)
+          else inexact.count("<${node.name}>: ${why ?: "the exporter writes it differently"}")
         } else unmodelled.count(node.name)
       }
       return raw(node)
@@ -392,6 +460,12 @@ object WatchFaceXmlImporter {
 
     private fun builtin(element: WffElement, allowed: Set<String>): String? {
       why = null
+      componentOf(element.name)?.let {
+        if (it !in allowed) {
+          why = "not valid here: $it does not go in this parent"
+          return null
+        }
+      }
       val candidate = candidate(element) ?: return null
       if (candidate.component !in allowed) {
         why = "not valid here: ${candidate.component} does not go in this parent"
@@ -436,37 +510,42 @@ object WatchFaceXmlImporter {
      * writes differently.
      */
     private fun writesBack(id: String, component: String, element: WffElement): String? {
-      val parent =
-        when (component) {
-          WatchFaceXmlExporter.CLOCK_HAND -> WatchFaceXmlExporter.ANALOG_CLOCK to "hands"
-          WatchFaceXmlExporter.TIME_TEXT -> WatchFaceXmlExporter.DIGITAL_CLOCK to "texts"
-          WatchFaceXmlExporter.COMPARE,
-          WatchFaceXmlExporter.DEFAULT -> WatchFaceXmlExporter.CONDITION to "branches"
-          WatchFaceXmlExporter.COMPLICATION -> WatchFaceXmlExporter.COMPLICATION_SLOT to "variants"
-          WatchFaceXmlExporter.LAUNCH -> WatchFaceXmlExporter.GROUP to "variants"
-          else -> null
-        }
-      val empty = literal("string", JsonPrimitive(""))
-      val parentProperties = buildMap {
-        put(ATTR_ORDER, empty)
-        // A slot refuses to write without these; its own attributes are not under test.
-        if (parent?.first == WatchFaceXmlExporter.COMPLICATION_SLOT) {
-          put("slotId", literal("int", JsonPrimitive(0)))
-          put("supportedTypes", literal("string", JsonPrimitive("SHORT_TEXT")))
+      // The element is written alone inside empty stand-ins for its ancestors, nearest first.
+      val chain = buildList {
+        var at = component
+        while (true) {
+          val up = PARENTS[at] ?: break
+          add(up)
+          at = up.first
         }
       }
+      val empty = literal("string", JsonPrimitive(""))
+      fun standIn(componentId: String, slots: Map<String, List<String>>, index: Int) =
+        UiBuilderNode(
+          "verify-$index",
+          componentId,
+          JsonObject(
+            buildMap {
+              put(ATTR_ORDER, empty)
+              // A slot refuses to write without these; its own attributes are not under test.
+              if (componentId == WatchFaceXmlExporter.COMPLICATION_SLOT) {
+                put("slotId", literal("int", JsonPrimitive(0)))
+                put("supportedTypes", literal("string", JsonPrimitive("SHORT_TEXT")))
+              }
+              if (componentId == WatchFaceXmlExporter.SHAPE)
+                put("shape", literal("string", JsonPrimitive("ellipse")))
+            },
+          ),
+          slots = slots,
+        )
       val scaffold = buildMap {
         putAll(nodes)
-        if (parent != null)
-          put(
-            "verify-parent",
-            UiBuilderNode(
-              "verify-parent",
-              parent.first,
-              JsonObject(parentProperties),
-              slots = mapOf(parent.second to listOf(id)),
-            ),
-          )
+        var below = id
+        chain.forEachIndexed { index, (parentComponent, slot) ->
+          put("verify-$index", standIn(parentComponent, mapOf(slot to listOf(below)), index))
+          below = "verify-$index"
+        }
+        val top = chain.lastOrNull()?.first ?: component
         put(
           "verify-scene",
           UiBuilderNode(
@@ -479,7 +558,11 @@ object WatchFaceXmlImporter {
                 ATTR_ORDER to empty,
               ),
             ),
-            slots = mapOf("content" to listOf(if (parent != null) "verify-parent" else id)),
+            slots =
+              mapOf(
+                (if (top == WatchFaceXmlExporter.USER_CONFIGURATIONS) WatchFaceXmlExporter.FACE
+                else "content") to listOf(below),
+              ),
           ),
         )
       }
@@ -488,12 +571,22 @@ object WatchFaceXmlImporter {
       if (built !is WatchFaceXmlExporter.Built.Tree)
         return "the exporter refuses it: " +
           (built as WatchFaceXmlExporter.Built.Refused).reasons.firstOrNull().orEmpty()
-      val scene = built.document.root.children.filterIsInstance<WffElement>().firstOrNull()
-      // The element under test is the last child of its scaffold parent: a slot writes its bounds
+      val top = chain.lastOrNull()?.first ?: component
+      val outer =
+        if (top == WatchFaceXmlExporter.USER_CONFIGURATIONS) built.document.root
+        else
+          built.document.root.children.filterIsInstance<WffElement>().firstOrNull {
+            it.name == "Scene"
+          }
+      // The element under test is the last child of each scaffold parent: a slot writes its bounds
       // element first.
-      val written =
-        if (parent != null) (scene?.children?.singleOrNull() as? WffElement)?.children?.lastOrNull()
-        else scene?.children?.singleOrNull()
+      var written: WffNode? =
+        if (top == WatchFaceXmlExporter.USER_CONFIGURATIONS)
+          outer?.children?.firstOrNull { it is WffElement && it.name == "UserConfigurations" }
+        else outer?.children?.singleOrNull()
+      repeat(chain.size) {
+        written = if (written is WffElement) (written as WffElement).children.lastOrNull() else null
+      }
       return if (written == element) null
       else (written as? WffElement)?.let { difference(it, element) } ?: "it is not written back"
     }
@@ -742,94 +835,33 @@ object WatchFaceXmlImporter {
           rest(setOf(at))?.let { Candidate(component, sink.finish(), it) }
         }
         "PartDraw" -> {
-          val tags = WatchFaceXmlExporter.SHAPE_TAGS.entries.associate { (k, v) -> v to k }
-          val at = e.children.indexOfFirst { it is WffElement && it.name in tags }
-          if (!top()) return no("an attribute clashes with another")
-          if (at < 0) {
-            // A part with no shape of its own: an empty PartDraw, or only overrides.
-            put("shape", "none")
-            return rest(emptySet())?.let { Candidate(component, sink.finish(), it) }
-          }
-          val shape = e.children[at] as WffElement
-          val kind = tags.getValue(shape.name)
-          val badChild =
-            shape.children.firstOrNull {
-              it !is WffElement || it.name != "Stroke" && it.name != "Fill"
-            }
-          if (badChild != null)
-            return no(
-              "<${shape.name}> has " +
-                ((badChild as? WffElement)?.let { "a <${it.name}> child" } ?: "text or a comment"),
-            )
-          val strokes = shape.childElements("Stroke")
-          val fills = shape.childElements("Fill")
-          if (strokes.size > 1 || fills.size > 1)
-            return no("<${shape.name}> has more than one <Stroke> or <Fill>")
-          (strokes + fills)
-            .firstNotNullOfOrNull { leaf(it) }
-            ?.let {
-              return no(it)
-            }
-          put("shape", kind)
-          val partExpected =
-            mapOf("x" to "0", "y" to "0", "width" to e.attr("width"), "height" to e.attr("height"))
-          val sizeExpected =
-            if (kind in setOf("ellipse", "rectangle", "round-rectangle")) partExpected
-            else emptyMap()
-          val named =
-            when (kind) {
-              "round-rectangle" ->
-                mapOf("cornerRadiusX" to "cornerRadiusX", "cornerRadiusY" to "cornerRadiusY")
-              "arc" ->
-                mapOf(
-                  "centerX" to "centerX",
-                  "centerY" to "centerY",
-                  "width" to "shapeWidth",
-                  "height" to "shapeHeight",
-                  "startAngle" to "startAngle",
-                  "endAngle" to "endAngle",
-                  "direction" to "direction",
-                )
-              "line" ->
-                mapOf(
-                  "startX" to "startX",
-                  "startY" to "startY",
-                  "endX" to "endX",
-                  "endY" to "endY",
-                )
-              else -> emptyMap()
-            }
-          if (
-            !inner(
-              shape.copy(children = emptyList()),
-              "shapeAttrOrder",
-              "shape",
-              named,
-              sizeExpected,
-            ) ||
-              strokes.any {
-                !inner(
-                  it,
-                  "strokeAttrOrder",
-                  "stroke",
-                  mapOf("color" to "strokeColor", "thickness" to "strokeWidth"),
-                )
-              } ||
-              fills.any { !inner(it, "fillAttrOrder", "fill", mapOf("color" to "fillColor")) }
-          )
+          // The part's children, in order, are its shapes (builtins of their own, each with its
+          // `Fill` and `Stroke`), overrides and whatever else. The part draws nothing itself.
+          if (!top() || !put("shape", "none")) return no("an attribute clashes with another")
+          rest(emptySet())?.let { Candidate(component, sink.finish(), it) }
+        }
+        "Ellipse",
+        "Rectangle",
+        "RoundRectangle",
+        "Arc",
+        "Line" -> {
+          if (!put("shape", SHAPE_KINDS.getValue(e.name)) || !top())
             return no("an attribute clashes with another")
-          val fillFirst =
-            shape.children
-              .indexOfFirst { (it as WffElement).name == "Fill" }
-              .let { f ->
-                f >= 0 &&
-                  shape.children
-                    .indexOfFirst { (it as WffElement).name == "Stroke" }
-                    .let { it >= 0 && f < it }
-              }
-          if (fillFirst) sink.extra(WatchFaceXmlExporter.SHAPE_CHILD_ORDER, "fill stroke")
-          coreAt(at)
-          rest(setOf(at))?.let { Candidate(component, sink.finish(), it) }
+          rest(emptySet())?.let { Candidate(component, sink.finish(), it) }
+        }
+        "Fill",
+        "Stroke",
+        "UserConfigurations",
+        "ColorConfiguration",
+        "ColorOption",
+        "ListConfiguration",
+        "ListOption",
+        "BooleanConfiguration",
+        "Flavors",
+        "Flavor",
+        "Configuration" -> {
+          if (!top()) return no("an attribute clashes with another")
+          rest(emptySet())?.let { Candidate(component, sink.finish(), it) }
         }
         "ComplicationSlot" -> {
           val boxAt = indexOf("BoundingOval", "BoundingBox", "BoundingRoundBox")

@@ -49,22 +49,24 @@ class WatchFaceEditValidationTest {
 
   private val face =
     """
-    <WatchFace width="450" height="450" clipShape="CIRCLE">
-      <Metadata key="CLOCK_TYPE" value="DIGITAL"/>
-      <Scene backgroundColor="#ff000000">
-        <Group name="column" x="0" y="0" width="450" height="450">
-          <PartImage x="0" y="0" width="450" height="450" tintColor="#ff112233">
-            <Image resource="dial"/>
-          </PartImage>
-        </Group>
-        <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="10" y="10" width="100" height="100">
-          <BoundingOval x="0" y="0" width="100" height="100"/>
-        </ComplicationSlot>
-        <ComplicationSlot slotId="1" supportedTypes="SHORT_TEXT" x="200" y="10" width="100" height="100">
-          <BoundingOval x="0" y="0" width="100" height="100"/>
-        </ComplicationSlot>
-      </Scene>
-    </WatchFace>
+        <WatchFace width="450" height="450" clipShape="CIRCLE">
+          <Metadata key="CLOCK_TYPE" value="DIGITAL"/>
+          <Scene backgroundColor="#ff000000">
+            <Group name="column" x="0" y="0" width="450" height="450">
+              <PartImage x="0" y="0" width="450" height="450" tintColor="#ff112233">
+                <Image resource="dial"/>
+              </PartImage>
+            </Group>
+            <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="10" y="10" width="100" height="100">
+              <BoundingOval x="0" y="0" width="100" height="100"/>
+              <Complication type="SHORT_TEXT"><PartText x="0" y="0" width="90" height="90"><Text><Font family="SYNC_TO_DEVICE" size="20" color="#ffffffff"><Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+    </ComplicationSlot>
+            <ComplicationSlot slotId="1" supportedTypes="SHORT_TEXT" x="200" y="10" width="100" height="100">
+              <BoundingOval x="0" y="0" width="100" height="100"/>
+              <Complication type="SHORT_TEXT"><PartText x="0" y="0" width="90" height="90"><Text><Font family="SYNC_TO_DEVICE" size="20" color="#ffffffff"><Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+    </ComplicationSlot>
+          </Scene>
+        </WatchFace>
     """
       .trimIndent()
 
@@ -268,6 +270,37 @@ class WatchFaceEditValidationTest {
     val outcome = refuse(DeleteNodeMutationV1("scene"))
     assertEquals(RejectionCodeV1.INVALID_DOCUMENT, outcome.code)
     assertTrue("root" in outcome.message, outcome.message)
+  }
+
+  @Test
+  fun `a node the format requires cannot be deleted, one it does not require can`() {
+    create(
+      """
+      <WatchFace width="450" height="450">
+        <UserConfigurations>
+          <ListConfiguration id="look" displayName="look" defaultValue="a">
+            <ListOption id="a" displayName="A"/>
+            <ListOption id="b" displayName="B"/>
+          </ListConfiguration>
+        </UserConfigurations>
+        <Scene><Group name="g" x="0" y="0" width="450" height="450"/></Scene>
+      </WatchFace>
+      """
+        .trimIndent(),
+    )
+    val options =
+      document().nodes.values.filter { it.componentId == WatchFaceXmlExporter.LIST_OPTION }
+    assertEquals(2, options.size)
+    accept(DeleteNodeMutationV1(options[0].id))
+    val outcome = refuse(DeleteNodeMutationV1(options[1].id))
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, outcome.code)
+    assertTrue("ListOption" in outcome.message && "requires" in outcome.message, outcome.message)
+    // The last configuration is required by `UserConfigurations` too; the whole of it can go, and
+    // so can a group nothing requires.
+    val last = refuse(DeleteNodeMutationV1(nodeOf(WatchFaceXmlExporter.LIST_CONFIGURATION)))
+    assertTrue("UserConfigurations" in last.message, last.message)
+    accept(DeleteNodeMutationV1(nodeOf(WatchFaceXmlExporter.USER_CONFIGURATIONS)))
+    accept(DeleteNodeMutationV1(nodeOf(WatchFaceXmlExporter.GROUP)))
   }
 
   @Test

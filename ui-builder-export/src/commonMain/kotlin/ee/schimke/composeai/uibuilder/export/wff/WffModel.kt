@@ -1,7 +1,9 @@
-// Vendored from yschimke/watchface-tools wff-core (commit 54fc4b7):
-//   wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffModel.kt
-// Only visibility (public -> internal) and the package differ.
-// TODO: replace with ee.schimke.watchface:wff-core once published
+// Vendored from yschimke/watchface-tools wff-core 0.2.1
+// (wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffModel.kt).
+// Only visibility (public -> internal) and the package differ. wff-core 0.2.1 is compiled for Java
+// 21 bytecode;
+// this repository's server floor is Java 17, so it cannot be consumed by coordinate yet.
+
 package ee.schimke.composeai.uibuilder.export.wff
 
 /** A single XML attribute. Attribute order within an element is significant and preserved. */
@@ -83,8 +85,5 @@ internal data class WffDocument(
 }
 
 /** Thrown for malformed XML. [line] and [column] are 1-based. */
-internal class WffParseException(
-  message: String,
-  internal val line: Int,
-  internal val column: Int,
-) : IllegalArgumentException("$message (line $line, column $column)")
+internal class WffParseException(message: String, val line: Int, val column: Int) :
+  IllegalArgumentException("$message (line $line, column $column)")

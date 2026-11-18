@@ -20,11 +20,11 @@ import kotlinx.serialization.json.contentOrNull
  * before it is committed.
  *
  * It knows the catalog's types ([WatchFaceCatalogShape]) and Watch Face Format's element table
- * (vendored from `wff-core`): a raw node's XML must be one well-formed element or comment, keep the
- * element it replaces, and be allowed under its parent at the design's format version; a number is
- * a number (or an expression), a colour a `#RRGGBB` / `#AARRGGBB` literal (or an expression), a
- * size is not negative, a slot id is used once, and a complication type exists at the format
- * version.
+ * (`ee.schimke.watchface:wff-core`): a raw node's XML must be one well-formed element or comment,
+ * keep the element it replaces, and be allowed under its parent at the design's format version; a
+ * number is a number (or an expression), a colour a `#RRGGBB` / `#AARRGGBB` literal (or an
+ * expression), a size is not negative, a slot id is used once, and a complication type exists at
+ * the format version.
  *
  * It judges what an edit can break. It does not require a node to be complete (a part image with no
  * `resource` yet is the editor's mid-edit state; the exporter refuses it), and it does not check
@@ -276,6 +276,80 @@ object WatchFaceDesignValidation {
     return null
   }
 
+  /**
+   * What is wrong with deleting [nodeId] from [document]: its parent, in Watch Face Format,
+   * requires at least as many children of that kind as it has left (a `ListConfiguration` needs a
+   * `ListOption`, a `Condition` a `Compare` or `Default`). The scene root is judged by [check].
+   * Null when the node is not required, or the format does not say.
+   */
+  fun checkDelete(document: UiBuilderDocument, nodeId: String): Issue? {
+    val node = document.nodes[nodeId] ?: return null
+    val parent =
+      document.nodes.values.firstOrNull { candidate ->
+        candidate.slots.any { (slot, ids) -> nodeId in ids && slot !in setOf("prolog", "epilog") }
+      } ?: return null
+    val slot = parent.slots.entries.first { nodeId in it.value }.key
+    val parentTag =
+      if (parent.componentId == WatchFaceXmlExporter.SCENE)
+        if (slot == "content") "Scene" else "WatchFace"
+      else tagOf(parent)
+    val childTag = elementName(node) ?: return null
+    parentTag ?: return null
+    val siblings =
+      parent.slots.values
+        .flatten()
+        .filter { it != nodeId }
+        .mapNotNull { document.nodes[it]?.let(::elementName) }
+    return requiredChildIssue(
+        parentTag,
+        childTag,
+        siblings,
+        parent.componentId !in WRITES_OWN_CHILDREN,
+      )
+      ?.let { Issue("INVALID_DELETE", it, nodeId) }
+  }
+
+  /**
+   * The first reason an element [parentTag] holding [remaining] element children (by name) may not
+   * lose one named [childTag], from the schema's minimum occurrences; null when it may. The one
+   * place the schema's cardinality is read, so it can move to wff-core's own query.
+   */
+  internal fun requiredChildIssue(
+    parentTag: String,
+    childTag: String,
+    remaining: List<String>,
+    /** False when the parent also writes children of its own, so [remaining] is not all of them. */
+    countsAll: Boolean = true,
+  ): String? {
+    val spec =
+      WffSchema.named(parentTag).firstOrNull { WffSchema.child(it, childTag) != null }
+        ?: return null
+    val edge = spec.children.firstOrNull { WffSchema.elements.getValue(it.id).name == childTag }
+    if (edge != null && edge.minOccurs > remaining.count { it == childTag })
+      return "<$parentTag> requires at least ${edge.minOccurs} <$childTag>; deleting this one " +
+        "leaves ${remaining.count { it == childTag }}"
+    if (countsAll && spec.minChildren > remaining.size)
+      return "<$parentTag> requires at least ${spec.minChildren} children; deleting this one " +
+        "leaves ${remaining.size}"
+    return null
+  }
+
+  /** The elements that write children of their own (`Text`, the bounds, an `Image`, a `Font`). */
+  private val WRITES_OWN_CHILDREN =
+    setOf(
+      WatchFaceXmlExporter.PART_TEXT,
+      WatchFaceXmlExporter.PART_IMAGE,
+      WatchFaceXmlExporter.TIME_TEXT,
+      WatchFaceXmlExporter.COMPLICATION_SLOT,
+      WatchFaceXmlExporter.SCENE,
+    )
+
+  /** The XML element name a node is written as, or null for a comment or an unnamed one. */
+  private fun elementName(node: UiBuilderNode): String? =
+    if (node.componentId == WatchFaceXmlExporter.RAW)
+      rawXml(node)?.let { parseRaw(it).first?.element?.name }
+    else tagOf(node)
+
   private val SLOT_FIELDS = setOf("supportedTypes", "defaultSystemProviderType")
 
   // ---- Raw XML ---------------------------------------------------------------------------------
@@ -327,6 +401,29 @@ object WatchFaceDesignValidation {
       WatchFaceXmlExporter.COMPARE -> "Compare"
       WatchFaceXmlExporter.DEFAULT -> "Default"
       WatchFaceXmlExporter.COMPLICATION -> "Complication"
+      WatchFaceXmlExporter.VARIANT -> "Variant"
+      WatchFaceXmlExporter.LAUNCH -> "Launch"
+      WatchFaceXmlExporter.CLOCK_HAND ->
+        when (WatchFaceXmlExporter.Props(node, mutableListOf()).string("type")) {
+          "hour" -> "HourHand"
+          "minute" -> "MinuteHand"
+          "second" -> "SecondHand"
+          else -> null
+        }
+      WatchFaceXmlExporter.SHAPE ->
+        WatchFaceXmlExporter.SHAPE_TAGS[
+            WatchFaceXmlExporter.Props(node, mutableListOf()).string("shape")]
+      WatchFaceXmlExporter.FILL -> "Fill"
+      WatchFaceXmlExporter.STROKE -> "Stroke"
+      WatchFaceXmlExporter.USER_CONFIGURATIONS -> "UserConfigurations"
+      WatchFaceXmlExporter.COLOR_CONFIGURATION -> "ColorConfiguration"
+      WatchFaceXmlExporter.COLOR_OPTION -> "ColorOption"
+      WatchFaceXmlExporter.LIST_CONFIGURATION -> "ListConfiguration"
+      WatchFaceXmlExporter.LIST_OPTION -> "ListOption"
+      WatchFaceXmlExporter.BOOLEAN_CONFIGURATION -> "BooleanConfiguration"
+      WatchFaceXmlExporter.FLAVORS -> "Flavors"
+      WatchFaceXmlExporter.FLAVOR -> "Flavor"
+      WatchFaceXmlExporter.FLAVOR_CONFIGURATION -> "Configuration"
       else -> null
     }
 

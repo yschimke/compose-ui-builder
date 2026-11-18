@@ -26,7 +26,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 
 /**
- * The face being drawn: its `width` × `height` in WFF pixels, and the dp one pixel is drawn as.
+ * The face being drawn: its `width` ? `height` in WFF pixels, and the dp one pixel is drawn as.
  * Phase 1 placeholder; the Remote Compose player preview replaces it.
  */
 private class WffFace(val widthPx: Float, val heightPx: Float, val dpPerPx: Float)
@@ -78,39 +78,72 @@ internal fun WatchFaceCanvas(
           .forEach { id -> child(id, place(id)) }
       }
     WatchFaceXmlExporter.PART_DRAW -> {
-      val fill = node.color("fillColor", Color.Unspecified)
-      val stroke = node.color("strokeColor", Color.Unspecified)
-      val strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx
-      val shape = node.string("shape").ifEmpty { "ellipse" }
-      val ellipse = shape == "ellipse" || shape == "arc"
-      val ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) }
+      // The shapes the part draws, in order: its `wff/shape` children, else the legacy properties
+      // of the part itself as one shape.
+      val shapes =
+        node.slots["content"]
+          .orEmpty()
+          .mapNotNull { document.nodes[it] }
+          .filter { it.componentId == WatchFaceXmlExporter.SHAPE }
+          .map { shape ->
+            fun paint(component: String) =
+              shape.slots["content"]
+                .orEmpty()
+                .mapNotNull { document.nodes[it] }
+                .firstOrNull { it.componentId == component }
+            val fillNode = paint(WatchFaceXmlExporter.FILL)
+            val strokeNode = paint(WatchFaceXmlExporter.STROKE)
+            WffShapeDrawing(
+              kind = shape.string("shape").ifEmpty { "ellipse" },
+              fill = fillNode?.color("color", Color.Unspecified) ?: Color.Unspecified,
+              stroke = strokeNode?.color("color", Color.Unspecified) ?: Color.Unspecified,
+              strokeWidth = (strokeNode?.float("thickness", 1f) ?: 1f) * face.dpPerPx,
+              ends = listOf("startX", "startY", "endX", "endY").map { shape.float(it) },
+            )
+          }
+          .ifEmpty {
+            listOf(
+              WffShapeDrawing(
+                kind = node.string("shape").ifEmpty { "ellipse" },
+                fill = node.color("fillColor", Color.Unspecified),
+                stroke = node.color("strokeColor", Color.Unspecified),
+                strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx,
+                ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) },
+              ),
+            )
+          }
       Box(
         modifier.drawBehind {
-          if (shape == "none") return@drawBehind
-          val size = this.size
-          val line = Stroke(width = strokeWidth.dp.toPx())
-          if (shape == "line") {
-            if (stroke != Color.Unspecified) {
-              val k = face.dpPerPx.dp.toPx()
-              drawLine(
-                stroke,
-                Offset(ends[0] * k, ends[1] * k),
-                Offset(ends[2] * k, ends[3] * k),
-                strokeWidth = line.width,
-              )
+          for (drawing in shapes) {
+            val shape = drawing.kind
+            if (shape == "none") continue
+            val ellipse = shape == "ellipse" || shape == "arc"
+            val size = this.size
+            val line = Stroke(width = drawing.strokeWidth.dp.toPx())
+            if (shape == "line") {
+              if (drawing.stroke != Color.Unspecified) {
+                val k = face.dpPerPx.dp.toPx()
+                drawLine(
+                  drawing.stroke,
+                  Offset(drawing.ends[0] * k, drawing.ends[1] * k),
+                  Offset(drawing.ends[2] * k, drawing.ends[3] * k),
+                  strokeWidth = line.width,
+                )
+              }
+              continue
             }
-            return@drawBehind
-          }
-          if (fill != Color.Unspecified) {
-            if (ellipse) drawOval(fill) else drawRect(fill)
-          }
-          if (stroke != Color.Unspecified) {
-            // Inset by half the line so the stroke stays inside the part's bounds, as WFF draws it.
-            val inset = line.width / 2
-            val topLeft = Offset(inset, inset)
-            val inner = Size(size.width - line.width, size.height - line.width)
-            if (ellipse) drawOval(stroke, topLeft, inner, style = line)
-            else drawRect(stroke, topLeft, inner, style = line)
+            if (drawing.fill != Color.Unspecified) {
+              if (ellipse) drawOval(drawing.fill) else drawRect(drawing.fill)
+            }
+            if (drawing.stroke != Color.Unspecified) {
+              // Inset by half the line so the stroke stays inside the part's bounds, as WFF draws
+              // it.
+              val inset = line.width / 2
+              val topLeft = Offset(inset, inset)
+              val inner = Size(size.width - line.width, size.height - line.width)
+              if (ellipse) drawOval(drawing.stroke, topLeft, inner, style = line)
+              else drawRect(drawing.stroke, topLeft, inner, style = line)
+            }
           }
         },
       )
@@ -203,6 +236,15 @@ private fun wffPlace(
       (target.float("height", sceneHeight) * scale).dp,
     )
 }
+
+/** One shape of a part, resolved for drawing. */
+private class WffShapeDrawing(
+  val kind: String,
+  val fill: Color,
+  val stroke: Color,
+  val strokeWidth: Float,
+  val ends: List<Float>,
+)
 
 /** `hh:mm` and friends, filled with the preview time. */
 private fun previewTime(format: String): String =

@@ -130,7 +130,11 @@
         }
       },
       "modifiers": [],
-      "slots": {},
+      "slots": {
+        "variants": [
+          "battery-complication"
+        ]
+      },
       "eventBindings": {}
     },
     "clock": {
@@ -293,6 +297,68 @@
         "value": {
           "type": "string",
           "value": "0"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "battery-complication": {
+      "id": "battery-complication",
+      "componentId": "wff/complication",
+      "properties": {
+        "type": {
+          "type": "string",
+          "value": "SHORT_TEXT"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "battery-text"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "battery-text": {
+      "id": "battery-text",
+      "componentId": "wff/part-text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "%s"
+        },
+        "parameters": {
+          "type": "string",
+          "value": "[COMPLICATION.TEXT]"
+        },
+        "x": {
+          "type": "int",
+          "value": 0
+        },
+        "y": {
+          "type": "int",
+          "value": 0
+        },
+        "width": {
+          "type": "int",
+          "value": 130
+        },
+        "height": {
+          "type": "int",
+          "value": 80
+        },
+        "fontSize": {
+          "type": "int",
+          "value": 24
+        },
+        "color": {
+          "type": "color",
+          "value": "#ffffffff"
+        },
+        "align": {
+          "type": "string",
+          "value": "CENTER"
         }
       },
       "modifiers": [],

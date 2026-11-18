@@ -13,7 +13,7 @@
     <PartText x="125" y="70" width="200" height="50">
       <Text align="CENTER">
         <Font family="SYNC_TO_DEVICE" size="32" color="#ff9aa0a6">
-          <Template>WEAR</Template>
+          <Template>%s<Parameter expression="[DAY_OF_WEEK_S]"/></Template>
         </Font>
       </Text>
     </PartText>
@@ -25,6 +25,15 @@
     <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="160" y="320" width="130" height="70">
       <BoundingBox x="0" y="0" width="130" height="70"/>
       <DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/>
+      <Complication type="SHORT_TEXT">
+        <PartText x="0" y="0" width="130" height="70">
+          <Text align="CENTER">
+            <Font family="SYNC_TO_DEVICE" size="24" color="#ffffffff">
+              <Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
     </ComplicationSlot>
   </Scene>
 </WatchFace>

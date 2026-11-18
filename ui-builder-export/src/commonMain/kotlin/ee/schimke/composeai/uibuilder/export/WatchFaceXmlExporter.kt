@@ -26,21 +26,18 @@ import kotlinx.serialization.json.doubleOrNull
  * `<WatchFace>` XML document. Deterministic (fixed attribute order, two-space indent), and total:
  * anything it cannot write is refused by node id and component, never dropped.
  *
- * The vocabulary mirrors WFF elements one to one (see the `wff/…` constants), with the WFF
- * attribute names as property names, positioned absolutely in pixels of the face's `width` ×
- * `height` (the [SCENE] node's properties, 450 × 450 unless stated).
+ * The vocabulary mirrors WFF elements one to one (see the `wff/?` constants), with the WFF
+ * attribute names as property names, positioned absolutely in pixels of the face's `width` ?
+ * `height` (the [SCENE] node's properties, 450 ? 450 unless stated).
  *
- * The WFF version (1–5, [DEFAULT_WFF_VERSION] = 2) is the `wffVersion` property of the [SCENE]
+ * The WFF version (1?5, [DEFAULT_WFF_VERSION] = 2) is the `wffVersion` property of the [SCENE]
  * node, or [Options.wffVersion] when the host states one. It is a node property, not an
  * `environment` entry, because `DesignEnvironmentV1` (compose-preview-contracts) is a closed type
  * that drops unknown keys on the wire.
  *
- * Bitmap resources (`resource="…"`) are named, not bundled: this writes the XML only. Packaging the
+ * Bitmap resources (`resource="?"`) are named, not bundled: this writes the XML only. Packaging the
  * drawables (and the DWF resource bundle) is the host's job.
  */
-// TODO: replace with ee.schimke.watchface:wff-core once published (the vendored `wff` package:
-// model,
-// parser and writer; validator still to come).
 object WatchFaceXmlExporter {
   const val CATALOG_SYSTEM_ID = "wff-watchface"
   const val PREFIX = "wff/"
@@ -60,6 +57,22 @@ object WatchFaceXmlExporter {
   const val DEFAULT = "wff/default"
   const val LAUNCH = "wff/launch"
   const val COMPLICATION = "wff/complication"
+
+  /** One shape of a `PartDraw` (`Ellipse`, `Rectangle`, ?) and its `Fill` and `Stroke`. */
+  const val SHAPE = "wff/shape"
+  const val FILL = "wff/fill"
+  const val STROKE = "wff/stroke"
+
+  /** The theme and user-configuration plumbing that sits before the `<Scene>`. */
+  const val USER_CONFIGURATIONS = "wff/user-configurations"
+  const val COLOR_CONFIGURATION = "wff/color-configuration"
+  const val COLOR_OPTION = "wff/color-option"
+  const val LIST_CONFIGURATION = "wff/list-configuration"
+  const val LIST_OPTION = "wff/list-option"
+  const val BOOLEAN_CONFIGURATION = "wff/boolean-configuration"
+  const val FLAVORS = "wff/flavors"
+  const val FLAVOR = "wff/flavor"
+  const val FLAVOR_CONFIGURATION = "wff/flavor-configuration"
 
   /**
    * An element this vocabulary has no builtin for (or cannot write exactly), held as its canonical
@@ -230,16 +243,21 @@ object WatchFaceXmlExporter {
           null
         } else element(child, rootId)
       }
-    fun frame(slot: String): List<WffNode> =
+    fun frame(slot: String, allowed: Set<String> = setOf(RAW)): List<WffNode> =
       root.slots[slot].orEmpty().mapNotNull { child ->
         val childComponent = document.nodes[child]?.componentId
-        if (childComponent != null && childComponent != RAW) {
-          refuse(child, childComponent, "only `$RAW` nodes can be placed in `$SCENE` slot `$slot`")
+        if (childComponent != null && childComponent !in allowed) {
+          refuse(
+            child,
+            childComponent,
+            "only ${allowed.sorted().joinToString(" and ") { "`$it`" }} nodes can be placed in " +
+              "`$SCENE` slot `$slot`",
+          )
           null
         } else element(child, rootId)
       }
-    val faceBefore = frame(FACE)
-    val faceAfter = frame(FACE_AFTER)
+    val faceBefore = frame(FACE, FACE_CONTENT)
+    val faceAfter = frame(FACE_AFTER, FACE_CONTENT)
     val prolog = frame(PROLOG)
     val epilog = frame(EPILOG)
     (prolog + epilog)
@@ -341,7 +359,7 @@ object WatchFaceXmlExporter {
 
   /**
    * An imported face keeps its `<Metadata>` as raw nodes; the scene's `clockType` and
-   * `previewTime`, when set, are written into the matching `<Metadata key="…">` (its `value`), or
+   * `previewTime`, when set, are written into the matching `<Metadata key="?">` (its `value`), or
    * added after the last one. A face that never set them is written as it was.
    */
   private fun withMetadata(before: List<WffNode>, scene: Props): List<WffNode> {
@@ -432,9 +450,22 @@ object WatchFaceXmlExporter {
     )
   internal val SCENE_CONTENT = DRAWABLE + VARIANT
 
+  /** What may sit among the `<WatchFace>` children around the `<Scene>`, besides raw XML. */
+  internal val FACE_CONTENT = setOf(RAW, USER_CONFIGURATIONS)
+
   /** What sits beside an element's own parts: an override, or a tap target. */
   private val OVERRIDES = setOf(VARIANT, LAUNCH)
   private val WITH_VARIANTS = mapOf("variants" to OVERRIDES)
+
+  /**
+   * A `PartDraw`'s children in document order: its shapes, and the overrides between them. The
+   * legacy `variants` slot is kept for designs written before shapes were nodes.
+   */
+  private val PART_DRAW_SLOTS =
+    mapOf("content" to setOf(SHAPE) + OVERRIDES, "variants" to OVERRIDES)
+
+  /** Whatever a leaf-like element holds besides its own attributes: only raw XML. */
+  private val RAW_ONLY = mapOf("content" to emptySet<String>())
 
   /** What a `<Compare>`, `<Default>` or `<Complication>` holds: the drawable parts. */
   private val BRANCH_CONTENT = DRAWABLE + OVERRIDES
@@ -468,6 +499,29 @@ object WatchFaceXmlExporter {
       number("pivotY")?.let { "pivotY" to it },
       number("angle")?.let { "angle" to it },
       number("alpha")?.let { "alpha" to it },
+    )
+
+  private val CONFIGURATION_ATTRIBUTES =
+    arrayOf("id", "displayName", "screenReaderText", "icon", "defaultValue", "highlight")
+
+  /** Every attribute a `wff/shape` property may stand for, across the kinds. */
+  private val SHAPE_ATTRIBUTES: List<String> =
+    listOf(
+      "x",
+      "y",
+      "width",
+      "height",
+      "cornerRadiusX",
+      "cornerRadiusY",
+      "centerX",
+      "centerY",
+      "startAngle",
+      "endAngle",
+      "direction",
+      "startX",
+      "startY",
+      "endX",
+      "endY",
     )
 
   /** The first-class shape attributes of each `PartDraw` shape element, attribute to property. */
@@ -512,7 +566,7 @@ object WatchFaceXmlExporter {
    * The `<Template>` of a part's text: the `text` property, then one `<Parameter>` per line of
    * `parameters`. An imported face's other nodes (CDATA, whitespace between parameters) are kept as
    * a layout in [TEMPLATE_LAYOUT]: a JSON array with `m` for the text, `M` for the text as CDATA,
-   * `p` for the next parameter, and `t…` / `c…` for a literal text or CDATA node.
+   * `p` for the next parameter, and `t?` / `c?` for a literal text or CDATA node.
    */
   private fun template(props: Props): WffElement {
     val text = props.string("text")
@@ -577,8 +631,17 @@ object WatchFaceXmlExporter {
           )
         },
       PART_DRAW to
-        ElementSpec(WITH_VARIANTS) { _, props, children, w, h, refuse ->
-          val shape = props.string("shape") ?: "ellipse"
+        ElementSpec(PART_DRAW_SLOTS) { _, props, children, w, h, refuse ->
+          // Shapes held as `wff/shape` children are the part's drawing; the `shape` property is the
+          // legacy way to write one inline, and the two do not mix.
+          val shapeTags = SHAPE_TAGS.values.toSet()
+          val hasShapes = children.any { it is WffElement && it.name in shapeTags }
+          val shape = props.string("shape") ?: if (hasShapes) "none" else "ellipse"
+          if (hasShapes && shape != "none")
+            return@ElementSpec refuse(
+                "shape `$shape`: this part holds `$SHAPE` children; set shape to none, or delete them",
+              )
+              .let { null }
           if (shape != "none" && shape !in SHAPE_TAGS)
             return@ElementSpec refuse(
                 "shape `$shape` is not ${(SHAPE_TAGS.keys + "none").joinToString(", ")}",
@@ -587,7 +650,12 @@ object WatchFaceXmlExporter {
           if (props.has("strokeWidth") && !props.has("strokeColor"))
             refuse("strokeWidth: a stroke needs a strokeColor")
           if (shape == "none" && (props.has("strokeColor") || props.has("fillColor")))
-            refuse("strokeColor and fillColor: a part with no shape has nothing to stroke or fill")
+            refuse(
+              if (hasShapes)
+                "strokeColor and fillColor: put the colours on the `$FILL` and `$STROKE` of each " +
+                  "`$SHAPE`"
+              else "strokeColor and fillColor: a part with no shape has nothing to stroke or fill",
+            )
           val bounds = props.bounds(w, h)
           val stroke =
             props
@@ -659,6 +727,121 @@ object WatchFaceXmlExporter {
               )
           el("PartDraw", bounds, props.withCore(core, children))
         },
+      SHAPE to
+        ElementSpec(mapOf("content" to setOf(FILL, STROKE))) { _, props, children, w, h, refuse ->
+          val kind = props.string("shape")
+          if (kind == null || kind !in SHAPE_TAGS) {
+            refuse("shape `${kind.orEmpty()}` is not ${SHAPE_TAGS.keys.joinToString(", ")}")
+            return@ElementSpec null
+          }
+          fun number(name: String) = props.number(name)?.let { name to it }
+          val own =
+            when (kind) {
+              "ellipse",
+              "rectangle",
+              "round-rectangle" ->
+                listOf(
+                  "x" to (props.number("x") ?: "0"),
+                  "y" to (props.number("y") ?: "0"),
+                  "width" to (props.number("width") ?: (props.parentWidth ?: w).toString()),
+                  "height" to (props.number("height") ?: (props.parentHeight ?: h).toString()),
+                ) +
+                  if (kind == "round-rectangle")
+                    listOfNotNull(number("cornerRadiusX"), number("cornerRadiusY"))
+                  else emptyList()
+              "arc" ->
+                listOfNotNull(
+                  number("centerX"),
+                  number("centerY"),
+                  number("width"),
+                  number("height"),
+                  number("startAngle"),
+                  number("endAngle"),
+                  props.string("direction")?.let { "direction" to it },
+                )
+              else ->
+                listOfNotNull(
+                  number("startX"),
+                  number("startY"),
+                  number("endX"),
+                  number("endY"),
+                )
+            }
+          // A shape's own attributes: set on another kind they would be dropped, so refuse them.
+          val written = own.map { it.first }.toSet()
+          SHAPE_ATTRIBUTES.filter { it !in written && props.has(it) }
+            .forEach { refuse("$it: a `$kind` shape has no `$it` attribute") }
+          el(SHAPE_TAGS.getValue(kind), own, children)
+        },
+      FILL to simple("Fill", RAW_ONLY, "color"),
+      STROKE to
+        ElementSpec(RAW_ONLY) { _, props, children, _, _, _ ->
+          val color = props.string("color")
+          el(
+            "Stroke",
+            listOfNotNull(
+              color?.let { "color" to it },
+              (props.number("thickness") ?: "1".takeIf { color != null })?.let {
+                "thickness" to it
+              },
+            ),
+            children,
+          )
+        },
+      USER_CONFIGURATIONS to
+        simple(
+          "UserConfigurations",
+          mapOf(
+            "content" to
+              setOf(COLOR_CONFIGURATION, LIST_CONFIGURATION, BOOLEAN_CONFIGURATION, FLAVORS),
+          ),
+        ),
+      COLOR_CONFIGURATION to
+        simple(
+          "ColorConfiguration",
+          mapOf("options" to setOf(COLOR_OPTION)),
+          *CONFIGURATION_ATTRIBUTES,
+        ),
+      COLOR_OPTION to
+        simple(
+          "ColorOption",
+          emptyMap(),
+          "id",
+          "displayName",
+          "screenReaderText",
+          "icon",
+          "colors",
+        ),
+      LIST_CONFIGURATION to
+        simple(
+          "ListConfiguration",
+          mapOf("options" to setOf(LIST_OPTION)),
+          *CONFIGURATION_ATTRIBUTES,
+        ),
+      LIST_OPTION to
+        simple(
+          "ListOption",
+          emptyMap(),
+          "id",
+          "displayName",
+          "screenReaderText",
+          "icon",
+          "childSettingIds",
+          "complicationSlotIds",
+        ),
+      BOOLEAN_CONFIGURATION to simple("BooleanConfiguration", RAW_ONLY, *CONFIGURATION_ATTRIBUTES),
+      FLAVORS to simple("Flavors", mapOf("content" to setOf(FLAVOR)), "defaultValue"),
+      FLAVOR to
+        simple(
+          "Flavor",
+          mapOf("content" to setOf(FLAVOR_CONFIGURATION)),
+          "id",
+          "displayName",
+          "screenReaderText",
+          "icon",
+        ),
+      FLAVOR_CONFIGURATION to
+        simple("Configuration", emptyMap(), "id", "optionId", "screenReaderText"),
       PART_IMAGE to
         ElementSpec(WITH_VARIANTS) { _, props, children, w, h, refuse ->
           val resource = props.string("resource")

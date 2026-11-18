@@ -17,22 +17,24 @@ import kotlinx.serialization.json.put
 class WatchFaceDesignValidationTest {
   private val xml =
     """
-    <WatchFace width="450" height="450">
-      <Scene>
-        <Group name="g" x="0" y="0" width="450" height="450">
-          <PartImage x="0" y="0" width="450" height="450"><Image resource="dial"/></PartImage>
-        </Group>
-        <AnalogClock x="0" y="0" width="450" height="450">
-          <HourHand resource="h" x="220" y="60" width="10" height="165" pivotX="0.5" pivotY="1.0"/>
-        </AnalogClock>
-        <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="0" y="0" width="90" height="90">
-          <BoundingOval x="0" y="0" width="90" height="90"/>
-        </ComplicationSlot>
-        <ComplicationSlot slotId="1" supportedTypes="SHORT_TEXT" x="100" y="0" width="90" height="90">
-          <BoundingOval x="0" y="0" width="90" height="90"/>
-        </ComplicationSlot>
-      </Scene>
-    </WatchFace>
+        <WatchFace width="450" height="450">
+          <Scene>
+            <Group name="g" x="0" y="0" width="450" height="450">
+              <PartImage x="0" y="0" width="450" height="450"><Image resource="dial"/></PartImage>
+            </Group>
+            <AnalogClock x="0" y="0" width="450" height="450">
+              <HourHand resource="h" x="220" y="60" width="10" height="165" pivotX="0.5" pivotY="1.0"/>
+            </AnalogClock>
+            <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="0" y="0" width="90" height="90">
+              <BoundingOval x="0" y="0" width="90" height="90"/>
+              <Complication type="SHORT_TEXT"><PartText x="0" y="0" width="90" height="90"><Text><Font family="SYNC_TO_DEVICE" size="20" color="#ffffffff"><Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+    </ComplicationSlot>
+            <ComplicationSlot slotId="1" supportedTypes="SHORT_TEXT" x="100" y="0" width="90" height="90">
+              <BoundingOval x="0" y="0" width="90" height="90"/>
+              <Complication type="SHORT_TEXT"><PartText x="0" y="0" width="90" height="90"><Text><Font family="SYNC_TO_DEVICE" size="20" color="#ffffffff"><Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+    </ComplicationSlot>
+          </Scene>
+        </WatchFace>
     """
       .trimIndent()
 
@@ -113,7 +115,8 @@ class WatchFaceDesignValidationTest {
     )
     val decimal =
       document().with(WatchFaceXmlExporter.CLOCK_HAND, "width", "string", JsonPrimitive("12.50"))
-    assertIs<WatchFaceXmlExporter.Result.Emitted>(WatchFaceXmlExporter.export(decimal))
+    // The format's own types now judge the written value: a hand's width is a whole number.
+    assertTrue(reasons(decimal).single().contains("width"), reasons(decimal).toString())
   }
 
   @Test
@@ -170,7 +173,8 @@ class WatchFaceDesignValidationTest {
   fun `invalid format is refused rather than written, and an import still holds it`() {
     // A ComplicationSlot only goes directly in the Scene.
     val inGroup =
-      """<WatchFace width="450" height="450"><Scene><Group name="g" x="0" y="0" width="1" height="1"><ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="0" y="0" width="1" height="1"><BoundingOval x="0" y="0" width="1" height="1"/></ComplicationSlot></Group></Scene></WatchFace>"""
+      """<WatchFace width="450" height="450"><Scene><Group name="g" x="0" y="0" width="1" height="1"><ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="0" y="0" width="1" height="1"><BoundingOval x="0" y="0" width="1" height="1"/>  <Complication type="SHORT_TEXT"><PartText x="0" y="0" width="90" height="90"><Text><Font family="SYNC_TO_DEVICE" size="20" color="#ffffffff"><Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+</ComplicationSlot></Group></Scene></WatchFace>"""
     val imported =
       assertIs<WatchFaceXmlImporter.Result.Imported>(WatchFaceXmlImporter.import(inGroup)).document
     assertTrue(

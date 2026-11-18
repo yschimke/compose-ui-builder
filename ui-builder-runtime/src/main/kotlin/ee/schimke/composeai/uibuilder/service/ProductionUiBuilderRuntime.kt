@@ -717,6 +717,17 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     watchFaceWriteIssue(catalog, document, node, property)
       ?: validateWrite(catalog, node, property, pinnedAssetKeys = document.assets.keys)
 
+  override fun validateDelete(
+    catalog: CatalogCapabilityV1,
+    document: DesignDocumentV1,
+    nodeId: String,
+  ): UiBuilderCatalogIssue? {
+    if (catalog.benchmark.catalogSystemId != WatchFaceXmlExporter.CATALOG_SYSTEM_ID) return null
+    return WatchFaceDesignValidation.checkDelete(document.toUiBuilderDocument(), nodeId)?.let {
+      issue(it.code, it.message, it.nodeId ?: nodeId, it.field)
+    }
+  }
+
   /**
    * The watch face rules for one write: a raw node's XML, a value Watch Face Format cannot hold.
    */
