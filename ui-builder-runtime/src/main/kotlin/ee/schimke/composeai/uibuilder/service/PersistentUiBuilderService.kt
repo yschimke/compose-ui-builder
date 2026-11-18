@@ -3643,9 +3643,21 @@ public class PersistentUiBuilderService(
               mutation.node.id in working.document.nodes ||
               (mutation.node.id in working.tombstones && !freedInBatch)
           ) {
+            // The words before the colon are what callers have always matched; after it, which.
+            val why =
+              when {
+                mutation.node.id.isBlank() -> "the id is blank"
+                mutation.node.id in working.document.nodes ->
+                  "`${mutation.node.id}` is a node in the design"
+                else ->
+                  "`${mutation.node.id}` was deleted by an earlier operation and stays reserved: " +
+                    "its tombstone is what `restoreNode` and undo bring back, so the id keeps " +
+                    "naming that node in the design's history. Insert under a new id, or " +
+                    "`restoreNode` it (deleting and inserting an id in one batch replaces it)"
+              }
             fail(
               RejectionCodeV1.INVALID_COMMAND,
-              "node id is blank or already used",
+              "node id is blank or already used: $why",
               index,
               mutation.node.id,
             )

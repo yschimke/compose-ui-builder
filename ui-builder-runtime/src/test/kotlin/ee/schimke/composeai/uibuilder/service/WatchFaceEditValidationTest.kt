@@ -478,7 +478,13 @@ class WatchFaceEditValidationTest {
     val image = nodeOf(WatchFaceXmlExporter.PART_IMAGE)
     accept(DeleteNodeMutationV1(image))
     val reused = refuse(InsertNodeMutationV1(partDraw(image, emptyMap()), intoColumn()))
-    assertTrue("already used" in reused.message, reused.message)
+    // yschimke/watchface-tools#43 item 5: the refusal says the reservation is deliberate, and why.
+    assertTrue(reused.message.startsWith("node id is blank or already used: "), reused.message)
+    assertTrue(
+      "deleted by an earlier operation and stays reserved" in reused.message,
+      reused.message,
+    )
+    assertTrue("restoreNode" in reused.message, reused.message)
   }
 
   @Test
