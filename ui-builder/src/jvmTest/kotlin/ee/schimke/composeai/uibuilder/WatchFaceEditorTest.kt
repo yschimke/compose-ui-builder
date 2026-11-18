@@ -1,6 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.ui.graphics.toPixelMap
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
+import ee.schimke.composeai.uibuilder.canvas.WffShapeDrawing
+import ee.schimke.composeai.uibuilder.canvas.drawWffShape
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
 import ee.schimke.composeai.uibuilder.canvas.shapeBox
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -153,4 +156,34 @@ class WatchFaceEditorTest {
       put("type", type)
       put("value", value)
     }
+
+  @Test
+  fun `two rectangles in one part are drawn apart, each in its own box`() {
+    val image = androidx.compose.ui.graphics.ImageBitmap(100, 100)
+    androidx.compose.ui.graphics.drawscope.CanvasDrawScope().draw(
+      androidx.compose.ui.unit.Density(1f),
+      androidx.compose.ui.unit.LayoutDirection.Ltr,
+      androidx.compose.ui.graphics.Canvas(image),
+      androidx.compose.ui.geometry.Size(100f, 100f),
+    ) {
+      fun rect(x: Float, y: Float, color: androidx.compose.ui.graphics.Color) =
+        WffShapeDrawing(
+          "rectangle",
+          fill = color,
+          stroke = androidx.compose.ui.graphics.Color.Unspecified,
+          strokeWidth = 1f,
+          ends = listOf(0f, 0f, 0f, 0f),
+          box = listOf(x, y, 20f, 20f),
+        )
+      drawWffShape(rect(10f, 10f, androidx.compose.ui.graphics.Color.Red), 1f)
+      drawWffShape(rect(60f, 60f, androidx.compose.ui.graphics.Color.Blue), 1f)
+    }
+    val pixels = image.toPixelMap()
+    assertEquals(androidx.compose.ui.graphics.Color.Red, pixels[15, 15])
+    assertEquals(androidx.compose.ui.graphics.Color.Blue, pixels[65, 65])
+    // Outside both boxes nothing is drawn; the first does not spill into the second's place.
+    assertEquals(0f, pixels[40, 40].alpha)
+    assertEquals(0f, pixels[15, 65].alpha)
+    assertEquals(0f, pixels[65, 15].alpha)
+  }
 }
