@@ -636,13 +636,21 @@ internal fun WatchFaceRuntimePane(
   val scope = rememberCoroutineScope()
   val uriHandler = LocalUriHandler.current
   var starting by remember { mutableStateOf(false) }
+  // True until the host's status is known: a start before it would race the pane's own.
+  var checking by remember { mutableStateOf(status != null) }
   var unavailable by remember { mutableStateOf<String?>(null) }
   var result by remember { mutableStateOf<UiBuilderWatchFaceStart?>(null) }
   var ambient by remember { mutableStateOf(false) }
+  // The pane is the one owner of the session's stream. A start that finishes after it was
+  // superseded or the pane closed closes the stream it returns instead of leaking the socket.
+  val generation = remember { intArrayOf(0) }
 
   fun startSession() {
     val begin = start ?: return
+    if (starting) return
     val xml = wffXml()
+    // Before anything overwrites `result`: a refused export must not strand the previous stream.
+    result?.stream?.close()
     if (xml == null) {
       result =
         UiBuilderWatchFaceStart(
@@ -650,11 +658,11 @@ internal fun WatchFaceRuntimePane(
         )
       return
     }
-    result?.stream?.close()
     ambient = false
     starting = true
+    val mine = ++generation[0]
     scope.launch {
-      result =
+      val outcome =
         try {
           begin(xml)
         } catch (failure: kotlin.coroutines.cancellation.CancellationException) {
@@ -662,6 +670,11 @@ internal fun WatchFaceRuntimePane(
         } catch (failure: Throwable) {
           UiBuilderWatchFaceStart(failure = failure.message ?: "the request failed")
         }
+      if (generation[0] != mine) {
+        outcome.stream?.close()
+        return@launch
+      }
+      result = outcome
       starting = false
     }
   }
@@ -676,9 +689,15 @@ internal fun WatchFaceRuntimePane(
       } catch (_: Throwable) {
         null
       }
+    checking = false
     if (unavailable == null) startSession()
   }
-  DisposableEffect(Unit) { onDispose { result?.stream?.close() } }
+  DisposableEffect(Unit) {
+    onDispose {
+      generation[0]++
+      result?.stream?.close()
+    }
+  }
 
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(
@@ -712,7 +731,10 @@ internal fun WatchFaceRuntimePane(
       }
       if (unavailable == null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          TextButton(enabled = !starting && start != null, onClick = { startSession() }) {
+          TextButton(
+            enabled = !starting && !checking && start != null,
+            onClick = { startSession() },
+          ) {
             Text(if (starting) "Starting…" else "Reload with the current design")
           }
           if (outcome?.sendControls != null) {

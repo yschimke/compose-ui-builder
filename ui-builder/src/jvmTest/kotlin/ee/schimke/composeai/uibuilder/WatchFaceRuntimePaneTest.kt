@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -130,5 +132,66 @@ class WatchFaceRuntimePaneTest {
       onNodeWithText("Ambient").performClick()
       waitForIdle()
       assertEquals(listOf("{\"ambient\":true}", "{\"ambient\":false}"), controls)
+    }
+
+  @Test
+  fun `a reload the export refuses still closes the stream it replaces`() =
+    runDesktopComposeUiTest(width = 420, height = 460) {
+      val stream = FakeStream()
+      var exportable = true
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 460.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { if (exportable) "<WatchFace/>" else null },
+              start = { UiBuilderWatchFaceStart(pagePath = "/tab", stream = stream) },
+              status = { null },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(0, stream.closes)
+      exportable = false
+      onNodeWithText("Reload with the current design").performClick()
+      waitForIdle()
+      assertEquals(1, stream.closes)
+    }
+
+  @Test
+  fun `a reload is off until the status is known and while a start runs, so one stream is live`() =
+    runDesktopComposeUiTest(width = 420, height = 460) {
+      val status = kotlinx.coroutines.CompletableDeferred<String?>()
+      val started = kotlinx.coroutines.CompletableDeferred<UiBuilderWatchFaceStart>()
+      val streams = mutableListOf<FakeStream>()
+      var starts = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 460.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                starts++
+                started.await()
+              },
+              status = { status.await() },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      onNodeWithText("Reload with the current design").assertIsNotEnabled()
+      assertEquals(0, starts)
+      status.complete(null)
+      waitForIdle()
+      assertEquals(1, starts)
+      // Still starting: the label says so and reload stays off.
+      onNodeWithText("Starting…").assertIsNotEnabled()
+      val stream = FakeStream().also(streams::add)
+      started.complete(UiBuilderWatchFaceStart(pagePath = "/tab", stream = stream))
+      waitForIdle()
+      onNodeWithText("Reload with the current design").assertIsEnabled()
+      assertEquals(1, starts)
+      assertEquals(listOf(0), streams.map { it.closes })
     }
 }
