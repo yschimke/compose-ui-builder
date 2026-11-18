@@ -112,6 +112,8 @@ class WffMotionTest {
   fun `a live face's gyro moves its part from frame to frame`() {
     val live = frames({ face(null) }, count = 2, gapMillis = 400)
     assertNotEquals(live[0].dotLeft(), live[1].dotLeft(), "the gyro part held still")
+    val ambient = frames({ face(null).withWffAmbient(true) }, count = 2, gapMillis = 1_100)
+    assertEquals(ambient[0].dotLeft(), ambient[1].dotLeft(), "an ambient face swayed")
     val frozen = frames({ face("2024-05-16T10:08:32Z") }, count = 2, gapMillis = 400)
     assertEquals(frozen[0].dotLeft(), frozen[1].dotLeft(), "a frozen face swayed")
   }
