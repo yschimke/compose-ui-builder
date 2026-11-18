@@ -8,6 +8,8 @@ import ee.schimke.composeai.uibuilder.export.wff.WffElement
 import ee.schimke.composeai.uibuilder.export.wff.WffNode
 import ee.schimke.composeai.uibuilder.export.wff.WffParseException
 import ee.schimke.composeai.uibuilder.export.wff.WffText
+import ee.schimke.composeai.uibuilder.export.wff.WffValidator
+import ee.schimke.composeai.uibuilder.export.wff.WffVersion
 import ee.schimke.composeai.uibuilder.export.wff.WffXmlParser
 import ee.schimke.composeai.uibuilder.export.wff.WffXmlWriter
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
@@ -53,6 +55,11 @@ object WatchFaceXmlExporter {
   const val TIME_TEXT = "wff/time-text"
   const val COMPLICATION_SLOT = "wff/complication-slot"
   const val VARIANT = "wff/variant"
+  const val CONDITION = "wff/condition"
+  const val COMPARE = "wff/compare"
+  const val DEFAULT = "wff/default"
+  const val LAUNCH = "wff/launch"
+  const val COMPLICATION = "wff/complication"
 
   /**
    * An element this vocabulary has no builtin for (or cannot write exactly), held as its canonical
@@ -69,6 +76,12 @@ object WatchFaceXmlExporter {
   data class Options(
     /** Overrides the scene's `wffVersion` when set. */
     val wffVersion: Int? = null,
+    /**
+     * Skip the checks that judge the face rather than write it: [WatchFaceDesignValidation] and the
+     * format schema. The importer asks for this, so that any XML it reads, invalid or not, is held
+     * and written back as it was; an export never does.
+     */
+    internal val lenient: Boolean = false,
   )
 
   sealed interface Result {
@@ -143,6 +156,9 @@ object WatchFaceXmlExporter {
     }
 
     val scene = Props(root, reasons)
+    val placedNodes = mutableListOf(root)
+    if (!options.lenient)
+      WatchFaceDesignValidation.nodeIssues(root).forEach { refuse(rootId, SCENE, it.second) }
     val width = scene.int("width") ?: DEFAULT_SIZE
     val height = scene.int("height") ?: DEFAULT_SIZE
     if (width <= 0 || height <= 0) refuse(rootId, SCENE, "width and height must be positive")
@@ -152,7 +168,7 @@ object WatchFaceXmlExporter {
     val verbatim = scene.bool("verbatim") == true
 
     val seen = mutableSetOf<String>()
-    fun element(id: String, parent: String): WffNode? {
+    fun element(id: String, parent: String, frame: Pair<Int, Int> = width to height): WffNode? {
       val node = document.nodes[id]
       if (node == null) {
         refuse(parent, null, "slot names the missing node `$id`")
@@ -164,6 +180,9 @@ object WatchFaceXmlExporter {
       }
       val component = node.componentId
       if (component == RAW) return rawNode(id, node, reasons)
+      placedNodes += node
+      if (!options.lenient && component in ELEMENTS)
+        WatchFaceDesignValidation.nodeIssues(node).forEach { refuse(id, component, it.second) }
       if (!component.startsWith(PREFIX) || component !in ELEMENTS) {
         refuse(id, component, "is not a Watch Face Format element; this export cannot write it")
         return null
@@ -179,6 +198,12 @@ object WatchFaceXmlExporter {
         .filter { it !in spec.slots }
         .forEach { refuse(id, component, "slot `$it` is not part of this element") }
       val props = Props(node, reasons)
+      props.parentWidth = frame.first
+      props.parentHeight = frame.second
+      // What this element's own children sit in: its box, else the one it sits in.
+      val box =
+        (props.number("width")?.toDoubleOrNull()?.toInt() ?: frame.first) to
+          (props.number("height")?.toDoubleOrNull()?.toInt() ?: frame.second)
       val children = mutableListOf<WffNode>()
       for ((slot, accepted) in spec.slots) {
         for (childId in node.slots[slot].orEmpty()) {
@@ -187,7 +212,7 @@ object WatchFaceXmlExporter {
             refuse(childId, childComponent, "cannot be placed in `$component` slot `$slot`")
             continue
           }
-          element(childId, id)?.let(children::add)
+          element(childId, id, box)?.let(children::add)
         }
       }
       return spec
@@ -224,6 +249,10 @@ object WatchFaceXmlExporter {
       .filter { it != "content" && it !in FRAME_SLOTS }
       .forEach { refuse(rootId, SCENE, "slot `$it` is not part of this element") }
     if (root.modifiers.isNotEmpty()) refuse(rootId, SCENE, "modifiers: not supported")
+    if (!options.lenient)
+      WatchFaceDesignValidation.slotIssues(placedNodes, version).forEach { (id, _, why) ->
+        refuse(id, document.nodes[id]?.componentId, why)
+      }
     if (reasons.isNotEmpty()) return Built.Refused(reasons)
 
     val face: WffElement
@@ -287,14 +316,21 @@ object WatchFaceXmlExporter {
         )
     }
     if (reasons.isNotEmpty()) return Built.Refused(reasons)
-    return Built.Tree(
+    val built =
       WffDocument(
         face,
         generated + prolog.filterIsInstance<WffComment>(),
         epilog.filterIsInstance<WffComment>(),
-      ),
-      version,
-    )
+      )
+    if (!options.lenient) {
+      // The face as a whole against the format's element table at this version: an element or
+      // attribute newer than the version, a child its parent does not allow, a required attribute
+      // missing. Unknown elements and attributes are passed through, as imports hold them.
+      val target = WffVersion.fromNumber(version) ?: WffVersion.V1
+      val errors = WffValidator.errors(built, target)
+      if (errors.isNotEmpty()) return Built.Refused(errors.map { "xml ${it.path}: ${it.message}" })
+    }
+    return Built.Tree(built, version)
   }
 
   private fun sceneElement(
@@ -341,7 +377,7 @@ object WatchFaceXmlExporter {
       try {
         WffXmlParser.parse("<r>$xml</r>").root.children
       } catch (e: WffParseException) {
-        return refuse("xml is not well formed: ${e.message}")
+        return refuse("xml is not well formed: ${e.message?.replace("</r>", "the end of the xml")}")
       }
     val single = parsed.singleOrNull()
     return if (single is WffElement || single is WffComment) single
@@ -384,9 +420,24 @@ object WatchFaceXmlExporter {
   )
 
   private val DRAWABLE =
-    setOf(GROUP, PART_DRAW, PART_IMAGE, PART_TEXT, ANALOG_CLOCK, DIGITAL_CLOCK, COMPLICATION_SLOT)
+    setOf(
+      GROUP,
+      PART_DRAW,
+      PART_IMAGE,
+      PART_TEXT,
+      ANALOG_CLOCK,
+      DIGITAL_CLOCK,
+      COMPLICATION_SLOT,
+      CONDITION,
+    )
   internal val SCENE_CONTENT = DRAWABLE + VARIANT
-  private val WITH_VARIANTS = mapOf("variants" to setOf(VARIANT))
+
+  /** What sits beside an element's own parts: an override, or a tap target. */
+  private val OVERRIDES = setOf(VARIANT, LAUNCH)
+  private val WITH_VARIANTS = mapOf("variants" to OVERRIDES)
+
+  /** What a `<Compare>`, `<Default>` or `<Complication>` holds: the drawable parts. */
+  private val BRANCH_CONTENT = DRAWABLE + OVERRIDES
 
   /**
    * An element's attributes in the order the face wrote them, when the document says so: a
@@ -398,6 +449,12 @@ object WatchFaceXmlExporter {
    */
   internal const val ATTR_ORDER = "wffAttrOrder"
   internal const val EXTRAS = "wffExtras"
+
+  /** Where an element's own synthesised part sits among its slot children (see `withCore`). */
+  internal const val CORE_AT = "coreAt"
+  internal const val SHAPE_CHILD_ORDER = "shapeChildOrder"
+  internal const val TEMPLATE_LAYOUT = "templateLayout"
+  internal const val SLOT_CHILD_ORDER = "slotChildOrder"
   internal const val FACE_ATTR_ORDER = "faceAttrOrder"
   private val FONT_SOURCES = mapOf("family" to "family", "size" to "fontSize", "color" to "color")
 
@@ -413,10 +470,100 @@ object WatchFaceXmlExporter {
       number("alpha")?.let { "alpha" to it },
     )
 
+  /** The first-class shape attributes of each `PartDraw` shape element, attribute to property. */
+  private val SHAPE_PROPERTIES: Map<String, Map<String, String>> =
+    mapOf(
+      "round-rectangle" to
+        mapOf("cornerRadiusX" to "cornerRadiusX", "cornerRadiusY" to "cornerRadiusY"),
+      "arc" to
+        mapOf(
+          "centerX" to "centerX",
+          "centerY" to "centerY",
+          "width" to "shapeWidth",
+          "height" to "shapeHeight",
+          "startAngle" to "startAngle",
+          "endAngle" to "endAngle",
+          "direction" to "direction",
+        ),
+      "line" to
+        mapOf("startX" to "startX", "startY" to "startY", "endX" to "endX", "endY" to "endY"),
+    )
+
+  internal val SHAPE_TAGS: Map<String, String> =
+    mapOf(
+      "ellipse" to "Ellipse",
+      "rectangle" to "Rectangle",
+      "round-rectangle" to "RoundRectangle",
+      "arc" to "Arc",
+      "line" to "Line",
+    )
+
+  /**
+   * The slot children of an element with the element's own [core] parts written at the position the
+   * document records ([CORE_AT], the first by default): a face may put a `<Variant>` before the
+   * `<Text>`.
+   */
+  private fun Props.withCore(core: List<WffNode>, children: List<WffNode>): List<WffNode> {
+    val at = (number(CORE_AT)?.toDoubleOrNull()?.toInt() ?: 0).coerceIn(0, children.size)
+    return children.take(at) + core + children.drop(at)
+  }
+
+  /**
+   * The `<Template>` of a part's text: the `text` property, then one `<Parameter>` per line of
+   * `parameters`. An imported face's other nodes (CDATA, whitespace between parameters) are kept as
+   * a layout in [TEMPLATE_LAYOUT]: a JSON array with `m` for the text, `M` for the text as CDATA,
+   * `p` for the next parameter, and `t…` / `c…` for a literal text or CDATA node.
+   */
+  private fun template(props: Props): WffElement {
+    val text = props.string("text")
+    val parameters =
+      props.string("parameters")?.split('\n').orEmpty().map {
+        el("Parameter", listOf("expression" to it))
+      }
+    val layout =
+      props.string(TEMPLATE_LAYOUT)?.let {
+        try {
+          Json.parseToJsonElement(it).let { array ->
+            (array as? kotlinx.serialization.json.JsonArray)?.map { item ->
+              (item as JsonPrimitive).content
+            }
+          }
+        } catch (e: Exception) {
+          null
+        }
+      }
+    if (layout == null)
+      return WffElement("Template", emptyList(), listOfNotNull(text?.let(::WffText)) + parameters)
+    val remaining = parameters.toMutableList()
+    val children = buildList {
+      for (item in layout) {
+        when {
+          item == "m" -> text?.let { add(WffText(it)) }
+          item == "M" -> text?.let { add(WffCData(it)) }
+          item == "p" -> remaining.removeFirstOrNull()?.let(::add)
+          item.startsWith("t") -> add(WffText(item.drop(1)))
+          item.startsWith("c") -> add(WffCData(item.drop(1)))
+        }
+      }
+      addAll(remaining)
+    }
+    return WffElement("Template", emptyList(), children)
+  }
+
+  /** An element whose attributes are its properties of the same name, in [names] order. */
+  private fun simple(
+    tag: String,
+    slots: Map<String, Set<String>>,
+    vararg names: String,
+  ): ElementSpec =
+    ElementSpec(slots) { _, props, children, _, _, _ ->
+      el(tag, names.mapNotNull { name -> props.string(name)?.let { name to it } }, children)
+    }
+
   private val ELEMENTS: Map<String, ElementSpec> =
     mapOf(
       GROUP to
-        ElementSpec(mapOf("content" to SCENE_CONTENT, "variants" to setOf(VARIANT))) {
+        ElementSpec(mapOf("content" to SCENE_CONTENT, "variants" to OVERRIDES)) {
           _,
           props,
           children,
@@ -432,18 +579,21 @@ object WatchFaceXmlExporter {
       PART_DRAW to
         ElementSpec(WITH_VARIANTS) { _, props, children, w, h, refuse ->
           val shape = props.string("shape") ?: "ellipse"
-          val tag =
-            when (shape) {
-              "ellipse" -> "Ellipse"
-              "rectangle" -> "Rectangle"
-              else ->
-                return@ElementSpec refuse("shape `$shape` is not ellipse or rectangle").let { null }
-            }
+          if (shape != "none" && shape !in SHAPE_TAGS)
+            return@ElementSpec refuse(
+                "shape `$shape` is not ${(SHAPE_TAGS.keys + "none").joinToString(", ")}",
+              )
+              .let { null }
           if (props.has("strokeWidth") && !props.has("strokeColor"))
             refuse("strokeWidth: a stroke needs a strokeColor")
-          val shapeChildren = buildList {
-            props.string("strokeColor")?.let {
-              add(
+          if (shape == "none" && (props.has("strokeColor") || props.has("fillColor")))
+            refuse("strokeColor and fillColor: a part with no shape has nothing to stroke or fill")
+          val bounds = props.bounds(w, h)
+          val stroke =
+            props
+              .string("strokeColor")
+              ?.takeIf { shape != "none" }
+              ?.let {
                 props.arrange(
                   el(
                     "Stroke",
@@ -452,39 +602,62 @@ object WatchFaceXmlExporter {
                   "strokeAttrOrder",
                   "stroke:",
                   mapOf("color" to "strokeColor", "thickness" to "strokeWidth"),
-                ),
-              )
-            }
-            props.string("fillColor")?.let {
-              add(
+                )
+              }
+          val fill =
+            props
+              .string("fillColor")
+              ?.takeIf { shape != "none" }
+              ?.let {
                 props.arrange(
                   el("Fill", listOf("color" to it)),
                   "fillAttrOrder",
                   "fill:",
                   mapOf("color" to "fillColor"),
+                )
+              }
+          val order = (props.string(SHAPE_CHILD_ORDER) ?: "stroke fill").split(' ')
+          val built = mapOf("stroke" to stroke, "fill" to fill)
+          val shapeChildren =
+            order.mapNotNull { built[it] } +
+              built.filterKeys { it !in order }.values.filterNotNull()
+          val sources = SHAPE_PROPERTIES[shape].orEmpty()
+          // A shape's own attributes: set on another shape they would be dropped, so refuse them.
+          for ((other, names) in SHAPE_PROPERTIES) {
+            if (other != shape)
+              names.values
+                .filter { it !in sources.values && props.has(it) }
+                .forEach { refuse("$it: only a `$other` shape has it, this part is `$shape`") }
+          }
+          val own =
+            when (shape) {
+              "ellipse",
+              "rectangle",
+              "round-rectangle" ->
+                bounds
+                  .filter { it.first in setOf("x", "y", "width", "height") }
+                  .map { if (it.first == "x" || it.first == "y") it.first to "0" else it } +
+                  sources.mapNotNull { (attribute, property) ->
+                    props.number(property)?.let { attribute to it }
+                  }
+              else ->
+                sources.mapNotNull { (attribute, property) ->
+                  (if (attribute == "direction") props.string(property) else props.number(property))
+                    ?.let { attribute to it }
+                }
+            }
+          val core =
+            if (shape == "none") emptyList()
+            else
+              listOf(
+                props.arrange(
+                  el(SHAPE_TAGS.getValue(shape), own, shapeChildren),
+                  "shapeAttrOrder",
+                  "shape:",
+                  sources,
                 ),
               )
-            }
-          }
-          val bounds = props.bounds(w, h)
-          el(
-            "PartDraw",
-            bounds,
-            listOf(
-              props.arrange(
-                el(
-                  tag,
-                  bounds
-                    .filter { it.first in setOf("x", "y", "width", "height") }
-                    .map { if (it.first == "x" || it.first == "y") it.first to "0" else it },
-                  shapeChildren,
-                ),
-                "shapeAttrOrder",
-                "shape:",
-                emptyMap(),
-              ),
-            ) + children,
-          )
+          el("PartDraw", bounds, props.withCore(core, children))
         },
       PART_IMAGE to
         ElementSpec(WITH_VARIANTS) { _, props, children, w, h, refuse ->
@@ -493,22 +666,27 @@ object WatchFaceXmlExporter {
             refuse("resource: name the bitmap resource this image draws")
             return@ElementSpec null
           }
-          val tint = props.string("tintColor")?.let { listOf("tintColor" to it) }.orEmpty()
+          // `tintColor` is an attribute of PartImage; `Image` has only `resource`.
           el(
             "PartImage",
-            props.bounds(w, h),
-            listOf(
-              props.arrange(
-                el("Image", listOf("resource" to resource) + tint),
-                "imageAttrOrder",
-                "image:",
-                mapOf("resource" to "resource", "tintColor" to "tintColor"),
+            props.bounds(w, h) +
+              listOfNotNull(props.string("tintColor")?.let { "tintColor" to it }),
+            props.withCore(
+              listOf(
+                props.arrange(
+                  el("Image", listOf("resource" to resource)),
+                  "imageAttrOrder",
+                  "image:",
+                  mapOf("resource" to "resource"),
+                ),
               ),
-            ) + children,
+              children,
+            ),
           )
         },
       PART_TEXT to
         ElementSpec(WITH_VARIANTS) { _, props, children, w, h, _ ->
+          val template = template(props)
           val font =
             props.arrange(
               el(
@@ -518,7 +696,7 @@ object WatchFaceXmlExporter {
                   "size" to (props.number("fontSize") ?: "32"),
                   "color" to (props.string("color") ?: "#ffffffff"),
                 ),
-                listOf(el("Template", text = props.string("text").orEmpty())),
+                listOf(template),
               ),
               "fontAttrOrder",
               "font:",
@@ -527,22 +705,25 @@ object WatchFaceXmlExporter {
           el(
             "PartText",
             props.bounds(w, h),
-            listOf(
-              props.arrange(
-                el(
-                  "Text",
-                  listOfNotNull(props.string("align")?.let { "align" to it }),
-                  listOf(font),
+            props.withCore(
+              listOf(
+                props.arrange(
+                  el(
+                    "Text",
+                    listOfNotNull(props.string("align")?.let { "align" to it }),
+                    listOf(font),
+                  ),
+                  "textAttrOrder",
+                  "text:",
+                  mapOf("align" to "align"),
                 ),
-                "textAttrOrder",
-                "text:",
-                mapOf("align" to "align"),
               ),
-            ) + children,
+              children,
+            ),
           )
         },
       ANALOG_CLOCK to
-        ElementSpec(mapOf("hands" to setOf(CLOCK_HAND), "variants" to setOf(VARIANT))) {
+        ElementSpec(mapOf("hands" to setOf(CLOCK_HAND) + OVERRIDES, "variants" to OVERRIDES)) {
           _,
           props,
           children,
@@ -575,7 +756,7 @@ object WatchFaceXmlExporter {
           )
         },
       DIGITAL_CLOCK to
-        ElementSpec(mapOf("texts" to setOf(TIME_TEXT), "variants" to setOf(VARIANT))) {
+        ElementSpec(mapOf("texts" to setOf(TIME_TEXT) + OVERRIDES, "variants" to OVERRIDES)) {
           _,
           props,
           children,
@@ -585,13 +766,25 @@ object WatchFaceXmlExporter {
           el("DigitalClock", props.bounds(w, h), children)
         },
       TIME_TEXT to
-        ElementSpec(WITH_VARIANTS) { _, props, children, _, _, _ ->
+        ElementSpec(WITH_VARIANTS) { _, props, children, w, h, _ ->
           val attributes =
             listOfNotNull(
               "format" to (props.string("format") ?: "hh:mm"),
               "hourFormat" to (props.string("hourFormat") ?: "SYNC_TO_DEVICE"),
               props.string("align")?.let { "align" to it },
-            )
+            ) +
+              // TimeText carries its own geometry (the schema requires it). A new one fills the
+              // DigitalClock it sits in; an imported one is written as the face had it.
+              listOf("x", "y", "width", "height").mapNotNull { name ->
+                (props.number(name)
+                    ?: when {
+                      props.has(ATTR_ORDER) -> null
+                      name == "width" -> (props.parentWidth ?: w).toString()
+                      name == "height" -> (props.parentHeight ?: h).toString()
+                      else -> "0"
+                    })
+                  ?.let { name to it }
+              }
           val font =
             props.arrange(
               el(
@@ -606,11 +799,16 @@ object WatchFaceXmlExporter {
               "font:",
               FONT_SOURCES,
             )
-          // TimeText sits inside its DigitalClock's box; a bare bounds attribute is not WFF.
-          el("TimeText", attributes, listOf(font) + children)
+          el("TimeText", attributes, props.withCore(listOf(font), children))
         },
       COMPLICATION_SLOT to
-        ElementSpec(WITH_VARIANTS) { _, props, children, w, h, refuse ->
+        ElementSpec(mapOf("variants" to OVERRIDES + COMPLICATION)) {
+          _,
+          props,
+          children,
+          w,
+          h,
+          refuse ->
           val slotId = props.int("slotId")
           val types = props.string("supportedTypes")
           if (slotId == null || slotId < 0) {
@@ -648,23 +846,38 @@ object WatchFaceXmlExporter {
                 ),
               )
             }
+          val boundsTag =
+            when (val type = props.string("boundsType") ?: "OVAL") {
+              "OVAL" -> "BoundingOval"
+              "RECTANGLE" -> "BoundingBox"
+              "ROUND_RECTANGLE" -> "BoundingRoundBox"
+              else ->
+                return@ElementSpec refuse(
+                    "boundsType `$type` is not OVAL, RECTANGLE or ROUND_RECTANGLE",
+                  )
+                  .let { null }
+            }
+          val boundsElement =
+            props.arrange(el(boundsTag, box), "boundsAttrOrder", "bounds:", emptyMap())
+          val order = (props.string(SLOT_CHILD_ORDER) ?: "bounds policy").split(' ')
+          val built = mapOf("bounds" to boundsElement, "policy" to policy)
+          val core =
+            order.mapNotNull { built[it] } +
+              built.filterKeys { it !in order }.values.filterNotNull()
           el(
             "ComplicationSlot",
             listOf("slotId" to slotId.toString(), "supportedTypes" to types.trim()) + bounds,
-            listOfNotNull(
-              props.arrange(
-                el(
-                  if (props.string("boundsType") == "RECTANGLE") "BoundingBox" else "BoundingOval",
-                  box,
-                ),
-                "boundsAttrOrder",
-                "bounds:",
-                emptyMap(),
-              ),
-              policy,
-            ) + children,
+            props.withCore(core, children),
           )
         },
+      CONDITION to
+        ElementSpec(mapOf("branches" to setOf(COMPARE, DEFAULT))) { _, _, children, _, _, _ ->
+          el("Condition", emptyList(), children)
+        },
+      COMPARE to simple("Compare", mapOf("content" to BRANCH_CONTENT), "expression"),
+      DEFAULT to simple("Default", mapOf("content" to BRANCH_CONTENT)),
+      LAUNCH to simple("Launch", emptyMap(), "target"),
+      COMPLICATION to simple("Complication", mapOf("content" to BRANCH_CONTENT), "type"),
       VARIANT to
         ElementSpec(emptyMap()) { _, props, _, _, _, refuse ->
           val mode = props.string("mode") ?: "AMBIENT"
@@ -682,6 +895,10 @@ object WatchFaceXmlExporter {
 
   /** Literal property reads; a binding or any non-literal value is refused by name. */
   internal class Props(val node: UiBuilderNode, val reasons: MutableList<String>) {
+    /** The width and height of the element this one sits in, when it is written inside one. */
+    var parentWidth: Int? = null
+    var parentHeight: Int? = null
+
     /** The strings of the node's `wffExtras` property: what has no property of its own. */
     private val extras: Map<String, String> by lazy {
       val encoded =
@@ -765,7 +982,10 @@ object WatchFaceXmlExporter {
       val order = text(orderProperty).orEmpty().split(' ').filter { it.isNotEmpty() }
       val computed = element.attributes.associate { it.name to it.value }
       val listed = order.mapNotNull { name ->
-        (computed[name] ?: text(prefix + name))?.let { WffAttribute(name, it) }
+        // A value kept under its prefixed name overrides the computed one: it is how an attribute
+        // that differs from what the part would write (an inner box of another size) survives.
+        val own = if (prefix.isNotEmpty() && has(prefix + name)) text(prefix + name) else null
+        (own ?: computed[name] ?: text(prefix + name))?.let { WffAttribute(name, it) }
       }
       val added =
         element.attributes.filter { attribute ->

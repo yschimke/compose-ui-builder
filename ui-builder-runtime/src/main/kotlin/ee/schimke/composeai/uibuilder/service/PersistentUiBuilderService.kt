@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.WatchFaceDesignValidation
 import ee.schimke.composeai.uibuilder.protocol.*
 import ee.schimke.composeai.uibuilder.replay.ReplayAnswer
 import ee.schimke.composeai.uibuilder.replay.replayCommandLog
@@ -614,13 +615,18 @@ public class PersistentUiBuilderService(
     // Judged on the probe: an undeclared property is a warning; a real defect (unknown component)
     // stays fatal.
     val probe = design.document.withoutProperties(undeclaredProperties(design.document, catalog))
-    catalogs.validate(probe, catalog)?.let {
-      return UnusableDesign(
-        ServiceErrorCodeV1.INTERNAL,
-        "invalid stored design $designId: ${it.message}",
-        catalogFault = true,
-      )
-    }
+    catalogs
+      .validate(probe, catalog)
+      // A watch face's value problems are refused when an edit makes them; a design stored before
+      // the rule existed still opens, so its owner can fix it.
+      ?.takeUnless { it.code == WatchFaceDesignValidation.VALUE_ISSUE_CODE }
+      ?.let {
+        return UnusableDesign(
+          ServiceErrorCodeV1.INTERNAL,
+          "invalid stored design $designId: ${it.message}",
+          catalogFault = true,
+        )
+      }
     return null
   }
 
@@ -4543,7 +4549,12 @@ public class PersistentUiBuilderService(
     design: PersistedDesignV1,
     operationId: String,
     rejection: RejectedOutcomeV1,
-  ): ReductionResult = ReductionResult(design, rejection.copy(operationId = operationId))
+  ): ReductionResult =
+    // A rejection built from a catalog issue has no revision of its own: it is the design's.
+    ReductionResult(
+      design,
+      rejection.copy(operationId = operationId, currentRevision = design.document.revision),
+    )
 
   private fun snapshot(
     design: PersistedDesignV1,

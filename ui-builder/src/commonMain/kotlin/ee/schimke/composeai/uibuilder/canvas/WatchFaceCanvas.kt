@@ -81,11 +81,26 @@ internal fun WatchFaceCanvas(
       val fill = node.color("fillColor", Color.Unspecified)
       val stroke = node.color("strokeColor", Color.Unspecified)
       val strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx
-      val ellipse = node.string("shape").ifEmpty { "ellipse" } == "ellipse"
+      val shape = node.string("shape").ifEmpty { "ellipse" }
+      val ellipse = shape == "ellipse" || shape == "arc"
+      val ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) }
       Box(
         modifier.drawBehind {
+          if (shape == "none") return@drawBehind
           val size = this.size
           val line = Stroke(width = strokeWidth.dp.toPx())
+          if (shape == "line") {
+            if (stroke != Color.Unspecified) {
+              val k = face.dpPerPx.dp.toPx()
+              drawLine(
+                stroke,
+                Offset(ends[0] * k, ends[1] * k),
+                Offset(ends[2] * k, ends[3] * k),
+                strokeWidth = line.width,
+              )
+            }
+            return@drawBehind
+          }
           if (fill != Color.Unspecified) {
             if (ellipse) drawOval(fill) else drawRect(fill)
           }
@@ -157,6 +172,18 @@ internal fun WatchFaceCanvas(
           fontSize = 9.sp,
         )
       }
+    // A condition draws its first branch, the one a preview with no data takes.
+    WatchFaceXmlExporter.CONDITION ->
+      Box(modifier) {
+        node.slots["branches"]
+          .orEmpty()
+          .firstOrNull { document.nodes[it]?.componentId != WatchFaceXmlExporter.RAW }
+          ?.let { id -> child(id, Modifier.fillMaxSize()) }
+      }
+    WatchFaceXmlExporter.COMPARE,
+    WatchFaceXmlExporter.DEFAULT,
+    WatchFaceXmlExporter.COMPLICATION ->
+      Box(modifier) { placed("content").forEach { id -> child(id, place(id)) } }
     // Hands are drawn by their clock, variants are overrides: neither has a box of its own.
     else -> Box(modifier.size(0.dp))
   }

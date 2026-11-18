@@ -52,7 +52,10 @@ class WatchFaceEditCoverageTest {
       .sortedBy { it.name }
       .forEach { faces[it.name] = File(it, "raw/watchface.xml").readText() }
     return faces.mapValues {
-      assertIs<WatchFaceXmlImporter.Result.Imported>(WatchFaceXmlImporter.import(it.value)).document
+      assertIs<WatchFaceXmlImporter.Result.Imported>(
+          WatchFaceXmlImporter.import(it.value, WatchFaceXmlImporter.Options(wffVersion = 5)),
+        )
+        .document
     }
   }
 

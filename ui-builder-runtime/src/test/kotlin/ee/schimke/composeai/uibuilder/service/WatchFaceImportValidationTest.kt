@@ -68,7 +68,11 @@ class WatchFaceImportValidationTest {
     for (dir in samples) {
       val result =
         assertIs<WatchFaceXmlImporter.Result.Imported>(
-          WatchFaceXmlImporter.import(File(dir, "raw/watchface.xml").readText()),
+          WatchFaceXmlImporter.import(
+            File(dir, "raw/watchface.xml").readText(),
+            // The samples use elements up to version 4.
+            WatchFaceXmlImporter.Options(wffVersion = 5),
+          ),
           dir.name,
         )
       assertValid(dir.name, result.document)

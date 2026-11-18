@@ -126,6 +126,29 @@ the new formats need a contracts change before the server can route them.
 elements are kept as opaque passthrough nodes rather than refused. The wear-os-samples faces are
 the round-trip corpus.
 
+**What is a builtin, 2026-11.** `Group`, `PartDraw` (ellipse, rectangle, round rectangle, arc, line,
+or no shape, with `Fill` and `Stroke` in either order), `PartImage`, `PartText` (its `Template`
+text and `Parameter` expressions are the `text` and `parameters` properties), `AnalogClock` and its
+hands, `DigitalClock` and `TimeText` (with its own `x`/`y`/`width`/`height`), `ComplicationSlot`
+(its bounds and default provider in either order, `BoundingOval`, `BoundingBox` or
+`BoundingRoundBox`) with its `Complication` bodies, `Condition`/`Compare`/`Default`, `Launch` and
+`Variant`. What a builtin cannot write back exactly (attribute order, where its own part sits among
+its children, a non-canonical decimal, an expression where a number goes) is kept in the node's
+`wffExtras`, so the tree still comes back identical. Still `wff/raw`, with the reason in the import
+warning: `UserConfigurations` and the rest of the theme plumbing, `Expressions`, `Transform`,
+gradients, `Reference`, a `PartDraw` after its first shape (the first shape is the part, the others
+are raw), a shape or `Font` with children, `Text` with comments.
+
+**Edits are checked where they are made.** The design service refuses, with the reason and the
+design's real revision: a raw node's `xml` that is not well formed, is not one element or comment,
+is not the element it replaces, is not allowed under its parent, or needs a later format version
+(`WatchFaceDesignValidation`, using the vendored `wff-core` element table); deleting the scene
+root; a negative size, a non-numeric number, a malformed colour; a duplicate `slotId`; a
+complication type newer than the face's version. The exporter asks the same questions and then
+validates the written tree against the format at the design's version, so it refuses rather than
+writes invalid XML. An import holds whatever XML it is given, valid or not (and warns when the
+stated `wffVersion` is lower than the XML needs); the export is what judges it.
+
 ## Prior art: Samsung Watch Face Studio and Google's Watch Face Designer
 
 Researched 2026-11-17, mostly from search extracts; Samsung's own pages could not be fetched from

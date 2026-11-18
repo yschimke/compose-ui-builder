@@ -35,7 +35,8 @@ class WatchFaceXmlImporterTest {
 
   private fun imported(
     xml: String,
-    options: WatchFaceXmlImporter.Options = WatchFaceXmlImporter.Options(),
+    // The samples use elements up to version 4 and the export judges them at the stated version.
+    options: WatchFaceXmlImporter.Options = WatchFaceXmlImporter.Options(wffVersion = 5),
   ) = assertIs<WatchFaceXmlImporter.Result.Imported>(WatchFaceXmlImporter.import(xml, options))
 
   private fun exported(document: UiBuilderDocument) =
@@ -157,7 +158,7 @@ class WatchFaceXmlImporterTest {
         <Scene>
           <Group x="0" y="0" width="450" height="450">
             <Gyro name="g"><Parameter expression="[ACCELEROMETER_X]"/></Gyro>
-            <PartDraw x="0" y="0" width="10" height="10"><Rectangle x="0" y="0" width="10" height="10"><Fill color="#fff"/></Rectangle></PartDraw>
+            <PartDraw x="0" y="0" width="10" height="10"><Rectangle x="0" y="0" width="10" height="10"><Fill color="#ffffff"/></Rectangle></PartDraw>
           </Group>
           <Condition><Compare expression="1"><Arm/></Compare></Condition>
         </Scene>
@@ -169,7 +170,17 @@ class WatchFaceXmlImporterTest {
     assertEquals(3, raws.size)
     assertTrue(raws.any { "FutureThing" in it.properties.toString() })
     assertTrue(result.warnings.single { "no wff/ element" in it }.contains("Gyro x1"))
-    assertEquals(WffXmlParser.parse(xml), WffXmlParser.parse(exported(result.document).xml))
+    // Not a valid face (unknown elements, a Group with no name): the import holds it as it was, and
+    // an export judges it. Written without the judging, it is the same tree.
+    val held =
+      assertIs<WatchFaceXmlExporter.Result.Emitted>(
+        WatchFaceXmlExporter.export(
+          result.document,
+          WatchFaceXmlExporter.Options(lenient = true),
+        ),
+      )
+    assertEquals(WffXmlParser.parse(xml), WffXmlParser.parse(held.xml))
+    assertIs<WatchFaceXmlExporter.Result.Refused>(WatchFaceXmlExporter.export(result.document))
     // The Group is still a Group, and keeps the raw Gyro before its PartDraw.
     val group = result.document.nodes.values.single { it.componentId == WatchFaceXmlExporter.GROUP }
     assertEquals(
@@ -181,7 +192,8 @@ class WatchFaceXmlImporterTest {
   @Test
   fun `the version is an option and lands on the scene`() {
     val xml = sample("SimpleDigital")
-    val default = imported(xml).document.nodes.getValue("scene").properties
+    val default =
+      imported(xml, WatchFaceXmlImporter.Options()).document.nodes.getValue("scene").properties
     assertEquals(JsonPrimitive(2), (default["wffVersion"] as JsonObject)["value"])
     val v4 = imported(xml, WatchFaceXmlImporter.Options(wffVersion = 4))
     assertEquals(
@@ -242,7 +254,7 @@ class WatchFaceXmlImporterTest {
               )),
       )
     assertTrue(
-      exported(tinted).xml.contains("<Image resource=\"dial\" tintColor=\"#ff00ff00\"/>"),
+      exported(tinted).xml.contains("tintColor=\"#ff00ff00\">\n      <Image resource=\"dial\"/>"),
       exported(tinted).xml,
     )
   }

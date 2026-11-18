@@ -35,10 +35,29 @@ internal object WatchFaceCatalogShape {
       WatchFaceXmlExporter.PART_DRAW to
         BOUNDS +
           mapOf(
-            "shape" to Declared("string", setOf("ellipse", "rectangle")),
+            "shape" to
+              Declared(
+                "string",
+                setOf("ellipse", "rectangle", "round-rectangle", "arc", "line", "none"),
+              ),
             "fillColor" to Declared("string"),
             "strokeColor" to Declared("string"),
             "strokeWidth" to Declared("number"),
+            "direction" to Declared("string", setOf("CLOCKWISE", "COUNTER_CLOCKWISE")),
+          ) +
+          numbers(
+            "cornerRadiusX",
+            "cornerRadiusY",
+            "shapeWidth",
+            "shapeHeight",
+            "centerX",
+            "centerY",
+            "startAngle",
+            "endAngle",
+            "startX",
+            "startY",
+            "endX",
+            "endY",
           ) +
           EXTRAS,
       WatchFaceXmlExporter.PART_IMAGE to BOUNDS + strings("resource", "tintColor") + EXTRAS,
@@ -46,6 +65,7 @@ internal object WatchFaceCatalogShape {
         BOUNDS +
           mapOf(
             "text" to Declared("string"),
+            "parameters" to Declared("string"),
             "fontSize" to Declared("number"),
             "color" to Declared("string"),
             "family" to Declared("string"),
@@ -63,20 +83,22 @@ internal object WatchFaceCatalogShape {
           EXTRAS,
       WatchFaceXmlExporter.DIGITAL_CLOCK to BOUNDS + EXTRAS,
       WatchFaceXmlExporter.TIME_TEXT to
-        mapOf(
-          "format" to Declared("string"),
-          "hourFormat" to Declared("string", setOf("SYNC_TO_DEVICE", "12", "24")),
-          "align" to ALIGN,
-          "fontSize" to Declared("number"),
-          "color" to Declared("string"),
-          "family" to Declared("string"),
-        ) + EXTRAS,
+        numbers("x", "y", "width", "height") +
+          mapOf(
+            "format" to Declared("string"),
+            "hourFormat" to Declared("string", setOf("SYNC_TO_DEVICE", "12", "24")),
+            "align" to ALIGN,
+            "fontSize" to Declared("number"),
+            "color" to Declared("string"),
+            "family" to Declared("string"),
+          ) +
+          EXTRAS,
       WatchFaceXmlExporter.COMPLICATION_SLOT to
         BOUNDS +
           mapOf(
             "slotId" to Declared("integer"),
             "supportedTypes" to Declared("string"),
-            "boundsType" to Declared("string", setOf("OVAL", "RECTANGLE")),
+            "boundsType" to Declared("string", setOf("OVAL", "RECTANGLE", "ROUND_RECTANGLE")),
             "defaultSystemProvider" to Declared("string"),
             "defaultSystemProviderType" to Declared("string"),
           ) +
@@ -87,6 +109,11 @@ internal object WatchFaceCatalogShape {
           "target" to Declared("string"),
           "value" to Declared("string"),
         ) + EXTRAS,
+      WatchFaceXmlExporter.CONDITION to EXTRAS,
+      WatchFaceXmlExporter.COMPARE to strings("expression") + EXTRAS,
+      WatchFaceXmlExporter.DEFAULT to EXTRAS,
+      WatchFaceXmlExporter.LAUNCH to strings("target") + EXTRAS,
+      WatchFaceXmlExporter.COMPLICATION to strings("type") + EXTRAS,
       WatchFaceXmlExporter.RAW to mapOf("xml" to Declared("string")),
     )
 }
