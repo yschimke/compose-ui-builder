@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -414,6 +415,9 @@ private fun wffPlace(
   val target = document.nodes[id]?.let { wffNodeIn(document, it, preview) } ?: return Modifier
   val box =
     Modifier.offset((target.float("x") * scale).dp, (target.float("y") * scale).dp)
+      // At its own size even past its parent's edge: a 500px group at -25,-25 on a 450px face
+      // was cut to 450 by the parent's constraints, which moved its centre, the pivot it turns on.
+      .wrapContentSize(Alignment.TopStart, unbounded = true)
       .size(
         (target.float("width", sceneWidth) * scale).dp,
         (target.float("height", sceneHeight) * scale).dp,
@@ -473,14 +477,33 @@ internal fun shapeBox(shape: UiBuilderNode): List<Float>? {
   else listOf(shape.float("x"), shape.float("y"), width, height)
 }
 
-/** `hh:mm` and friends, filled with the preview time. */
-private fun previewTime(format: String, preview: WffPreviewContext, twelveHour: Boolean): String {
-  val hour =
-    if (twelveHour) (if (preview.hour % 12 == 0) 12 else preview.hour % 12) else preview.hour
-  return format
-    .replace("hh", hour.toString().padStart(2, '0'))
-    .replace("mm", preview.minute.toString().padStart(2, '0'))
-    .replace("ss", preview.second.toString().padStart(2, '0'))
+/**
+ * A `<TimeText>` `format` filled with the preview time, read as runs of one letter, as a date
+ * pattern is: `h`/`hh` and `H`/`HH` the hour, 1–12 when [twelveHour] (`hourFormat="12"`), else 0–23
+ * as the preview has always drawn a synced device; `m`/`mm`, `s`/`ss` the minutes and seconds; `a`
+ * AM or PM. A doubled letter pads to two digits. Anything else is drawn as written.
+ */
+internal fun previewTime(format: String, preview: WffPreviewContext, twelveHour: Boolean): String {
+  val twelve = if (preview.hour % 12 == 0) 12 else preview.hour % 12
+  return buildString {
+    var i = 0
+    while (i < format.length) {
+      val letter = format[i]
+      var end = i
+      while (end < format.length && format[end] == letter) end++
+      val run = end - i
+      fun number(value: Int) = append(if (run >= 2) value.toString().padStart(2, '0') else value)
+      when (letter) {
+        'h',
+        'H' -> number(if (twelveHour) twelve else preview.hour)
+        'm' -> number(preview.minute)
+        's' -> number(preview.second)
+        'a' -> append(if (preview.hour < 12) "AM" else "PM")
+        else -> append(format, i, end)
+      }
+      i = end
+    }
+  }
 }
 
 /**
