@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -58,6 +59,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -609,6 +611,85 @@ private fun NativeRenderFrame(
             style = Stroke(width = 2f),
           )
         }
+      }
+    }
+  }
+}
+
+/**
+ * The native pane of a Watch Face Format design. A watch face is drawn by Google's watch-face
+ * runtime on the host, not by generated Compose, so there is nothing to compile and show inline:
+ * this pane starts a runtime session on the exported WFF and opens the tab that streams it. When
+ * the host cannot (no runtime installed, no packaging, not signed in) it shows the host's own
+ * reason instead of a refusal about the design.
+ */
+@Composable
+internal fun WatchFaceRuntimePane(
+  wffXml: () -> String?,
+  start: (suspend (String) -> UiBuilderWatchFaceStart)?,
+  modifier: Modifier = Modifier,
+) {
+  val scope = rememberCoroutineScope()
+  val uriHandler = LocalUriHandler.current
+  var starting by remember { mutableStateOf(false) }
+  var result by remember { mutableStateOf<UiBuilderWatchFaceStart?>(null) }
+  Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+    Column(
+      Modifier.fillMaxSize().padding(12.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      Text(
+        "Native · Wear OS watch-face runtime",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+      Text(
+        "A watch face is drawn by the real watch-face runtime on the host, in its own tab " +
+          "with time, ambient and sensor controls. The Preview pane stays the fast approximation.",
+        style = MaterialTheme.typography.bodySmall,
+      )
+      Button(
+        enabled = !starting && start != null,
+        onClick = {
+          val xml = wffXml()
+          if (xml == null) {
+            result =
+              UiBuilderWatchFaceStart(
+                failure =
+                  "This design does not export to Watch Face Format yet; see the code pane.",
+              )
+            return@Button
+          }
+          starting = true
+          scope.launch {
+            result =
+              try {
+                start!!(xml)
+              } catch (failure: Throwable) {
+                UiBuilderWatchFaceStart(failure = failure.message ?: "the request failed")
+              }
+            starting = false
+            // Opened here as well as offered below: a blocked popup leaves the link.
+            result?.pagePath?.let { runCatching { uriHandler.openUri(it) } }
+          }
+        },
+      ) {
+        Text(if (starting) "Starting…" else "Open the real watch-face preview")
+      }
+      val outcome = result
+      when {
+        outcome?.failure != null ->
+          SelectionContainer {
+            Text(
+              outcome.failure,
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
+        outcome?.pagePath != null ->
+          TextButton(onClick = { uriHandler.openUri(outcome.pagePath) }) {
+            Text("Session started · open the tab again")
+          }
       }
     }
   }

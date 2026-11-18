@@ -172,6 +172,9 @@ private val VARIANT_THUMBNAIL_SIZE = DpSize(32.dp, 24.dp)
 private val CODE_DOCK_WIDTH = 520.dp
 
 /** Pixels per dp for a flattened reference: 2× so hairline strokes survive being re-fitted. */
+/** `statusSemantics.previewSurfaces.native.backend` of a Watch Face Format catalog. */
+private const val WATCH_FACE_NATIVE_BACKEND = "android-dwf"
+
 private const val FLATTEN_SCALE = 2
 
 internal val EditorColors =
@@ -347,6 +350,12 @@ fun UiBuilderEditor(
    * (`:ui-builder` has no `WebSocket`). Without it the native pane draws the still.
    */
   onOpenNativeStream: ((UiBuilderNativeLive) -> UiBuilderNativeStream)? = null,
+  /**
+   * Starts the real watch-face runtime for a design whose catalog's native backend is
+   * `android-dwf`, given the WFF XML the editor exports; null where the host has none. Such a
+   * design has no Compose to compile, so the native pane offers this instead of a render.
+   */
+  onStartWatchFacePreview: (suspend (wffXml: String) -> UiBuilderWatchFaceStart)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   /**
@@ -2109,9 +2118,12 @@ fun UiBuilderEditor(
   // Only while the pane is open: generating is a projection plus a full generator run.
   var nativeRender by remember(document.id) { mutableStateOf(initialNativeRender) }
   // Even with no lane the menu row stays, disabled with its reason, so the pane is discoverable.
-  val nativeAvailable = onRequestNativeRender != null
+  val watchFaceRuntime = catalog.previewSurfaces.native.backend == WATCH_FACE_NATIVE_BACKEND
+  val nativeAvailable =
+    if (watchFaceRuntime) onStartWatchFacePreview != null else onRequestNativeRender != null
   // Derived from the pane set rather than stored. Only the native pane needs a compile.
-  val nativeRequested = onRequestNativeRender != null && EditorPane.Native in state.panes
+  val nativeRequested =
+    !watchFaceRuntime && onRequestNativeRender != null && EditorPane.Native in state.panes
   var nativePending by remember(document.id) { mutableStateOf(false) }
   // Re-render on each revision and host-shape change, so the native pane never shows a stale frame
   // beside the live canvas.
@@ -2163,21 +2175,32 @@ fun UiBuilderEditor(
   // The native pane: the design compiled on the host. Document playback belongs only to Browser
   // Preview.
   val nativePane: @Composable (Modifier) -> Unit = { paneModifier ->
-    NativeRenderPane(
-      render =
-        if (clippedWidgetPreview)
-          UiBuilderNativeRender(
-            failure =
-              "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview.",
-          )
-        else nativeRender,
-      pending = !clippedWidgetPreview && nativePending,
-      stream = if (clippedWidgetPreview) null else nativeStream,
-      backend = catalog.previewSurfaces.native.backend,
-      selectedNodeId = state.selectedNodeId,
-      onNodeSelected = { selectNodeForEditing(it) },
-      modifier = paneModifier,
-    )
+    if (watchFaceRuntime) {
+      WatchFaceRuntimePane(
+        wffXml = {
+          (reducer.generatedCode(state.document) { assetBytesByDigest[it] }
+              as? EditorGeneratedCode.Source)
+            ?.kotlin
+        },
+        start = onStartWatchFacePreview,
+        modifier = paneModifier,
+      )
+    } else
+      NativeRenderPane(
+        render =
+          if (clippedWidgetPreview)
+            UiBuilderNativeRender(
+              failure =
+                "Native rendering does not yet support the clipped host profile. Use the canvas or browser preview.",
+            )
+          else nativeRender,
+        pending = !clippedWidgetPreview && nativePending,
+        stream = if (clippedWidgetPreview) null else nativeStream,
+        backend = catalog.previewSurfaces.native.backend,
+        selectedNodeId = state.selectedNodeId,
+        onNodeSelected = { selectNodeForEditing(it) },
+        modifier = paneModifier,
+      )
   }
   LaunchedEffect(pendingRemoteSource) {
     val source = pendingRemoteSource ?: return@LaunchedEffect

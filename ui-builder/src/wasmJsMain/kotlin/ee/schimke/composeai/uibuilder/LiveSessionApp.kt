@@ -1947,6 +1947,18 @@ private fun LiveSessionApp(
         // editor opens it when a render names a session and closes it when that session changes or
         // the pane goes away.
         onOpenNativeStream = { live -> BrowserNativeStream(live) },
+        // A Watch Face Format catalog's native backend is the real watch-face runtime, shown in its
+        // own tab; the editor offers this instead of a compile.
+        onStartWatchFacePreview =
+          if (config.localStorage || !config.canWrite) null
+          else
+            { xml ->
+              requestWatchFacePreview(
+                config.designId,
+                xml,
+                revisionPin?.takeIf { it.pinned }?.requested,
+              )
+            },
         onRequestNativeRender = { hostShape ->
           if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
           else if (!config.canWrite) UiBuilderNativeRender(failure = serverOnlyRefusal(config))
