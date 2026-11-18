@@ -91,6 +91,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.round
 import kotlin.math.roundToInt
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -3037,7 +3038,16 @@ class UiBuilderEditorReducer(
     val field =
       propertyFields(state.copy(selection = listOf(nodeId))).firstOrNull { it.name == propertyName }
         ?: return state
-    val parsed = field.parseDraft(draft)
+    val watchFace = catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE
+    if (
+      watchFace &&
+        edgeName == null &&
+        field.control == EditorPropertyControl.Color &&
+        WFF_COLOUR_REFERENCE.matches(draft.trim())
+    ) {
+      return commitWatchFaceColourReference(state, sequence, nodeId, baseName, draft.trim())
+    }
+    val parsed = field.parseDraft(draft, watchFace = watchFace)
     if (parsed is PropertyDraft.Invalid) {
       return state.rejected(
         sequence,
@@ -5678,6 +5688,52 @@ class UiBuilderEditorReducer(
         selection = listOf(bodyNodeId),
       )
     return catalogPropertyFields(probed).firstOrNull { it.name == property }
+  }
+
+  /**
+   * A face colour option (`[CONFIGURATION.<id>.<n>]`) on a colour property. The design service
+   * refuses a colour that is not a drawable literal, so the reference is not a `color` value: like
+   * an imported one, it is held in the node's `wffExtras` and the property it replaces is unset
+   * (the exporter reads the property first). One edit across a selection, as any other.
+   */
+  private fun commitWatchFaceColourReference(
+    state: UiBuilderEditorState,
+    sequence: Int,
+    nodeId: String,
+    property: String,
+    reference: String,
+  ): UiBuilderEditorState {
+    val targets =
+      (state.selection.filter { it != nodeId } + nodeId).mapNotNull { id ->
+        state.document.nodes[id]?.takeIf {
+          catalog.componentsById[it.componentId]?.propertiesByName?.containsKey(property) == true
+        }
+      }
+    val operations = mutableListOf<DesignOperation>()
+    for (target in targets) {
+      val held =
+        (((target.properties[WATCH_FACE_EXTRAS] as? JsonObject)?.get("value") as? JsonPrimitive)
+            ?.contentOrNull
+            ?.let { runCatching { Json.parseToJsonElement(it) as? JsonObject }.getOrNull() })
+          ?.toMap()
+          .orEmpty()
+      val extras = JsonObject(held + (property to JsonPrimitive(reference)))
+      val encoded = literal("string", JsonPrimitive(extras.toString()))
+      validator.validate(state.document, target.id, WATCH_FACE_EXTRAS, encoded)?.let { issue ->
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          issue.message,
+          target.id,
+          property,
+        )
+      }
+      operations += DesignOperation.SetProperty(target.id, WATCH_FACE_EXTRAS, encoded)
+      if (property in target.properties)
+        operations += DesignOperation.RemoveNodeProperty(target.id, property)
+    }
+    if (operations.isEmpty()) return state
+    return state.apply(sequence, operations, selectionAfter = nodeId)
   }
 
   /**
