@@ -14,6 +14,7 @@ import ee.schimke.composeai.uibuilder.ResolvedUiBuilderAsset
 import ee.schimke.composeai.uibuilder.artwork.readProjectOwnedJetcasterArtwork
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderExportRasterAssets
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderExportStructuredIcons
+import ee.schimke.composeai.uibuilder.canvas.LocalWffCanvasExport
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -172,6 +173,7 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
           CompositionLocalProvider(
             LocalUiBuilderExportRasterAssets provides rasterAssets.bitmaps,
             LocalUiBuilderExportStructuredIcons provides true,
+            LocalWffCanvasExport provides true,
           ) {
             UiBuilderSurface(
               document = document,
@@ -241,11 +243,14 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
     var snapshot: UiBuilderInspectionSnapshot? = null
     return try {
       scene.setContent {
-        UiBuilderSurface(
-          document = document,
-          editorOverlay = false,
-          onInspectionSnapshot = { snapshot = it },
-        )
+        // As the SVG pass draws it, so the two layouts agree.
+        CompositionLocalProvider(LocalWffCanvasExport provides true) {
+          UiBuilderSurface(
+            document = document,
+            editorOverlay = false,
+            onInspectionSnapshot = { snapshot = it },
+          )
+        }
       }
       recomposer.performFrame(document.fixedFrameNanos())
       scene.measureAndLayout()
