@@ -642,7 +642,8 @@ private fun strokeBand(
           close()
         }
         "rectangle" -> addRect(outer)
-        "round-rectangle" -> addRoundRect(RoundRect(outer, corner(drawing, pxPerWffPx)))
+        "round-rectangle" ->
+          addRoundRect(RoundRect(outer, corner(drawing, pxPerWffPx).grownBy(width / 2)))
         else -> return null
       }
     }
@@ -665,17 +666,11 @@ private fun strokeBand(
       }
       "round-rectangle" -> {
         fillType = PathFillType.EvenOdd
+        // The editor strokes the corner's radius centred on the line half a width in, so the
+        // band's outside corner is half a width rounder and its inside one half a width tighter.
         val radius = corner(drawing, pxPerWffPx)
-        addRoundRect(RoundRect(outer, radius))
-        addRoundRect(
-          RoundRect(
-            inner,
-            CornerRadius(
-              (radius.x - width).coerceAtLeast(0f),
-              (radius.y - width).coerceAtLeast(0f),
-            ),
-          ),
-        )
+        addRoundRect(RoundRect(outer, radius.grownBy(width / 2)))
+        addRoundRect(RoundRect(inner, radius.grownBy(-width / 2)))
       }
       else -> return null
     }
@@ -740,6 +735,16 @@ private fun DrawScope.drawSweepWedges(gradient: WffGradient, pxPerWffPx: Float, 
 }
 
 private const val WEDGES = 240
+
+/**
+ * This radius [by] larger each way (smaller when negative), never below square. A square corner
+ * stays square, as a stroke's mitred corner is.
+ */
+private fun CornerRadius.grownBy(by: Float) =
+  CornerRadius(
+    if (x > 0f) (x + by).coerceAtLeast(0f) else 0f,
+    if (y > 0f) (y + by).coerceAtLeast(0f) else 0f,
+  )
 
 private fun corner(drawing: WffShapeDrawing, pxPerWffPx: Float) =
   CornerRadius(

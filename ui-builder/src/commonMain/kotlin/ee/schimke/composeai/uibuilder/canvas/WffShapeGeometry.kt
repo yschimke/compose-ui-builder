@@ -173,7 +173,8 @@ internal fun composeAngle(wffDegrees: Float): Float = wffDegrees - 90f
  * The colour stops of a WFF sweep gradient as Compose's `sweepGradient` takes them, which always
  * starts at three o'clock and turns once clockwise. WFF's runs from [start] to [end] in its
  * direction; past the end it keeps its last colour until the turn comes back round to the start,
- * where it jumps back to the first, the hard edge a conic gradient has.
+ * where it jumps back to the first, the hard edge a conic gradient has. Every stop keeps its own
+ * colour, so two at one position make a hard transition, in the order the sweep meets them.
  */
 internal fun sweepStops(
   start: Float,
@@ -182,45 +183,52 @@ internal fun sweepStops(
   positions: List<Float>,
   colors: List<Color>,
 ): Array<Pair<Float, Color>> {
-  val sweep = wffArcSweep(start, end, clockwise)
-  val span = kotlin.math.abs(sweep)
-  // Where (0 to 1 of Compose's turn) a WFF angle falls.
-  fun fraction(wffDegrees: Float): Float {
-    val turn = ((composeAngle(wffDegrees) % 360f) + 360f) % 360f
-    return turn / 360f
-  }
-  fun colorAt(t: Float): Color {
-    if (t <= positions.first()) return colors.first()
-    if (t >= positions.last()) return colors.last()
-    val i = positions.indexOfLast { it <= t }
-    val a = positions[i]
-    val b = positions[i + 1]
-    return lerpSrgb(colors[i], colors[i + 1], (t - a) / (b - a))
-  }
-  // The gradient's progress at a point of Compose's turn.
-  fun progress(f: Float): Float {
-    if (span == 0f) return 1f
-    val wff = f * 360f + 90f
-    val along = if (clockwise) wff - start else start - wff
-    return (((along % 360f) + 360f) % 360f) / span
-  }
-  val origin = fraction(start)
-  val points =
-    (positions.map { fraction(start + sweep * it) } + listOf(0f, 1f))
-      .filter { it != origin }
-      .map { it to colorAt(progress(it).coerceAtMost(1f)) }
-  // At the start the turn jumps: the last colour on one side of it, the first on the other.
-  val edge =
-    if (clockwise) listOf(origin to colors.last(), origin to colors.first())
-    else listOf(origin to colors.first(), origin to colors.last())
-  val atOrigin =
-    if (origin == 0f)
-      // The edge is Compose's own start and end, so each colour sits at its own end of the turn.
-      listOf(0f to edge[1].second, 1f to edge[0].second)
-    else edge
-  return (points.filter { it.first != 0f && it.first != 1f || origin != 0f } + atOrigin)
-    .sortedBy { it.first }
+  val span = kotlin.math.abs(wffArcSweep(start, end, clockwise)) / 360f
+  if (span == 0f) return arrayOf(0f to colors.last(), 1f to colors.last())
+  // The stops in turns clockwise from the start, 0 to 1, in the order a clockwise walk meets them.
+  // Clockwise the gradient runs forward from the start and holds its last colour after the end; a
+  // counter-clockwise one holds its last colour first and runs backwards into the start.
+  val stops: List<Pair<Float, Color>> =
+    if (clockwise)
+      listOf(0f to colors.first()) +
+        positions.zip(colors).map { (p, c) -> p * span to c } +
+        listOf(1f to colors.last())
+    else
+      listOf(0f to colors.last()) +
+        positions.zip(colors).reversed().map { (p, c) -> 1f - p * span to c } +
+        listOf(1f to colors.first())
+  // Where Compose's turn starts, in those turns; the list is cut there and the two parts swapped.
+  val origin = (((composeAngle(start) % 360f) + 360f) % 360f) / 360f
+  if (origin == 0f) return stops.toTypedArray()
+  val cut = 1f - origin
+  val after = stops.filter { it.first > cut }.map { (u, c) -> u - cut to c }
+  val before = stops.filter { it.first < cut }.map { (u, c) -> u + origin to c }
+  return (listOf(0f to colorAtTurn(stops, cut, fromAfter = true)) +
+      after +
+      before +
+      listOf(1f to colorAtTurn(stops, cut, fromAfter = false)))
     .toTypedArray()
+}
+
+/**
+ * The colour [stops] give at [x]: approached from after it ([fromAfter], the last stop there) or
+ * from before it (the first), which differ only where stops coincide.
+ */
+private fun colorAtTurn(stops: List<Pair<Float, Color>>, x: Float, fromAfter: Boolean): Color {
+  if (fromAfter) {
+    val i = stops.indexOfLast { it.first <= x }
+    if (i < 0) return stops.first().second
+    if (i == stops.lastIndex || stops[i].first == x) return stops[i].second
+    val (a, from) = stops[i]
+    val (b, to) = stops[i + 1]
+    return lerpSrgb(from, to, (x - a) / (b - a))
+  }
+  val j = stops.indexOfFirst { it.first >= x }
+  if (j < 0) return stops.last().second
+  if (j == 0 || stops[j].first == x) return stops[j].second
+  val (a, from) = stops[j - 1]
+  val (b, to) = stops[j]
+  return lerpSrgb(from, to, (x - a) / (b - a))
 }
 
 /** The colour [stops] (as [sweepStops] returns them) give at [fraction] of Compose's turn. */

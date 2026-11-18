@@ -234,6 +234,68 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `two sweep stops at one position make a hard edge, whichever way it turns`() {
+    // Red for the first half turn, blue for the second, from three o'clock (WFF 90°).
+    for (direction in listOf("CLOCKWISE", "COUNTER_CLOCKWISE")) {
+      val face =
+        gradientFace(
+          """<SweepGradient centerX="225" centerY="225" startAngle="90" endAngle="450" """ +
+            """direction="$direction" colors="#ffff0000 #ffff0000 #ff0000ff #ff0000ff" """ +
+            """positions="0 0.5 0.5 1"/>""",
+        )
+      // Clockwise the first half is three to nine o'clock through six; counter-clockwise through
+      // twelve.
+      val redSide = if (direction == "CLOCKWISE") 180f else 0f
+      val blueSide = if (direction == "CLOCKWISE") 0f else 180f
+      for ((name, bitmap) in listOf("editor" to renderWffFace(face), "export" to export(face))) {
+        for (offset in listOf(-60f, 0f, 60f)) {
+          val red = bitmap.atPolar(150f, redSide + offset)
+          val blue = bitmap.atPolar(150f, blueSide + offset)
+          assertTrue(red[1] > 230 && red[3] < 25, "$direction $name red side $offset: $red")
+          assertTrue(blue[3] > 230 && blue[1] < 25, "$direction $name blue side $offset: $blue")
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `a sweep-stroked round rectangle has the editor's corners in the export`() {
+    // 100px square, corner radius 20, stroke 10: the editor's outside corner is radius 25.
+    val face =
+      wffFace(
+        listOf("card"),
+        paintedPart(
+            "card",
+            mapOf(
+              "shape" to "round-rectangle",
+              "x" to 175,
+              "y" to 175,
+              "width" to 100,
+              "height" to 100,
+              "cornerRadiusX" to 20,
+              "cornerRadiusY" to 20,
+            ),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 10),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffffffff #ffffffff"/>""",
+          )
+          .joinToString(","),
+      )
+    val editor = renderWffFace(face)
+    val exported = export(face)
+    // Along the corner's diagonal, from just outside the outer curve to inside the hole.
+    var differing = 0
+    for (step in 0..30) {
+      val d = 175f + step
+      val a = editor.at(d, d)[1]
+      val b = exported.at(d, d)[1]
+      if (abs(a - b) > 60) differing++
+    }
+    assertTrue(differing <= 1, "$differing pixels differ along the corner")
+  }
+
+  @Test
   fun `a gradient in a stroke paints the stroke`() {
     val face =
       wffFace(
