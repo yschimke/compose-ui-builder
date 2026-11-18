@@ -194,4 +194,39 @@ class WatchFaceRuntimePaneTest {
       assertEquals(1, starts)
       assertEquals(listOf(0), streams.map { it.closes })
     }
+
+  @Test
+  fun `while a reload starts, the previous session's ambient switch is gone`() =
+    runDesktopComposeUiTest(width = 420, height = 460) {
+      val second = kotlinx.coroutines.CompletableDeferred<UiBuilderWatchFaceStart>()
+      val first = FakeStream()
+      val controls = mutableListOf<String>()
+      var calls = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 460.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                if (calls++ == 0)
+                  UiBuilderWatchFaceStart(
+                    pagePath = "/tab",
+                    stream = first,
+                    sendControls = { controls += it },
+                  )
+                else second.await()
+              },
+              status = { null },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      onNodeWithText("Ambient").assertExists()
+      onNodeWithText("Reload with the current design").performClick()
+      waitForIdle()
+      assertEquals(1, first.closes)
+      onNodeWithText("Ambient").assertDoesNotExist()
+      assertEquals(emptyList(), controls)
+    }
 }

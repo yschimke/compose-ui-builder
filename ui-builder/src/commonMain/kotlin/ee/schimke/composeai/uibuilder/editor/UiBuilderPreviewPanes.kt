@@ -651,6 +651,9 @@ internal fun WatchFaceRuntimePane(
     val xml = wffXml()
     // Before anything overwrites `result`: a refused export must not strand the previous stream.
     result?.stream?.close()
+    // Cleared with it: the old result's Ambient switch would send to the closed stream while the
+    // new session, which never received it, showed it checked.
+    result = null
     if (xml == null) {
       result =
         UiBuilderWatchFaceStart(
