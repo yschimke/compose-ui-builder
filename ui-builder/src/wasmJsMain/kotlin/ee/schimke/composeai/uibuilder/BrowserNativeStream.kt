@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
+import ee.schimke.composeai.uibuilder.editor.WatchFaceDesiredControls
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.serialization.json.Json
@@ -54,6 +55,8 @@ internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
       openNativeStreamSocket(
         url = url,
         onTextMessage = ::onMessage,
+        // Every open, a reconnect included: the whole desired state goes out.
+        onOpened = { controls.opened() },
         onClosed = {
           // Only a close before the first frame is a failure; afterwards the last frame stays.
           if (!closed && frame == null && failure == null) {
@@ -86,11 +89,18 @@ internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
     )
   }
 
-  /** One raw text message to the session, for a lane whose client messages are not input. */
-  fun sendText(text: String) {
-    val open = socket ?: return
-    if (!closed) sendNativeStreamText(open, text)
-  }
+  /**
+   * The controls a session should have, sent once the socket is open and again on every open, so a
+   * switch flipped during the handshake is not lost.
+   */
+  private val controls =
+    WatchFaceDesiredControls { text ->
+      val open = socket
+      open != null && !closed && sendNativeStreamText(open, text)
+    }
+
+  /** Merges a `controls` patch into the desired state; see [WatchFaceDesiredControls]. */
+  fun sendControls(patch: String) = controls.set(patch)
 
   override fun close() {
     if (closed) return
@@ -164,6 +174,7 @@ internal fun nativeStreamUrl(sessionId: String, previewId: String): String =
 private fun openNativeStreamSocket(
   url: String,
   onTextMessage: (String) -> Unit,
+  onOpened: () -> Unit,
   onClosed: () -> Unit,
 ): JsAny =
   js(
@@ -173,7 +184,7 @@ private fun openNativeStreamSocket(
         if (socket.readyState !== 1) return;
         socket.send(JSON.stringify({ type: 'visibility', visible: !document.hidden }));
       }
-      socket.onopen = function () { if (document.hidden) reportVisibility(); };
+      socket.onopen = function () { if (document.hidden) reportVisibility(); onOpened(); };
       socket.onclose = function () {
         document.removeEventListener('visibilitychange', reportVisibility);
         onClosed();
@@ -185,8 +196,14 @@ private fun openNativeStreamSocket(
     })()""",
   )
 
-private fun sendNativeStreamText(socket: JsAny, text: String): Unit =
-  js("""(function () { if (socket.readyState === 1) socket.send(text); })()""")
+private fun sendNativeStreamText(socket: JsAny, text: String): Boolean =
+  js(
+    """(function () {
+      if (socket.readyState !== 1) return false;
+      socket.send(text);
+      return true;
+    })()""",
+  )
 
 private fun closeNativeStreamSocket(socket: JsAny): Unit = js("socket.close()")
 

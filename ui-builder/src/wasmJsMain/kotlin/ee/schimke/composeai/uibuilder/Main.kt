@@ -3115,7 +3115,7 @@ internal suspend fun requestWatchFacePreview(
         // The same session the tab shows, drawn inline too.
         watchFaceStartOf(it.pagePath, it.socketPath) { socketPath ->
           val stream = BrowserNativeStream(sessionSocketUrl(socketPath))
-          WatchFaceSocket(stream, stream::sendText)
+          WatchFaceSocket(stream, stream::sendControls)
         }
       }
     401,

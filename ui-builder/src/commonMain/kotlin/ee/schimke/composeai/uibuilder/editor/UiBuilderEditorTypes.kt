@@ -97,8 +97,42 @@ data class UiBuilderWatchFaceStart(
   val sendControls: ((String) -> Unit)? = null,
 )
 
-/** A watch-face session's open socket: its frames, and a way to send it a text message. */
-class WatchFaceSocket(val stream: UiBuilderNativeStream, val sendText: (String) -> Unit)
+/** A watch-face session's socket: its frames, and a state-based way to send it `controls`. */
+class WatchFaceSocket(val stream: UiBuilderNativeStream, val sendControls: (String) -> Unit)
+
+/**
+ * The controls a watch-face session should have, as state rather than a stream of messages. Each
+ * patch is merged into the desired state and the whole state is sent when the socket is open; one
+ * that is not open yet (the handshake, a reconnect) keeps it, so anything set meanwhile is
+ * coalesced to its latest value and the full state goes out again on every [opened].
+ *
+ * [transmit] returns whether the text was sent.
+ */
+class WatchFaceDesiredControls(private val transmit: (String) -> Boolean) {
+  private var desired: Map<String, kotlinx.serialization.json.JsonElement> = emptyMap()
+
+  /** Merges a `controls` patch (a JSON object) and sends the state if the socket is open. */
+  fun set(patch: String) {
+    val parsed =
+      runCatching {
+          kotlinx.serialization.json.Json.parseToJsonElement(patch)
+            as? kotlinx.serialization.json.JsonObject
+        }
+        .getOrNull() ?: return
+    desired = desired + parsed
+    flush()
+  }
+
+  /** The socket opened (or reopened): the full desired state goes out. */
+  fun opened() = flush()
+
+  private fun flush() {
+    if (desired.isEmpty()) return
+    transmit(
+      "{\"type\":\"controls\",\"controls\":${kotlinx.serialization.json.JsonObject(desired)}}",
+    )
+  }
+}
 
 /**
  * The start result for a session the host started: the tab to open, and, when [openSocket] can open
@@ -115,10 +149,7 @@ fun watchFaceStartOf(
   return UiBuilderWatchFaceStart(
     pagePath = pagePath,
     stream = socket?.stream,
-    sendControls =
-      socket?.let { open ->
-        { controls -> open.sendText("{\"type\":\"controls\",\"controls\":$controls}") }
-      },
+    sendControls = socket?.sendControls,
   )
 }
 

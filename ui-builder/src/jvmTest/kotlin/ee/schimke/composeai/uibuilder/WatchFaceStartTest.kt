@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
+import ee.schimke.composeai.uibuilder.editor.WatchFaceDesiredControls
 import ee.schimke.composeai.uibuilder.editor.WatchFaceSocket
 import ee.schimke.composeai.uibuilder.editor.watchFaceStartOf
 import kotlin.test.Test
@@ -35,7 +36,7 @@ class WatchFaceStartTest {
     assertEquals("/ui-builder/face/watch-face?session=s1", start.pagePath)
     assertNotNull(start.stream)
     start.sendControls!!.invoke("{\"ambient\":true}")
-    assertEquals(listOf("{\"type\":\"controls\",\"controls\":{\"ambient\":true}}"), sent)
+    assertEquals(listOf("{\"ambient\":true}"), sent)
   }
 
   @Test
@@ -49,5 +50,32 @@ class WatchFaceStartTest {
     val failed = watchFaceStartOf("/tab", "/ws") { error("blocked") }
     assertEquals("/tab", failed.pagePath)
     assertNull(failed.stream)
+  }
+
+  @Test
+  fun `controls set before the socket opens are coalesced and sent in full on every open`() {
+    val sent = mutableListOf<String>()
+    var open = false
+    val controls = WatchFaceDesiredControls { text -> open.also { if (it) sent += text } }
+    controls.set("{\"ambient\":true}")
+    controls.set("{\"ambient\":false}")
+    controls.set("{\"heartRate\":70}")
+    assertEquals(emptyList(), sent, "nothing goes out while the handshake is pending")
+
+    open = true
+    controls.opened()
+    assertEquals(
+      listOf("{\"type\":\"controls\",\"controls\":{\"ambient\":false,\"heartRate\":70}}"),
+      sent,
+    )
+
+    // A later change sends the whole state, and a reconnect sends it again.
+    controls.set("{\"ambient\":true}")
+    controls.opened()
+    assertEquals(
+      "{\"type\":\"controls\",\"controls\":{\"ambient\":true,\"heartRate\":70}}",
+      sent.last(),
+    )
+    assertEquals(3, sent.size)
   }
 }
