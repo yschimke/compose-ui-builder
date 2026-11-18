@@ -115,9 +115,9 @@ class WatchFaceDesiredControls(private val transmit: (String) -> Boolean) {
   fun set(patch: String) {
     val parsed =
       runCatching {
-          kotlinx.serialization.json.Json.parseToJsonElement(patch)
-            as? kotlinx.serialization.json.JsonObject
-        }
+        kotlinx.serialization.json.Json.parseToJsonElement(patch)
+          as? kotlinx.serialization.json.JsonObject
+      }
         .getOrNull() ?: return
     desired = desired + parsed
     flush()

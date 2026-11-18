@@ -93,11 +93,10 @@ internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
    * The controls a session should have, sent once the socket is open and again on every open, so a
    * switch flipped during the handshake is not lost.
    */
-  private val controls =
-    WatchFaceDesiredControls { text ->
-      val open = socket
-      open != null && !closed && sendNativeStreamText(open, text)
-    }
+  private val controls = WatchFaceDesiredControls { text ->
+    val open = socket
+    open != null && !closed && sendNativeStreamText(open, text)
+  }
 
   /** Merges a `controls` patch into the desired state; see [WatchFaceDesiredControls]. */
   fun sendControls(patch: String) = controls.set(patch)
