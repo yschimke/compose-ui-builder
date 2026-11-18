@@ -78,6 +78,16 @@ data class UiBuilderNativeRender(
 )
 
 /**
+ * The outcome of asking the host to start a real Wear OS watch-face runtime session for the current
+ * design (the `android-dwf` native backend): the tab to open, or the host's own reason it cannot.
+ */
+data class UiBuilderWatchFaceStart(
+  /** Same-origin path of the watch-face tab that shows the session, or null on [failure]. */
+  val pagePath: String? = null,
+  val failure: String? = null,
+)
+
+/**
  * Where a native render's live session is. Opaque to the editor: only the host knows how to reach
  * it.
  */

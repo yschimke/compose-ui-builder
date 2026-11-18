@@ -96,22 +96,25 @@ internal fun WatchFaceCanvas(
       // selected. The preview and the exports are cut.
       val editing = LocalUiBuilderEditingCanvas.current
       val background = node.wffColor(document, "backgroundColor", Color.Black)
-      BoxWithConstraints(
-        if (editing)
-          modifier.background(background, clip).drawWithContent {
-            drawContent()
-            if (clip == CircleShape) {
-              drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
-            }
-          }
-        else modifier.clip(clip).background(background),
-      ) {
-        val scale = maxWidth.value / width
+      // The face keeps its own aspect ratio, centred in whatever box it is given: cut to a circle
+      // in a landscape box it would be an ellipse, and its pixels would be drawn off-scale.
+      BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val scale = minOf(maxWidth.value / width, maxHeight.value / height)
         CompositionLocalProvider(
           LocalWffFace provides WffFace(width, height, scale),
           LocalWffPreview provides context,
         ) {
-          Box(Modifier.fillMaxSize()) {
+          val face = Modifier.size((width * scale).dp, (height * scale).dp)
+          Box(
+            if (editing)
+              face.background(background, clip).drawWithContent {
+                drawContent()
+                if (clip == CircleShape) {
+                  drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
+                }
+              }
+            else face.clip(clip).background(background),
+          ) {
             placed("content").forEach { id ->
               child(id, wffPlace(document, id, width, height, scale, context))
             }
