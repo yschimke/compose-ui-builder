@@ -37,7 +37,7 @@ class WatchFacePublishedCatalogTest {
       UiBuilderCatalogPlatform.WATCH_FACE,
       UiBuilderCatalogPlatform.from(catalog.statusSemantics),
     )
-    assertEquals(31, catalog.components.size, catalog.components.map { it.componentId }.toString())
+    assertEquals(35, catalog.components.size, catalog.components.map { it.componentId }.toString())
     assertTrue(catalog.components.all { it.componentId.startsWith("wff/") })
   }
 
