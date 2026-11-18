@@ -748,7 +748,7 @@
     "functionName": "UiBuilderEditorChromePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderEditorChromePreview-7201c9a1.png",
-    "sha256": "4e354bbaa24272aa620c32b91ee6a6a51c6cc1c4f45ce0d62308a1083342afb5",
+    "sha256": "e29df6b14aa0612beacabb4c77ddf928f112c3cea97325dd121705bff5148c2a",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderHistoryBarPreview": {
@@ -900,7 +900,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "c1f787ee6bf67ed28f2135d8b86402fd33584d033d8e92d73eed5f39a3e5b9a1",
+    "sha256": "0e2131fadd716bcc6621aa5b7815e0c9c96daab34b845c15f27e6caea83cda6a",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
@@ -916,7 +916,7 @@
     "functionName": "UiBuilderCollaboratorsPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCollaboratorsPreview-97eeead1.png",
-    "sha256": "1dc6ebdf21b33c0e0f12af8ace4526c5712cf0b60c46a34455e9cfbf9d02d9c0",
+    "sha256": "a1dbca1d45bb3a26d17e5efcb08df1759ccb207995f68721ba0b2715d18830fe",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorScenarioPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorScenarioPreviewsKt.UiBuilderCompactEditorPreview": {
@@ -956,7 +956,7 @@
     "functionName": "UiBuilderLightThemePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderLightThemePreview-8fd9f6b2.png",
-    "sha256": "e009ef74368ac7f070286863f911772e27b2bb9b168c4fda3c90e0211954a89b",
+    "sha256": "85f191c4691f0a87d43c501a971d364595ff7c420d7e16dcf0b4f461bab24386",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorScenarioPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorScenarioPreviewsKt.UiBuilderPinnedRevisionPreview": {
