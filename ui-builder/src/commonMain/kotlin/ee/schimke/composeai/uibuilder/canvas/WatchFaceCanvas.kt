@@ -89,15 +89,19 @@ internal fun WatchFaceCanvas(
           "RECTANGLE" -> RoundedCornerShape(percent = 8)
           else -> RoundedCornerShape(0.dp)
         }
-      BoxWithConstraints(
-        modifier.clip(clip).background(node.color("backgroundColor", Color.Black)),
-      ) {
-        val scale = maxWidth.value / width
+      // The face keeps its own aspect ratio, centred in whatever box it is given: cut to a circle
+      // in a landscape box it would be an ellipse, and its pixels would be drawn off-scale.
+      BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val scale = minOf(maxWidth.value / width, maxHeight.value / height)
         CompositionLocalProvider(
           LocalWffFace provides WffFace(width, height, scale),
           LocalWffPreview provides context,
         ) {
-          Box(Modifier.fillMaxSize()) {
+          Box(
+            Modifier.size((width * scale).dp, (height * scale).dp)
+              .clip(clip)
+              .background(node.color("backgroundColor", Color.Black)),
+          ) {
             placed("content").forEach { id ->
               child(id, wffPlace(document, id, width, height, scale, context))
             }
