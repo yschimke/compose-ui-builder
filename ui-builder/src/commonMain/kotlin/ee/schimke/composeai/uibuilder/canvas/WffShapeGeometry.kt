@@ -151,17 +151,19 @@ internal fun parseWffColor(value: String): Color? {
  * The sweep of a WFF arc, in Compose's degrees: WFF measures from twelve o'clock and an angle grows
  * clockwise (the format's own samples sweep a gauge from -150 to 150 through the top). The arc runs
  * from [start] to [end] in its direction: clockwise the long way round when [end] is before
- * [start], counter-clockwise the other way, a whole turn when they are 360° or more apart.
+ * [start], counter-clockwise the other way, a whole turn when they are 360° or more apart either
+ * way round. Equal ends sweep nothing.
  */
 internal fun wffArcSweep(start: Float, end: Float, clockwise: Boolean): Float {
   val span = if (clockwise) end - start else start - end
   val turn =
     when {
-      span >= 360f -> 360f
+      // A whole turn whichever way it is written: 0 to 360 counter-clockwise is -360 here.
+      kotlin.math.abs(span) >= 360f -> 360f
       span < 0f -> ((span % 360f) + 360f) % 360f
       else -> span
     }
-  return if (clockwise) turn else -turn
+  return if (clockwise || turn == 0f) turn else -turn
 }
 
 /** Compose's start angle (three o'clock, clockwise) for a WFF angle (twelve o'clock, clockwise). */

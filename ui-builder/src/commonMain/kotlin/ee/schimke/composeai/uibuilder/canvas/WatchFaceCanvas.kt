@@ -617,7 +617,8 @@ internal fun DrawScope.drawWffShape(
 
 /**
  * The area a butt-capped stroke of [width] inside the box covers: between the shape and the same
- * shape [width] inside it. Null for a shape whose stroke is not such a band.
+ * shape [width] inside it, or the whole shape when the stroke is that wide. Null for a shape whose
+ * stroke is not such a band.
  */
 private fun strokeBand(
   drawing: WffShapeDrawing,
@@ -630,7 +631,21 @@ private fun strokeBand(
 ): Path? {
   val outer = Rect(origin, extent)
   val inner = outer.deflate(width)
-  if (inner.width <= 0f || inner.height <= 0f) return null
+  // A stroke as wide as the shape leaves no hole: it covers the whole shape, an arc's sector.
+  if (inner.width <= 0f || inner.height <= 0f)
+    return Path().apply {
+      when (drawing.kind) {
+        "ellipse" -> addOval(outer)
+        "arc" -> {
+          moveTo(outer.center.x, outer.center.y)
+          arcTo(outer, start, sweep, forceMoveTo = false)
+          close()
+        }
+        "rectangle" -> addRect(outer)
+        "round-rectangle" -> addRoundRect(RoundRect(outer, corner(drawing, pxPerWffPx)))
+        else -> return null
+      }
+    }
   return Path().apply {
     when (drawing.kind) {
       "ellipse" -> {

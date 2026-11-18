@@ -206,6 +206,34 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a sweep stroke as wide as its shape is exported as wedges, not dropped`() {
+    // A 60px stroke on a 100px rectangle leaves no hole; it still paints the sweep in the SVG.
+    val face =
+      wffFace(
+        listOf("block"),
+        paintedPart(
+            "block",
+            mapOf("shape" to "rectangle", "x" to 175, "y" to 175, "width" to 100, "height" to 100),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 60),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffff0000 #ff0000ff"/>""",
+          )
+          .joinToString(","),
+      )
+    val svg = svg(face, "gradient-sweep-thick")
+    assertTrue(Regex("<path").findAll(svg).count() >= 200, "wedges")
+    val fills =
+      Regex("fill=\"#([0-9A-Fa-f]{6})\"").findAll(svg).map { it.groupValues[1].toInt(16) }.toList()
+    assertTrue(fills.any { it shr 16 > 0xf0 && it and 0xff < 0x20 }, "red")
+    // The exported PNG paints it too, and nothing outside the rectangle.
+    val bitmap = export(face)
+    val inside = bitmap.at(200f, 200f)
+    assertTrue(inside[1] > 60 || inside[3] > 60, "inside $inside")
+    assertEquals(listOf(255, 0, 0, 0), bitmap.at(150f, 150f))
+  }
+
+  @Test
   fun `a gradient in a stroke paints the stroke`() {
     val face =
       wffFace(
@@ -360,6 +388,10 @@ class WatchFaceFidelityTest {
     assertEquals(-270f, wffArcSweep(0f, 90f, clockwise = false))
     assertEquals(-90f, wffArcSweep(90f, 0f, clockwise = false))
     assertEquals(0f, wffArcSweep(-150f, -150f, clockwise = true))
+    // A whole turn written either way round still draws the whole ring.
+    assertEquals(-360f, wffArcSweep(0f, 360f, clockwise = false))
+    assertEquals(360f, wffArcSweep(360f, 0f, clockwise = true))
+    assertEquals(0f, wffArcSweep(90f, 90f, clockwise = false))
   }
 
   // yschimke/watchface-tools#25
