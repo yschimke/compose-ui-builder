@@ -138,7 +138,7 @@
       </PartDraw>
     </Group>
     <Group name="second-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
-      <Transform target="angle" value="[SECOND_MILLISECOND] * 0.006"/>
+      <Transform target="angle" value="[SECOND_MILLISECOND] * 6"/>
       <PartDraw x="222" y="36" width="6" height="238">
         <Rectangle x="0" y="0" width="6" height="238">
           <Fill color="#ffff5252"/>

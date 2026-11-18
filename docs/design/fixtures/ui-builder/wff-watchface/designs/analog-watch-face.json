@@ -1628,7 +1628,7 @@
       "properties": {
         "xml": {
           "type": "string",
-          "value": "<Transform target=\"angle\" value=\"[SECOND_MILLISECOND] * 0.006\"/>"
+          "value": "<Transform target=\"angle\" value=\"[SECOND_MILLISECOND] * 6\"/>"
         }
       },
       "modifiers": [],

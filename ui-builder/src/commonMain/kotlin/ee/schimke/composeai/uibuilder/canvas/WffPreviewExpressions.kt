@@ -17,6 +17,8 @@ internal class WffPreviewContext(
   val hour: Int = 10,
   val minute: Int = 8,
   val second: Int = 32,
+  /** The part of the second after the point, 0 until 1: what `SECOND_MILLISECOND` carries. */
+  val fraction: Double = 0.0,
   val year: Int = 2024,
   val month: Int = 5,
   val day: Int = 16,
@@ -32,7 +34,7 @@ internal class WffPreviewContext(
     }
 
   fun withComplication(sample: WffComplicationSample) =
-    WffPreviewContext(hour, minute, second, year, month, day, sample)
+    WffPreviewContext(hour, minute, second, fraction, year, month, day, sample)
 
   companion object {
     /**
@@ -40,12 +42,20 @@ internal class WffPreviewContext(
      */
     fun of(previewTime: String, fixedTime: String): WffPreviewContext {
       val base = WffPreviewContext()
-      val clock = previewTime.split(':').mapNotNull { it.trim().toIntOrNull() }
+      val parts = previewTime.split(':').map { it.trim() }
+      val clock = parts.map { it.substringBefore('.').toIntOrNull() }.filterNotNull()
+      val fraction =
+        parts
+          .getOrNull(2)
+          ?.substringAfter('.', "")
+          ?.takeIf { it.isNotEmpty() }
+          ?.let { "0.$it".toDoubleOrNull() } ?: 0.0
       val date = fixedTime.substringBefore('T').split('-').mapNotNull { it.toIntOrNull() }
       return WffPreviewContext(
         hour = clock.getOrNull(0)?.coerceIn(0, 23) ?: base.hour,
         minute = clock.getOrNull(1)?.coerceIn(0, 59) ?: base.minute,
         second = clock.getOrNull(2)?.coerceIn(0, 59) ?: base.second,
+        fraction = fraction,
         year = date.getOrNull(0) ?: base.year,
         month = date.getOrNull(1)?.coerceIn(1, 12) ?: base.month,
         day = date.getOrNull(2)?.coerceIn(1, 31) ?: base.day,
@@ -130,21 +140,22 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
   fun s(v: String) = WffValue.Str(v)
   val hour12 = if (hour % 12 == 0) 12 else hour % 12
   return when (name) {
-    "HOUR_0_11",
-    "HOUR_0_11_Z" -> n(hour % 12)
-    "HOUR_1_12",
-    "HOUR_1_12_Z" -> n(hour12)
-    "HOUR_0_23",
-    "HOUR_0_23_Z" -> n(hour)
-    "HOUR_1_24",
-    "HOUR_1_24_Z" -> n(if (hour == 0) 24 else hour)
+    "HOUR_0_11" -> n(hour % 12)
+    "HOUR_0_11_Z" -> s(two(hour % 12))
+    "HOUR_1_12" -> n(hour12)
+    "HOUR_1_12_Z" -> s(two(hour12))
+    "HOUR_0_23" -> n(hour)
+    "HOUR_0_23_Z" -> s(two(hour))
+    "HOUR_1_24" -> n(if (hour == 0) 24 else hour)
+    "HOUR_1_24_Z" -> s(two(if (hour == 0) 24 else hour))
     "HOUR_0_11_MINUTE" -> WffValue.Num((hour % 12) + minute / 60.0)
     "MINUTE" -> n(minute)
     "MINUTE_Z" -> s(two(minute))
-    "MINUTE_SECOND" -> WffValue.Num(minute + second / 60.0)
+    "MINUTE_SECOND" -> WffValue.Num(minute + (second + fraction) / 60.0)
     "SECOND" -> n(second)
     "SECOND_Z" -> s(two(second))
-    "SECOND_MILLISECOND" -> n(second * 1000)
+    // Seconds with their fraction, 0 to 59.999, as the format defines it; not milliseconds.
+    "SECOND_MILLISECOND" -> WffValue.Num(second + fraction)
     "AMPM_STATE" -> n(if (hour < 12) 0 else 1)
     "AMPM_POSITION" -> n(if (hour < 12) 0 else 1)
     "DAY" -> n(day)

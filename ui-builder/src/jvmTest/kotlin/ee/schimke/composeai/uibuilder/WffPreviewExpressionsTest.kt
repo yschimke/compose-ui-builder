@@ -21,7 +21,21 @@ class WffPreviewExpressionsTest {
   fun `the hands' angles come out of the clock`() {
     assertEquals(10 * 30 + 8 * 0.5, number("[HOUR_0_11] * 30 + [MINUTE] * 0.5"))
     assertEquals(8 * 6 + 32 * 0.1, number("[MINUTE] * 6 + [SECOND] * 0.1")!!, 1e-9)
-    assertEquals(192.0, number("[SECOND_MILLISECOND] * 0.006"))
+    assertEquals(192.0, number("[SECOND_MILLISECOND] * 6"))
+  }
+
+  @Test
+  fun `SECOND_MILLISECOND is seconds with their fraction, so the second hand is at 195 degrees at 32 point 5`() {
+    val half = WffPreviewContext.of("10:08:32.5", "2024-05-16T10:08:32Z")
+    assertEquals(32.5, (evaluateWffExpression("[SECOND_MILLISECOND]", half) as WffValue.Num).value)
+    assertEquals(
+      195.0,
+      (evaluateWffExpression("[SECOND_MILLISECOND] * 6", half) as WffValue.Num).value,
+    )
+    assertEquals(
+      "05",
+      evaluateWffExpression("[HOUR_0_11_Z]", WffPreviewContext.of("05:00:00", ""))?.asText(),
+    )
   }
 
   @Test
