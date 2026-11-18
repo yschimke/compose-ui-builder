@@ -67,7 +67,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
-      - uses: yschimke/compose-ai-tools/.github/actions/apply@ef6fc3613c826a84fa7d53f42c062196895843cf # v2.99.1
+      - uses: yschimke/compose-ai-tools/.github/actions/apply@e5992cd143eb8ebc43390a611c174181e62b8c48 # v2.99.3
         with:
           only: compose
           # A ceiling for a hung build, not a budget: a cold runner compiles the whole editor
