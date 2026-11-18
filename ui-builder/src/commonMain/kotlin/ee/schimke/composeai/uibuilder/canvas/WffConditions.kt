@@ -43,21 +43,9 @@ internal fun wffConditionBranch(
 }
 
 /**
- * Each user setting's id to its `defaultValue`: the colour, list and boolean configurations under
- * the face's `UserConfigurations`, as `[CONFIGURATION.<id>]` reads them before the wearer chooses.
+ * Each user setting's id to the value it holds in [this]: its `defaultValue`, which a preview's
+ * configuration picker has already replaced with the chosen option on the copy being drawn. What
+ * `[CONFIGURATION.<id>]` reads.
  */
-internal fun UiBuilderDocument.wffConfigurationDefaults(): Map<String, String> =
-  nodes.values
-    .filter {
-      it.componentId == WatchFaceXmlExporter.COLOR_CONFIGURATION ||
-        it.componentId == WatchFaceXmlExporter.LIST_CONFIGURATION ||
-        it.componentId == WatchFaceXmlExporter.BOOLEAN_CONFIGURATION
-    }
-    .mapNotNull { node ->
-      val id =
-        node.string("id").ifEmpty {
-          return@mapNotNull null
-        }
-      id to node.string("defaultValue")
-    }
-    .toMap()
+internal fun UiBuilderDocument.wffConfigurationValues(): Map<String, String> =
+  wffConfigurations().associate { it.id to it.defaultValue }

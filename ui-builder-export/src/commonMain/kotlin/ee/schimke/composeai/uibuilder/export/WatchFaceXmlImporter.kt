@@ -166,6 +166,7 @@ object WatchFaceXmlImporter {
       "ListConfiguration",
       "ListOption",
       "BooleanConfiguration",
+      "BooleanOption",
       "Flavors",
       "Flavor",
       "Configuration",
@@ -215,6 +216,10 @@ object WatchFaceXmlImporter {
       WatchFaceXmlExporter.LIST_OPTION to (WatchFaceXmlExporter.LIST_CONFIGURATION to "options"),
       WatchFaceXmlExporter.FLAVOR to (WatchFaceXmlExporter.FLAVORS to "content"),
       WatchFaceXmlExporter.FLAVOR_CONFIGURATION to (WatchFaceXmlExporter.FLAVOR to "content"),
+      WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION to
+        (WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION to "options"),
+      WatchFaceXmlExporter.SCENE_LIST_OPTION to
+        (WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION to "options"),
     )
 
   private val RESERVED_SCENE = setOf("width", "height", "clipShape", "clockType", "previewTime")
@@ -235,6 +240,25 @@ object WatchFaceXmlImporter {
       else literal("int", JsonPrimitive(value.toLong()))
     }
     return literal("string", JsonPrimitive(value))
+  }
+
+  /**
+   * The component a `<tag>` is, in a parent that accepts [allowed]. A `BooleanConfiguration`,
+   * `ListConfiguration` or `ListOption` is a declaration under `<UserConfigurations>` and a
+   * container in the `<Scene>`; the parent says which.
+   */
+  private fun componentOf(tag: String, allowed: Set<String>): String? {
+    val scene =
+      when (tag) {
+        "BooleanConfiguration" -> WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION
+        "BooleanOption" -> WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION
+        "ListConfiguration" -> WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION
+        "ListOption" -> WatchFaceXmlExporter.SCENE_LIST_OPTION
+        else -> null
+      }
+    val declared = componentOf(tag)
+    return if (scene != null && scene in allowed && declared !in allowed) scene
+    else declared ?: scene
   }
 
   private fun componentOf(tag: String): String? =
@@ -516,13 +540,13 @@ object WatchFaceXmlImporter {
 
     private fun builtin(element: WffElement, allowed: Set<String>): String? {
       why = null
-      componentOf(element.name)?.let {
+      componentOf(element.name, allowed)?.let {
         if (it !in allowed) {
           why = "not valid here: $it does not go in this parent"
           return null
         }
       }
-      val candidate = candidate(element) ?: return null
+      val candidate = candidate(element, allowed) ?: return null
       if (candidate.component !in allowed) {
         why = "not valid here: ${candidate.component} does not go in this parent"
         return null
@@ -686,8 +710,8 @@ object WatchFaceXmlImporter {
 
     // ---- Element to node ---------------------------------------------------------------------
 
-    private fun candidate(e: WffElement): Candidate? {
-      val component = componentOf(e.name) ?: return null
+    private fun candidate(e: WffElement, allowed: Set<String>): Candidate? {
+      val component = componentOf(e.name, allowed) ?: return null
       val sink = Sink(component)
 
       fun no(reason: String): Candidate? {
@@ -935,6 +959,7 @@ object WatchFaceXmlImporter {
         "ListConfiguration",
         "ListOption",
         "BooleanConfiguration",
+        "BooleanOption",
         "Flavors",
         "Flavor",
         "Configuration" -> {

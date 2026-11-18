@@ -4,7 +4,7 @@ import ee.schimke.composeai.uibuilder.canvas.WffComplicationSample
 import ee.schimke.composeai.uibuilder.canvas.WffPreviewContext
 import ee.schimke.composeai.uibuilder.canvas.evaluateWffExpression
 import ee.schimke.composeai.uibuilder.canvas.wffConditionBranch
-import ee.schimke.composeai.uibuilder.canvas.wffConfigurationDefaults
+import ee.schimke.composeai.uibuilder.canvas.wffConfigurationValues
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlImporter
 import kotlin.test.Test
@@ -99,7 +99,7 @@ class WffConditionTest {
   @Test
   fun `the true compare is drawn, else the default`() {
     val doc = document()
-    assertEquals(mapOf("showRing" to "TRUE", "style" to "bold"), doc.wffConfigurationDefaults())
+    assertEquals(mapOf("showRing" to "TRUE", "style" to "bold"), doc.wffConfigurationValues())
     // As imported: the compare names the `morning` expression of the condition's Expressions.
     assertEquals("wff/compare", doc.branchAt(WffPreviewContext(hour = 9)))
     assertEquals("wff/default", doc.branchAt(WffPreviewContext(hour = 21)))
@@ -107,7 +107,7 @@ class WffConditionTest {
     assertEquals("wff/compare", morning.branchAt(WffPreviewContext(hour = 10)))
     assertEquals("wff/default", morning.branchAt(WffPreviewContext(hour = 15)))
 
-    val settings = WffPreviewContext().withConfiguration(doc.wffConfigurationDefaults())
+    val settings = WffPreviewContext().withConfiguration(doc.wffConfigurationValues())
     assertEquals(
       "wff/compare",
       doc.comparing("[CONFIGURATION.showRing] == true").branchAt(settings),
