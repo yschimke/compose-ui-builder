@@ -571,6 +571,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
     LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
     LocalUiBuilderUnrolled provides effectiveUnrolled,
+    LocalUiBuilderEditingCanvas provides editorOverlay,
     LocalUiBuilderSurfaceSizeDp provides renderSurface?.let { it.widthDp to it.heightDp },
     LocalWearWidgetHostShape provides wearWidgetHostShape,
     // What a lazy container scrolls to; see [RevealSelectedItem]. Recomputed only when the
@@ -2096,6 +2097,13 @@ internal fun UiBuilderDocument.wearDeviceConfiguration(
  * word ("host did not say"), which is distinct from [UiBuilderCatalogPlatform.DEFAULT].
  */
 internal val LocalUiBuilderCatalogPlatform = staticCompositionLocalOf { "" }
+
+/**
+ * Whether this surface is the editing canvas (the selection overlay is on), as opposed to a
+ * preview, thumbnail or export. A watch face's editing canvas is not cut to the screen's shape, so
+ * parts outside it can still be seen and selected.
+ */
+internal val LocalUiBuilderEditingCanvas = staticCompositionLocalOf { false }
 
 /**
  * The frame the served catalog declares for its screens; see [UiBuilderFrameGeometry]. A host that
