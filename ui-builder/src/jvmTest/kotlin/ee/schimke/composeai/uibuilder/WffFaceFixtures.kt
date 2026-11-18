@@ -67,8 +67,12 @@ internal fun wffNode(
 
 /** [document] drawn by the editor canvas at its environment's size and density. */
 @OptIn(ExperimentalComposeUiApi::class)
-internal fun renderWffFace(document: UiBuilderDocument, name: String? = null): Bitmap {
-  val side = 227
+internal fun renderWffFace(document: UiBuilderDocument, name: String? = null): Bitmap =
+  renderWffFaceAt(document, 227, name)
+
+/** [document] drawn by the editor canvas [side]dp square, 2px to the dp. */
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun renderWffFaceAt(document: UiBuilderDocument, side: Int, name: String? = null): Bitmap {
   val density = 2f
   val px = (side * density).toInt()
   val scene =
