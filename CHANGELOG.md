@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.132.0](https://github.com/yschimke/compose-ui-builder/compare/v3.131.0...v3.132.0) (2026-11-18)
+
+
+### Features
+
+* **runtime:** create a watch face design from Watch Face Format XML ([#1235](https://github.com/yschimke/compose-ui-builder/issues/1235)) ([42782f8](https://github.com/yschimke/compose-ui-builder/commit/42782f8dc0c4adb8e620d139565f372c575f752a))
+* Watch Face Format watch face target with lossless XML import and export ([#1234](https://github.com/yschimke/compose-ui-builder/issues/1234)) ([1072622](https://github.com/yschimke/compose-ui-builder/commit/1072622f98e62e8e1cc66ef368dd672a7487ff99))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-ai-tools-bom to v2.97.0 ([#1239](https://github.com/yschimke/compose-ui-builder/issues/1239)) ([a64663a](https://github.com/yschimke/compose-ui-builder/commit/a64663ae9691d5eaef91590263e4d0579151df36))
+* refuse invalid watch face edits and import more elements as builtins ([#1241](https://github.com/yschimke/compose-ui-builder/issues/1241)) ([dede905](https://github.com/yschimke/compose-ui-builder/commit/dede9050d08be3dd0eaa75de70ffdc8683927b95))
+
 ## [3.131.0](https://github.com/yschimke/compose-ui-builder/compare/v3.130.0...v3.131.0) (2026-11-17)
 
 
