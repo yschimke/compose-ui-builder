@@ -20,6 +20,7 @@ import ee.schimke.composeai.uibuilder.canvas.WffComplicationSample
 import ee.schimke.composeai.uibuilder.canvas.WffPreviewContext
 import ee.schimke.composeai.uibuilder.canvas.WffSampleImage
 import ee.schimke.composeai.uibuilder.canvas.evaluateWffExpression
+import ee.schimke.composeai.uibuilder.canvas.wffArcSweep
 import ee.schimke.composeai.uibuilder.canvas.wffSlotSample
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
@@ -102,6 +103,18 @@ class WffComplicationSampleTest {
       WffSampleImage.HEART,
       WffComplicationSample.forProvider("HEART_RATE", "SMALL_IMAGE").image,
     )
+  }
+
+  @Test
+  fun `an arc's direction picks the way round, never its end`() {
+    assertEquals(90f, wffArcSweep(0f, 90f, clockwise = true))
+    assertEquals(-270f, wffArcSweep(0f, 90f, clockwise = false))
+    assertEquals(270f, wffArcSweep(90f, 0f, clockwise = true))
+    assertEquals(-90f, wffArcSweep(90f, 0f, clockwise = false))
+    // Wrapping past 12 o'clock, and a whole turn.
+    assertEquals(60f, wffArcSweep(330f, 30f, clockwise = true))
+    assertEquals(360f, wffArcSweep(0f, 360f, clockwise = true))
+    assertEquals(-360f, wffArcSweep(0f, 360f, clockwise = false))
   }
 
   @Test

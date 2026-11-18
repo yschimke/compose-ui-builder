@@ -391,6 +391,16 @@ private val WFF_NOT_DRAWN =
     WatchFaceXmlExporter.RAW,
   )
 
+/**
+ * The signed sweep, in degrees, from an arc's `startAngle` to its `endAngle` the way its
+ * `direction` goes: the end is a position either way, so counter-clockwise from 0 to 90 is -270,
+ * not -90. Angles a whole turn apart are a full ring.
+ */
+internal fun wffArcSweep(start: Float, end: Float, clockwise: Boolean): Float {
+  val turn = if (clockwise) (end - start).mod(360f) else -(start - end).mod(360f)
+  return if (turn == 0f && end != start) (if (clockwise) 360f else -360f) else turn
+}
+
 /** One shape of a part, resolved for drawing. */
 internal class WffShapeDrawing(
   val kind: String,
@@ -465,12 +475,11 @@ internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float)
     val topLeft = Offset(origin.x + inset, origin.y + inset)
     val inner = Size(extent.width - line.width, extent.height - line.width)
     if (shape == "arc") {
-      // WFF measures from 12 o'clock, Compose from 3; counter-clockwise sweeps the other way.
-      val sweep = drawing.endAngle - drawing.startAngle
+      // WFF measures from 12 o'clock, Compose from 3.
       drawArc(
         drawing.stroke,
         drawing.startAngle - 90f,
-        if (drawing.clockwise) sweep else -sweep,
+        wffArcSweep(drawing.startAngle, drawing.endAngle, drawing.clockwise),
         useCenter = false,
         topLeft = topLeft,
         size = inner,
