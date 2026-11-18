@@ -91,18 +91,21 @@ internal fun WatchFaceCanvas(
           "RECTANGLE" -> RoundedCornerShape(percent = 8)
           else -> RoundedCornerShape(0.dp)
         }
-      BoxWithConstraints(
-        modifier.clip(clip).background(node.wffColor("backgroundColor", Color.Black)),
-      ) {
-        val scale = maxWidth.value / width
-        CompositionLocalProvider(
-          LocalWffFace provides WffFace(width, height, scale),
-          LocalWffPreview provides context,
-          LocalWffConfigurations provides configurations,
+      // The configurations are provided around the whole face, so the scene's own background can
+      // read a `[CONFIGURATION.<id>.<n>]` colour as its parts do.
+      CompositionLocalProvider(LocalWffConfigurations provides configurations) {
+        BoxWithConstraints(
+          modifier.clip(clip).background(node.wffColor("backgroundColor", Color.Black)),
         ) {
-          Box(Modifier.fillMaxSize()) {
-            placed("content").forEach { id ->
-              child(id, wffPlace(document, id, width, height, scale, context))
+          val scale = maxWidth.value / width
+          CompositionLocalProvider(
+            LocalWffFace provides WffFace(width, height, scale),
+            LocalWffPreview provides context,
+          ) {
+            Box(Modifier.fillMaxSize()) {
+              placed("content").forEach { id ->
+                child(id, wffPlace(document, id, width, height, scale, context))
+              }
             }
           }
         }

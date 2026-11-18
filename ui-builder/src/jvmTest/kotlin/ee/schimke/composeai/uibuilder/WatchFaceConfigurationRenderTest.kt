@@ -148,6 +148,26 @@ class WatchFaceConfigurationRenderTest {
   }
 
   @Test
+  fun `a scene background bound to a configuration follows the selection`() {
+    val bound =
+      assertIs<WatchFaceXmlImporter.Result.Imported>(
+          WatchFaceXmlImporter.import(
+            face.replace(
+              """<Scene backgroundColor="#ff000000">""",
+              """<Scene backgroundColor="[CONFIGURATION.theme.0]">""",
+            ),
+            WatchFaceXmlImporter.Options(wffVersion = 5),
+          ),
+        )
+        .document
+    val red = render(bound, "config-background-red")
+    val blue = render(bound.chosen("theme" to "blue"), "config-background-blue")
+    // Below the parts, where only the scene's own background shows.
+    assertEquals(0xFFFF0000.toInt(), red.at(120, 360))
+    assertEquals(0xFF0000FF.toInt(), blue.at(120, 360))
+  }
+
+  @Test
   fun `a boolean container draws its parts only while its option is selected`() {
     val on = render(document, "config-boolean-on")
     val off = render(document.chosen("dot" to "FALSE"), "config-boolean-off")
