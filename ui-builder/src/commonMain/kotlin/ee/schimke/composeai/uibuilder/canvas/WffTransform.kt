@@ -70,6 +70,9 @@ private fun wffUnsetDefault(document: UiBuilderDocument, target: String): Float 
     "alpha" -> 255f
     "scaleX",
     "scaleY" -> 1f
+    // The centre, as `wffPlace` turns and scales about it.
+    "pivotX",
+    "pivotY" -> 0.5f
     "width" -> scene("width")
     "height" -> scene("height")
     else -> 0f

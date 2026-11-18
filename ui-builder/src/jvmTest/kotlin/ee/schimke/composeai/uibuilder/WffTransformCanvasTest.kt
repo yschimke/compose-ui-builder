@@ -171,6 +171,20 @@ class WffTransformCanvasTest {
         WffPreviewContext.of("03:00:00", ""),
       )
     assertEquals(460f, moved.float("width"))
+    // An unset pivot is the centre: BY 0.1 is 0.6.
+    val bare =
+      document.nodes.getValue("hand").let {
+        it.copy(properties = kotlinx.serialization.json.JsonObject(it.properties - "pivotX"))
+      }
+    val pivoted =
+      face(typed("target" to "pivotX", "value" to "0.1", "mode" to "BY")).let {
+        it.copy(nodes = it.nodes + ("hand" to bare))
+      }
+    assertEquals(
+      0.6f,
+      wffTransformed(pivoted, bare, WffPreviewContext.of("03:00:00", "")).float("pivotX"),
+      1e-6f,
+    )
   }
 
   private fun Bitmap.differing(other: Bitmap): Int {
