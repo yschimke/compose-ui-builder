@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
@@ -99,6 +100,7 @@ internal fun WatchFaceCanvas(
               stroke = strokeNode?.color("color", Color.Unspecified) ?: Color.Unspecified,
               strokeWidth = (strokeNode?.float("thickness", 1f) ?: 1f) * face.dpPerPx,
               ends = listOf("startX", "startY", "endX", "endY").map { shape.float(it) },
+              box = shapeBox(shape),
             )
           }
           .ifEmpty {
@@ -109,42 +111,14 @@ internal fun WatchFaceCanvas(
                 stroke = node.color("strokeColor", Color.Unspecified),
                 strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx,
                 ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) },
+                box = null,
               ),
             )
           }
       Box(
         modifier.drawBehind {
-          for (drawing in shapes) {
-            val shape = drawing.kind
-            if (shape == "none") continue
-            val ellipse = shape == "ellipse" || shape == "arc"
-            val size = this.size
-            val line = Stroke(width = drawing.strokeWidth.dp.toPx())
-            if (shape == "line") {
-              if (drawing.stroke != Color.Unspecified) {
-                val k = face.dpPerPx.dp.toPx()
-                drawLine(
-                  drawing.stroke,
-                  Offset(drawing.ends[0] * k, drawing.ends[1] * k),
-                  Offset(drawing.ends[2] * k, drawing.ends[3] * k),
-                  strokeWidth = line.width,
-                )
-              }
-              continue
-            }
-            if (drawing.fill != Color.Unspecified) {
-              if (ellipse) drawOval(drawing.fill) else drawRect(drawing.fill)
-            }
-            if (drawing.stroke != Color.Unspecified) {
-              // Inset by half the line so the stroke stays inside the part's bounds, as WFF draws
-              // it.
-              val inset = line.width / 2
-              val topLeft = Offset(inset, inset)
-              val inner = Size(size.width - line.width, size.height - line.width)
-              if (ellipse) drawOval(drawing.stroke, topLeft, inner, style = line)
-              else drawRect(drawing.stroke, topLeft, inner, style = line)
-            }
-          }
+          val k = face.dpPerPx.dp.toPx()
+          for (drawing in shapes) drawWffShape(drawing, k)
         },
       )
     }
@@ -238,13 +212,25 @@ private fun wffPlace(
 }
 
 /** One shape of a part, resolved for drawing. */
-private class WffShapeDrawing(
+internal class WffShapeDrawing(
   val kind: String,
   val fill: Color,
   val stroke: Color,
   val strokeWidth: Float,
   val ends: List<Float>,
+  /** x, y, width, height of the shape inside its part, px of the face; null for the whole part. */
+  val box: List<Float>?,
 )
+
+/** A shape node's box: its own `x`/`y`/`width`/`height`, or an arc's from its centre. */
+internal fun shapeBox(shape: UiBuilderNode): List<Float>? {
+  val width = shape.float("width", -1f)
+  val height = shape.float("height", -1f)
+  if (width < 0 || height < 0) return null
+  return if (shape.string("shape") == "arc")
+    listOf(shape.float("centerX") - width / 2, shape.float("centerY") - height / 2, width, height)
+  else listOf(shape.float("x"), shape.float("y"), width, height)
+}
 
 /** `hh:mm` and friends, filled with the preview time. */
 private fun previewTime(format: String): String =
@@ -252,3 +238,40 @@ private fun previewTime(format: String): String =
     .replace("hh", PREVIEW_HOUR.toString().padStart(2, '0'))
     .replace("mm", PREVIEW_MINUTE.toString().padStart(2, '0'))
     .replace("ss", PREVIEW_SECOND.toString().padStart(2, '0'))
+
+/**
+ * Draws [drawing] into this scope: [pxPerWffPx] canvas pixels to a face pixel. A shape with a box
+ * draws only inside it (fill and stroke both), else it fills the whole scope, as the part does.
+ */
+internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float) {
+  val shape = drawing.kind
+  if (shape == "none") return
+  val ellipse = shape == "ellipse" || shape == "arc"
+  val line = Stroke(width = drawing.strokeWidth.dp.toPx())
+  if (shape == "line") {
+    if (drawing.stroke != Color.Unspecified) {
+      val k = pxPerWffPx
+      drawLine(
+        drawing.stroke,
+        Offset(drawing.ends[0] * k, drawing.ends[1] * k),
+        Offset(drawing.ends[2] * k, drawing.ends[3] * k),
+        strokeWidth = line.width,
+      )
+    }
+    return
+  }
+  val box = drawing.box
+  val origin = if (box == null) Offset.Zero else Offset(box[0] * pxPerWffPx, box[1] * pxPerWffPx)
+  val extent = if (box == null) size else Size(box[2] * pxPerWffPx, box[3] * pxPerWffPx)
+  if (drawing.fill != Color.Unspecified) {
+    if (ellipse) drawOval(drawing.fill, origin, extent) else drawRect(drawing.fill, origin, extent)
+  }
+  if (drawing.stroke != Color.Unspecified) {
+    // Inset by half the line so the stroke stays inside the shape's bounds, as WFF draws it.
+    val inset = line.width / 2
+    val topLeft = Offset(origin.x + inset, origin.y + inset)
+    val inner = Size(extent.width - line.width, extent.height - line.width)
+    if (ellipse) drawOval(drawing.stroke, topLeft, inner, style = line)
+    else drawRect(drawing.stroke, topLeft, inner, style = line)
+  }
+}
