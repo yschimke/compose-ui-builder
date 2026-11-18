@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.canvas
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -14,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -31,12 +34,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,8 +102,7 @@ internal fun WatchFaceCanvas(
     node.slots[slot].orEmpty().filter { id ->
       val candidate = document.nodes[id]
       candidate != null &&
-        candidate.componentId != WatchFaceXmlExporter.VARIANT &&
-        candidate.componentId != WatchFaceXmlExporter.RAW &&
+        candidate.componentId !in WFF_NOT_DRAWN &&
         wffVisibleIn(wffNodeIn(document, candidate, preview), preview)
     }
   }
@@ -113,11 +118,27 @@ internal fun WatchFaceCanvas(
           continuous = remember(document.nodes) { document.wffReadsSubSecond() } && !ambient,
           enabled = fixedTime.isBlank(),
         )
-      val context =
-        remember(node, fixedTime, live, ambient) {
-          (live?.let { WffPreviewContext.of(it) }
-              ?: WffPreviewContext.of(node.string("previewTime"), fixedTime))
-            .inMode(ambient)
+      val swaying = remember(document.nodes) { document.wffHasGyro() }
+      // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
+      val clock =
+        remember(node, fixedTime, live, swaying) {
+          live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
+            ?: WffPreviewContext.of(node.string("previewTime"), fixedTime)
+        }
+      // Interactive and ambient cross-fade as the watch switches, rather than cut: while the
+      // switch runs both are drawn, the mode being entered over the one being left.
+      val ambientShown by
+        animateFloatAsState(
+          if (ambient) 1f else 0f,
+          tween(WFF_AMBIENT_SWITCH_MILLIS),
+          label = "wff-ambient",
+        )
+      val layers =
+        when (ambientShown) {
+          0f -> listOf(false to 1f)
+          1f -> listOf(true to 1f)
+          else ->
+            listOf(!ambient to 1f, ambient to if (ambient) ambientShown else 1f - ambientShown)
         }
       val configurations =
         remember(document) { WffConfigurationState(document.wffConfigurations()) }
@@ -135,29 +156,50 @@ internal fun WatchFaceCanvas(
       CompositionLocalProvider(LocalWffConfigurations provides configurations) {
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
           val scale = minOf(maxWidth.value / width, maxHeight.value / height)
-          CompositionLocalProvider(
-            LocalWffFace provides WffFace(width, height, scale),
-            LocalWffPreview provides context,
-          ) {
-            // The editing canvas draws the screen's shape (a faint outline, and the background
-            // inside it) but does not cut the parts to it, so content outside the circle can be
-            // seen and selected. The preview and the exports are cut.
-            val editing = LocalUiBuilderEditingCanvas.current
-            val background =
-              if (ambient) Color.Black else node.wffColor("backgroundColor", Color.Black)
-            val face = Modifier.size((width * scale).dp, (height * scale).dp)
-            Box(
-              if (editing)
-                face.background(background, clip).drawWithContent {
-                  drawContent()
-                  if (clip == CircleShape) {
-                    drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
-                  }
+          // The editing canvas draws the screen's shape (a faint outline, and the background
+          // inside it) but does not cut the parts to it, so content outside the circle can be
+          // seen and selected. The preview and the exports are cut.
+          val editing = LocalUiBuilderEditingCanvas.current
+          val face = Modifier.size((width * scale).dp, (height * scale).dp)
+          Box(
+            if (editing)
+              face.drawWithContent {
+                drawContent()
+                if (clip == CircleShape) {
+                  drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
                 }
-              else face.clip(clip).background(background),
-            ) {
-              placed("content").forEach { id ->
-                child(id, wffPlace(document, id, width, height, scale, context, forExport))
+              }
+            else face.clip(clip),
+          ) {
+            for ((layerAmbient, alpha) in layers) {
+              // Ambient holds the wrist still: the sway is the interactive layer's only.
+              val context =
+                remember(clock, layerAmbient) {
+                  clock.inMode(layerAmbient).let { if (layerAmbient) it.withTilt(0.0, 0.0) else it }
+                }
+              CompositionLocalProvider(
+                LocalWffFace provides WffFace(width, height, scale),
+                LocalWffPreview provides context,
+              ) {
+                val background =
+                  if (layerAmbient) Color.Black else node.wffColor("backgroundColor", Color.Black)
+                Box(
+                  Modifier.matchParentSize()
+                    .graphicsLayer { this.alpha = alpha }
+                    .background(background, if (editing) clip else RectangleShape),
+                ) {
+                  node.slots["content"]
+                    .orEmpty()
+                    .filter { id ->
+                      val candidate = document.nodes[id]
+                      candidate != null &&
+                        candidate.componentId !in WFF_NOT_DRAWN &&
+                        wffVisibleIn(wffNodeIn(document, candidate, context), context)
+                    }
+                    .forEach { id ->
+                      child(id, wffPlace(document, id, width, height, scale, context, forExport))
+                    }
+                }
               }
             }
           }
@@ -436,19 +478,30 @@ private fun wffPlace(
         (target.float("width", sceneWidth) * scale).dp,
         (target.float("height", sceneHeight) * scale).dp,
       )
-  val degrees = wffAngle(document, target, preview)
+  // The angle, alpha and scale with the node's transforms applied (see [wffNodeIn]).
+  val degrees = target.float("angle")
   val alpha = target.float("alpha", 255f).coerceIn(0f, 255f) / 255f
+  val scaleX = target.float("scaleX", 1f)
+  val scaleY = target.float("scaleY", 1f)
   val pivotX = target.float("pivotX", 0.5f)
   val pivotY = target.float("pivotY", 0.5f)
-  return if (degrees == 0f && alpha == 1f) box
+  val transformed = degrees != 0f || scaleX != 1f || scaleY != 1f
+  return if (!transformed && alpha == 1f) box
   else if (drawnRotation)
     box
       .then(if (alpha == 1f) Modifier else Modifier.graphicsLayer { this.alpha = alpha })
       .then(
-        if (degrees == 0f) Modifier
+        if (!transformed) Modifier
         else
           Modifier.drawWithContent {
-            rotate(degrees, Offset(size.width * pivotX, size.height * pivotY)) {
+            val pivot = Offset(size.width * pivotX, size.height * pivotY)
+            // As the layer would: scaled, then turned, both about the pivot.
+            withTransform(
+              {
+                rotate(degrees, pivot)
+                scale(scaleX, scaleY, pivot)
+              },
+            ) {
               this@drawWithContent.drawContent()
             }
           },
@@ -457,35 +510,26 @@ private fun wffPlace(
     box.graphicsLayer {
       rotationZ = degrees
       this.alpha = alpha
+      this.scaleX = scaleX
+      this.scaleY = scaleY
       transformOrigin = TransformOrigin(pivotX, pivotY)
     }
 }
 
-private val TRANSFORM_ATTRIBUTE = Regex("""(\w+)\s*=\s*"([^"]*)"""")
+/** How long the switch between interactive and ambient takes to fade across. */
+private const val WFF_AMBIENT_SWITCH_MILLIS = 400
 
 /**
- * The rotation of a node, in degrees: its static `angle`, or the `angle` a `<Transform>` among its
- * children drives, evaluated at the preview time. A `<Transform>` is carried as a `wff/raw` child.
+ * What sits among a part's children but is not drawn as one: an override, the motion that drives
+ * the part, or raw XML.
  */
-private fun wffAngle(
-  document: UiBuilderDocument,
-  node: UiBuilderNode,
-  preview: WffPreviewContext,
-): Float {
-  var degrees = node.float("angle")
-  for (id in node.slots.values.flatten()) {
-    val raw = document.nodes[id]?.takeIf { it.componentId == WatchFaceXmlExporter.RAW } ?: continue
-    val xml = raw.string("xml")
-    if (!xml.trimStart().startsWith("<Transform")) continue
-    val attributes =
-      TRANSFORM_ATTRIBUTE.findAll(xml).associate { it.groupValues[1] to it.groupValues[2] }
-    if (attributes["target"] != "angle") continue
-    val value =
-      attributes["value"]?.let { evaluateWffExpression(it, preview) }?.asNumber() ?: continue
-    degrees = if (attributes["mode"] == "BY") degrees + value.toFloat() else value.toFloat()
-  }
-  return degrees
-}
+private val WFF_NOT_DRAWN =
+  setOf(
+    WatchFaceXmlExporter.VARIANT,
+    WatchFaceXmlExporter.TRANSFORM,
+    WatchFaceXmlExporter.GYRO,
+    WatchFaceXmlExporter.RAW,
+  )
 
 /** One shape of a part, resolved for drawing. */
 internal class WffShapeDrawing(

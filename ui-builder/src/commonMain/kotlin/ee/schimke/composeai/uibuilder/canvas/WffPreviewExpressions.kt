@@ -1,12 +1,15 @@
 package ee.schimke.composeai.uibuilder.canvas
 
 import ee.schimke.composeai.uibuilder.export.UiExpressions
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToLong
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -26,6 +29,12 @@ internal class WffPreviewContext(
   val complication: WffComplicationSample = WffComplicationSample.Default,
   /** Whether the watch is in ambient mode: `<Variant mode="AMBIENT">` overrides apply. */
   val ambient: Boolean = false,
+  /**
+   * The wrist's tilt, degrees about the watch's x and y axes: what `[ACCELEROMETER_ANGLE_X]` and
+   * `_Y` read, and so what a `<Gyro>` moves a part by. Zero is the watch held flat.
+   */
+  val tiltX: Double = 0.0,
+  val tiltY: Double = 0.0,
 ) {
   /** 0 = Sunday. */
   val dayOfWeek: Int
@@ -37,10 +46,51 @@ internal class WffPreviewContext(
     }
 
   fun withComplication(sample: WffComplicationSample) =
-    WffPreviewContext(hour, minute, second, fraction, year, month, day, sample, ambient)
+    WffPreviewContext(
+      hour,
+      minute,
+      second,
+      fraction,
+      year,
+      month,
+      day,
+      sample,
+      ambient,
+      tiltX,
+      tiltY,
+    )
 
   fun inMode(ambient: Boolean) =
-    WffPreviewContext(hour, minute, second, fraction, year, month, day, complication, ambient)
+    WffPreviewContext(
+      hour,
+      minute,
+      second,
+      fraction,
+      year,
+      month,
+      day,
+      complication,
+      ambient,
+      tiltX,
+      tiltY,
+    )
+
+  fun withTilt(x: Double, y: Double) =
+    WffPreviewContext(hour, minute, second, fraction, year, month, day, complication, ambient, x, y)
+
+  /**
+   * This time with the wrist swaying gently, as a preview with no watch shows a `<Gyro>` move: a
+   * slow sine about each axis, at periods that do not line up, so the motion never repeats a frame
+   * pair. Ambient holds still, as the watch's own gyro effects do.
+   */
+  fun swaying(): WffPreviewContext {
+    if (ambient) return withTilt(0.0, 0.0)
+    val t = ((hour * 60 + minute) * 60 + second) + fraction
+    return withTilt(
+      WFF_SWAY_X_DEGREES * sin(2 * PI * t / WFF_SWAY_X_PERIOD_SECONDS),
+      WFF_SWAY_Y_DEGREES * sin(2 * PI * t / WFF_SWAY_Y_PERIOD_SECONDS),
+    )
+  }
 
   companion object {
     /** The real time [clock] reads, its milliseconds as the fraction of the second. */
@@ -195,6 +245,13 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "COMPLICATION.TEXT" -> s(complication.text)
     "COMPLICATION.TITLE" -> s(complication.title)
     "BATTERY_PERCENT" -> n(85)
+    "ACCELEROMETER_IS_SUPPORTED" -> n(1)
+    "ACCELEROMETER_ANGLE_X" -> WffValue.Num(tiltX)
+    "ACCELEROMETER_ANGLE_Y" -> WffValue.Num(tiltY)
+    // Gravity, m/s², along each axis of a watch tilted so.
+    "ACCELEROMETER_X" -> WffValue.Num(-WFF_GRAVITY * sin(tiltY * PI / 180))
+    "ACCELEROMETER_Y" -> WffValue.Num(WFF_GRAVITY * sin(tiltX * PI / 180))
+    "ACCELEROMETER_Z" -> WffValue.Num(WFF_GRAVITY * cos(tiltX * PI / 180) * cos(tiltY * PI / 180))
     "STEP_COUNT" -> n(6482)
     "HEART_RATE" -> n(72)
     else -> null
@@ -389,3 +446,9 @@ private fun fixed(value: Double, digits: Int): String {
   val sign = if (value < 0 && rounded != 0L) "-" else ""
   return if (digits == 0) "$sign$whole" else "$sign$whole.$fraction"
 }
+
+private const val WFF_GRAVITY = 9.81
+private const val WFF_SWAY_X_DEGREES = 12.0
+private const val WFF_SWAY_Y_DEGREES = 8.0
+private const val WFF_SWAY_X_PERIOD_SECONDS = 5.0
+private const val WFF_SWAY_Y_PERIOD_SECONDS = 7.0

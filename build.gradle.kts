@@ -1,5 +1,8 @@
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnPlugin
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnRootExtension
 import org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec
 
 plugins {
@@ -128,6 +131,49 @@ subprojects {
 // lock as "no dependencies"; skip when there is no lock (e.g. a fresh CI checkout).
 tasks.withType<YarnLockStoreTask>().configureEach {
   onlyIf("the generated Yarn lock exists") { inputFile.asFile.get().isFile }
+}
+
+// The Wasm npm install is driven by the committed `kotlin-js-store/wasm/yarn.lock`, restored into
+// `build/wasm` before `kotlinWasmNpmInstall` and stored back after it. A dependency bump that
+// changes the npm graph (a Renovate PR cannot run Gradle to refresh the lock) still builds: the
+// mismatch is a warning and the lock is replaced in that build. Refresh the committed copy with
+// `./gradlew kotlinWasmUpgradeYarnLock`.
+plugins.withType<WasmYarnPlugin> {
+  extensions.getByType<WasmYarnRootExtension>().apply {
+    yarnLockMismatchReport = YarnLockMismatchReport.WARNING
+    yarnLockAutoReplace = true
+  }
+}
+
+// An npm install that comes up short — CI has seen it leave `build/wasm/node_modules` without
+// `@js-joda/core` and no `yarn.lock` at all — otherwise surfaces minutes later as Karma's "no
+// message in 120000 ms" and "did not discover any tests", because the test bundle's first import
+// fails before the page can report. Fail at the install instead, naming what is missing.
+// By name, lazily: the root Wasm plugin registers the task only once a subproject applies it.
+tasks.matching { it.name == "kotlinWasmNpmInstall" }.configureEach {
+  val wasmDir = layout.buildDirectory.dir("wasm").get().asFile
+  doLast {
+    val declared =
+      wasmDir.resolve("packages").listFiles().orEmpty().flatMap { pkg ->
+        val json = pkg.resolve("package.json").takeIf { it.isFile }?.readText() ?: return@flatMap emptyList()
+        // `"dependencies": { "a": "1", "b": "2" }`: only the names matter here.
+        Regex(""""dependencies"\s*:\s*\{([^}]*)\}""")
+          .find(json)
+          ?.groupValues
+          ?.get(1)
+          ?.let { block -> Regex(""""([^"]+)"\s*:""").findAll(block).map { it.groupValues[1] }.toList() }
+          .orEmpty()
+      }
+    val missing =
+      declared.distinct().filterNot { wasmDir.resolve("node_modules/$it/package.json").isFile }.sorted()
+    check(missing.isEmpty()) {
+      "kotlinWasmNpmInstall finished but build/wasm/node_modules lacks ${missing.joinToString()}, " +
+        "which the Wasm packages declare (yarn.lock " +
+        (if (wasmDir.resolve("yarn.lock").isFile) "present" else "absent: the install was empty") +
+        "). The test bundle would fail to load and Karma would time out with no tests. Re-run " +
+        "the build; if it repeats, refresh the lock with ./gradlew kotlinWasmUpgradeYarnLock."
+    }
+  }
 }
 
 // ktfmt tasks write and delete per-task temp directories under `build/tmp/`, so they must not run

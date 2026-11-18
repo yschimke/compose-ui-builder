@@ -393,6 +393,8 @@ class WatchFaceXmlExporterTest {
         WatchFaceXmlExporter.TIME_TEXT,
         WatchFaceXmlExporter.COMPLICATION_SLOT,
         WatchFaceXmlExporter.VARIANT,
+        WatchFaceXmlExporter.TRANSFORM,
+        WatchFaceXmlExporter.GYRO,
         WatchFaceXmlExporter.CONDITION,
         WatchFaceXmlExporter.COMPARE,
         WatchFaceXmlExporter.DEFAULT,

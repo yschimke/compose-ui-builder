@@ -17,7 +17,12 @@ bin/
 
 # Kotlin
 .kotlin/
-kotlin-js-store/
+# The Wasm npm lock is committed (see the root build.gradle.kts); anything else Kotlin/JS writes
+# there is not.
+kotlin-js-store/*
+!kotlin-js-store/wasm/
+kotlin-js-store/wasm/*
+!kotlin-js-store/wasm/yarn.lock
 
 # Java
 *.class

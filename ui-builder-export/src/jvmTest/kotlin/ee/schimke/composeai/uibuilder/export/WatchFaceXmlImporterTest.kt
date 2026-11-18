@@ -157,7 +157,7 @@ class WatchFaceXmlImporterTest {
         <FutureThing a="1"><Nested b="x &amp; y">text</Nested></FutureThing>
         <Scene>
           <Group x="0" y="0" width="450" height="450">
-            <Gyro name="g"><Parameter expression="[ACCELEROMETER_X]"/></Gyro>
+            <Localization name="g"><Parameter expression="[ACCELEROMETER_X]"/></Localization>
             <PartDraw x="0" y="0" width="10" height="10"><Rectangle x="0" y="0" width="10" height="10"><Fill color="#ffffff"/></Rectangle></PartDraw>
           </Group>
           <Condition><Compare expression="1"><Arm/></Compare></Condition>
@@ -169,7 +169,7 @@ class WatchFaceXmlImporterTest {
     val raws = result.document.nodes.values.filter { it.componentId == WatchFaceXmlExporter.RAW }
     assertEquals(3, raws.size)
     assertTrue(raws.any { "FutureThing" in it.properties.toString() })
-    assertTrue(result.warnings.single { "no wff/ element" in it }.contains("Gyro x1"))
+    assertTrue(result.warnings.single { "no wff/ element" in it }.contains("Localization x1"))
     // Not a valid face (unknown elements, a Group with no name): the import holds it as it was, and
     // an export judges it. Written without the judging, it is the same tree.
     val held =
@@ -181,7 +181,7 @@ class WatchFaceXmlImporterTest {
       )
     assertEquals(WffXmlParser.parse(xml), WffXmlParser.parse(held.xml))
     assertIs<WatchFaceXmlExporter.Result.Refused>(WatchFaceXmlExporter.export(result.document))
-    // The Group is still a Group, and keeps the raw Gyro before its PartDraw.
+    // The Group is still a Group, and keeps the raw Localization before its PartDraw.
     val group = result.document.nodes.values.single { it.componentId == WatchFaceXmlExporter.GROUP }
     assertEquals(
       listOf(WatchFaceXmlExporter.RAW, WatchFaceXmlExporter.PART_DRAW),
