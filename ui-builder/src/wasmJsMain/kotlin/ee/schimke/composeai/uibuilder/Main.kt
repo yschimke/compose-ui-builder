@@ -58,7 +58,9 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStart
+import ee.schimke.composeai.uibuilder.editor.WatchFaceSocket
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.watchFaceStartOf
 import ee.schimke.composeai.uibuilder.editor.wearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
@@ -3110,7 +3112,11 @@ internal suspend fun requestWatchFacePreview(
   return when (response.statusCode) {
     201 ->
       nativePreviewJson.decodeFromString(WatchFaceStarted.serializer(), response.body).let {
-        UiBuilderWatchFaceStart(pagePath = it.pagePath)
+        // The same session the tab shows, drawn inline too.
+        watchFaceStartOf(it.pagePath, it.socketPath) { socketPath ->
+          val stream = BrowserNativeStream(sessionSocketUrl(socketPath))
+          WatchFaceSocket(stream, stream::sendText)
+        }
       }
     401,
     403 ->

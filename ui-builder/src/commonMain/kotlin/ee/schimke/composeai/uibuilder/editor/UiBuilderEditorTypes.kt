@@ -97,6 +97,31 @@ data class UiBuilderWatchFaceStart(
   val sendControls: ((String) -> Unit)? = null,
 )
 
+/** A watch-face session's open socket: its frames, and a way to send it a text message. */
+class WatchFaceSocket(val stream: UiBuilderNativeStream, val sendText: (String) -> Unit)
+
+/**
+ * The start result for a session the host started: the tab to open, and, when [openSocket] can open
+ * the session's socket, its stream and a `controls` sender, so the pane draws it inline. A socket
+ * that cannot be opened leaves the tab link as the only way to see it.
+ */
+fun watchFaceStartOf(
+  pagePath: String,
+  socketPath: String?,
+  openSocket: (String) -> WatchFaceSocket?,
+): UiBuilderWatchFaceStart {
+  val socket =
+    socketPath?.takeIf { it.isNotBlank() }?.let { runCatching { openSocket(it) }.getOrNull() }
+  return UiBuilderWatchFaceStart(
+    pagePath = pagePath,
+    stream = socket?.stream,
+    sendControls =
+      socket?.let { open ->
+        { controls -> open.sendText("{\"type\":\"controls\",\"controls\":$controls}") }
+      },
+  )
+}
+
 /**
  * Where a native render's live session is. Opaque to the editor: only the host knows how to reach
  * it.
