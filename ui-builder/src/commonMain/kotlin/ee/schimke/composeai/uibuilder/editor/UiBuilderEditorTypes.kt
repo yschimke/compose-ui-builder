@@ -85,7 +85,73 @@ data class UiBuilderWatchFaceStart(
   /** Same-origin path of the watch-face tab that shows the session, or null on [failure]. */
   val pagePath: String? = null,
   val failure: String? = null,
+  /**
+   * The session's frames, drawn inline in the native pane, or null where the host cannot open a
+   * socket (the tab link is then the only way to see it). The pane closes it.
+   */
+  val stream: UiBuilderNativeStream? = null,
+  /**
+   * Sends one `controls` patch to the session: the JSON of its `controls` object, for example
+   * `{"ambient":true}`. Null with no [stream].
+   */
+  val sendControls: ((String) -> Unit)? = null,
 )
+
+/** A watch-face session's socket: its frames, and a state-based way to send it `controls`. */
+class WatchFaceSocket(val stream: UiBuilderNativeStream, val sendControls: (String) -> Unit)
+
+/**
+ * The controls a watch-face session should have, as state rather than a stream of messages. Each
+ * patch is merged into the desired state and the whole state is sent when the socket is open; one
+ * that is not open yet (the handshake, a reconnect) keeps it, so anything set meanwhile is
+ * coalesced to its latest value and the full state goes out again on every [opened].
+ *
+ * [transmit] returns whether the text was sent.
+ */
+class WatchFaceDesiredControls(private val transmit: (String) -> Boolean) {
+  private var desired: Map<String, kotlinx.serialization.json.JsonElement> = emptyMap()
+
+  /** Merges a `controls` patch (a JSON object) and sends the state if the socket is open. */
+  fun set(patch: String) {
+    val parsed =
+      runCatching {
+        kotlinx.serialization.json.Json.parseToJsonElement(patch)
+          as? kotlinx.serialization.json.JsonObject
+      }
+        .getOrNull() ?: return
+    desired = desired + parsed
+    flush()
+  }
+
+  /** The socket opened (or reopened): the full desired state goes out. */
+  fun opened() = flush()
+
+  private fun flush() {
+    if (desired.isEmpty()) return
+    transmit(
+      "{\"type\":\"controls\",\"controls\":${kotlinx.serialization.json.JsonObject(desired)}}",
+    )
+  }
+}
+
+/**
+ * The start result for a session the host started: the tab to open, and, when [openSocket] can open
+ * the session's socket, its stream and a `controls` sender, so the pane draws it inline. A socket
+ * that cannot be opened leaves the tab link as the only way to see it.
+ */
+fun watchFaceStartOf(
+  pagePath: String,
+  socketPath: String?,
+  openSocket: (String) -> WatchFaceSocket?,
+): UiBuilderWatchFaceStart {
+  val socket =
+    socketPath?.takeIf { it.isNotBlank() }?.let { runCatching { openSocket(it) }.getOrNull() }
+  return UiBuilderWatchFaceStart(
+    pagePath = pagePath,
+    stream = socket?.stream,
+    sendControls = socket?.sendControls,
+  )
+}
 
 /**
  * Where a native render's live session is. Opaque to the editor: only the host knows how to reach
