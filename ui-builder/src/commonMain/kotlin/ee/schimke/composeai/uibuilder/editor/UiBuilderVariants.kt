@@ -509,8 +509,7 @@ internal fun UiBuilderVariantPane.mobileTabLabel(): String =
       id.startsWith(DEVICE_PANE_ID_PREFIX) ||
       id.startsWith(LAUNCHER_PANE_ID_PREFIX)
   )
-    label.substringBefore(" · ") +
-      if (id.endsWith(WFF_AMBIENT_PANE_ID_SUFFIX)) " · Ambient" else ""
+    label.substringBefore(" · ") + if (id.endsWith(WFF_AMBIENT_PANE_ID_SUFFIX)) " · Ambient" else ""
   else label
 
 private const val CURRENT_FRAME_PANE_ID = "preview-current"
@@ -520,9 +519,9 @@ internal const val WFF_AMBIENT_PANE_ID_SUFFIX = "-ambient"
 
 /**
  * For a watch face, every pane followed by the same frame in ambient mode, so the preview shows
- * Interactive and Ambient side by side: the ambient pane applies the design's
- * `<Variant mode="AMBIENT">` overrides, hides what they make invisible and draws on black. Other
- * designs have no ambient mode and are returned as they are.
+ * Interactive and Ambient side by side: the ambient pane applies the design's `<Variant
+ * mode="AMBIENT">` overrides, hides what they make invisible and draws on black. Other designs have
+ * no ambient mode and are returned as they are.
  */
 internal fun List<UiBuilderVariantPane>.withWffAmbientTwins(
   document: UiBuilderDocument,
@@ -530,7 +529,10 @@ internal fun List<UiBuilderVariantPane>.withWffAmbientTwins(
   if (!document.isWatchFace()) return this
   return flatMap { pane ->
     listOf(
-      pane.copy(label = "${pane.label} · Interactive", document = pane.document.withWffAmbient(false)),
+      pane.copy(
+        label = "${pane.label} · Interactive",
+        document = pane.document.withWffAmbient(false),
+      ),
       pane.copy(
         id = pane.id + WFF_AMBIENT_PANE_ID_SUFFIX,
         label = "${pane.label} · Ambient",

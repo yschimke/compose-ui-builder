@@ -123,14 +123,20 @@ class WffAmbientTest {
     val variant = analog.nodes.getValue("second-hand-ambient")
     val owner =
       analog.nodes.values.single { node -> node.slots.values.any { "second-hand-ambient" in it } }
-    assertEquals("alpha", (variant.properties["target"] as JsonObject)["value"].toString().trim('"'))
+    assertEquals(
+      "alpha",
+      (variant.properties["target"] as JsonObject)["value"].toString().trim('"'),
+    )
 
     val interactive = wffNodeIn(analog, owner, context)
     assertTrue(wffVisibleIn(interactive, context), "interactive keeps the second hand")
 
     val ambient = context.inMode(true)
     val dimmed = wffNodeIn(analog, owner, ambient)
-    assertFalse(wffVisibleIn(dimmed, ambient), "ambient hides it: alpha ${dimmed.properties["alpha"]}")
+    assertFalse(
+      wffVisibleIn(dimmed, ambient),
+      "ambient hides it: alpha ${dimmed.properties["alpha"]}",
+    )
     // Only the targeted property changed.
     assertEquals(owner.properties - "alpha", dimmed.properties - "alpha")
   }
@@ -145,26 +151,27 @@ class WffAmbientTest {
         nodes =
           analog.nodes +
             ("second-hand-ambient" to
-              analog.nodes
-                .getValue("second-hand-ambient")
-                .let { variant ->
-                  variant.copy(
-                    properties =
-                      JsonObject(
-                        variant.properties +
-                          ("value" to
-                            JsonObject(
-                              mapOf(
-                                "type" to JsonPrimitive("string"),
-                                "value" to JsonPrimitive("[HOUR_0_11] * 10"),
-                              ),
-                            )),
-                      ),
-                  )
-                }),
+              analog.nodes.getValue("second-hand-ambient").let { variant ->
+                variant.copy(
+                  properties =
+                    JsonObject(
+                      variant.properties +
+                        ("value" to
+                          JsonObject(
+                            mapOf(
+                              "type" to JsonPrimitive("string"),
+                              "value" to JsonPrimitive("[HOUR_0_11] * 10"),
+                            ),
+                          )),
+                    ),
+                )
+              }),
       )
     val shown = wffNodeIn(doc, owner, ambient)
-    assertEquals("100.0", ((shown.properties["alpha"] as JsonObject)["value"] as JsonPrimitive).content)
+    assertEquals(
+      "100.0",
+      ((shown.properties["alpha"] as JsonObject)["value"] as JsonPrimitive).content,
+    )
 
     val other =
       doc.nodes.getValue("second-hand-ambient").let {
@@ -206,7 +213,10 @@ class WffAmbientTest {
       )
     val twins = listOf(pane).withWffAmbientTwins(analog)
     assertEquals(
-      listOf("variant-device-id:wearos_large_round", "variant-device-id:wearos_large_round-ambient"),
+      listOf(
+        "variant-device-id:wearos_large_round",
+        "variant-device-id:wearos_large_round-ambient",
+      ),
       twins.map { it.id },
     )
     assertEquals(listOf(false, true), twins.map { it.document.isWffAmbient() })
@@ -267,7 +277,8 @@ class WffAmbientTest {
 
   private fun Bitmap.differingPixels(other: Bitmap): Int {
     var count = 0
-    for (y in 0 until height) for (x in 0 until width) if (getColor(x, y) != other.getColor(x, y)) count++
+    for (y in 0 until height) for (x in 0 until width) if (getColor(x, y) != other.getColor(x, y))
+      count++
     return count
   }
 
@@ -286,6 +297,18 @@ class WffAmbientTest {
   }
 
   @Test
+  fun `the digital template's ambient leaves out its ring`() {
+    val fixed = template("digital-watch-face").fixedAt("2024-05-16T10:08:32Z")
+    val interactive = render(fixed, "digital-interactive").single()
+    val ambient = render(fixed.withWffAmbient(true), "digital-ambient").single()
+    // The ring's stroke, at the top of the face, 15px of 450 in from its edge.
+    val x = interactive.width / 2
+    val y = (interactive.height * 18f / 450f).toInt()
+    assertNotEquals(0xFF000000.toInt(), interactive.getColor(x, y), "interactive draws the ring")
+    assertEquals(0xFF000000.toInt(), ambient.getColor(x, y), "ambient still draws the ring")
+  }
+
+  @Test
   fun `ambient draws on black whatever the face's background is`() {
     val red =
       Json.decodeFromString(
@@ -298,7 +321,10 @@ class WffAmbientTest {
       )
     val inside = 227
     assertEquals(0xFFCC0000.toInt(), render(red).single().getColor(inside, inside))
-    assertEquals(0xFF000000.toInt(), render(red.withWffAmbient(true)).single().getColor(inside, inside))
+    assertEquals(
+      0xFF000000.toInt(),
+      render(red.withWffAmbient(true)).single().getColor(inside, inside),
+    )
   }
 
   @Test

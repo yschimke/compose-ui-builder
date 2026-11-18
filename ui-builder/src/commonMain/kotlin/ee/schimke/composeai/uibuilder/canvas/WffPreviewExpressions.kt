@@ -62,10 +62,9 @@ internal class WffPreviewContext(
     fun of(previewTime: String, fixedTime: String): WffPreviewContext {
       val base = WffPreviewContext()
       // With no `previewTime` the fixed instant's own time of day is the frozen time.
-      val clockText =
-        previewTime.ifBlank {
-          fixedTime.substringAfter('T', "").substringBefore('Z').substringBefore('+')
-        }
+      val clockText = previewTime.ifBlank {
+        fixedTime.substringAfter('T', "").substringBefore('Z').substringBefore('+')
+      }
       val parts = clockText.split(':').map { it.trim() }
       val clock = parts.map { it.substringBefore('.').toIntOrNull() }.filterNotNull()
       val fraction =

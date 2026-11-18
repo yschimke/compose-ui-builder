@@ -81,14 +81,14 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderHostActions
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderHostValues
-import ee.schimke.composeai.uibuilder.canvas.isWatchFace
-import ee.schimke.composeai.uibuilder.canvas.withWffAmbient
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNavigator
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
+import ee.schimke.composeai.uibuilder.canvas.isWatchFace
+import ee.schimke.composeai.uibuilder.canvas.withWffAmbient
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
@@ -1515,8 +1515,8 @@ fun UiBuilderEditor(
           variantPanes + wearScreenPanes
         else -> listOf(drawnDocument.currentFramePane()) + variantPanes + wearScreenPanes
       }
-        // A watch face is shown Interactive and Ambient side by side.
-        .withWffAmbientTwins(drawnDocument)
+      // A watch face is shown Interactive and Ambient side by side.
+      .withWffAmbientTwins(drawnDocument)
     }
   // Panes the preview draws as given: a catalog's, or any list with the watches in it, which a
   // widget's own host panes would otherwise replace.
@@ -1533,8 +1533,8 @@ fun UiBuilderEditor(
     ) {
       val resizable = documentBackedPreview == null
       ((drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
-        ?: drawnDocument.widgetPreviewPanes(resizable)
-        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes)
+          ?: drawnDocument.widgetPreviewPanes(resizable)
+          ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes)
         .withWffAmbientTwins(drawnDocument)
     }
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since

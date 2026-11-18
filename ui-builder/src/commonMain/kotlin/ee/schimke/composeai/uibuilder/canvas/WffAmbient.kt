@@ -76,6 +76,8 @@ internal fun wffNodeIn(
   return if (properties === node.properties) node else node.copy(properties = properties)
 }
 
-/** Whether [node] is drawn at all in [preview]'s mode: ambient hides what its variants make clear. */
+/**
+ * Whether [node] is drawn at all in [preview]'s mode: ambient hides what its variants make clear.
+ */
 internal fun wffVisibleIn(node: UiBuilderNode, preview: WffPreviewContext): Boolean =
   !preview.ambient || node.float("alpha", 255f) > 0f
