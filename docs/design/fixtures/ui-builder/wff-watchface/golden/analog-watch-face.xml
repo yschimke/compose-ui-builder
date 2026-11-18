@@ -122,7 +122,7 @@
       </Complication>
     </ComplicationSlot>
     <Group name="hour-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
-      <Transform target="angle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
+      <Transform target="angle" value="([HOUR_0_11]+[MINUTE]/60)*30"/>
       <PartDraw x="210" y="118" width="30" height="124">
         <RoundRectangle x="0" y="0" width="30" height="124" cornerRadiusX="15" cornerRadiusY="15">
           <Fill color="#ffffffff"/>
@@ -130,7 +130,7 @@
       </PartDraw>
     </Group>
     <Group name="minute-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
-      <Transform target="angle" value="[MINUTE] * 6 + [SECOND] * 0.1"/>
+      <Transform target="angle" value="([MINUTE]+[SECOND]/60)*6"/>
       <PartDraw x="215" y="50" width="20" height="192">
         <RoundRectangle x="0" y="0" width="20" height="192" cornerRadiusX="10" cornerRadiusY="10">
           <Fill color="#ffe3f2fd"/>
@@ -138,7 +138,7 @@
       </PartDraw>
     </Group>
     <Group name="second-hand" x="0" y="0" width="450" height="450" pivotX="0.5" pivotY="0.5">
-      <Transform target="angle" value="[SECOND_MILLISECOND] * 6"/>
+      <Transform target="angle" value="[SECOND_MILLISECOND]*6"/>
       <PartDraw x="222" y="36" width="6" height="238">
         <Rectangle x="0" y="0" width="6" height="238">
           <Fill color="#ffff5252"/>

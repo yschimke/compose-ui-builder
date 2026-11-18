@@ -1428,11 +1428,15 @@
     },
     "hour-hand-angle": {
       "id": "hour-hand-angle",
-      "componentId": "wff/raw",
+      "componentId": "wff/transform",
       "properties": {
-        "xml": {
+        "target": {
           "type": "string",
-          "value": "<Transform target=\"angle\" value=\"[HOUR_0_11] * 30 + [MINUTE] * 0.5\"/>"
+          "value": "angle"
+        },
+        "rotateWith": {
+          "type": "string",
+          "value": "hour"
         }
       },
       "modifiers": [],
@@ -1524,11 +1528,15 @@
     },
     "minute-hand-angle": {
       "id": "minute-hand-angle",
-      "componentId": "wff/raw",
+      "componentId": "wff/transform",
       "properties": {
-        "xml": {
+        "target": {
           "type": "string",
-          "value": "<Transform target=\"angle\" value=\"[MINUTE] * 6 + [SECOND] * 0.1\"/>"
+          "value": "angle"
+        },
+        "rotateWith": {
+          "type": "string",
+          "value": "minute"
         }
       },
       "modifiers": [],
@@ -1623,11 +1631,15 @@
     },
     "second-hand-angle": {
       "id": "second-hand-angle",
-      "componentId": "wff/raw",
+      "componentId": "wff/transform",
       "properties": {
-        "xml": {
+        "target": {
           "type": "string",
-          "value": "<Transform target=\"angle\" value=\"[SECOND_MILLISECOND] * 6\"/>"
+          "value": "angle"
+        },
+        "rotateWith": {
+          "type": "string",
+          "value": "second-sweep"
         }
       },
       "modifiers": [],

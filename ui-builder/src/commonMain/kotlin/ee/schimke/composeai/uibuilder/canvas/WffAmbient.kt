@@ -39,25 +39,31 @@ internal fun UiBuilderDocument.withWffAmbient(ambient: Boolean): UiBuilderDocume
  */
 internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
   nodes.values.any { node ->
-    node.properties.values.any { property ->
-      ((property as? JsonObject)?.get("value") as? JsonPrimitive)
-        ?.contentOrNull
-        ?.contains("SECOND_MILLISECOND") == true
+    node.properties.entries.any { (name, property) ->
+      val value = ((property as? JsonObject)?.get("value") as? JsonPrimitive)?.contentOrNull
+      // A transform's "Rotate with" preset stands for its expression.
+      val expression =
+        if (node.componentId == WatchFaceXmlExporter.TRANSFORM && name == "rotateWith")
+          WatchFaceXmlExporter.ROTATE_WITH[value]
+        else value
+      expression?.contains("SECOND_MILLISECOND") == true
     }
   }
 
 /**
- * [node] as the watch draws it in [preview]'s mode. Interactive is as authored; ambient applies the
- * `<Variant mode="AMBIENT" target value>` children, each replacing the property its `target` names
- * (a number when `value` evaluates to one, else the text).
+ * [node] as the watch draws it at [preview]'s time and in its mode: its transforms applied (see
+ * [wffTransformed]), then, in ambient, the `<Variant mode="AMBIENT" target value>` children, each
+ * replacing the property its `target` names (a number when `value` evaluates to one, else the
+ * text).
  */
 internal fun wffNodeIn(
   document: UiBuilderDocument,
   node: UiBuilderNode,
   preview: WffPreviewContext,
 ): UiBuilderNode {
-  if (!preview.ambient) return node
-  var properties = node.properties
+  val moved = wffTransformed(document, node, preview)
+  if (!preview.ambient) return moved
+  var properties = moved.properties
   for (id in node.slots.values.flatten()) {
     val variant = document.nodes[id]?.takeIf { it.componentId == WatchFaceXmlExporter.VARIANT }
     if (variant == null || variant.string("mode").ifEmpty { "AMBIENT" } != "AMBIENT") continue
@@ -73,7 +79,7 @@ internal fun wffNodeIn(
       else JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(raw)))
     properties = JsonObject(properties + (target to encoded))
   }
-  return if (properties === node.properties) node else node.copy(properties = properties)
+  return if (properties === moved.properties) moved else moved.copy(properties = properties)
 }
 
 /**

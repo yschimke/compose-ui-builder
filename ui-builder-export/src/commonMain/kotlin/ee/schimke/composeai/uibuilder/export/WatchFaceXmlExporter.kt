@@ -58,6 +58,36 @@ object WatchFaceXmlExporter {
   const val LAUNCH = "wff/launch"
   const val COMPLICATION = "wff/complication"
 
+  /**
+   * A `<Transform>`: one attribute of its parent (`target`) driven by an expression (`value`), set
+   * to it (`mode` TO, the default) or added to the static attribute (BY). `rotateWith` names a
+   * preset expression instead of a `value`; see [ROTATE_WITH].
+   */
+  const val TRANSFORM = "wff/transform"
+
+  /** A `<Gyro>`: its parent's position, scale, angle and alpha offset by the wrist's tilt. */
+  const val GYRO = "wff/gyro"
+
+  /**
+   * The "Rotate with" presets of a [TRANSFORM], each the `angle` expression it writes. `custom` (or
+   * no `rotateWith`) writes the transform's own `value`.
+   */
+  val ROTATE_WITH: Map<String, String> =
+    linkedMapOf(
+      "hour" to "([HOUR_0_11]+[MINUTE]/60)*30",
+      "minute" to "([MINUTE]+[SECOND]/60)*6",
+      "second-ticking" to "[SECOND]*6",
+      "second-sweep" to "[SECOND_MILLISECOND]*6",
+    )
+  const val ROTATE_WITH_CUSTOM = "custom"
+
+  /** The parent attributes a [TRANSFORM] may drive, as the inspector offers them. */
+  val TRANSFORM_TARGETS: List<String> =
+    listOf("angle", "x", "y", "alpha", "width", "height", "pivotX", "pivotY", "scaleX", "scaleY")
+
+  /** The attributes of a `<Gyro>`, each an expression of the tilt. */
+  val GYRO_ATTRIBUTES: List<String> = listOf("x", "y", "scaleX", "scaleY", "angle", "alpha")
+
   /** One shape of a `PartDraw` (`Ellipse`, `Rectangle`, ?) and its `Fill` and `Stroke`. */
   const val SHAPE = "wff/shape"
   const val FILL = "wff/fill"
@@ -448,7 +478,7 @@ object WatchFaceXmlExporter {
       COMPLICATION_SLOT,
       CONDITION,
     )
-  internal val SCENE_CONTENT = DRAWABLE + VARIANT
+  internal val SCENE_CONTENT = DRAWABLE + VARIANT + TRANSFORM
 
   /** What may sit among the `<WatchFace>` children around the `<Scene>`, besides raw XML. */
   internal val FACE_CONTENT = setOf(RAW, USER_CONFIGURATIONS)
@@ -457,12 +487,18 @@ object WatchFaceXmlExporter {
   private val OVERRIDES = setOf(VARIANT, LAUNCH)
   private val WITH_VARIANTS = mapOf("variants" to OVERRIDES)
 
+  /** What moves a part: a transform and the wrist's tilt. Clocks and their hands take neither. */
+  private val MOTION = setOf(TRANSFORM, GYRO)
+
+  /** The overrides of a part that can move: a `PartText`'s or `PartImage`'s. */
+  private val PART_OVERRIDES = mapOf("variants" to OVERRIDES + MOTION)
+
   /**
    * A `PartDraw`'s children in document order: its shapes, and the overrides between them. The
    * legacy `variants` slot is kept for designs written before shapes were nodes.
    */
   private val PART_DRAW_SLOTS =
-    mapOf("content" to setOf(SHAPE) + OVERRIDES, "variants" to OVERRIDES)
+    mapOf("content" to setOf(SHAPE) + OVERRIDES + MOTION, "variants" to OVERRIDES + MOTION)
 
   /** Whatever a leaf-like element holds besides its own attributes: only raw XML. */
   private val RAW_ONLY = mapOf("content" to emptySet<String>())
@@ -617,7 +653,7 @@ object WatchFaceXmlExporter {
   private val ELEMENTS: Map<String, ElementSpec> =
     mapOf(
       GROUP to
-        ElementSpec(mapOf("content" to SCENE_CONTENT, "variants" to OVERRIDES)) {
+        ElementSpec(mapOf("content" to SCENE_CONTENT + GYRO, "variants" to OVERRIDES + MOTION)) {
           _,
           props,
           children,
@@ -843,7 +879,7 @@ object WatchFaceXmlExporter {
       FLAVOR_CONFIGURATION to
         simple("Configuration", emptyMap(), "id", "optionId", "screenReaderText"),
       PART_IMAGE to
-        ElementSpec(WITH_VARIANTS) { _, props, children, w, h, refuse ->
+        ElementSpec(PART_OVERRIDES) { _, props, children, w, h, refuse ->
           val resource = props.string("resource")
           if (resource.isNullOrBlank()) {
             refuse("resource: name the bitmap resource this image draws")
@@ -868,7 +904,7 @@ object WatchFaceXmlExporter {
           )
         },
       PART_TEXT to
-        ElementSpec(WITH_VARIANTS) { _, props, children, w, h, _ ->
+        ElementSpec(PART_OVERRIDES) { _, props, children, w, h, _ ->
           val template = template(props)
           val font =
             props.arrange(
@@ -1072,7 +1108,77 @@ object WatchFaceXmlExporter {
           }
           el("Variant", listOf("mode" to mode, "target" to target, "value" to value))
         },
+      // An `<Animation>` inside a transform has no builtin: it is held raw, in `content`.
+      TRANSFORM to
+        ElementSpec(RAW_ONLY) { _, props, children, _, _, refuse ->
+          val transform =
+            transformOf(
+              props.string("target"),
+              props.string("rotateWith"),
+              props.string("value") ?: props.number("value"),
+            )
+          when (transform) {
+            is TransformReading.Refused -> {
+              refuse(transform.why)
+              null
+            }
+            is TransformReading.Read ->
+              el(
+                "Transform",
+                listOfNotNull(
+                  "target" to transform.target,
+                  "value" to transform.value,
+                  props.string("mode")?.let { "mode" to it },
+                ),
+                children,
+              )
+          }
+        },
+      GYRO to
+        ElementSpec(emptyMap()) { _, props, _, _, _, _ ->
+          el("Gyro", GYRO_ATTRIBUTES.mapNotNull { name -> props.number(name)?.let { name to it } })
+        },
     )
+
+  /** What a [TRANSFORM] drives and the expression it writes, or why it writes nothing. */
+  sealed interface TransformReading {
+    data class Read(val target: String, val value: String) : TransformReading
+
+    data class Refused(val why: String) : TransformReading
+  }
+
+  /**
+   * A [TRANSFORM]'s `target` and written `value` from its properties: a `rotateWith` preset drives
+   * `angle` (the default target) with the preset's expression, else the node's own `value`. Shared
+   * with the canvas, so that what is drawn is what is written.
+   */
+  fun transformOf(target: String?, rotateWith: String?, value: String?): TransformReading {
+    val preset =
+      rotateWith
+        ?.takeIf { it.isNotEmpty() && it != ROTATE_WITH_CUSTOM }
+        ?.let {
+          ROTATE_WITH[it]
+            ?: return TransformReading.Refused(
+              "rotateWith `$it` is not ${(ROTATE_WITH.keys + ROTATE_WITH_CUSTOM).joinToString(", ")}",
+            )
+        }
+    val written = target?.takeIf { it.isNotEmpty() } ?: if (preset != null) "angle" else null
+    if (preset != null && written != "angle")
+      return TransformReading.Refused(
+        "rotateWith `$rotateWith` drives the angle; set target to angle, or rotateWith to custom",
+      )
+    val own = value?.takeIf { it.isNotEmpty() }
+    if (preset != null && own != null && own != preset)
+      return TransformReading.Refused(
+        "value: rotateWith `$rotateWith` writes $preset; set rotateWith to custom to write `$own`",
+      )
+    val expression = preset ?: own
+    if (written == null || expression == null)
+      return TransformReading.Refused(
+        "target and value: state the attribute this transform drives and its expression",
+      )
+    return TransformReading.Read(written, expression)
+  }
 
   // ---- Property reading and the XML tree -----------------------------------------------------
 

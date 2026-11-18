@@ -71,8 +71,7 @@ internal fun WatchFaceCanvas(
     node.slots[slot].orEmpty().filter { id ->
       val candidate = document.nodes[id]
       candidate != null &&
-        candidate.componentId != WatchFaceXmlExporter.VARIANT &&
-        candidate.componentId != WatchFaceXmlExporter.RAW &&
+        candidate.componentId !in WFF_NOT_DRAWN &&
         wffVisibleIn(wffNodeIn(document, candidate, preview), preview)
     }
   }
@@ -340,42 +339,33 @@ private fun wffPlace(
         (target.float("width", sceneWidth) * scale).dp,
         (target.float("height", sceneHeight) * scale).dp,
       )
-  val degrees = wffAngle(document, target, preview)
+  // The angle, alpha and scale with the node's transforms applied (see [wffNodeIn]).
+  val degrees = target.float("angle")
   val alpha = target.float("alpha", 255f).coerceIn(0f, 255f) / 255f
-  return if (degrees == 0f && alpha == 1f) box
+  val scaleX = target.float("scaleX", 1f)
+  val scaleY = target.float("scaleY", 1f)
+  return if (degrees == 0f && alpha == 1f && scaleX == 1f && scaleY == 1f) box
   else
     box.graphicsLayer {
       rotationZ = degrees
       this.alpha = alpha
+      this.scaleX = scaleX
+      this.scaleY = scaleY
       transformOrigin = TransformOrigin(target.float("pivotX", 0.5f), target.float("pivotY", 0.5f))
     }
 }
 
-private val TRANSFORM_ATTRIBUTE = Regex("""(\w+)\s*=\s*"([^"]*)"""")
-
 /**
- * The rotation of a node, in degrees: its static `angle`, or the `angle` a `<Transform>` among its
- * children drives, evaluated at the preview time. A `<Transform>` is carried as a `wff/raw` child.
+ * What sits among a part's children but is not drawn as one: an override, the motion that drives
+ * the part, or raw XML.
  */
-private fun wffAngle(
-  document: UiBuilderDocument,
-  node: UiBuilderNode,
-  preview: WffPreviewContext,
-): Float {
-  var degrees = node.float("angle")
-  for (id in node.slots.values.flatten()) {
-    val raw = document.nodes[id]?.takeIf { it.componentId == WatchFaceXmlExporter.RAW } ?: continue
-    val xml = raw.string("xml")
-    if (!xml.trimStart().startsWith("<Transform")) continue
-    val attributes =
-      TRANSFORM_ATTRIBUTE.findAll(xml).associate { it.groupValues[1] to it.groupValues[2] }
-    if (attributes["target"] != "angle") continue
-    val value =
-      attributes["value"]?.let { evaluateWffExpression(it, preview) }?.asNumber() ?: continue
-    degrees = if (attributes["mode"] == "BY") degrees + value.toFloat() else value.toFloat()
-  }
-  return degrees
-}
+private val WFF_NOT_DRAWN =
+  setOf(
+    WatchFaceXmlExporter.VARIANT,
+    WatchFaceXmlExporter.TRANSFORM,
+    WatchFaceXmlExporter.GYRO,
+    WatchFaceXmlExporter.RAW,
+  )
 
 /** One shape of a part, resolved for drawing. */
 internal class WffShapeDrawing(

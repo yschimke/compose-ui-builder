@@ -111,6 +111,19 @@ internal object WatchFaceCatalogShape {
           "target" to Declared("string"),
           "value" to Declared("string"),
         ) + EXTRAS,
+      WatchFaceXmlExporter.TRANSFORM to
+        mapOf(
+          "target" to Declared("string", WatchFaceXmlExporter.TRANSFORM_TARGETS.toSet()),
+          "rotateWith" to
+            Declared(
+              "string",
+              WatchFaceXmlExporter.ROTATE_WITH.keys + WatchFaceXmlExporter.ROTATE_WITH_CUSTOM,
+            ),
+          "value" to Declared("string"),
+          "mode" to Declared("string", setOf("TO", "BY")),
+        ) + EXTRAS,
+      WatchFaceXmlExporter.GYRO to
+        WatchFaceXmlExporter.GYRO_ATTRIBUTES.associateWith { Declared("string") } + EXTRAS,
       WatchFaceXmlExporter.CONDITION to EXTRAS,
       WatchFaceXmlExporter.COMPARE to strings("expression") + EXTRAS,
       WatchFaceXmlExporter.DEFAULT to EXTRAS,

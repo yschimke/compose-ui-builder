@@ -29,12 +29,12 @@ import kotlinx.serialization.json.put
  * Each element with a `wff/` builtin becomes that node, its attributes the node's properties (named
  * as the attribute, with the original order kept in `wffAttrOrder`), its children the node's slots.
  * An element is only taken as a builtin if the exporter writes exactly that element back, checked
- * per element; anything else, and every element without a builtin (`Metadata`,
- * `UserConfigurations`, `BitmapFonts`, `Condition`, `Transform`, gradients, future elements?), is
- * kept as a `wff/raw` node holding the element's canonical XML and written back verbatim at the
- * same position. Comments, the licence header included, are `wff/raw` nodes too: in the scene's
- * `prolog` and `epilog` slots outside the root, in `face` and `faceAfter` between the `<WatchFace>`
- * children, and in place inside the `<Scene>`.
+ * per element; anything else, and every element without a builtin (`Metadata`, `BitmapFonts`,
+ * gradients, a `Transform` inside a shape or font, future elements?), is kept as a `wff/raw` node
+ * holding the element's canonical XML and written back verbatim at the same position. Comments, the
+ * licence header included, are `wff/raw` nodes too: in the scene's `prolog` and `epilog` slots
+ * outside the root, in `face` and `faceAfter` between the `<WatchFace>` children, and in place
+ * inside the `<Scene>`.
  *
  * What is not kept, because it is not part of the XML tree: the XML declaration (a `standalone` or
  * `encoding` attribute), a DOCTYPE, other processing instructions, and whitespace between elements
@@ -68,6 +68,26 @@ object WatchFaceXmlImporter {
 
   const val SCENE_ID = "scene"
 
+  /**
+   * A `wff/raw` node's `<Transform>` as the typed `wff/transform` node an import makes of it, or
+   * null when [xml] is not one plain transform. The canvas reads a design imported before the
+   * transform had a builtin through this, so both draw the same.
+   */
+  fun transformNode(xml: String, id: String = "transform"): UiBuilderNode? {
+    val element =
+      try {
+        WffXmlParser.parse("<r>$xml</r>").root.children.singleOrNull() as? WffElement
+      } catch (e: WffParseException) {
+        null
+      } ?: return null
+    if (element.name != "Transform") return null
+    val importer = Importer(Options())
+    val placed = importer.place(element, setOf(WatchFaceXmlExporter.TRANSFORM))
+    return importer.nodes[placed]
+      ?.takeIf { it.componentId == WatchFaceXmlExporter.TRANSFORM }
+      ?.copy(id = id)
+  }
+
   /** An import holds the XML it is given, valid or not; the export is what judges the face. */
   private val LENIENT = WatchFaceXmlExporter.Options(lenient = true)
 
@@ -94,6 +114,8 @@ object WatchFaceXmlImporter {
       "TimeText",
       "ComplicationSlot",
       "Variant",
+      "Transform",
+      "Gyro",
       "Condition",
       "Compare",
       "Default",
@@ -146,6 +168,7 @@ object WatchFaceXmlImporter {
       WatchFaceXmlExporter.DEFAULT to (WatchFaceXmlExporter.CONDITION to "branches"),
       WatchFaceXmlExporter.COMPLICATION to (WatchFaceXmlExporter.COMPLICATION_SLOT to "variants"),
       WatchFaceXmlExporter.LAUNCH to (WatchFaceXmlExporter.GROUP to "variants"),
+      WatchFaceXmlExporter.GYRO to (WatchFaceXmlExporter.GROUP to "variants"),
       WatchFaceXmlExporter.SHAPE to (WatchFaceXmlExporter.PART_DRAW to "content"),
       WatchFaceXmlExporter.FILL to (WatchFaceXmlExporter.SHAPE to "content"),
       WatchFaceXmlExporter.STROKE to (WatchFaceXmlExporter.SHAPE to "content"),
@@ -191,6 +214,8 @@ object WatchFaceXmlImporter {
       "MinuteHand",
       "SecondHand" -> WatchFaceXmlExporter.CLOCK_HAND
       "Variant" -> WatchFaceXmlExporter.VARIANT
+      "Transform" -> WatchFaceXmlExporter.TRANSFORM
+      "Gyro" -> WatchFaceXmlExporter.GYRO
       "TimeText" -> WatchFaceXmlExporter.TIME_TEXT
       "PartText" -> WatchFaceXmlExporter.PART_TEXT
       "PartImage" -> WatchFaceXmlExporter.PART_IMAGE
@@ -725,6 +750,28 @@ object WatchFaceXmlImporter {
         "Variant" ->
           if (e.children.isEmpty() && top()) Candidate(component, sink.finish(), emptyList())
           else no("<Variant> has children")
+        "Transform" -> {
+          // An angle driven by exactly a preset's expression is that preset, so the inspector
+          // shows "Rotate with: Hour" rather than the formula; any other value is written as is.
+          val preset =
+            if (e.attr("target") == "angle")
+              WatchFaceXmlExporter.ROTATE_WITH.entries
+                .firstOrNull { it.value == e.attr("value") }
+                ?.key
+            else null
+          val kept =
+            e.attributes.all {
+              if (it.name == "value" && preset != null) put("rotateWith", preset)
+              else put(it.name, it.value)
+            }
+          if (!kept) return no("an attribute clashes with another")
+          sink.order(ATTR_ORDER, e.attributes)
+          rest(emptySet())?.let { Candidate(component, sink.finish(), it) }
+        }
+        "Gyro" ->
+          if (e.children.isNotEmpty()) no(leaf(e) ?: "<Gyro> has children")
+          else if (!top()) no("an attribute clashes with another")
+          else Candidate(component, sink.finish(), emptyList())
         "Condition",
         "Default" ->
           if (!top()) no("an attribute clashes with another")
