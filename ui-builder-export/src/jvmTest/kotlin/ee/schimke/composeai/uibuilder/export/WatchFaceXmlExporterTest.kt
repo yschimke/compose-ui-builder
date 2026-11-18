@@ -107,6 +107,184 @@ class WatchFaceXmlExporterTest {
     assertTrue(bad.any { "wffVersion 9" in it }, bad.toString())
   }
 
+  private fun withProperty(
+    document: UiBuilderDocument,
+    id: String,
+    name: String,
+    type: String,
+    value: kotlinx.serialization.json.JsonElement,
+  ) =
+    document.copy(
+      nodes =
+        document.nodes +
+          (id to
+            document.nodes.getValue(id).let {
+              it.copy(
+                properties =
+                  JsonObject(
+                    it.properties +
+                      (name to
+                        buildJsonObject {
+                          put("type", type)
+                          put("value", value)
+                        }),
+                  ),
+              )
+            }),
+    )
+
+  @Test
+  fun `an ellipse part keeps its leftover corner radii without refusing the export`() {
+    val round = template("digital-watch-face")
+    assertTrue("cornerRadiusX" in emitted(round).xml)
+    // The part is switched to an ellipse in the editor; its round-rectangle properties stay behind.
+    val ellipse = withProperty(round, "steps-back", "shape", "string", JsonPrimitive("ellipse"))
+    assertTrue("cornerRadiusX" in ellipse.nodes.getValue("steps-back").properties)
+    val xml = emitted(ellipse).xml
+    assertTrue("<Ellipse" in xml, xml)
+    assertFalse("cornerRadius" in xml, xml)
+    assertEquals(
+      setOf("cornerRadiusX", "cornerRadiusY"),
+      WatchFaceXmlExporter.inapplicableProperties(ellipse.nodes.getValue("steps-back"))
+        .filter { it.startsWith("cornerRadius") }
+        .toSet(),
+    )
+    assertTrue(
+      WatchFaceXmlExporter.inapplicableProperties(round.nodes.getValue("steps-back")).none {
+        it.startsWith("cornerRadius")
+      },
+    )
+  }
+
+  @Test
+  fun `a stroke width with no stroke colour is dropped, not refused`() {
+    val round = template("digital-watch-face")
+    emitted(withProperty(round, "steps-back", "strokeWidth", "float", JsonPrimitive(3)))
+  }
+
+  /** Every x, y, width and height the document holds, moved off the integers. */
+  private fun fractional(document: UiBuilderDocument, seed: Int): UiBuilderDocument {
+    val random = kotlin.random.Random(seed)
+    return document.copy(
+      nodes =
+        document.nodes.mapValues { (_, node) ->
+          if (node.componentId == WatchFaceXmlExporter.SCENE) node
+          else
+            node.copy(
+              properties =
+                JsonObject(
+                  node.properties.mapValues { (name, value) ->
+                    val number =
+                      ((value as? JsonObject)?.get("value") as? JsonPrimitive)
+                        ?.content
+                        ?.toDoubleOrNull()
+                    if (name in setOf("x", "y", "width", "height") && number != null)
+                      buildJsonObject {
+                        put("type", "float")
+                        put(
+                          "value",
+                          (number + random.nextInt(1, 100) / 100.0).let {
+                            kotlin.math.round(it * 100) / 100.0
+                          },
+                        )
+                      }
+                    else value
+                  },
+                ),
+            )
+        },
+    )
+  }
+
+  @Test
+  fun `fractional geometry exports to XML the format validator accepts`() {
+    // `emitted` runs the same WffValidator the user's failing export ran; a refusal is an error.
+    var notes = 0
+    listOf("analog-watch-face", "digital-watch-face").forEach { name ->
+      for (seed in 1..40) {
+        val outcome = WatchFaceXmlExporter.export(fractional(template(name), seed))
+        val result =
+          outcome as? WatchFaceXmlExporter.Result.Emitted
+            ?: error(
+              "$name seed $seed: ${(outcome as WatchFaceXmlExporter.Result.Refused).reasons.take(5)}",
+            )
+        notes += result.notes.size
+        assertFalse(
+          Regex("""(x|y|width|height)="[-0-9]*\.[0-9]+"""")
+            .containsMatchIn(
+              Regex(
+                  "<(PartDraw|Group|PartText|PartImage|ComplicationSlot|AnalogClock|DigitalClock)\\b[^>]*>",
+                )
+                .findAll(result.xml)
+                .joinToString("\n") { it.value },
+            ),
+          result.xml,
+        )
+      }
+    }
+    // The elements that cannot absorb an offset are rounded, and each says so.
+    assertTrue(notes > 0)
+  }
+
+  @Test
+  fun `a fractional part draw keeps its shapes at the same pixels`() {
+    val round = template("digital-watch-face")
+    val part = round.nodes.getValue("steps-back")
+    fun set(doc: UiBuilderDocument, name: String, v: Double) =
+      withProperty(doc, "steps-back", name, "float", JsonPrimitive(v))
+    val moved =
+      listOf("x" to 211.3, "y" to 20.6, "width" to 60.5, "height" to 30.2).fold(round) { d, (n, v)
+        ->
+        set(d, n, v)
+      }
+    val xml = emitted(moved).xml
+    // floor(211.3)=211, floor(20.6)=20, ceil(271.8)-211=61, ceil(50.8)-20=31
+    assertTrue("""<PartDraw x="211" y="20" width="61" height="31"""" in xml, xml)
+    assertTrue("""x="0.3"""" in xml && """y="0.6"""" in xml, xml)
+    assertTrue(part.properties.isNotEmpty())
+  }
+
+  @Test
+  fun `the design check and the export agree on a design the export refuses`() {
+    val good = template("digital-watch-face")
+    assertTrue(WatchFaceDesignValidation.exportIssues(good).isEmpty())
+    // A shape the format has no element for: the export refuses it.
+    val bad = withProperty(good, "steps-back", "shape", "string", JsonPrimitive("not-a-shape"))
+    val issues = WatchFaceDesignValidation.exportIssues(bad)
+    assertEquals(refused(bad).size, issues.size)
+    assertEquals("steps-back", issues.first().nodeId)
+    assertEquals(refused(bad), issues.map { it.message })
+  }
+
+  @Test
+  fun `a rotated fractional part draw keeps its centre of rotation`() {
+    val round = template("digital-watch-face")
+    val moved =
+      listOf(
+          "x" to 10.9,
+          "y" to 20.0,
+          "width" to 10.0,
+          "height" to 30.0,
+          "angle" to 180.0,
+          "pivotX" to 0.0,
+        )
+        .fold(round) { d, (n, v) -> withProperty(d, "steps-back", n, "float", JsonPrimitive(v)) }
+    val xml = emitted(moved).xml
+    // X=10, W=ceil(20.9)-10=11; the centre stays at 10.9: (0*10 + 0.9) / 11
+    assertTrue("""<PartDraw x="10" y="20" width="11" height="30"""" in xml, xml)
+    val pivot = Regex("""pivotX="([0-9.]+)"""").find(xml)!!.groupValues[1].toDouble()
+    assertEquals(0.9 / 11, pivot, 1e-5)
+  }
+
+  @Test
+  fun `a fractional group imports losslessly and is only rounded on export`() {
+    val xml =
+      """<WatchFace width="450" height="450"><Scene><Group name="g" x="0.5" y="0" width="450" height="450"/></Scene></WatchFace>"""
+    val imported = WatchFaceXmlImporter.import(xml)
+    val document = assertIs<WatchFaceXmlImporter.Result.Imported>(imported).document
+    assertTrue(emitted(document).notes.isNotEmpty())
+  }
+
   private fun refusedOptions(document: UiBuilderDocument, options: WatchFaceXmlExporter.Options) =
     assertIs<WatchFaceXmlExporter.Result.Refused>(WatchFaceXmlExporter.export(document, options))
       .reasons
