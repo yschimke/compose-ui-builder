@@ -8,8 +8,12 @@ import ee.schimke.composeai.uibuilder.protocol.ColorValueV1
 import ee.schimke.composeai.uibuilder.protocol.DecimalValueV1
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
+import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
+import ee.schimke.composeai.uibuilder.protocol.InsertNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.IntegerValueV1
+import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
+import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RejectedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.RejectionCodeV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
@@ -389,5 +393,102 @@ class WatchFaceEditValidationTest {
         )
         .xml
     assertTrue("""<Group name="column" x="12" y="0" width="300" height="450">""" in xml, xml)
+  }
+
+  // ---- Inserting nodes
+  // ---------------------------------------------------------------------------
+
+  private fun partDraw(id: String, slots: Map<String, List<String>>) =
+    DesignNodeV1(
+      id = id,
+      componentId = WatchFaceXmlExporter.PART_DRAW,
+      properties =
+        mapOf(
+          "x" to IntegerValueV1(0),
+          "y" to IntegerValueV1(0),
+          "width" to IntegerValueV1(10),
+          "height" to IntegerValueV1(10),
+        ),
+      slots = slots,
+    )
+
+  private fun intoColumn() =
+    NodeLocationV1(ParentSlotV1(nodeOf(WatchFaceXmlExporter.GROUP), "content"))
+
+  @Test
+  fun `an inserted node is stored with every slot its component declares`() {
+    // yschimke/watchface-tools#34: a part sent with only `content` keeps `variants` too, as the
+    // editor's own parts do, so reading the design shows which nodes take a variant.
+    create()
+    accept(InsertNodeMutationV1(partDraw("dot", mapOf("content" to emptyList())), intoColumn()))
+    assertEquals(
+      mapOf("content" to emptyList<String>(), "variants" to emptyList()),
+      document().nodes.getValue("dot").slots,
+    )
+    // As does one sent with no slots at all.
+    accept(InsertNodeMutationV1(partDraw("bare", emptyMap()), intoColumn()))
+    assertEquals(
+      listOf("content", "variants"),
+      document().nodes.getValue("bare").slots.keys.toList(),
+    )
+  }
+
+  @Test
+  fun `an id deleted earlier in the same batch can be inserted again`() {
+    // yschimke/watchface-tools#27 item 3: delete X, then insert a new X, in one apply.
+    create()
+    val image = nodeOf(WatchFaceXmlExporter.PART_IMAGE)
+    accept(
+      DeleteNodeMutationV1(image),
+      InsertNodeMutationV1(partDraw(image, emptyMap()), intoColumn()),
+    )
+    val replacedBy = operations
+    assertEquals(WatchFaceXmlExporter.PART_DRAW, document().nodes.getValue(image).componentId)
+
+    // Undone, the batch puts the original node back under its id.
+    val undone =
+      assertIs<AcceptedOutcomeV1>(
+        assertIs<UiBuilderServiceResponse.OperationOutcome>(
+            run {
+              service.execute(
+                UiBuilderServiceCall(
+                  owner,
+                  UiBuilderServiceRequest.ApplyOperation(
+                    UiBuilderSubmission.Undo(
+                      "face",
+                      "op-${++operations}",
+                      "test",
+                      revision,
+                      "op-$replacedBy",
+                    ),
+                  ),
+                ),
+              )
+            },
+          )
+          .outcome,
+      )
+    revision = undone.committedRevision
+    assertEquals(WatchFaceXmlExporter.PART_IMAGE, document().nodes.getValue(image).componentId)
+  }
+
+  @Test
+  fun `an id deleted by an earlier operation stays retired`() {
+    create()
+    val image = nodeOf(WatchFaceXmlExporter.PART_IMAGE)
+    accept(DeleteNodeMutationV1(image))
+    val reused = refuse(InsertNodeMutationV1(partDraw(image, emptyMap()), intoColumn()))
+    assertTrue("already used" in reused.message, reused.message)
+  }
+
+  @Test
+  fun `an id inserted twice in one batch is still refused`() {
+    create()
+    val twice =
+      refuse(
+        InsertNodeMutationV1(partDraw("dot", emptyMap()), intoColumn()),
+        InsertNodeMutationV1(partDraw("dot", emptyMap()), intoColumn()),
+      )
+    assertTrue("already used" in twice.message, twice.message)
   }
 }
