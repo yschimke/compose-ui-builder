@@ -526,12 +526,28 @@ internal fun DrawScope.drawWffShape(
     drawing.strokeGradient?.brush(pxPerWffPx)
       ?: drawing.stroke.takeIf { it != Color.Unspecified }?.let(::SolidColor)
   if (shape == "line") {
-    if (stroke != null) {
-      val k = pxPerWffPx
+    val k = pxPerWffPx
+    val start = Offset(drawing.ends[0] * k, drawing.ends[1] * k)
+    val end = Offset(drawing.ends[2] * k, drawing.ends[3] * k)
+    val sweepLine = drawing.strokeGradient?.takeIf { forExport && it.kind == WffGradient.SWEEP }
+    if (sweepLine != null && start != end) {
+      // As every other shape's: the area a butt-capped line covers, filled with the wedges.
+      val along = end - start
+      val normal = Offset(-along.y, along.x) / along.getDistance() * (line.width / 2)
+      val band =
+        Path().apply {
+          moveTo(start.x + normal.x, start.y + normal.y)
+          lineTo(end.x + normal.x, end.y + normal.y)
+          lineTo(end.x - normal.x, end.y - normal.y)
+          lineTo(start.x - normal.x, start.y - normal.y)
+          close()
+        }
+      drawSweepWedges(sweepLine, pxPerWffPx, band)
+    } else if (stroke != null) {
       drawLine(
         stroke,
-        Offset(drawing.ends[0] * k, drawing.ends[1] * k),
-        Offset(drawing.ends[2] * k, drawing.ends[3] * k),
+        start,
+        end,
         strokeWidth = line.width,
       )
     }
@@ -630,7 +646,8 @@ private fun strokeBand(
 
 /**
  * [gradient], a sweep, drawn inside [area] as wedges of its colours a degree and a half wide, each
- * reaching a little over the next so no seam shows between them: what an SVG recorder can keep.
+ * opaque one reaching a little over the next so no seam shows between them: what an SVG recorder
+ * can keep.
  */
 private fun DrawScope.drawSweepWedges(gradient: WffGradient, pxPerWffPx: Float, area: Path) {
   val center =
@@ -655,10 +672,15 @@ private fun DrawScope.drawSweepWedges(gradient: WffGradient, pxPerWffPx: Float, 
       } + 1f
   clipPath(area) {
     val steps = WEDGES
+    val colors = List(steps) { i -> sweepColorAt(stops, (i + 0.5f) / steps) }
     for (i in 0 until steps) {
+      val color = colors[i]
       val from = i / steps.toFloat()
-      val to = (i + 1.5f) / steps
-      val color = sweepColorAt(stops, (i + 0.5f) / steps)
+      // Reaching half a wedge over the next hides the seam antialiasing leaves between two opaque
+      // wedges; where either is translucent the overlap would be painted twice and show as a
+      // band, so they meet edge to edge.
+      val overlap = color.alpha >= 1f && colors[(i + 1) % steps].alpha >= 1f
+      val to = (i + if (overlap) 1.5f else 1f) / steps
       fun point(fraction: Float): Offset {
         val radians = fraction * 2.0 * kotlin.math.PI
         return Offset(

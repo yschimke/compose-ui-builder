@@ -164,6 +164,48 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a translucent sweep is exported without bands where its wedges meet`() {
+    // A constant half-transparent red: over the black scene it is ≈128 red everywhere. Wedges that
+    // overlapped would paint the overlap twice, ≈191 red, in bands round the dial.
+    val face =
+      gradientFace(
+        """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+          """colors="#80ff0000 #80ff0000"/>""",
+      )
+    val bitmap = export(face)
+    val reds = (0 until 720).map { bitmap.atPolar(150f, it / 2f)[1] }
+    // At most the one coat everywhere. Where two translucent wedges meet edge to edge,
+    // antialiasing leaves a faint seam a little under it (≈111), never a second coat.
+    assertTrue(reds.all { it in 100..138 }, "reds ${reds.min()}..${reds.max()}")
+  }
+
+  @Test
+  fun `a sweep on a line's stroke is exported as wedges too`() {
+    val face =
+      wffFace(
+        listOf("hand"),
+        paintedPart(
+            "hand",
+            mapOf("shape" to "line", "startX" to 225, "startY" to 225, "endX" to 225, "endY" to 40),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 12),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffff0000 #ff0000ff"/>""",
+          )
+          .joinToString(","),
+      )
+    val svg = svg(face, "gradient-sweep-line")
+    val fills =
+      Regex("fill=\"#([0-9A-Fa-f]{6})\"").findAll(svg).map { it.groupValues[1].toInt(16) }.toList()
+    // The line points to twelve, where the sweep starts and ends: red on one side, blue the other.
+    assertTrue(fills.any { it shr 16 > 0xf0 && it and 0xff < 0x20 }, "red: $svg")
+    assertTrue(fills.any { it and 0xff > 0xf0 && it shr 16 < 0x20 }, "blue")
+    // And the PNG draws the line, not a black stroke.
+    val pixel = export(face).at(222f, 120f)
+    assertTrue(pixel[1] > 150 || pixel[3] > 150, "line $pixel")
+  }
+
+  @Test
   fun `a gradient in a stroke paints the stroke`() {
     val face =
       wffFace(
