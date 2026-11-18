@@ -242,7 +242,7 @@ internal fun WatchFaceCanvas(
           else -> null
         }
       if (image != null) {
-        val tint = node.color("tintColor", Color.White)
+        val tint = node.wffColor("tintColor", Color.White)
         Box(modifier.drawBehind { drawWffGlyph(image, tint, Offset.Zero, size) })
       } else
         Box(modifier.border(1.dp, Color(0x66FFFFFF)), contentAlignment = Alignment.Center) {

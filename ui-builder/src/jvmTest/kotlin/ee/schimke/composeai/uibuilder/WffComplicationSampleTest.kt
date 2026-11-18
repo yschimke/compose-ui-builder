@@ -280,6 +280,50 @@ class WffComplicationSampleTest {
   }
 
   @Test
+  fun `a complication icon takes its tint from the selected theme`() {
+    val xml =
+      """
+      <WatchFace width="450" height="450" clipShape="CIRCLE">
+        <UserConfigurations>
+          <ColorConfiguration id="themeColor" displayName="Theme" defaultValue="0">
+            <ColorOption id="0" displayName="Red" colors="#ff00ff00 #ffff0000"/>
+          </ColorConfiguration>
+        </UserConfigurations>
+        <Scene backgroundColor="#ff000000">
+          <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT" x="125" y="125" width="200" height="200">
+            <DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY" defaultSystemProviderType="SHORT_TEXT"/>
+            <BoundingBox x="0" y="0" width="200" height="200"/>
+            <Complication type="SHORT_TEXT">
+              <PartImage x="0" y="0" width="200" height="200" tintColor="[CONFIGURATION.themeColor.1]">
+                <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/>
+              </PartImage>
+            </Complication>
+          </ComplicationSlot>
+        </Scene>
+      </WatchFace>
+      """
+        .trimIndent()
+    val face =
+      assertIs<WatchFaceXmlImporter.Result.Imported>(WatchFaceXmlImporter.import(xml))
+        .document
+        .fixed()
+    val bitmap = render(face, "complication-icon-theme-tint")
+    var red = 0
+    var white = 0
+    for (y in 0 until bitmap.height) for (x in 0 until bitmap.width) {
+      when (bitmap.getColor(x, y)) {
+        0xFFFF0000.toInt() -> red++
+        0xFFFFFFFF.toInt() -> white++
+      }
+    }
+    assertTrue(
+      red > 200,
+      "the battery icon is not drawn in the theme's red: $red red, $white white",
+    )
+    assertEquals(0, white, "the icon is drawn white, not in the theme colour")
+  }
+
+  @Test
   fun `a slot with no content for the picked type draws a tidy default`() {
     val analog = template("analog-watch-face")
     val slot =
