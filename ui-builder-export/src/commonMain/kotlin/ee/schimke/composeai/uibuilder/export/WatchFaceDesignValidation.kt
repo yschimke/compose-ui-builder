@@ -1,14 +1,14 @@
 package ee.schimke.composeai.uibuilder.export
 
-import ee.schimke.composeai.uibuilder.export.wff.WffCData
-import ee.schimke.composeai.uibuilder.export.wff.WffComment
-import ee.schimke.composeai.uibuilder.export.wff.WffElement
-import ee.schimke.composeai.uibuilder.export.wff.WffElementSpec
-import ee.schimke.composeai.uibuilder.export.wff.WffParseException
-import ee.schimke.composeai.uibuilder.export.wff.WffSchema
-import ee.schimke.composeai.uibuilder.export.wff.WffText
-import ee.schimke.composeai.uibuilder.export.wff.WffVersion
-import ee.schimke.composeai.uibuilder.export.wff.WffXmlParser
+import ee.schimke.watchface.wff.WffCData
+import ee.schimke.watchface.wff.WffComment
+import ee.schimke.watchface.wff.WffElement
+import ee.schimke.watchface.wff.WffElementSpec
+import ee.schimke.watchface.wff.WffParseException
+import ee.schimke.watchface.wff.WffSchema
+import ee.schimke.watchface.wff.WffText
+import ee.schimke.watchface.wff.WffVersion
+import ee.schimke.watchface.wff.WffXmlParser
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -324,14 +324,21 @@ object WatchFaceDesignValidation {
     val spec =
       WffSchema.named(parentTag).firstOrNull { WffSchema.child(it, childTag) != null }
         ?: return null
-    val edge = spec.children.firstOrNull { WffSchema.elements.getValue(it.id).name == childTag }
-    if (edge != null && edge.minOccurs > remaining.count { it == childTag })
-      return "<$parentTag> requires at least ${edge.minOccurs} <$childTag>; deleting this one " +
-        "leaves ${remaining.count { it == childTag }}"
-    if (countsAll && spec.minChildren > remaining.size)
-      return "<$parentTag> requires at least ${spec.minChildren} children; deleting this one " +
-        "leaves ${remaining.size}"
-    return null
+    // `mayRemoveChild` takes the children as they are before the removal, the child included.
+    val before = remaining + childTag
+    if (countsAll) {
+      if (WffSchema.mayRemoveChild(spec, childTag, before)) return null
+    } else {
+      // The parent's own children are not counted, so only the child's own minimum is known.
+      val required =
+        WffSchema.requiredChildren(spec).firstOrNull {
+          WffSchema.elements.getValue(it.id).name == childTag
+        }
+      if (required == null || remaining.count { it == childTag } >= required.minOccurs) return null
+    }
+    return "<$parentTag> requires its <$childTag> children (at least " +
+      "${WffSchema.requiredChildren(spec).firstOrNull { WffSchema.elements.getValue(it.id).name == childTag }?.minOccurs ?: 1}" +
+      ", or ${spec.minChildren} children in all); deleting this one leaves too few"
   }
 
   /** The elements that write children of their own (`Text`, the bounds, an `Image`, a `Font`). */

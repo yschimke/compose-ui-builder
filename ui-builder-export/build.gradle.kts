@@ -195,6 +195,10 @@ kotlin {
       api(libs.composeai.screen.model)
       api(libs.composeai.ui.builder.protocol)
       implementation(libs.kotlinx.serialization.json)
+      // The Watch Face Format model, XML parser and writer, schema and validator the watch face
+      // target imports, exports and judges with. Common code: the browser editor emits XML too.
+      implementation(project.dependencies.platform(libs.watchface.tools.bom))
+      implementation(libs.wff.core)
     }
     // flexpress's code generator, for `FlexpressVariableFontSources`. Plain Kotlin on the JVM at
     // Java 17, like this side; the wasm editor has no generator and says so. The fonts it reads are
