@@ -130,7 +130,11 @@ internal fun WatchFaceCanvas(
           val scale = minOf(maxWidth.value / width, maxHeight.value / height)
           Box(Modifier.size((width * scale).dp, (height * scale).dp).clip(clip)) {
             for ((layerAmbient, alpha) in layers) {
-              val context = remember(clock, layerAmbient) { clock.inMode(layerAmbient) }
+              // Ambient holds the wrist still: the sway is the interactive layer's only.
+              val context =
+                remember(clock, layerAmbient) {
+                  clock.inMode(layerAmbient).let { if (layerAmbient) it.withTilt(0.0, 0.0) else it }
+                }
               CompositionLocalProvider(
                 LocalWffFace provides WffFace(width, height, scale),
                 LocalWffPreview provides context,
