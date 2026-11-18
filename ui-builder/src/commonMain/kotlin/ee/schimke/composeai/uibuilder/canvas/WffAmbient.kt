@@ -34,21 +34,23 @@ internal fun UiBuilderDocument.withWffAmbient(ambient: Boolean): UiBuilderDocume
 }
 
 /**
- * Whether the face reads the clock below a second: `[SECOND_MILLISECOND]`, which a sweeping second
- * hand turns on. Without it the face only changes each whole second, and is redrawn that often.
+ * Whether the face moves between whole seconds: it reads `[SECOND_MILLISECOND]` (a sweeping second
+ * hand), or has a `<Gyro>`, which the preview sways. Without either the face only changes each
+ * whole second, and is redrawn that often.
  */
 internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
-  nodes.values.any { node ->
-    node.properties.entries.any { (name, property) ->
-      val value = ((property as? JsonObject)?.get("value") as? JsonPrimitive)?.contentOrNull
-      // A transform's "Rotate with" preset stands for its expression.
-      val expression =
-        if (node.componentId == WatchFaceXmlExporter.TRANSFORM && name == "rotateWith")
-          WatchFaceXmlExporter.ROTATE_WITH[value]
-        else value
-      expression?.contains("SECOND_MILLISECOND") == true
+  wffHasGyro() ||
+    nodes.values.any { node ->
+      node.properties.entries.any { (name, property) ->
+        val value = ((property as? JsonObject)?.get("value") as? JsonPrimitive)?.contentOrNull
+        // A transform's "Rotate with" preset stands for its expression.
+        val expression =
+          if (node.componentId == WatchFaceXmlExporter.TRANSFORM && name == "rotateWith")
+            WatchFaceXmlExporter.ROTATE_WITH[value]
+          else value
+        expression?.contains("SECOND_MILLISECOND") == true
+      }
     }
-  }
 
 /**
  * [node] as the watch draws it at [preview]'s time and in its mode: its transforms applied (see
@@ -87,3 +89,7 @@ internal fun wffNodeIn(
  */
 internal fun wffVisibleIn(node: UiBuilderNode, preview: WffPreviewContext): Boolean =
   !preview.ambient || node.float("alpha", 255f) > 0f
+
+/** Whether a part of the face moves with the wrist's tilt, which the preview sways. */
+internal fun UiBuilderDocument.wffHasGyro(): Boolean =
+  nodes.values.any { it.componentId == WatchFaceXmlExporter.GYRO }

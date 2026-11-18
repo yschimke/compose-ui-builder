@@ -1364,37 +1364,37 @@
             "name": "x",
             "jsonType": "string",
             "required": false,
-            "notes": "An expression offsetting the parent's x by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. The preview holds the watch flat."
+            "notes": "An expression offsetting the parent's x by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "y",
             "jsonType": "string",
             "required": false,
-            "notes": "An expression offsetting the parent's y by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. The preview holds the watch flat."
+            "notes": "An expression offsetting the parent's y by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "scaleX",
             "jsonType": "string",
             "required": false,
-            "notes": "An expression offsetting the parent's scaleX by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. The preview holds the watch flat."
+            "notes": "An expression offsetting the parent's scaleX by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "scaleY",
             "jsonType": "string",
             "required": false,
-            "notes": "An expression offsetting the parent's scaleY by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. The preview holds the watch flat."
+            "notes": "An expression offsetting the parent's scaleY by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "angle",
             "jsonType": "string",
             "required": false,
-            "notes": "An expression offsetting the parent's angle by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. The preview holds the watch flat."
+            "notes": "An expression offsetting the parent's angle by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "alpha",
             "jsonType": "string",
             "required": false,
-            "notes": "An expression offsetting the parent's alpha by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. The preview holds the watch flat."
+            "notes": "An expression offsetting the parent's alpha by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "wffExtras",

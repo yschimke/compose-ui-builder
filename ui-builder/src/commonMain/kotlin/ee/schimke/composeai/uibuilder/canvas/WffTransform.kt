@@ -14,7 +14,9 @@ import kotlinx.serialization.json.JsonPrimitive
  * adds to it with `mode="BY"`. A `<Transform>` held as `wff/raw` XML, as a design imported before
  * the transform had a builtin holds it, is read as the typed node an import would make of it.
  *
- * A `wff/gyro` changes nothing: the preview holds the watch flat, where the tilt is zero.
+ * A `wff/gyro` then offsets the attributes it names (`x`, `y`, `scaleX`, `scaleY`, `angle`,
+ * `alpha`) by its expressions of the tilt in [preview] ([WffPreviewContext.swaying] on a live
+ * canvas, zero on a frozen one, where a flat watch leaves the part where it is).
  */
 internal fun wffTransformed(
   document: UiBuilderDocument,
@@ -22,8 +24,21 @@ internal fun wffTransformed(
   preview: WffPreviewContext,
 ): UiBuilderNode {
   var properties = node.properties
+  fun set(name: String, value: Double) {
+    properties =
+      JsonObject(
+        properties +
+          (name to
+            JsonObject(mapOf("type" to JsonPrimitive("number"), "value" to JsonPrimitive(value)))),
+      )
+  }
+  val gyros = mutableListOf<UiBuilderNode>()
   for (id in node.slots.values.flatten()) {
     val child = document.nodes[id] ?: continue
+    if (child.componentId == WatchFaceXmlExporter.GYRO) {
+      gyros += child
+      continue
+    }
     val transform =
       when (child.componentId) {
         WatchFaceXmlExporter.TRANSFORM -> child
@@ -47,14 +62,16 @@ internal fun wffTransformed(
         val current = node.copy(properties = properties)
         current.float(target, wffUnsetDefault(document, target)) + value
       } else value.toDouble()
-    properties =
-      JsonObject(
-        properties +
-          (target to
-            JsonObject(
-              mapOf("type" to JsonPrimitive("number"), "value" to JsonPrimitive(result.toDouble())),
-            )),
-      )
+    set(target, result.toDouble())
+  }
+  for (gyro in gyros) {
+    for (name in WatchFaceXmlExporter.GYRO_ATTRIBUTES) {
+      val expression = gyro.string(name).ifEmpty { null } ?: continue
+      val offset = evaluateWffExpression(expression, preview)?.asNumber() ?: continue
+      if (offset == 0.0) continue
+      val current = node.copy(properties = properties)
+      set(name, current.float(name, wffUnsetDefault(document, name)) + offset)
+    }
   }
   return if (properties === node.properties) node else node.copy(properties = properties)
 }
