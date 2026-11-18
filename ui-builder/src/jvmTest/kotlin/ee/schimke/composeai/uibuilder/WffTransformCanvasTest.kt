@@ -160,6 +160,19 @@ class WffTransformCanvasTest {
     assertNotEquals(white, render(document).getColor(227, 227 - 120), "drawn at alpha 60 of 255")
   }
 
+  @Test
+  fun `a BY transform of an unset dimension grows from the scene's`() {
+    // The group sets no width: the export writes the scene's 450, so BY 10 is 460.
+    val document = face(typed("target" to "width", "value" to "10", "mode" to "BY"))
+    val moved =
+      wffTransformed(
+        document,
+        document.nodes.getValue("hand"),
+        WffPreviewContext.of("03:00:00", ""),
+      )
+    assertEquals(460f, moved.float("width"))
+  }
+
   private fun Bitmap.differing(other: Bitmap): Int {
     var count = 0
     for (y in 0 until height) for (x in 0 until width) if (getColor(x, y) != other.getColor(x, y))
