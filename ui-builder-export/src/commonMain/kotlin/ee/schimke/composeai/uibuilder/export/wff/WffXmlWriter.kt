@@ -1,7 +1,9 @@
-// Vendored from yschimke/watchface-tools wff-core (commit 54fc4b7):
-//   wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffXmlWriter.kt
-// Only visibility (public -> internal) and the package differ.
-// TODO: replace with ee.schimke.watchface:wff-core once published
+// Vendored from yschimke/watchface-tools wff-core 0.2.1
+// (wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffXmlWriter.kt).
+// Only visibility (public -> internal) and the package differ. wff-core 0.2.1 is compiled for Java
+// 21 bytecode;
+// this repository's server floor is Java 17, so it cannot be consumed by coordinate yet.
+
 package ee.schimke.composeai.uibuilder.export.wff
 
 /**

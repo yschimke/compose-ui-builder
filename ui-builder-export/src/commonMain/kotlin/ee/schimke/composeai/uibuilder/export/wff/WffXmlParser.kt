@@ -1,7 +1,9 @@
-// Vendored from yschimke/watchface-tools wff-core (commit 54fc4b7):
-//   wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffXmlParser.kt
-// Only visibility (public -> internal) and the package differ.
-// TODO: replace with ee.schimke.watchface:wff-core once published
+// Vendored from yschimke/watchface-tools wff-core 0.2.1
+// (wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffXmlParser.kt).
+// Only visibility (public -> internal) and the package differ. wff-core 0.2.1 is compiled for Java
+// 21 bytecode;
+// this repository's server floor is Java 17, so it cannot be consumed by coordinate yet.
+
 package ee.schimke.composeai.uibuilder.export.wff
 
 /**
@@ -9,7 +11,7 @@ package ee.schimke.composeai.uibuilder.export.wff
  *
  * What is kept: element/attribute names and attribute order, text, CDATA, comments (including those
  * around the root). What is dropped, by design: the XML declaration, other processing instructions,
- * a DOCTYPE, and *ignorable* whitespace — whitespace-only text in an element that has no real text
+ * a DOCTYPE, and *ignorable* whitespace ? whitespace-only text in an element that has no real text
  * or CDATA content. An element that does have real text or CDATA is "mixed" and keeps every text
  * node verbatim (so a `<Template>` and its `<Parameter>` children are exact).
  *
@@ -22,7 +24,7 @@ internal object WffXmlParser {
   internal fun parseOrNull(xml: String): WffDocument? = runCatching { parse(xml) }.getOrNull()
 
   private fun normalizeInput(raw: String): String {
-    val s = if (raw.isNotEmpty() && raw[0] == '﻿') raw.substring(1) else raw
+    val s = if (raw.isNotEmpty() && raw[0] == '?') raw.substring(1) else raw
     return if ('\r' in s) s.replace("\r\n", "\n").replace('\r', '\n') else s
   }
 

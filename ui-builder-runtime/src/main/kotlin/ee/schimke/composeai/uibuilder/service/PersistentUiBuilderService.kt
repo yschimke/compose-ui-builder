@@ -77,6 +77,18 @@ public interface UiBuilderCatalogExecutor {
     node: DesignNodeV1,
     property: String,
   ): UiBuilderCatalogIssue? = null
+
+  /**
+   * Whether deleting node [nodeId] (and what sits under it) from [document] leaves its parent with
+   * what the catalog's format requires of it: a configuration with no option, a condition with no
+   * branch. Asked only for a `deleteNode`, never document-wide, so a design that already lacks one
+   * stays editable. Refusals are `INVALID_COMMAND`. Defaulted for source compatibility.
+   */
+  public fun validateDelete(
+    catalog: CatalogCapabilityV1,
+    document: DesignDocumentV1,
+    nodeId: String,
+  ): UiBuilderCatalogIssue? = null
 }
 
 public data class RevisionPinnedUiBuilderExport(
@@ -3724,6 +3736,9 @@ public class PersistentUiBuilderService(
           )
         }
         is DeleteNodeMutationV1 -> {
+          catalogs.validateDelete(catalog, working.document, mutation.nodeId)?.let {
+            fail(RejectionCodeV1.INVALID_COMMAND, it.message, index, mutation.nodeId)
+          }
           val before = working.document.snapshotOrFail(mutation.nodeId, working.positions, index)
           val positions = working.positions - before.nodes.keys
           val document =

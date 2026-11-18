@@ -33,7 +33,10 @@ class WatchFaceEditorTest {
             "Scaffold",
             slots = listOf(syntheticSlot("content", max = null)),
           ),
-          syntheticComponent("wff/part-text", "PartText", "Leaf") { p("text", "string") },
+          syntheticComponent("wff/part-text", "PartText", "Leaf") {
+            p("text", "string")
+            p("parameters", "string")
+          },
         ),
       ),
     )
@@ -47,7 +50,7 @@ class WatchFaceEditorTest {
         "stateVariables":{},"roots":["scene"],"nodes":{
           "scene":{"id":"scene","componentId":"wff/scene","slots":{"content":[${nodes.joinToString { "\"$it\"" }}]}},
           "hello":{"id":"hello","componentId":"wff/part-text",
-            "properties":{"text":{"type":"string","value":"Hi"}}}}}""",
+            "properties":{"text":{"type":"string","value":"Hi %s"},"parameters":{"type":"string","value":"[DAY_OF_WEEK_S]"}}}}}""",
     )
 
   @Test
@@ -55,7 +58,12 @@ class WatchFaceEditorTest {
     assertEquals(UiBuilderCatalogPlatform.WATCH_FACE, catalog.platform)
     val source = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(document("hello")))
     assertTrue(source.kotlin.contains("<WatchFace width=\"450\" height=\"450\""), source.kotlin)
-    assertTrue(source.kotlin.contains("<Template>Hi</Template>"), source.kotlin)
+    assertTrue(
+      source.kotlin.contains(
+        "<Template>Hi %s<Parameter expression=\"[DAY_OF_WEEK_S]\"/></Template>",
+      ),
+      source.kotlin,
+    )
   }
 
   @Test

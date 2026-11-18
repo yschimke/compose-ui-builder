@@ -1,12 +1,14 @@
-// Vendored from yschimke/watchface-tools wff-core (commit f1d35e9):
-//   wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffSchema.kt
-// Only visibility (public -> internal) and the package differ.
-// TODO: replace with ee.schimke.watchface:wff-core once published
+// Vendored from yschimke/watchface-tools wff-core 0.2.1
+// (wff-core/src/commonMain/kotlin/ee/schimke/watchface/wff/WffSchema.kt).
+// Only visibility (public -> internal) and the package differ. wff-core 0.2.1 is compiled for Java
+// 21 bytecode;
+// this repository's server floor is Java 17, so it cannot be consumed by coordinate yet.
+
 package ee.schimke.composeai.uibuilder.export.wff
 
 /**
- * Value kind of an attribute. Informational: numeric and colour attributes also accept expressions
- * (`[CONFIGURATION.x]`, `[HOUR_0_23] * 15`), so the validator does not check values.
+ * Value kind of an attribute: a coarse label for tooling. What a value may actually be is
+ * [WffAttributeSpec.rule], generated from the XSD type.
  */
 internal enum class WffAttributeType {
   INT,
@@ -23,16 +25,70 @@ internal enum class WffAttributeType {
   ID,
 }
 
+/**
+ * What an attribute (or text) value may be, as the XSD type says. Facets other than enumeration,
+ * pattern and numeric bounds are not modelled. [WffValueChecker] evaluates a rule.
+ */
+internal sealed interface WffValueRule {
+  /** One of [values]; a value in [since] needs at least that format version (`"X" to 2`). */
+  data class Enumeration(
+    val values: List<String>,
+    val since: Map<String, Int> = emptyMap(),
+  ) : WffValueRule
+
+  /** The whole value matches [regex] (XSD patterns are anchored). */
+  data class Pattern(val regex: String) : WffValueRule {
+    internal val compiled: Regex by lazy { Regex(regex) }
+  }
+
+  /** A literal integer or float, optionally bounded. */
+  data class Number(
+    val integer: Boolean,
+    val min: Double? = null,
+    val minExclusive: Boolean = false,
+    val max: Double? = null,
+    val maxExclusive: Boolean = false,
+  ) : WffValueRule
+
+  /** An arithmetic expression (`[HOUR_0_23] * 15`): syntax, data sources and functions checked. */
+  data object Expression : WffValueRule
+
+  /** Any one of [members]. */
+  data class Union(val members: List<WffValueRule>) : WffValueRule
+
+  /** A whitespace-separated list whose items each match [item]. */
+  data class ListOf(val item: WffValueRule) : WffValueRule
+
+  /** Unconstrained text. */
+  data object Anything : WffValueRule
+}
+
 internal data class WffAttributeSpec(
   val name: String,
   val type: WffAttributeType,
   val required: Boolean = false,
   val sinceVersion: WffVersion = WffVersion.V1,
   val enumValues: List<String> = emptyList(),
+  /** Null when the XSD leaves the value unconstrained. */
+  val rule: WffValueRule? = null,
 )
 
-/** A child [id] allowed under some parent, and the format version that first allowed it there. */
-internal data class WffChildSpec(val id: String, val sinceVersion: WffVersion = WffVersion.V1)
+/**
+ * A child [id] allowed under some parent, and the format version that first allowed it there.
+ * [minOccurs] and [maxOccurs] are how many times the XSD lets the child appear (`-1` for no limit
+ * is [maxOccurs]'s default); they are the loosest bounds across versions, and a child that is one
+ * of several alternatives has [minOccurs] 0.
+ */
+internal data class WffChildSpec(
+  val id: String,
+  val sinceVersion: WffVersion = WffVersion.V1,
+  val minOccurs: Int = 0,
+  val maxOccurs: Int = UNBOUNDED,
+) {
+  companion object {
+    internal const val UNBOUNDED: Int = -1
+  }
+}
 
 /**
  * One element as allowed in one context. The same XML name can have several specs (for example
@@ -46,6 +102,11 @@ internal data class WffElementSpec(
   val attributes: List<WffAttributeSpec>,
   val children: List<WffChildSpec>,
   val allowsText: Boolean = false,
+  /** Bounds on the number of element children in total; [maxChildren] is -1 for no limit. */
+  val minChildren: Int = 0,
+  val maxChildren: Int = WffChildSpec.UNBOUNDED,
+  /** For simple-content elements (`Expression`): what the text may be. */
+  val textRule: WffValueRule? = null,
 ) {
   val childIds: List<String>
     get() = children.map { it.id }
@@ -63,7 +124,7 @@ internal data class WffElementSpec(
  * the members of their substitution groups.
  */
 internal object WffSchema {
-  internal const val ROOT_ID: String = "WatchFace"
+  const val ROOT_ID: String = "WatchFace"
 
   internal val elements: Map<String, WffElementSpec> by lazy {
     GENERATED_SCHEMA.associateBy { it.id }

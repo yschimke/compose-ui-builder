@@ -10,6 +10,15 @@
     <ComplicationSlot slotId="0" supportedTypes="SHORT_TEXT RANGED_VALUE" x="160" y="290" width="130" height="80">
       <BoundingBox x="0" y="0" width="130" height="80"/>
       <DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY" defaultSystemProviderType="SHORT_TEXT"/>
+      <Complication type="SHORT_TEXT">
+        <PartText x="0" y="0" width="130" height="80">
+          <Text align="CENTER">
+            <Font family="SYNC_TO_DEVICE" size="24" color="#ffffffff">
+              <Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
     </ComplicationSlot>
     <AnalogClock x="0" y="0" width="450" height="450">
       <HourHand resource="hour_hand" x="215" y="125" width="20" height="100" pivotX="0.5" pivotY="1"/>

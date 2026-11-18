@@ -39,6 +39,7 @@
         "Complications",
         "Ambient",
         "Conditions",
+        "Configuration",
         "Raw XML"
       ],
       "components": {
@@ -90,6 +91,42 @@
         "wff/complication": {
           "group": "Complications"
         },
+        "wff/shape": {
+          "group": "Draw"
+        },
+        "wff/fill": {
+          "group": "Draw"
+        },
+        "wff/stroke": {
+          "group": "Draw"
+        },
+        "wff/user-configurations": {
+          "group": "Configuration"
+        },
+        "wff/color-configuration": {
+          "group": "Configuration"
+        },
+        "wff/color-option": {
+          "group": "Configuration"
+        },
+        "wff/list-configuration": {
+          "group": "Configuration"
+        },
+        "wff/list-option": {
+          "group": "Configuration"
+        },
+        "wff/boolean-configuration": {
+          "group": "Configuration"
+        },
+        "wff/flavors": {
+          "group": "Configuration"
+        },
+        "wff/flavor": {
+          "group": "Configuration"
+        },
+        "wff/flavor-configuration": {
+          "group": "Configuration"
+        },
         "wff/raw": {
           "group": "Raw XML"
         }
@@ -130,11 +167,13 @@
           },
           "face": {
             "acceptedTraits": [
+              "WffUserConfigurations",
               "WffRaw"
             ]
           },
           "faceAfter": {
             "acceptedTraits": [
+              "WffUserConfigurations",
               "WffRaw"
             ]
           },
@@ -315,6 +354,14 @@
           "WffDrawable"
         ],
         "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffShape",
+              "WffVariant",
+              "WffLaunch",
+              "WffRaw"
+            ]
+          },
           "variants": {
             "acceptedTraits": [
               "WffVariant",
@@ -376,7 +423,7 @@
             "name": "shape",
             "jsonType": "string",
             "required": false,
-            "notes": "The shape the part draws: ellipse, rectangle, round-rectangle (WFF `RoundRectangle`), arc (`Arc`), line (`Line`), or none for a part with no shape element of its own (an empty `PartDraw`).",
+            "notes": "Legacy shorthand for ONE shape drawn by the part itself: ellipse, rectangle, round-rectangle (WFF `RoundRectangle`), arc (`Arc`), line (`Line`), or none. An imported part is `none` and holds its shapes as `wff/shape` children of its `content` slot, in order; setting a shape here AND placing `wff/shape` children is refused.",
             "allowedValues": [
               "ellipse",
               "rectangle",
@@ -1358,6 +1405,642 @@
         ],
         "modifierCapabilities": []
       },
+      "wff/shape": {
+        "role": "element",
+        "displayName": "Shape",
+        "group": "Draw",
+        "canvas": "placeholder",
+        "traits": [
+          "WffShape"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffPaint",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "shape",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Which shape element this is: ellipse (WFF `Ellipse`), rectangle (`Rectangle`), round-rectangle (`RoundRectangle`), arc (`Arc`) or line (`Line`).",
+            "allowedValues": [
+              "ellipse",
+              "rectangle",
+              "round-rectangle",
+              "arc",
+              "line"
+            ]
+          },
+          {
+            "name": "x",
+            "jsonType": "number",
+            "required": false,
+            "notes": "ellipse, rectangle, round-rectangle: left edge in px, relative to the part. Default 0."
+          },
+          {
+            "name": "y",
+            "jsonType": "number",
+            "required": false,
+            "notes": "ellipse, rectangle, round-rectangle: top edge in px, relative to the part. Default 0."
+          },
+          {
+            "name": "width",
+            "jsonType": "number",
+            "required": false,
+            "notes": "The shape's own width in px (ellipse, rectangle, round-rectangle, arc). Defaults to the part's width."
+          },
+          {
+            "name": "height",
+            "jsonType": "number",
+            "required": false,
+            "notes": "The shape's own height in px (ellipse, rectangle, round-rectangle, arc). Defaults to the part's height."
+          },
+          {
+            "name": "cornerRadiusX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "round-rectangle: WFF `cornerRadiusX`."
+          },
+          {
+            "name": "cornerRadiusY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "round-rectangle: WFF `cornerRadiusY`."
+          },
+          {
+            "name": "centerX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "arc: WFF `centerX`."
+          },
+          {
+            "name": "centerY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "arc: WFF `centerY`."
+          },
+          {
+            "name": "startAngle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "arc: WFF `startAngle`, degrees."
+          },
+          {
+            "name": "endAngle",
+            "jsonType": "number",
+            "required": false,
+            "notes": "arc: WFF `endAngle`, degrees."
+          },
+          {
+            "name": "direction",
+            "jsonType": "string",
+            "required": false,
+            "notes": "arc: WFF `direction`.",
+            "allowedValues": [
+              "CLOCKWISE",
+              "COUNTER_CLOCKWISE"
+            ]
+          },
+          {
+            "name": "startX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "line: WFF `startX`."
+          },
+          {
+            "name": "startY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "line: WFF `startY`."
+          },
+          {
+            "name": "endX",
+            "jsonType": "number",
+            "required": false,
+            "notes": "line: WFF `endX`."
+          },
+          {
+            "name": "endY",
+            "jsonType": "number",
+            "required": false,
+            "notes": "line: WFF `endY`."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/fill": {
+        "role": "element",
+        "displayName": "Fill",
+        "group": "Draw",
+        "canvas": "placeholder",
+        "traits": [
+          "WffPaint"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Fill colour, #RRGGBB or #AARRGGBB (WFF `Fill color`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/stroke": {
+        "role": "element",
+        "displayName": "Stroke",
+        "group": "Draw",
+        "canvas": "placeholder",
+        "traits": [
+          "WffPaint"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Stroke colour, #RRGGBB or #AARRGGBB (WFF `Stroke color`)."
+          },
+          {
+            "name": "thickness",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Stroke thickness in px (WFF `Stroke thickness`). Default 1."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/user-configurations": {
+        "role": "element",
+        "displayName": "UserConfigurations",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffUserConfigurations"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffConfiguration",
+              "WffFlavors",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/color-configuration": {
+        "role": "element",
+        "displayName": "ColorConfiguration",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffConfiguration"
+        ],
+        "slots": {
+          "options": {
+            "acceptedTraits": [
+              "WffColorOption",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The configuration's id, referenced by `[CONFIGURATION.<id>]` expressions and by flavors."
+          },
+          {
+            "name": "displayName",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Name shown in the companion app: a string resource name or text (WFF `displayName`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "icon",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Icon resource name (WFF `icon`)."
+          },
+          {
+            "name": "defaultValue",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the option selected by default (`TRUE` or `FALSE` for a boolean)."
+          },
+          {
+            "name": "highlight",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `highlight`."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/color-option": {
+        "role": "element",
+        "displayName": "ColorOption",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffColorOption"
+        ],
+        "slots": {},
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The option's id (WFF `id`); the configuration's `defaultValue` and a flavor's `optionId` name it."
+          },
+          {
+            "name": "displayName",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Name shown in the companion app (WFF `displayName`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "icon",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Icon resource name (WFF `icon`)."
+          },
+          {
+            "name": "colors",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The option's colours, space separated `#RRGGBB` values, one per theme slot (WFF `colors`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/list-configuration": {
+        "role": "element",
+        "displayName": "ListConfiguration",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffConfiguration"
+        ],
+        "slots": {
+          "options": {
+            "acceptedTraits": [
+              "WffListOption",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The configuration's id, referenced by `[CONFIGURATION.<id>]` expressions and by flavors."
+          },
+          {
+            "name": "displayName",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Name shown in the companion app: a string resource name or text (WFF `displayName`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "icon",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Icon resource name (WFF `icon`)."
+          },
+          {
+            "name": "defaultValue",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the option selected by default (`TRUE` or `FALSE` for a boolean)."
+          },
+          {
+            "name": "highlight",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `highlight`."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/list-option": {
+        "role": "element",
+        "displayName": "ListOption",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffListOption"
+        ],
+        "slots": {},
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The option's id (WFF `id`)."
+          },
+          {
+            "name": "displayName",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Name shown in the companion app (WFF `displayName`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "icon",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Icon resource name (WFF `icon`)."
+          },
+          {
+            "name": "childSettingIds",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `childSettingIds`."
+          },
+          {
+            "name": "complicationSlotIds",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `complicationSlotIds`."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/boolean-configuration": {
+        "role": "element",
+        "displayName": "BooleanConfiguration",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffConfiguration"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The configuration's id, referenced by `[CONFIGURATION.<id>]` expressions and by flavors."
+          },
+          {
+            "name": "displayName",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Name shown in the companion app: a string resource name or text (WFF `displayName`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "icon",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Icon resource name (WFF `icon`)."
+          },
+          {
+            "name": "defaultValue",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the option selected by default (`TRUE` or `FALSE` for a boolean)."
+          },
+          {
+            "name": "highlight",
+            "jsonType": "string",
+            "required": false,
+            "notes": "WFF `highlight`."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/flavors": {
+        "role": "element",
+        "displayName": "Flavors",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffFlavors"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffFlavor",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "defaultValue",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the flavor selected by default (WFF `defaultValue`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/flavor": {
+        "role": "element",
+        "displayName": "Flavor",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffFlavor"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffFlavorConfiguration",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The flavor's id (WFF `id`)."
+          },
+          {
+            "name": "displayName",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Name shown in the companion app (WFF `displayName`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "icon",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Icon resource name (WFF `icon`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/flavor-configuration": {
+        "role": "element",
+        "displayName": "Configuration",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffFlavorConfiguration"
+        ],
+        "slots": {},
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The configuration this flavor sets (WFF `id`)."
+          },
+          {
+            "name": "optionId",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The option it selects (WFF `optionId`)."
+          },
+          {
+            "name": "screenReaderText",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
       "wff/raw": {
         "role": "element",
         "displayName": "Raw XML",
@@ -1372,7 +2055,7 @@
             "name": "xml",
             "jsonType": "string",
             "required": true,
-            "notes": "One element subtree or comment in canonical XML, written back verbatim at this position. Holds what has no wff/ element (Metadata, UserConfigurations, BitmapFonts, Expressions, Transform, gradients, unknown future elements) and the comments of an imported face. Editing it is checked: the XML must be well formed, one element or comment, and an element keeps the element name it replaces."
+            "notes": "One element subtree or comment in canonical XML, written back verbatim at this position. Holds what has no wff/ element (Metadata, BitmapFonts, Expressions, Transform, gradients, Localization, unknown future elements) and the comments of an imported face. Editing it is checked: the XML must be well formed, one element or comment, and an element keeps the element name it replaces."
           }
         ],
         "modifierCapabilities": []
