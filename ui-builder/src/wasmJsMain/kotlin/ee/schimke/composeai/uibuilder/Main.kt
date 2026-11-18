@@ -58,7 +58,9 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStart
+import ee.schimke.composeai.uibuilder.editor.WatchFaceSocket
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.watchFaceStartOf
 import ee.schimke.composeai.uibuilder.editor.wearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
@@ -3110,7 +3112,11 @@ internal suspend fun requestWatchFacePreview(
   return when (response.statusCode) {
     201 ->
       nativePreviewJson.decodeFromString(WatchFaceStarted.serializer(), response.body).let {
-        UiBuilderWatchFaceStart(pagePath = it.pagePath)
+        // The same session the tab shows, drawn inline too.
+        watchFaceStartOf(it.pagePath, it.socketPath) { socketPath ->
+          val stream = BrowserNativeStream(sessionSocketUrl(socketPath))
+          WatchFaceSocket(stream, stream::sendControls)
+        }
       }
     401,
     403 ->
@@ -3135,7 +3141,28 @@ internal suspend fun requestWatchFacePreview(
 
 @kotlinx.serialization.Serializable private class WatchFaceStartBody(val wffXml: String)
 
-@kotlinx.serialization.Serializable private class WatchFaceStarted(val pagePath: String)
+@kotlinx.serialization.Serializable
+private class WatchFaceStarted(val pagePath: String, val socketPath: String)
 
 @kotlinx.serialization.Serializable
 private class WatchFaceRefusal(val reasons: List<String> = emptyList())
+
+/**
+ * Why the host's real watch-face runtime cannot run, as `CODE: reason`, or null when it can. The
+ * status route is read-gated like the design itself; a failed read is no reason either way.
+ */
+internal suspend fun requestWatchFaceRuntimeStatus(designId: String): String? {
+  val body = fetchText("/api/ui-builder/v1/designs/$designId/dwf-preview/status")
+  val status = nativePreviewJson.decodeFromString(WatchFaceStatus.serializer(), body)
+  if (status.available) return null
+  return listOfNotNull(status.code, status.reason).joinToString(": ").ifBlank {
+    "the watch-face runtime is not available on this host"
+  }
+}
+
+@kotlinx.serialization.Serializable
+private class WatchFaceStatus(
+  val available: Boolean = false,
+  val code: String? = null,
+  val reason: String? = null,
+)
