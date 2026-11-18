@@ -47,7 +47,7 @@ internal fun wffTransformed(
     val result =
       if (transform.string("mode") == "BY") {
         val current = node.copy(properties = properties)
-        current.float(target, WFF_UNSET_DEFAULTS[target] ?: 0f) + value
+        current.float(target, wffUnsetDefault(document, target)) + value
       } else value.toDouble()
     properties =
       JsonObject(
@@ -61,8 +61,22 @@ internal fun wffTransformed(
   return if (properties === node.properties) node else node.copy(properties = properties)
 }
 
-/** What a target reads as when the node does not set it, for a `mode="BY"` transform. */
-private val WFF_UNSET_DEFAULTS = mapOf("alpha" to 255f, "scaleX" to 1f, "scaleY" to 1f)
+/**
+ * What a target reads as when the node does not set it, for a `mode="BY"` transform: what the
+ * exporter writes for it (`Props.bounds`), so a part with no `width` grows from the scene's.
+ */
+private fun wffUnsetDefault(document: UiBuilderDocument, target: String): Float {
+  fun scene(name: String) =
+    document.roots.firstNotNullOfOrNull { document.nodes[it] }?.float(name, 450f) ?: 450f
+  return when (target) {
+    "alpha" -> 255f
+    "scaleX",
+    "scaleY" -> 1f
+    "width" -> scene("width")
+    "height" -> scene("height")
+    else -> 0f
+  }
+}
 
 /** The numeric attributes a face may drive with an expression, such as a ranged value's arc. */
 private val WFF_NUMERIC_ATTRIBUTES =
