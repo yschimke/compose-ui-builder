@@ -27,17 +27,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -47,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
@@ -60,6 +64,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -97,6 +102,8 @@ internal fun GeneratedCodePane(
    */
   caption: String,
   modifier: Modifier = Modifier,
+  /** What a refusal says there is none of, in the generator's own words. */
+  noSource: String = "No Compose source",
 ) {
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -171,7 +178,7 @@ internal fun GeneratedCodePane(
         }
         is EditorGeneratedCode.Refused -> {
           Text(
-            "No Compose source · the export would refuse this design",
+            "$noSource · the export would refuse this design",
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.labelSmall,
           )
@@ -616,78 +623,173 @@ private fun NativeRenderFrame(
 
 /**
  * The native pane of a Watch Face Format design. A watch face is drawn by Google's watch-face
- * runtime on the host, not by generated Compose, so there is nothing to compile and show inline:
- * this pane starts a runtime session on the exported WFF and opens the tab that streams it. When
- * the host cannot (no runtime installed, no packaging, not signed in) it shows the host's own
- * reason instead of a refusal about the design.
+ * runtime on the host, not by generated Compose, so there is nothing to compile: this pane asks the
+ * host whether the runtime can run ([status], shown as a banner when it cannot), starts a session
+ * on the exported WFF, and draws the frames the session streams, with an ambient switch that is
+ * sent back as a `controls` patch. The watch-face tab stays a secondary action.
  */
 @Composable
 internal fun WatchFaceRuntimePane(
   wffXml: () -> String?,
   start: (suspend (String) -> UiBuilderWatchFaceStart)?,
   modifier: Modifier = Modifier,
+  status: (suspend () -> String?)? = null,
 ) {
   val scope = rememberCoroutineScope()
   val uriHandler = LocalUriHandler.current
   var starting by remember { mutableStateOf(false) }
+  // True until the host's status is known: a start before it would race the pane's own.
+  var checking by remember { mutableStateOf(status != null) }
+  var unavailable by remember { mutableStateOf<String?>(null) }
   var result by remember { mutableStateOf<UiBuilderWatchFaceStart?>(null) }
+  var ambient by remember { mutableStateOf(false) }
+  // The pane is the one owner of the session's stream. A start that finishes after it was
+  // superseded or the pane closed closes the stream it returns instead of leaking the socket.
+  val generation = remember { intArrayOf(0) }
+
+  fun startSession() {
+    val begin = start ?: return
+    if (starting) return
+    val xml = wffXml()
+    // Before anything overwrites `result`: a refused export must not strand the previous stream.
+    result?.stream?.close()
+    // Cleared with it: the old result's Ambient switch would send to the closed stream while the
+    // new session, which never received it, showed it checked.
+    result = null
+    if (xml == null) {
+      result =
+        UiBuilderWatchFaceStart(
+          failure = "This design does not export to Watch Face Format yet; see the code pane.",
+        )
+      return
+    }
+    ambient = false
+    starting = true
+    val mine = ++generation[0]
+    scope.launch {
+      val outcome =
+        try {
+          begin(xml)
+        } catch (failure: kotlin.coroutines.cancellation.CancellationException) {
+          throw failure
+        } catch (failure: Throwable) {
+          UiBuilderWatchFaceStart(failure = failure.message ?: "the request failed")
+        }
+      if (generation[0] != mine) {
+        outcome.stream?.close()
+        return@launch
+      }
+      result = outcome
+      starting = false
+    }
+  }
+  // Asked once as the pane opens: a host that cannot run the runtime says why instead of failing a
+  // start; one that can starts the session at once.
+  LaunchedEffect(Unit) {
+    unavailable =
+      try {
+        status?.invoke()
+      } catch (failure: kotlin.coroutines.cancellation.CancellationException) {
+        throw failure
+      } catch (_: Throwable) {
+        null
+      }
+    checking = false
+    if (unavailable == null) startSession()
+  }
+  DisposableEffect(Unit) {
+    onDispose {
+      generation[0]++
+      result?.stream?.close()
+    }
+  }
+
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(
       Modifier.fillMaxSize().padding(12.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+      val outcome = result
+      val frame = outcome?.stream?.frame
       Text(
-        "Native · Wear OS watch-face runtime",
+        if (frame != null) "Native · live on the Wear OS watch-face runtime"
+        else "Native · Wear OS watch-face runtime",
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
       )
-      Text(
-        "A watch face is drawn by the real watch-face runtime on the host, in its own tab " +
-          "with time, ambient and sensor controls. The Preview pane stays the fast approximation.",
-        style = MaterialTheme.typography.bodySmall,
-      )
-      Button(
-        enabled = !starting && start != null,
-        onClick = {
-          val xml = wffXml()
-          if (xml == null) {
-            result =
-              UiBuilderWatchFaceStart(
-                failure =
-                  "This design does not export to Watch Face Format yet; see the code pane.",
-              )
-            return@Button
-          }
-          starting = true
-          scope.launch {
-            result =
-              try {
-                start!!(xml)
-              } catch (failure: Throwable) {
-                UiBuilderWatchFaceStart(failure = failure.message ?: "the request failed")
-              }
-            starting = false
-            // Opened here as well as offered below: a blocked popup leaves the link.
-            result?.pagePath?.let { runCatching { uriHandler.openUri(it) } }
-          }
-        },
-      ) {
-        Text(if (starting) "Starting…" else "Open the real watch-face preview")
-      }
-      val outcome = result
-      when {
-        outcome?.failure != null ->
+      unavailable?.let { reason ->
+        Surface(
+          color = MaterialTheme.colorScheme.errorContainer,
+          shape = RoundedCornerShape(8.dp),
+          modifier =
+            Modifier.fillMaxWidth().semantics { contentDescription = "Runtime unavailable" },
+        ) {
           SelectionContainer {
             Text(
-              outcome.failure,
-              color = MaterialTheme.colorScheme.error,
+              reason,
+              Modifier.padding(12.dp),
+              color = MaterialTheme.colorScheme.onErrorContainer,
               style = MaterialTheme.typography.bodySmall,
             )
           }
-        outcome?.pagePath != null ->
-          TextButton(onClick = { uriHandler.openUri(outcome.pagePath) }) {
-            Text("Session started · open the tab again")
+        }
+      }
+      if (unavailable == null) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          TextButton(
+            enabled = !starting && !checking && start != null,
+            onClick = { startSession() },
+          ) {
+            Text(if (starting) "Starting…" else "Reload with the current design")
           }
+          if (outcome?.sendControls != null) {
+            Row(
+              Modifier.toggleable(
+                value = ambient,
+                role = Role.Checkbox,
+                onValueChange = {
+                  ambient = it
+                  outcome.sendControls.invoke("{\"ambient\":$it}")
+                },
+              ),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              androidx.compose.material3.Checkbox(checked = ambient, onCheckedChange = null)
+              Text("Ambient", style = MaterialTheme.typography.bodySmall)
+            }
+          }
+        }
+        when {
+          outcome?.failure != null ->
+            SelectionContainer {
+              Text(
+                outcome.failure,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+              )
+            }
+          frame != null ->
+            Image(
+              bitmap = frame.image,
+              contentDescription = "Watch face on the real runtime",
+              modifier = Modifier.fillMaxWidth().weight(1f, fill = false).clip(CircleShape),
+            )
+          outcome?.stream?.failure != null ->
+            Text(
+              outcome.stream.failure.orEmpty(),
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          starting || outcome?.stream != null ->
+            Text(
+              "Waiting for the first frame…",
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+            )
+        }
+      }
+      outcome?.pagePath?.let { page ->
+        TextButton(onClick = { uriHandler.openUri(page) }) { Text("Open in a tab") }
       }
     }
   }

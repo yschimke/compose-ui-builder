@@ -506,6 +506,49 @@ internal object WatchFacePalettePreviews {
           face += node(Wff.BOOLEAN_CONFIGURATION)
           toggle().forEach(::put)
         }
+        Wff.SCENE_BOOLEAN_CONFIGURATION,
+        Wff.SCENE_BOOLEAN_OPTION ->
+          // The container and its selected option's parts, which are what the face draws.
+          put(
+            node(
+              Wff.SCENE_BOOLEAN_CONFIGURATION,
+              mapOf("id" to string("show")),
+              mapOf(
+                "options" to
+                  listOf(
+                    node(
+                      Wff.SCENE_BOOLEAN_OPTION,
+                      mapOf("id" to string("TRUE")),
+                      mapOf(
+                        "content" to
+                          listOf(draw(shape("ellipse", listOf(75, 75, 300, 300), fill = ACCENT))),
+                      ),
+                    ),
+                  ),
+              ),
+            ),
+          )
+        Wff.SCENE_LIST_CONFIGURATION,
+        Wff.SCENE_LIST_OPTION ->
+          put(
+            node(
+              Wff.SCENE_LIST_CONFIGURATION,
+              mapOf("id" to string("look")),
+              mapOf(
+                "options" to
+                  listOf(
+                    node(
+                      Wff.SCENE_LIST_OPTION,
+                      mapOf("id" to string("round")),
+                      mapOf(
+                        "content" to
+                          listOf(draw(shape("ellipse", listOf(75, 75, 300, 300), fill = WARM))),
+                      ),
+                    ),
+                  ),
+              ),
+            ),
+          )
         Wff.FLAVORS -> {
           face += node(Wff.FLAVORS)
           put(

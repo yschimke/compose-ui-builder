@@ -253,6 +253,26 @@ object WatchFaceDesignValidation {
   }
 
   /**
+   * Every reason the Watch Face Format export would refuse [document], as issues with the node each
+   * names: the same export and wff-core validation that [WatchFaceXmlExporter.export] runs, so a
+   * design check and an export cannot disagree. Empty means the export succeeds.
+   *
+   * Unlike [check] this judges a finished design, not an edit: a part image with no `resource` yet
+   * is reported here and not by [check], which would block the edit that fills it in.
+   */
+  fun exportIssues(document: UiBuilderDocument): List<Issue> =
+    when (val result = WatchFaceXmlExporter.export(document)) {
+      is WatchFaceXmlExporter.Result.Emitted -> emptyList()
+      is WatchFaceXmlExporter.Result.Refused ->
+        result.reasons.map { reason ->
+          val node = NODE_REASON.find(reason)?.groupValues?.get(1)
+          Issue("WFF_EXPORT_REFUSED", reason, node?.takeIf { it in document.nodes })
+        }
+    }
+
+  private val NODE_REASON = Regex("^nodes\\.([^ .(:]+)")
+
+  /**
    * The problem with writing [property] on [node] into [document] (the document as it is before the
    * write; the node as it will be), or null.
    */
@@ -431,6 +451,10 @@ object WatchFaceDesignValidation {
       WatchFaceXmlExporter.FLAVORS -> "Flavors"
       WatchFaceXmlExporter.FLAVOR -> "Flavor"
       WatchFaceXmlExporter.FLAVOR_CONFIGURATION -> "Configuration"
+      WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION -> "BooleanConfiguration"
+      WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION -> "BooleanOption"
+      WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION -> "ListConfiguration"
+      WatchFaceXmlExporter.SCENE_LIST_OPTION -> "ListOption"
       else -> null
     }
 

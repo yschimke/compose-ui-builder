@@ -75,6 +75,18 @@ object WatchFaceXmlExporter {
   const val FLAVOR_CONFIGURATION = "wff/flavor-configuration"
 
   /**
+   * The configuration-driven containers of the `<Scene>`: a `BooleanConfiguration` or
+   * `ListConfiguration` holding one `BooleanOption` / `ListOption` per value, each holding the
+   * parts shown while that option is selected. They share their tag with the declarations under
+   * `<UserConfigurations>` ([BOOLEAN_CONFIGURATION], [LIST_CONFIGURATION]) and are told apart by
+   * where they sit.
+   */
+  const val SCENE_BOOLEAN_CONFIGURATION = "wff/scene-boolean-configuration"
+  const val SCENE_BOOLEAN_OPTION = "wff/scene-boolean-option"
+  const val SCENE_LIST_CONFIGURATION = "wff/scene-list-configuration"
+  const val SCENE_LIST_OPTION = "wff/scene-list-option"
+
+  /**
    * An element this vocabulary has no builtin for (or cannot write exactly), held as its canonical
    * XML in the `xml` property and written back verbatim at the same position. A comment is held the
    * same way.
@@ -98,7 +110,15 @@ object WatchFaceXmlExporter {
   )
 
   sealed interface Result {
-    data class Emitted(val xml: String, val wffVersion: Int) : Result
+    /**
+     * [notes] are informational: what the export adjusted to write valid XML (a fractional integer
+     * attribute rounded), never a reason to refuse.
+     */
+    data class Emitted(
+      val xml: String,
+      val wffVersion: Int,
+      val notes: List<String> = emptyList(),
+    ) : Result
 
     data class Refused(val reasons: List<String>) : Result
   }
@@ -124,13 +144,18 @@ object WatchFaceXmlExporter {
 
   fun export(document: UiBuilderDocument, options: Options = Options()): Result =
     when (val built = build(document, options)) {
-      is Built.Tree -> Result.Emitted(WffXmlWriter.write(built.document), built.wffVersion)
+      is Built.Tree ->
+        Result.Emitted(WffXmlWriter.write(built.document), built.wffVersion, built.notes)
       is Built.Refused -> Result.Refused(built.reasons)
     }
 
   /** The XML tree an export writes, before it is written: what [WatchFaceXmlImporter] compares. */
   internal sealed interface Built {
-    data class Tree(val document: WffDocument, val wffVersion: Int) : Built
+    data class Tree(
+      val document: WffDocument,
+      val wffVersion: Int,
+      val notes: List<String> = emptyList(),
+    ) : Built
 
     data class Refused(val reasons: List<String>) : Built
   }
@@ -334,9 +359,12 @@ object WatchFaceXmlExporter {
         )
     }
     if (reasons.isNotEmpty()) return Built.Refused(reasons)
+    val notes = mutableListOf<String>()
     val built =
       WffDocument(
-        face,
+        // Only the real export: an import's lossless round-trip check (lenient) must see the face
+        // as written.
+        if (options.lenient) face else WffIntegerGeometry.normalise(face, notes),
         generated + prolog.filterIsInstance<WffComment>(),
         epilog.filterIsInstance<WffComment>(),
       )
@@ -348,7 +376,7 @@ object WatchFaceXmlExporter {
       val errors = WffValidator.errors(built, target)
       if (errors.isNotEmpty()) return Built.Refused(errors.map { "xml ${it.path}: ${it.message}" })
     }
-    return Built.Tree(built, version)
+    return Built.Tree(built, version, notes)
   }
 
   private fun sceneElement(
@@ -447,6 +475,8 @@ object WatchFaceXmlExporter {
       DIGITAL_CLOCK,
       COMPLICATION_SLOT,
       CONDITION,
+      SCENE_BOOLEAN_CONFIGURATION,
+      SCENE_LIST_CONFIGURATION,
     )
   internal val SCENE_CONTENT = DRAWABLE + VARIANT
 
@@ -504,26 +534,6 @@ object WatchFaceXmlExporter {
   private val CONFIGURATION_ATTRIBUTES =
     arrayOf("id", "displayName", "screenReaderText", "icon", "defaultValue", "highlight")
 
-  /** Every attribute a `wff/shape` property may stand for, across the kinds. */
-  private val SHAPE_ATTRIBUTES: List<String> =
-    listOf(
-      "x",
-      "y",
-      "width",
-      "height",
-      "cornerRadiusX",
-      "cornerRadiusY",
-      "centerX",
-      "centerY",
-      "startAngle",
-      "endAngle",
-      "direction",
-      "startX",
-      "startY",
-      "endX",
-      "endY",
-    )
-
   /** The first-class shape attributes of each `PartDraw` shape element, attribute to property. */
   private val SHAPE_PROPERTIES: Map<String, Map<String, String>> =
     mapOf(
@@ -542,6 +552,62 @@ object WatchFaceXmlExporter {
       "line" to
         mapOf("startX" to "startX", "startY" to "startY", "endX" to "endX", "endY" to "endY"),
     )
+
+  /** The attributes a `wff/shape` property may stand for, per shape kind. */
+  private val SHAPE_NODE_ATTRIBUTES: Map<String, Set<String>> =
+    mapOf(
+      "ellipse" to setOf("x", "y", "width", "height"),
+      "rectangle" to setOf("x", "y", "width", "height"),
+      "round-rectangle" to setOf("x", "y", "width", "height", "cornerRadiusX", "cornerRadiusY"),
+      "arc" to
+        setOf(
+          "centerX",
+          "centerY",
+          "width",
+          "height",
+          "startAngle",
+          "endAngle",
+          "direction",
+        ),
+      "line" to setOf("startX", "startY", "endX", "endY"),
+    )
+
+  /**
+   * The properties of [node] that do not apply to the shape it currently has: a `round-rectangle`'s
+   * corner radii on an `ellipse`, an `arc`'s angles on a `line`. The editor hides them, and the
+   * export leaves them out rather than refusing the design.
+   */
+  fun inapplicableProperties(
+    node: UiBuilderNode,
+    document: UiBuilderDocument? = null,
+  ): Set<String> {
+    val props = Props(node, mutableListOf())
+    return when (node.componentId) {
+      PART_DRAW -> {
+        // Shapes held as `wff/shape` children are the part's drawing, and the `shape` property
+        // then means none (see the part's writer).
+        val hasShapes =
+          document != null &&
+            node.slots.values.flatten().any { document.nodes[it]?.componentId == SHAPE }
+        val shape = if (hasShapes) "none" else props.string("shape") ?: "ellipse"
+        // Colours and a stroke width style a shape; a part with none has nothing to style.
+        if (shape == "none")
+          SHAPE_PROPERTIES.values.flatMap { it.values }.toSet() +
+            setOf("strokeColor", "fillColor", "strokeWidth")
+        else if (shape !in SHAPE_TAGS) emptySet()
+        else {
+          val own = SHAPE_PROPERTIES[shape].orEmpty().values.toSet()
+          SHAPE_PROPERTIES.values.flatMap { it.values }.filter { it !in own }.toSet()
+        }
+      }
+      SHAPE -> {
+        val kind = props.string("shape")
+        val own = SHAPE_NODE_ATTRIBUTES[kind] ?: return emptySet()
+        SHAPE_NODE_ATTRIBUTES.values.flatten().filter { it !in own }.toSet()
+      }
+      else -> emptySet()
+    }
+  }
 
   internal val SHAPE_TAGS: Map<String, String> =
     mapOf(
@@ -647,15 +713,9 @@ object WatchFaceXmlExporter {
                 "shape `$shape` is not ${(SHAPE_TAGS.keys + "none").joinToString(", ")}",
               )
               .let { null }
-          if (props.has("strokeWidth") && !props.has("strokeColor"))
-            refuse("strokeWidth: a stroke needs a strokeColor")
-          if (shape == "none" && (props.has("strokeColor") || props.has("fillColor")))
-            refuse(
-              if (hasShapes)
-                "strokeColor and fillColor: put the colours on the `$FILL` and `$STROKE` of each " +
-                  "`$SHAPE`"
-              else "strokeColor and fillColor: a part with no shape has nothing to stroke or fill",
-            )
+          // Leftover properties that do not apply (a stroke width with no stroke colour, colours on
+          // a part with no shape, another shape's attributes) are dropped, not refused: changing a
+          // part's shape in the editor leaves them behind, and nothing is lost by omitting them.
           val bounds = props.bounds(w, h)
           val stroke =
             props
@@ -690,13 +750,6 @@ object WatchFaceXmlExporter {
             order.mapNotNull { built[it] } +
               built.filterKeys { it !in order }.values.filterNotNull()
           val sources = SHAPE_PROPERTIES[shape].orEmpty()
-          // A shape's own attributes: set on another shape they would be dropped, so refuse them.
-          for ((other, names) in SHAPE_PROPERTIES) {
-            if (other != shape)
-              names.values
-                .filter { it !in sources.values && props.has(it) }
-                .forEach { refuse("$it: only a `$other` shape has it, this part is `$shape`") }
-          }
           val own =
             when (shape) {
               "ellipse",
@@ -767,10 +820,6 @@ object WatchFaceXmlExporter {
                   number("endY"),
                 )
             }
-          // A shape's own attributes: set on another kind they would be dropped, so refuse them.
-          val written = own.map { it.first }.toSet()
-          SHAPE_ATTRIBUTES.filter { it !in written && props.has(it) }
-            .forEach { refuse("$it: a `$kind` shape has no `$it` attribute") }
           el(SHAPE_TAGS.getValue(kind), own, children)
         },
       FILL to simple("Fill", RAW_ONLY, "color"),
@@ -830,6 +879,12 @@ object WatchFaceXmlExporter {
           "complicationSlotIds",
         ),
       BOOLEAN_CONFIGURATION to simple("BooleanConfiguration", RAW_ONLY, *CONFIGURATION_ATTRIBUTES),
+      SCENE_BOOLEAN_CONFIGURATION to
+        simple("BooleanConfiguration", mapOf("options" to setOf(SCENE_BOOLEAN_OPTION)), "id"),
+      SCENE_BOOLEAN_OPTION to simple("BooleanOption", mapOf("content" to DRAWABLE), "id"),
+      SCENE_LIST_CONFIGURATION to
+        simple("ListConfiguration", mapOf("options" to setOf(SCENE_LIST_OPTION)), "id"),
+      SCENE_LIST_OPTION to simple("ListOption", mapOf("content" to DRAWABLE), "id"),
       FLAVORS to simple("Flavors", mapOf("content" to setOf(FLAVOR)), "defaultValue"),
       FLAVOR to
         simple(

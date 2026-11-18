@@ -67,6 +67,9 @@
       },
       "modifiers": [],
       "slots": {
+        "face": [
+          "configurations"
+        ],
         "content": [
           "dial",
           "bezel",
@@ -269,10 +272,6 @@
           "type": "int",
           "value": 46
         },
-        "fillColor": {
-          "type": "color",
-          "value": "#ff4fc3f7"
-        },
         "cornerRadiusX": {
           "type": "int",
           "value": 4
@@ -280,6 +279,10 @@
         "cornerRadiusY": {
           "type": "int",
           "value": 4
+        },
+        "wffExtras": {
+          "type": "string",
+          "value": "{\"fillColor\":\"[CONFIGURATION.theme.0]\"}"
         }
       },
       "modifiers": [],
@@ -527,10 +530,6 @@
           "type": "int",
           "value": 46
         },
-        "fillColor": {
-          "type": "color",
-          "value": "#ff4fc3f7"
-        },
         "cornerRadiusX": {
           "type": "int",
           "value": 4
@@ -538,6 +537,10 @@
         "cornerRadiusY": {
           "type": "int",
           "value": 4
+        },
+        "wffExtras": {
+          "type": "string",
+          "value": "{\"fillColor\":\"[CONFIGURATION.theme.0]\"}"
         }
       },
       "modifiers": [],
@@ -785,10 +788,6 @@
           "type": "int",
           "value": 46
         },
-        "fillColor": {
-          "type": "color",
-          "value": "#ff4fc3f7"
-        },
         "cornerRadiusX": {
           "type": "int",
           "value": 4
@@ -796,6 +795,10 @@
         "cornerRadiusY": {
           "type": "int",
           "value": 4
+        },
+        "wffExtras": {
+          "type": "string",
+          "value": "{\"fillColor\":\"[CONFIGURATION.theme.0]\"}"
         }
       },
       "modifiers": [],
@@ -1043,10 +1046,6 @@
           "type": "int",
           "value": 46
         },
-        "fillColor": {
-          "type": "color",
-          "value": "#ff4fc3f7"
-        },
         "cornerRadiusX": {
           "type": "int",
           "value": 4
@@ -1054,6 +1053,10 @@
         "cornerRadiusY": {
           "type": "int",
           "value": 4
+        },
+        "wffExtras": {
+          "type": "string",
+          "value": "{\"fillColor\":\"[CONFIGURATION.theme.0]\"}"
         }
       },
       "modifiers": [],
@@ -1659,9 +1662,9 @@
           "type": "int",
           "value": 238
         },
-        "fillColor": {
-          "type": "color",
-          "value": "#ffff5252"
+        "wffExtras": {
+          "type": "string",
+          "value": "{\"fillColor\":\"[CONFIGURATION.theme.1]\"}"
         }
       },
       "modifiers": [],
@@ -1746,9 +1749,111 @@
           "type": "int",
           "value": 24
         },
-        "fillColor": {
-          "type": "color",
-          "value": "#ffff5252"
+        "wffExtras": {
+          "type": "string",
+          "value": "{\"fillColor\":\"[CONFIGURATION.theme.1]\"}"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "configurations": {
+      "id": "configurations",
+      "componentId": "wff/user-configurations",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "theme"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "theme": {
+      "id": "theme",
+      "componentId": "wff/color-configuration",
+      "properties": {
+        "id": {
+          "type": "string",
+          "value": "theme"
+        },
+        "displayName": {
+          "type": "string",
+          "value": "Colour theme"
+        },
+        "defaultValue": {
+          "type": "string",
+          "value": "ice"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "options": [
+          "theme-ice",
+          "theme-ember",
+          "theme-moss"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "theme-ice": {
+      "id": "theme-ice",
+      "componentId": "wff/color-option",
+      "properties": {
+        "id": {
+          "type": "string",
+          "value": "ice"
+        },
+        "displayName": {
+          "type": "string",
+          "value": "Ice"
+        },
+        "colors": {
+          "type": "string",
+          "value": "#ff4fc3f7 #ffff5252"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "theme-ember": {
+      "id": "theme-ember",
+      "componentId": "wff/color-option",
+      "properties": {
+        "id": {
+          "type": "string",
+          "value": "ember"
+        },
+        "displayName": {
+          "type": "string",
+          "value": "Ember"
+        },
+        "colors": {
+          "type": "string",
+          "value": "#ffffa726 #ff26c6da"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "theme-moss": {
+      "id": "theme-moss",
+      "componentId": "wff/color-option",
+      "properties": {
+        "id": {
+          "type": "string",
+          "value": "moss"
+        },
+        "displayName": {
+          "type": "string",
+          "value": "Moss"
+        },
+        "colors": {
+          "type": "string",
+          "value": "#ff9ccc65 #fff06292"
         }
       },
       "modifiers": [],
