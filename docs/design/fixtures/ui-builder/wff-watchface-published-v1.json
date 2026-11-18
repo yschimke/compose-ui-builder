@@ -36,6 +36,7 @@
         "Layout",
         "Draw",
         "Clocks",
+        "Motion",
         "Complications",
         "Ambient",
         "Conditions",
@@ -75,6 +76,13 @@
         },
         "wff/variant": {
           "group": "Ambient"
+        },
+        "wff/transform": {
+          "group": "Motion",
+          "variantProperty": "rotateWith"
+        },
+        "wff/gyro": {
+          "group": "Motion"
         },
         "wff/condition": {
           "group": "Conditions"
@@ -169,6 +177,7 @@
             "acceptedTraits": [
               "WffDrawable",
               "WffVariant",
+              "WffTransform",
               "WffRaw"
             ]
           },
@@ -282,6 +291,8 @@
             "acceptedTraits": [
               "WffDrawable",
               "WffVariant",
+              "WffTransform",
+              "WffGyro",
               "WffRaw"
             ]
           },
@@ -289,6 +300,8 @@
             "acceptedTraits": [
               "WffVariant",
               "WffLaunch",
+              "WffTransform",
+              "WffGyro",
               "WffRaw"
             ]
           }
@@ -371,6 +384,8 @@
               "WffShape",
               "WffVariant",
               "WffLaunch",
+              "WffTransform",
+              "WffGyro",
               "WffRaw"
             ]
           },
@@ -378,6 +393,8 @@
             "acceptedTraits": [
               "WffVariant",
               "WffLaunch",
+              "WffTransform",
+              "WffGyro",
               "WffRaw"
             ]
           }
@@ -567,6 +584,8 @@
             "acceptedTraits": [
               "WffVariant",
               "WffLaunch",
+              "WffTransform",
+              "WffGyro",
               "WffRaw"
             ]
           }
@@ -654,6 +673,8 @@
             "acceptedTraits": [
               "WffVariant",
               "WffLaunch",
+              "WffTransform",
+              "WffGyro",
               "WffRaw"
             ]
           }
@@ -1259,6 +1280,133 @@
             "jsonType": "string",
             "required": false,
             "notes": "The value in that mode."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/transform": {
+        "role": "element",
+        "displayName": "Transform",
+        "group": "Motion",
+        "canvas": "placeholder",
+        "traits": [
+          "WffTransform"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "target",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The attribute of the parent element this transform drives. Default angle when rotateWith names a preset.",
+            "allowedValues": [
+              "angle",
+              "x",
+              "y",
+              "alpha",
+              "width",
+              "height",
+              "pivotX",
+              "pivotY",
+              "scaleX",
+              "scaleY"
+            ]
+          },
+          {
+            "name": "rotateWith",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Rotate with: a preset angle expression. hour ([HOUR_0_11]+[MINUTE]/60)*30, minute ([MINUTE]+[SECOND]/60)*6, second-ticking [SECOND]*6, second-sweep [SECOND_MILLISECOND]*6; custom (or none) writes value. A preset wins over value.",
+            "allowedValues": [
+              "hour",
+              "minute",
+              "second-ticking",
+              "second-sweep",
+              "custom"
+            ]
+          },
+          {
+            "name": "value",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The expression the target takes, e.g. [SECOND] * 6. Used when rotateWith is custom or unset."
+          },
+          {
+            "name": "mode",
+            "jsonType": "string",
+            "required": false,
+            "notes": "TO sets the target to the value (the default); BY adds it to the parent's own value.",
+            "allowedValues": [
+              "TO",
+              "BY"
+            ]
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/gyro": {
+        "role": "element",
+        "displayName": "Gyro",
+        "group": "Motion",
+        "canvas": "placeholder",
+        "traits": [
+          "WffGyro"
+        ],
+        "slots": {},
+        "properties": [
+          {
+            "name": "x",
+            "jsonType": "string",
+            "required": false,
+            "notes": "An expression offsetting the parent's x by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
+          },
+          {
+            "name": "y",
+            "jsonType": "string",
+            "required": false,
+            "notes": "An expression offsetting the parent's y by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
+          },
+          {
+            "name": "scaleX",
+            "jsonType": "string",
+            "required": false,
+            "notes": "An expression offsetting the parent's scaleX by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
+          },
+          {
+            "name": "scaleY",
+            "jsonType": "string",
+            "required": false,
+            "notes": "An expression offsetting the parent's scaleY by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
+          },
+          {
+            "name": "angle",
+            "jsonType": "string",
+            "required": false,
+            "notes": "An expression offsetting the parent's angle by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
+          },
+          {
+            "name": "alpha",
+            "jsonType": "string",
+            "required": false,
+            "notes": "An expression offsetting the parent's alpha by the wrist's tilt, e.g. [ACCELEROMETER_ANGLE_X] * 0.5. A live preview sways the wrist gently so the motion shows; a frozen one holds it flat."
           },
           {
             "name": "wffExtras",

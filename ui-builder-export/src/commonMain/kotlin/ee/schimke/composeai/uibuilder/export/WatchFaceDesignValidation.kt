@@ -475,6 +475,8 @@ object WatchFaceDesignValidation {
       WatchFaceXmlExporter.COMPLICATION -> "Complication"
       WatchFaceXmlExporter.VARIANT -> "Variant"
       WatchFaceXmlExporter.LAUNCH -> "Launch"
+      WatchFaceXmlExporter.TRANSFORM -> "Transform"
+      WatchFaceXmlExporter.GYRO -> "Gyro"
       WatchFaceXmlExporter.CLOCK_HAND ->
         when (WatchFaceXmlExporter.Props(node, mutableListOf()).string("type")) {
           "hour" -> "HourHand"

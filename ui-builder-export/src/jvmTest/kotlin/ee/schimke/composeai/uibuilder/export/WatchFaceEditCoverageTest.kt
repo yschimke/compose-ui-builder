@@ -123,8 +123,12 @@ class WatchFaceEditCoverageTest {
     }
   }
 
-  /** Properties whose value is not written as text of its own (it picks a tag or a mode). */
-  private val notWrittenAsText = setOf("type", "shape", "boundsType", "verbatim", "wffVersion")
+  /**
+   * Properties whose value is not written as text of its own (it picks a tag, a mode or, for a
+   * transform's `rotateWith`, the expression it writes).
+   */
+  private val notWrittenAsText =
+    setOf("type", "shape", "boundsType", "verbatim", "wffVersion", "rotateWith")
 
   @Test
   fun `no declared property is silently dropped on an imported face`() {
