@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
+import ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
@@ -63,24 +64,35 @@ internal fun WatchFaceCanvas(
 ) {
   val face = LocalWffFace.current
   val preview = LocalWffPreview.current
+  // In ambient mode the node as its `<Variant mode="AMBIENT">` children make it.
+  @Suppress("NAME_SHADOWING") val node = wffNodeIn(document, node, preview)
   fun place(id: String) = wffPlace(document, id, face.widthPx, face.heightPx, face.dpPerPx, preview)
   val placed = { slot: String ->
     node.slots[slot].orEmpty().filter { id ->
-      document.nodes[id]?.componentId.let {
-        it != WatchFaceXmlExporter.VARIANT && it != WatchFaceXmlExporter.RAW
-      }
+      val candidate = document.nodes[id]
+      candidate != null &&
+        candidate.componentId != WatchFaceXmlExporter.VARIANT &&
+        candidate.componentId != WatchFaceXmlExporter.RAW &&
+        wffVisibleIn(wffNodeIn(document, candidate, preview), preview)
     }
   }
   when (node.componentId) {
     WatchFaceXmlExporter.SCENE -> {
       val width = node.float("width", 450f).coerceAtLeast(1f)
       val height = node.float("height", 450f).coerceAtLeast(1f)
+      // The real clock, unless the environment fixes the time: then it is frozen at that.
+      val fixedTime = (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+      val ambient = document.isWffAmbient()
+      val live =
+        rememberLiveWallClock(
+          continuous = remember(document.nodes) { document.wffReadsSubSecond() } && !ambient,
+          enabled = fixedTime.isBlank(),
+        )
       val context =
-        remember(node, document.environment) {
-          WffPreviewContext.of(
-            node.string("previewTime"),
-            (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
-          )
+        remember(node, fixedTime, live, ambient) {
+          (live?.let { WffPreviewContext.of(it) }
+              ?: WffPreviewContext.of(node.string("previewTime"), fixedTime))
+            .inMode(ambient)
         }
       val clip =
         when (node.string("clipShape").ifEmpty { "CIRCLE" }) {
@@ -90,7 +102,9 @@ internal fun WatchFaceCanvas(
           else -> RoundedCornerShape(0.dp)
         }
       BoxWithConstraints(
-        modifier.clip(clip).background(node.color("backgroundColor", Color.Black)),
+        modifier
+          .clip(clip)
+          .background(if (ambient) Color.Black else node.color("backgroundColor", Color.Black)),
       ) {
         val scale = maxWidth.value / width
         CompositionLocalProvider(
@@ -119,12 +133,15 @@ internal fun WatchFaceCanvas(
           .orEmpty()
           .mapNotNull { document.nodes[it] }
           .filter { it.componentId == WatchFaceXmlExporter.SHAPE }
+          .map { wffNodeIn(document, it, preview) }
+          .filter { wffVisibleIn(it, preview) }
           .map { shape ->
             fun paint(component: String) =
               shape.slots["content"]
                 .orEmpty()
                 .mapNotNull { document.nodes[it] }
                 .firstOrNull { it.componentId == component }
+                ?.let { wffNodeIn(document, it, preview) }
             val fillNode = paint(WatchFaceXmlExporter.FILL)
             val strokeNode = paint(WatchFaceXmlExporter.STROKE)
             WffShapeDrawing(
@@ -197,7 +214,12 @@ internal fun WatchFaceCanvas(
         node.string("align").ifEmpty { "CENTER" },
       )
     WatchFaceXmlExporter.ANALOG_CLOCK -> {
-      val hands = node.slots["hands"].orEmpty().mapNotNull { document.nodes[it] }
+      val hands =
+        node.slots["hands"]
+          .orEmpty()
+          .mapNotNull { document.nodes[it] }
+          .map { wffNodeIn(document, it, preview) }
+          .filter { wffVisibleIn(it, preview) }
       // Resolved here: a colour token needs the composition, the draw lambda has none.
       val tints = hands.map { it.color("tintColor", Color.White) }
       Box(
@@ -311,7 +333,7 @@ private fun wffPlace(
   scale: Float,
   preview: WffPreviewContext,
 ): Modifier {
-  val target = document.nodes[id] ?: return Modifier
+  val target = document.nodes[id]?.let { wffNodeIn(document, it, preview) } ?: return Modifier
   val box =
     Modifier.offset((target.float("x") * scale).dp, (target.float("y") * scale).dp)
       .size(

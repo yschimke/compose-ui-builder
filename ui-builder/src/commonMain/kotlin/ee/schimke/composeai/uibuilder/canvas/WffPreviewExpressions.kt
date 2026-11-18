@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.canvas
 
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -23,6 +24,8 @@ internal class WffPreviewContext(
   val month: Int = 5,
   val day: Int = 16,
   val complication: WffComplicationSample = WffComplicationSample.Default,
+  /** Whether the watch is in ambient mode: `<Variant mode="AMBIENT">` overrides apply. */
+  val ambient: Boolean = false,
 ) {
   /** 0 = Sunday. */
   val dayOfWeek: Int
@@ -34,15 +37,36 @@ internal class WffPreviewContext(
     }
 
   fun withComplication(sample: WffComplicationSample) =
-    WffPreviewContext(hour, minute, second, fraction, year, month, day, sample)
+    WffPreviewContext(hour, minute, second, fraction, year, month, day, sample, ambient)
+
+  fun inMode(ambient: Boolean) =
+    WffPreviewContext(hour, minute, second, fraction, year, month, day, complication, ambient)
 
   companion object {
+    /** The real time [clock] reads, its milliseconds as the fraction of the second. */
+    fun of(clock: UiExpressions.Clock, ambient: Boolean = false) =
+      WffPreviewContext(
+        hour = clock.hour,
+        minute = clock.minute,
+        second = clock.second,
+        fraction = clock.millisecond / 1000.0,
+        year = clock.year,
+        month = clock.month,
+        day = clock.dayOfMonth,
+        ambient = ambient,
+      )
+
     /**
      * From a `previewTime` (`HH:mm:ss`) and a `fixedTime` (an ISO instant), either may be blank.
      */
     fun of(previewTime: String, fixedTime: String): WffPreviewContext {
       val base = WffPreviewContext()
-      val parts = previewTime.split(':').map { it.trim() }
+      // With no `previewTime` the fixed instant's own time of day is the frozen time.
+      val clockText =
+        previewTime.ifBlank {
+          fixedTime.substringAfter('T', "").substringBefore('Z').substringBefore('+')
+        }
+      val parts = clockText.split(':').map { it.trim() }
       val clock = parts.map { it.substringBefore('.').toIntOrNull() }.filterNotNull()
       val fraction =
         parts

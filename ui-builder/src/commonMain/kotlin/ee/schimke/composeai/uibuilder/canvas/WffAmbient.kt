@@ -1,0 +1,81 @@
+package ee.schimke.composeai.uibuilder.canvas
+
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+
+/**
+ * The environment entry a preview pane sets to draw a watch face in ambient mode. It is on the
+ * pane's copy of the document only: never saved, never exported.
+ */
+internal const val WFF_AMBIENT_ENV = "wffAmbient"
+
+/** Whether [this] is a Watch Face Format design, whose scene is its root. */
+internal fun UiBuilderDocument.isWatchFace(): Boolean =
+  roots.firstNotNullOfOrNull { nodes[it] }?.componentId == WatchFaceXmlExporter.SCENE
+
+/** Whether the surface drawing [this] asks for ambient mode. */
+internal fun UiBuilderDocument.isWffAmbient(): Boolean =
+  (environment[WFF_AMBIENT_ENV] as? JsonPrimitive)?.contentOrNull == "true"
+
+/** [this] drawn in ambient mode, or in the interactive one. */
+internal fun UiBuilderDocument.withWffAmbient(ambient: Boolean): UiBuilderDocument {
+  if (isWffAmbient() == ambient) return this
+  return copy(
+    environment =
+      JsonObject(
+        if (ambient) environment + (WFF_AMBIENT_ENV to JsonPrimitive("true"))
+        else environment - WFF_AMBIENT_ENV,
+      ),
+  )
+}
+
+/**
+ * Whether the face reads the clock below a second: `[SECOND_MILLISECOND]`, which a sweeping second
+ * hand turns on. Without it the face only changes each whole second, and is redrawn that often.
+ */
+internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
+  nodes.values.any { node ->
+    node.properties.values.any { property ->
+      ((property as? JsonObject)?.get("value") as? JsonPrimitive)
+        ?.contentOrNull
+        ?.contains("SECOND_MILLISECOND") == true
+    }
+  }
+
+/**
+ * [node] as the watch draws it in [preview]'s mode. Interactive is as authored; ambient applies the
+ * `<Variant mode="AMBIENT" target value>` children, each replacing the property its `target` names
+ * (a number when `value` evaluates to one, else the text).
+ */
+internal fun wffNodeIn(
+  document: UiBuilderDocument,
+  node: UiBuilderNode,
+  preview: WffPreviewContext,
+): UiBuilderNode {
+  if (!preview.ambient) return node
+  var properties = node.properties
+  for (id in node.slots.values.flatten()) {
+    val variant = document.nodes[id]?.takeIf { it.componentId == WatchFaceXmlExporter.VARIANT }
+    if (variant == null || variant.string("mode").ifEmpty { "AMBIENT" } != "AMBIENT") continue
+    val target = variant.string("target")
+    val raw = variant.string("value")
+    if (target.isEmpty()) continue
+    val number = evaluateWffExpression(raw, preview) as? WffValue.Num
+    val encoded =
+      if (number != null)
+        JsonObject(
+          mapOf("type" to JsonPrimitive("number"), "value" to JsonPrimitive(number.value)),
+        )
+      else JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(raw)))
+    properties = JsonObject(properties + (target to encoded))
+  }
+  return if (properties === node.properties) node else node.copy(properties = properties)
+}
+
+/** Whether [node] is drawn at all in [preview]'s mode: ambient hides what its variants make clear. */
+internal fun wffVisibleIn(node: UiBuilderNode, preview: WffPreviewContext): Boolean =
+  !preview.ambient || node.float("alpha", 255f) > 0f
