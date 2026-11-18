@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.136.0](https://github.com/yschimke/compose-ui-builder/compare/v3.135.0...v3.136.0) (2026-11-18)
+
+
+### Features
+
+* draw the real watch-face runtime inline in the Native pane ([#1268](https://github.com/yschimke/compose-ui-builder/issues/1268)) ([2d10f2f](https://github.com/yschimke/compose-ui-builder/commit/2d10f2f54c4c50dd00bff2a099d032f04298fb44))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.99.3 ([#1260](https://github.com/yschimke/compose-ui-builder/issues/1260)) ([a1c7e6f](https://github.com/yschimke/compose-ui-builder/commit/a1c7e6fb3c1cbeb17c3265d6ef9394aa75dc32a6))
+* **deps:** update dependency ee.schimke.watchface:watchface-tools-bom to v0.3.2 ([#1266](https://github.com/yschimke/compose-ui-builder/issues/1266)) ([879cccc](https://github.com/yschimke/compose-ui-builder/commit/879ccccd8cab96e58f0262e3550164f46f830b71))
+* draw a thumbnail for every watch face component in the palette ([#1267](https://github.com/yschimke/compose-ui-builder/issues/1267)) ([77a6c93](https://github.com/yschimke/compose-ui-builder/commit/77a6c9350475336626c300ced20f2817f6c8911c))
+* **wff:** export no longer refuses leftover shape properties or fractional geometry ([#1265](https://github.com/yschimke/compose-ui-builder/issues/1265)) ([c707a2e](https://github.com/yschimke/compose-ui-builder/commit/c707a2e4b2577d8d5799e62e2775ee434c0ecbc6))
+
 ## [3.135.0](https://github.com/yschimke/compose-ui-builder/compare/v3.134.0...v3.135.0) (2026-11-18)
 
 

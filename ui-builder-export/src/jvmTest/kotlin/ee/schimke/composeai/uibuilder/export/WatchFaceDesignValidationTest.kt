@@ -136,8 +136,12 @@ class WatchFaceDesignValidationTest {
     )
     val decimal =
       document().with(WatchFaceXmlExporter.CLOCK_HAND, "width", "string", JsonPrimitive("12.50"))
-    // The format's own types now judge the written value: a hand's width is a whole number.
-    assertTrue(reasons(decimal).single().contains("width"), reasons(decimal).toString())
+    // A hand's width is a whole number in the format: the export rounds it and says so, rather
+    // than refusing the face.
+    val rounded =
+      assertIs<WatchFaceXmlExporter.Result.Emitted>(WatchFaceXmlExporter.export(decimal))
+    assertTrue(rounded.notes.any { "width" in it }, rounded.notes.toString())
+    assertTrue("""width="13"""" in rounded.xml, rounded.xml)
   }
 
   @Test

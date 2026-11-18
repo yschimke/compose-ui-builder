@@ -127,6 +127,18 @@
         "wff/flavor-configuration": {
           "group": "Configuration"
         },
+        "wff/scene-boolean-configuration": {
+          "group": "Configuration"
+        },
+        "wff/scene-boolean-option": {
+          "group": "Configuration"
+        },
+        "wff/scene-list-configuration": {
+          "group": "Configuration"
+        },
+        "wff/scene-list-option": {
+          "group": "Configuration"
+        },
         "wff/raw": {
           "group": "Raw XML"
         }
@@ -1733,7 +1745,7 @@
             "name": "colors",
             "jsonType": "string",
             "required": false,
-            "notes": "The option's colours, space separated `#RRGGBB` values, one per theme slot (WFF `colors`)."
+            "notes": "The option's colours, space separated `#RRGGBB` values, one per theme slot (WFF `colors`). A colour attribute elsewhere in the face reads slot N of the selected option as `[CONFIGURATION.<configurationId>.<N>]`, counting from 0."
           },
           {
             "name": "wffExtras",
@@ -1905,7 +1917,7 @@
             "name": "defaultValue",
             "jsonType": "string",
             "required": false,
-            "notes": "The id of the option selected by default (`TRUE` or `FALSE` for a boolean)."
+            "notes": "The id of the option selected by default (`TRUE` or `FALSE`). The Preview pane's configuration picker can show the other value without changing this."
           },
           {
             "name": "highlight",
@@ -2031,6 +2043,136 @@
             "jsonType": "string",
             "required": false,
             "notes": "Accessibility text (WFF `screenReaderText`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/scene-boolean-configuration": {
+        "role": "element",
+        "displayName": "BooleanConfiguration (scene)",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable",
+          "WffBooleanSwitch"
+        ],
+        "slots": {
+          "options": {
+            "acceptedTraits": [
+              "WffBooleanCase",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the boolean configuration this container follows (declared by a `wff/boolean-configuration`). Only the child of the selected option is drawn and written as shown."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/scene-boolean-option": {
+        "role": "element",
+        "displayName": "BooleanOption",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffBooleanCase"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffDrawable",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "`TRUE` or `FALSE`: the parts below show while the configuration has this value."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/scene-list-configuration": {
+        "role": "element",
+        "displayName": "ListConfiguration (scene)",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffDrawable",
+          "WffListSwitch"
+        ],
+        "slots": {
+          "options": {
+            "acceptedTraits": [
+              "WffListCase",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the list configuration this container follows (declared by a `wff/list-configuration`)."
+          },
+          {
+            "name": "wffExtras",
+            "jsonType": "string",
+            "required": false,
+            "notes": "Import only: a JSON object of strings holding what has no property of its own: the attribute order (`wffAttrOrder`, `faceAttrOrder`, `<inner>AttrOrder`), attributes this vocabulary does not model (`renderMode`, `font:weight`) and values a typed property cannot carry (`2.0`, `[WEATHER.TEMPERATURE]`). Read wherever the named property is absent. An order is authoritative: an attribute it does not list is not written unless its property is set. Layout keys: `coreAt` (where the element's own part sits among its children), `shapeChildOrder`, `slotChildOrder`, and for a text template `templateCData` and `templateTail`."
+          }
+        ],
+        "modifierCapabilities": []
+      },
+      "wff/scene-list-option": {
+        "role": "element",
+        "displayName": "ListOption (scene)",
+        "group": "Configuration",
+        "canvas": "placeholder",
+        "traits": [
+          "WffListCase"
+        ],
+        "slots": {
+          "content": {
+            "acceptedTraits": [
+              "WffDrawable",
+              "WffRaw"
+            ]
+          }
+        },
+        "properties": [
+          {
+            "name": "id",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The id of the declared option: the parts below show while it is selected."
           },
           {
             "name": "wffExtras",

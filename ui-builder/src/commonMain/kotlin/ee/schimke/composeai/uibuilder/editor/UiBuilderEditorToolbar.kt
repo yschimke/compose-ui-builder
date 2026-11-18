@@ -1432,6 +1432,7 @@ internal fun editorSelectionMenuEntries(
 internal suspend fun copyCodeSentence(
   code: EditorGeneratedCode,
   layer: String,
+  noSource: String = "No Compose source",
   write: suspend (String) -> Unit,
 ): String =
   when (code) {
@@ -1448,7 +1449,7 @@ internal suspend fun copyCodeSentence(
       // The first reason in full, since a notice has room for a sentence, not the pane's list; the
       // count says there is more. Not "in the code pane": that lists the whole design's reasons.
       val more = code.reasons.size - 1
-      "No Compose source · the export would refuse $layer" +
+      "$noSource · the export would refuse $layer" +
         (code.reasons.firstOrNull()?.let { ": $it" } ?: "") +
         (if (more > 0) " (and $more more)" else "")
     }

@@ -18,8 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
@@ -84,6 +83,8 @@ internal fun WatchFaceCanvas(
             (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
           )
         }
+      val configurations =
+        remember(document) { WffConfigurationState(document.wffConfigurations()) }
       val clip =
         when (node.string("clipShape").ifEmpty { "CIRCLE" }) {
           "CIRCLE" -> CircleShape
@@ -91,32 +92,36 @@ internal fun WatchFaceCanvas(
           "RECTANGLE" -> RoundedCornerShape(percent = 8)
           else -> RoundedCornerShape(0.dp)
         }
-      // The editing canvas draws the screen's shape (a faint outline, and the background inside
-      // it) but does not cut the parts to it, so content outside the circle can be seen and
-      // selected. The preview and the exports are cut.
-      val editing = LocalUiBuilderEditingCanvas.current
-      val background = node.wffColor(document, "backgroundColor", Color.Black)
       // The face keeps its own aspect ratio, centred in whatever box it is given: cut to a circle
-      // in a landscape box it would be an ellipse, and its pixels would be drawn off-scale.
-      BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-        val scale = minOf(maxWidth.value / width, maxHeight.value / height)
-        CompositionLocalProvider(
-          LocalWffFace provides WffFace(width, height, scale),
-          LocalWffPreview provides context,
-        ) {
-          val face = Modifier.size((width * scale).dp, (height * scale).dp)
-          Box(
-            if (editing)
-              face.background(background, clip).drawWithContent {
-                drawContent()
-                if (clip == CircleShape) {
-                  drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
-                }
-              }
-            else face.clip(clip).background(background),
+      // in a landscape box it would be an ellipse, and its pixels would be drawn off-scale. The
+      // configurations are provided around the whole face, so the scene's own background reads a
+      // `[CONFIGURATION.<id>.<n>]` colour as its parts do.
+      CompositionLocalProvider(LocalWffConfigurations provides configurations) {
+        BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+          val scale = minOf(maxWidth.value / width, maxHeight.value / height)
+          CompositionLocalProvider(
+            LocalWffFace provides WffFace(width, height, scale),
+            LocalWffPreview provides context,
           ) {
-            placed("content").forEach { id ->
-              child(id, wffPlace(document, id, width, height, scale, context))
+            // The editing canvas draws the screen's shape (a faint outline, and the background
+            // inside it) but does not cut the parts to it, so content outside the circle can be
+            // seen and selected. The preview and the exports are cut.
+            val editing = LocalUiBuilderEditingCanvas.current
+            val background = node.wffColor("backgroundColor", Color.Black)
+            val face = Modifier.size((width * scale).dp, (height * scale).dp)
+            Box(
+              if (editing)
+                face.background(background, clip).drawWithContent {
+                  drawContent()
+                  if (clip == CircleShape) {
+                    drawCircle(Color(0x33FFFFFF), style = Stroke(1.dp.toPx()))
+                  }
+                }
+              else face.clip(clip).background(background),
+            ) {
+              placed("content").forEach { id ->
+                child(id, wffPlace(document, id, width, height, scale, context))
+              }
             }
           }
         }
@@ -146,9 +151,8 @@ internal fun WatchFaceCanvas(
             val strokeNode = paint(WatchFaceXmlExporter.STROKE)
             WffShapeDrawing(
               kind = shape.string("shape").ifEmpty { "ellipse" },
-              fill = fillNode?.wffColor(document, "color", Color.Unspecified) ?: Color.Unspecified,
-              stroke =
-                strokeNode?.wffColor(document, "color", Color.Unspecified) ?: Color.Unspecified,
+              fill = fillNode?.wffColor("color", Color.Unspecified) ?: Color.Unspecified,
+              stroke = strokeNode?.wffColor("color", Color.Unspecified) ?: Color.Unspecified,
               strokeWidth = (strokeNode?.float("thickness", 1f) ?: 1f) * face.dpPerPx,
               ends = listOf("startX", "startY", "endX", "endY").map { shape.float(it) },
               box = shapeBox(shape),
@@ -160,8 +164,8 @@ internal fun WatchFaceCanvas(
             listOf(
               WffShapeDrawing(
                 kind = node.string("shape").ifEmpty { "ellipse" },
-                fill = node.wffColor(document, "fillColor", Color.Unspecified),
-                stroke = node.wffColor(document, "strokeColor", Color.Unspecified),
+                fill = node.wffColor("fillColor", Color.Unspecified),
+                stroke = node.wffColor("strokeColor", Color.Unspecified),
                 strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx,
                 ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) },
                 box = null,
@@ -197,7 +201,7 @@ internal fun WatchFaceCanvas(
       WffText(
         modifier,
         text,
-        node.wffColor(document, "color", Color.White),
+        node.wffColor("color", Color.White),
         (node.float("fontSize", 32f) * face.dpPerPx).sp,
         node.string("align"),
       )
@@ -210,14 +214,14 @@ internal fun WatchFaceCanvas(
           preview,
           twelveHour = node.string("hourFormat") == "12",
         ),
-        node.wffColor(document, "color", Color.White),
+        node.wffColor("color", Color.White),
         (node.float("fontSize", 48f) * face.dpPerPx).sp,
         node.string("align").ifEmpty { "CENTER" },
       )
     WatchFaceXmlExporter.ANALOG_CLOCK -> {
       val hands = node.slots["hands"].orEmpty().mapNotNull { document.nodes[it] }
       // Resolved here: a colour token needs the composition, the draw lambda has none.
-      val tints = hands.map { it.wffColor(document, "tintColor", Color.White) }
+      val tints = hands.map { it.wffColor("tintColor", Color.White) }
       Box(
         modifier.drawBehind {
           hands.forEachIndexed { index, hand ->
@@ -271,6 +275,34 @@ internal fun WatchFaceCanvas(
             )
           }
         }
+      }
+    }
+    // A configuration container draws the parts of the option selected now; the others are not
+    // drawn, as the watch does not draw them.
+    WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION,
+    WatchFaceXmlExporter.SCENE_LIST_CONFIGURATION -> {
+      val state = LocalWffConfigurations.current
+      val options =
+        node.slots["options"]
+          .orEmpty()
+          .mapNotNull { document.nodes[it] }
+          .filter {
+            it.componentId == WatchFaceXmlExporter.SCENE_BOOLEAN_OPTION ||
+              it.componentId == WatchFaceXmlExporter.SCENE_LIST_OPTION
+          }
+      val id = node.wffValue("id")
+      val shown =
+        state.selected(id)
+          ?: if (node.componentId == WatchFaceXmlExporter.SCENE_BOOLEAN_CONFIGURATION) "TRUE"
+          else options.firstOrNull()?.wffValue("id")
+      Box(modifier) {
+        options
+          .firstOrNull { it.wffValue("id") == shown }
+          ?.slots
+          ?.get("content")
+          .orEmpty()
+          .filter { document.nodes[it]?.componentId != WatchFaceXmlExporter.RAW }
+          .forEach { childId -> child(childId, place(childId)) }
       }
     }
     // A condition draws its first branch, the one a preview with no data takes.
@@ -460,61 +492,4 @@ internal fun UiBuilderDocument.isRoundWatchFace(): Boolean {
   val scene = roots.firstNotNullOfOrNull { nodes[it] } ?: return false
   return scene.componentId == WatchFaceXmlExporter.SCENE &&
     scene.string("clipShape").ifEmpty { "CIRCLE" } == "CIRCLE"
-}
-
-/**
- * A colour property of a watch-face node: its own literal, else the face colour option
- * (`[CONFIGURATION.<id>.<n>]`) it names, which a chip commit holds in `wffExtras` rather than in
- * the property (the design service accepts only drawable literals there). The option is read from
- * the configuration's default option, colour index `n`; anything that cannot be resolved draws
- * [fallback].
- */
-@Composable
-internal fun UiBuilderNode.wffColor(
-  document: UiBuilderDocument,
-  name: String,
-  fallback: Color,
-): Color {
-  // A property that is set, empty included, is authoritative: a held reference is only for a
-  // colour the node has no property for.
-  if (name in properties) return color(name, fallback)
-  val reference = heldColourReference(name) ?: return fallback
-  return resolveColourOption(document, reference) ?: fallback
-}
-
-private fun UiBuilderNode.heldColourReference(name: String): String? {
-  val held =
-    string("wffExtras").ifEmpty {
-      return null
-    }
-  val extras = runCatching {
-    kotlinx.serialization.json.Json.parseToJsonElement(held) as? JsonObject
-  }
-    .getOrNull()
-  return (extras?.get(name) as? JsonPrimitive)?.contentOrNull
-}
-
-private val COLOUR_OPTION_REFERENCE = Regex("""\[CONFIGURATION\.([A-Za-z0-9_.-]+)\.(\d+)]""")
-
-private fun resolveColourOption(document: UiBuilderDocument, reference: String): Color? {
-  val match = COLOUR_OPTION_REFERENCE.matchEntire(reference.trim()) ?: return null
-  val (id, index) = match.destructured
-  val configuration =
-    document.nodes.values.firstOrNull {
-      it.componentId == WatchFaceXmlExporter.COLOR_CONFIGURATION && it.string("id") == id
-    } ?: return null
-  val options =
-    configuration.slots["options"]
-      .orEmpty()
-      .mapNotNull { document.nodes[it] }
-      .filter { it.componentId == WatchFaceXmlExporter.COLOR_OPTION }
-  val chosen =
-    options.firstOrNull { it.string("id") == configuration.string("defaultValue") }
-      ?: options.firstOrNull()
-      ?: return null
-  val literal =
-    index.toIntOrNull()?.let { at ->
-      chosen.string("colors").split(' ', '\n').filter { it.isNotBlank() }.getOrNull(at)
-    } ?: return null
-  return literal.takeIf { it.startsWith("#") }?.let { Color(parseArgb(it)) }
 }

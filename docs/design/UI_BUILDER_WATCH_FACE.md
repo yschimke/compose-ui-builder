@@ -143,8 +143,20 @@ The theme plumbing before the `<Scene>` is builtin too: `wff/user-configurations
 `wff/color-configuration` (with `wff/color-option`), `wff/list-configuration` (with
 `wff/list-option`), `wff/boolean-configuration` and `wff/flavors` (with `wff/flavor` and its
 `wff/flavor-configuration`), every attribute a property, so an option can be added, removed,
-reordered, renamed or recoloured through ordinary node edits. (The `ListConfiguration` and
-`BooleanConfiguration` inside a `<Scene>` select a layout, hold parts, and stay raw.) What a
+reordered, renamed or recoloured through ordinary node edits. The `BooleanConfiguration` and
+`ListConfiguration` inside a `<Scene>` are builtins of their own (`wff/scene-boolean-configuration`
+with `wff/scene-boolean-option`, `wff/scene-list-configuration` with `wff/scene-list-option`): the
+same tags as the declarations, told apart by where they sit, each option holding the parts shown
+while it is selected.
+
+**Previewing configurations.** The canvas reads each declared configuration's `defaultValue`: a
+colour attribute written `[CONFIGURATION.<id>.<n>]` draws colour `n` (from 0) of the selected
+`ColorOption`, and a scene container draws only the selected option's children. The Preview pane
+and the editing canvas offer a picker per configuration (a swatch per colour theme, a switch for a
+boolean, a menu for a list). The choice is editor state, drawn through a copy of the design: the
+exported XML keeps the `defaultValue` its author wrote until they edit it. The Native pane's
+simulator accepts the same selection as `DwfControls.config` (compose-preview-server), but the
+editor's host seam passes only the XML, so the real runtime starts at each default. What a
 builtin cannot write back exactly (attribute order, where its own part sits among its children,
 a non-canonical decimal, an expression where a number goes) is kept in the node's `wffExtras`, so
 the tree still comes back identical. Still `wff/raw`, with the reason in the import warning:
