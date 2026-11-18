@@ -67,8 +67,6 @@ jobs:
           ro-token: ${{ secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN_RO || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN_RO }}
       - name: Check Markdown links
         run: ./scripts/check-markdown-links.py
-      - name: Kobento catalog is generated from its snapshot
-        run: ./scripts/kobento/snapshot-kobento-catalog.py check
       # The two JVM test suites run in `jvm-tests`: they were the last ~4 minutes of this job,
       # holding the workers the Wasm browser tests sat waiting for.
       - run: >-

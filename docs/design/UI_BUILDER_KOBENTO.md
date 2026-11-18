@@ -23,14 +23,18 @@ Kobento's MCP `convert` turns a call into plain format JSON.
 
 | Piece | Where | What it proves |
 | --- | --- | --- |
-| Snapshot generator | `scripts/kobento/snapshot-kobento-catalog.py` | the component list can be got into a catalog mechanically, from Kobento's own `find` answer |
 | Interface snapshot | `docs/design/fixtures/ui-builder/kobento-components-snapshot-v1.json` | 96 components, their params (type, required, default, enum values, `static`) and slots |
 | Published catalog | `docs/design/fixtures/ui-builder/kobento-published-v1.json` | a `ui-builder.json` that `PublishedUiBuilderCatalog` composes with **no record**: every component is a builtin |
 | Exporter | `ui-builder-export/.../KobentoComponentJsonExporter.kt` | a design over that catalog lowers to Kobento component JSON |
 | Test | `ui-builder-runtime/.../KobentoCatalogTest.kt` | all 96 are served under their ids, a sample design **validates in the runtime** against the served catalog, and it exports to the golden `kobento-export-sample.json` |
 
-`snapshot-kobento-catalog.py check` regenerates the published file from the snapshot offline and
-fails if they disagree. `fetch` needs a token and is the only step that touches the network.
+Both fixtures are **captures** from [`yschimke/kobento-catalog`](https://github.com/yschimke/kobento-catalog),
+which owns the generator (`generator/snapshot.py`), the snapshot and the published catalog (§5).
+Re-capture them as a reviewed change when that catalog republishes, the same way
+`remote-m3-published-v1.json` is re-captured from its delivery branch. The generator's `fetch`
+needs a Kobento token and is the only step that touches the network. Its `check` regenerates the
+published file from the snapshot offline and fails if they disagree, and that check runs in the
+catalog's own repository, not here.
 
 ## 1. Getting the component list into a catalog
 
@@ -232,8 +236,8 @@ lists the four in `statusSemantics.kobento.looks`. A host pairs each preset with
 
 ## 5. Where it lives
 
-**Recommendation: a new repository, `yschimke/kobento-catalog`, publishing to
-`yschimke/kobento-catalog-out` on `design-artifacts/kobento`**, the way `m3-catalog`,
+**Decided: a separate repository, [`yschimke/kobento-catalog`](https://github.com/yschimke/kobento-catalog),
+publishing to `yschimke/kobento-catalog-out` on `design-artifacts/kobento`**, the way `m3-catalog`,
 `wear-m3-catalog` and `remote-m3-catalog` publish their catalogs. `PublishedCatalogLocation.DEFAULTS`
 then gains one row, and the offline hosts open it like any other. That is the
 catalog-agnosticism contract working as designed: the builder carries no Kobento definitions.
@@ -247,15 +251,17 @@ What stays **here** is what every catalog relies on: the exporter (a lowering, l
 `RemoteDocumentJsonExporter`), the test fixture that pins the exporter's input, and this plan. The
 fixture in `docs/design/fixtures/ui-builder/` is the same kind of capture as `remote-m3-published-v1.json`.
 
-I cannot create repositories, so the proposed layout is:
+It was set up in [kobento-catalog#1](https://github.com/yschimke/kobento-catalog/pull/1). The layout
+it started from:
 
 ```
 kobento-catalog/
   README.md                     what it is, the token, how to refresh
   generator/
-    snapshot.py                 this repo's scripts/kobento/snapshot-kobento-catalog.py, moved
+    snapshot.py                 the generator, first written here and moved there
   catalog/
     components.snapshot.json    the interface snapshot (or the upstream manifest URL, once it exists)
+    ui-builder.json             the generated, published catalog
     ui-builder.policy.json      hand-written: groups, display names, which looks, board presets
   designs/                      seed templates (a thermostat card, a round clock, an e-ink dashboard)
   .github/workflows/
@@ -283,9 +289,12 @@ generators do.
 
 ## Landing order
 
-1. ~~Snapshot generator, published fixture, exporter, runtime test~~ (this slice).
-2. Ask Kobento for a published manifest. Meanwhile, stand up `kobento-catalog` with the
-   generator, and add the `PublishedCatalogLocation` row here.
+1. ~~Snapshot generator, published fixture, exporter, runtime test~~ (this slice; the generator
+   has since moved to `kobento-catalog`).
+2. ~~Stand up `kobento-catalog`~~ (kobento-catalog#1). Its publishing still needs the
+   `kobento-catalog-out` repository and the `ARTIFACTS_TOKEN` and `KOBENTO_TOKEN` secrets. Once
+   it publishes, add the `PublishedCatalogLocation` row here. Ask Kobento for a published
+   manifest.
 3. Advertise the export. This needs a contracts change: `ExportFormatV1` has `JSON` and `RC` but
    no "component JSON". Add `KOBENTO_JSON` (or a generic `REMOTE_COMPONENT_JSON` with the
    component-set list as an option), gated per catalog as `remoteJson`/`remoteDocument` are. Then

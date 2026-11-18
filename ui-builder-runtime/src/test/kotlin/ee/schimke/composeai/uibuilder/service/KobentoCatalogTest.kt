@@ -18,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The Kobento catalog is data this build has never heard of: a `ui-builder.json` generated from a
- * snapshot of Kobento's component library (`scripts/kobento/snapshot-kobento-catalog.py`), with
+ * snapshot of Kobento's component library (captured from `yschimke/kobento-catalog`), with
  * every component a builtin because none has a Kotlin call site. A design authored against it
  * validates in the runtime and exports as Kobento component JSON. See
  * `docs/design/UI_BUILDER_KOBENTO.md`.
