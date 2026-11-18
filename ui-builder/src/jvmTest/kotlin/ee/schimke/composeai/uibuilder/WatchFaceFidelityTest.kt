@@ -296,6 +296,37 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a sweep-stroked oval that is not a circle has the editor's outline in the export`() {
+    // A flat oval with a thick stroke: its edges are offset curves, not ovals.
+    val face =
+      wffFace(
+        listOf("lozenge"),
+        paintedPart(
+            "lozenge",
+            mapOf("shape" to "ellipse", "x" to 25, "y" to 145, "width" to 400, "height" to 160),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 50),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffffffff #ffffffff"/>""",
+          )
+          .joinToString(","),
+      )
+    val editor = renderWffFace(face)
+    val exported = export(face)
+    var differing = 0
+    var lit = 0
+    for (y in 0 until editor.height step 2) for (x in 0 until editor.width step 2) {
+      val a = editor.argb(x, y)[1]
+      val b = exported.argb(x, y)[1]
+      if (a > 128) lit++
+      if ((a > 128) != (b > 128)) differing++
+    }
+    // Only antialiased edge pixels may disagree; concentric ovals missed by thousands.
+    assertTrue(lit > 2000, "lit $lit")
+    assertTrue(differing < lit / 50, "$differing of $lit pixels differ")
+  }
+
+  @Test
   fun `a gradient in a stroke paints the stroke`() {
     val face =
       wffFace(

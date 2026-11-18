@@ -642,8 +642,24 @@ private fun strokeBand(
 ): Path? {
   val outer = Rect(origin, extent)
   val inner = outer.deflate(width)
+  val collapsed = inner.width <= 0f || inner.height <= 0f
+  // An oval that is not a circle: its stroke's edges are offset curves, not ovals, so the band is
+  // traced from the centre line the editor strokes rather than two ovals.
+  val centre = outer.deflate(width / 2)
+  val oval = drawing.kind == "ellipse" || drawing.kind == "arc"
+  if (oval && kotlin.math.abs(centre.width - centre.height) > 0.01f) {
+    val ring = drawing.kind == "ellipse"
+    return offsetBand(
+      centre,
+      width / 2,
+      if (ring) 0f else start,
+      if (ring) 360f else sweep,
+      ring,
+      collapsed,
+    )
+  }
   // A stroke as wide as the shape leaves no hole: it covers the whole shape, an arc's sector.
-  if (inner.width <= 0f || inner.height <= 0f)
+  if (collapsed)
     return Path().apply {
       when (drawing.kind) {
         "ellipse" -> addOval(outer)
@@ -746,6 +762,59 @@ private fun DrawScope.drawSweepWedges(gradient: WffGradient, pxPerWffPx: Float, 
 }
 
 private const val WEDGES = 240
+
+/**
+ * The area a stroke of half-width [half] along the oval [centre] covers, from [start] for [sweep]
+ * degrees (Compose's, which on an oval are its parametric angles, as `drawArc` takes them): each
+ * edge is the centre line moved [half] along its normal. A [ring] is closed; an arc's ends are cut
+ * square, as a butt cap is. [collapsed]: the stroke leaves no hole, so only the outer edge is kept
+ * (an arc's out to its centre).
+ */
+private fun offsetBand(
+  centre: Rect,
+  half: Float,
+  start: Float,
+  sweep: Float,
+  ring: Boolean,
+  collapsed: Boolean,
+): Path {
+  val steps = (kotlin.math.abs(sweep) * 2).toInt().coerceAtLeast(16)
+  val a = centre.width / 2
+  val b = centre.height / 2
+  fun edge(i: Int, side: Float): Offset {
+    val t = (start + sweep * i / steps) * kotlin.math.PI / 180
+    val cos = kotlin.math.cos(t).toFloat()
+    val sin = kotlin.math.sin(t).toFloat()
+    val nx = b * cos
+    val ny = a * sin
+    val length = kotlin.math.sqrt(nx * nx + ny * ny).takeIf { it > 0f } ?: 1f
+    return Offset(
+      centre.center.x + a * cos + side * half * nx / length,
+      centre.center.y + b * sin + side * half * ny / length,
+    )
+  }
+  return Path().apply {
+    // Non-zero winding with the inner edge run backwards: the hole cancels out, and where a thick
+    // stroke's inner edge loops back on itself the loop stays filled, as the editor's stroke is.
+    fillType = PathFillType.NonZero
+    val outer = (0..steps).map { edge(it, 1f) }
+    if (ring) {
+      outer.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+      close()
+      if (!collapsed) {
+        (steps downTo 0)
+          .map { edge(it, -1f) }
+          .forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+        close()
+      }
+      return@apply
+    }
+    outer.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+    if (collapsed) lineTo(centre.center.x, centre.center.y)
+    else (steps downTo 0).forEach { i -> edge(i, -1f).let { lineTo(it.x, it.y) } }
+    close()
+  }
+}
 
 /**
  * This radius [by] larger each way (smaller when negative), never below square. A square corner
