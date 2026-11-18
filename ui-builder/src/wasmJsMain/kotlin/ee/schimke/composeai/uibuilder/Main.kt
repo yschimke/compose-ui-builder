@@ -57,6 +57,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStart
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.wearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
@@ -3080,3 +3081,61 @@ internal suspend fun renameServerDesign(designId: String, title: String): String
     }
   return ee.schimke.composeai.uibuilder.editor.renameRefusal(encoded)
 }
+
+/**
+ * Starts a real watch-face runtime session for [designId] with the editor's own exported WFF, and
+ * returns the tab to open. A refusal (runtime missing, not signed in, ...) comes back as the host's
+ * own words, never as an error about the design.
+ */
+internal suspend fun requestWatchFacePreview(
+  designId: String,
+  wffXml: String,
+  revision: Long? = null,
+): UiBuilderWatchFaceStart {
+  val response =
+    BrowserUiBuilderHttpTransport()
+      .post(
+        UiBuilderHttpRequest(
+          endpoint =
+            "/api/ui-builder/v1/designs/$designId/dwf-preview" +
+              (revision?.let { "?revision=$it" } ?: ""),
+          contentType = "application/json",
+          body =
+            nativePreviewJson.encodeToString(
+              WatchFaceStartBody.serializer(),
+              WatchFaceStartBody(wffXml),
+            ),
+        ),
+      )
+  return when (response.statusCode) {
+    201 ->
+      nativePreviewJson.decodeFromString(WatchFaceStarted.serializer(), response.body).let {
+        UiBuilderWatchFaceStart(pagePath = it.pagePath)
+      }
+    401,
+    403 ->
+      UiBuilderWatchFaceStart(
+        failure =
+          "Sign in with an account that can export designs to start the real watch-face runtime.",
+      )
+    else ->
+      UiBuilderWatchFaceStart(
+        failure = runCatching {
+            nativePreviewJson
+              .decodeFromString(WatchFaceRefusal.serializer(), response.body)
+              .reasons
+              .joinToString(" ")
+          }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: "the host answered ${response.statusCode} to a watch-face preview request",
+      )
+  }
+}
+
+@kotlinx.serialization.Serializable private class WatchFaceStartBody(val wffXml: String)
+
+@kotlinx.serialization.Serializable private class WatchFaceStarted(val pagePath: String)
+
+@kotlinx.serialization.Serializable
+private class WatchFaceRefusal(val reasons: List<String> = emptyList())

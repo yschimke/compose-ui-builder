@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.135.0](https://github.com/yschimke/compose-ui-builder/compare/v3.134.0...v3.135.0) (2026-11-18)
+
+
+### Features
+
+* offer the real watch-face runtime in the Native pane of a watch face ([#1258](https://github.com/yschimke/compose-ui-builder/issues/1258)) ([c44cc7e](https://github.com/yschimke/compose-ui-builder/commit/c44cc7efa650752c297b09f3e9b0aaaf6270dc57))
+
 ## [3.134.0](https://github.com/yschimke/compose-ui-builder/compare/v3.133.0...v3.134.0) (2026-11-18)
 
 
