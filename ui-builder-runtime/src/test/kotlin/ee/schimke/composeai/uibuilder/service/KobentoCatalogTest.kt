@@ -207,6 +207,49 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `a system read and a computed increment are refused, not flattened`() {
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    val gauge = design.nodes.getValue("gauge")
+    val warmer = design.nodes.getValue("warmer")
+    val broken =
+      design.copy(
+        nodes =
+          design.nodes +
+            mapOf(
+              "gauge" to
+                gauge.copy(
+                  properties =
+                    kotlinx.serialization.json.JsonObject(
+                      gauge.properties +
+                        ("value" to
+                          Json.parseToJsonElement("""{"type": "system", "value": "time.hour"}""")),
+                    ),
+                ),
+              "warmer" to
+                warmer.copy(
+                  eventBindings =
+                    Json.parseToJsonElement(
+                        """{"click": [{"type": "increment", "variable": "target",
+                          "amount": {"type": "formula", "value": "@target * 2"}}]}""",
+                      )
+                      .jsonObject,
+                ),
+            ),
+      )
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(broken),
+      )
+    assertEquals(
+      listOf(
+        "nodes.gauge.properties.value: system values are not lowered to Kobento yet",
+        "nodes.warmer.eventBindings.click[0].amount: only a literal number is lowered to Kobento",
+      ),
+      refused.reasons,
+    )
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =

@@ -329,14 +329,14 @@ object KobentoComponentJsonExporter {
           errors += "$path: component arguments are not lowered to Kobento yet"
           null
         }
+        // Only literal wrappers are written as themselves. Anything computed (`stateEquals`, a
+        // `system` read such as `time.hour`, a formula) has no Kobento lowering yet; reading its
+        // operand as a literal would drop the dependency.
+        in LITERAL_TYPES -> literal(value, path)
         else -> {
-          // A comparison (`stateEquals`) or any other state-reading value has no Kobento lowering
-          // yet; reading its operand as a literal would drop the dependency.
-          val type = typed["type"]?.jsonPrimitive?.contentOrNull
-          if ("variable" in typed || type?.startsWith("state") == true) {
-            errors += "$path: $type values are not lowered to Kobento yet"
-            null
-          } else literal(value, path)
+          errors +=
+            "$path: ${typed["type"]?.jsonPrimitive?.contentOrNull} values are not lowered to Kobento yet"
+          null
         }
       }
     }
@@ -396,8 +396,15 @@ object KobentoComponentJsonExporter {
             }
           else null.also { errors += "$path: toggle needs a bool" }
         "increment" -> {
+          val authored = action["amount"]
+          // Absent is one step. A computed amount (a formula) is refused, not read as one.
           val amount =
-            (action["amount"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull ?: 1.0
+            if (authored == null || authored is JsonNull) 1.0
+            else (authored as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull
+          if (amount == null || !amount.isFinite()) {
+            errors += "$path.amount: only a literal number is lowered to Kobento"
+            return null
+          }
           buildJsonObject {
             put("type", "valueFloatExpressionChange")
             put("target", target)
@@ -502,6 +509,9 @@ object KobentoComponentJsonExporter {
   private fun Double.roundedNumber(): JsonPrimitive =
     if (this == kotlin.math.floor(this) && kotlin.math.abs(this) < 1e15) JsonPrimitive(toLong())
     else JsonPrimitive(this)
+
+  /** The property wrappers that hold a literal, as `UiExpressions.OPERAND_LITERALS` plus `enum`. */
+  private val LITERAL_TYPES = setOf("string", "int", "float", "bool", "enum", "color")
 
   private val COLOR = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|@colors\\.[A-Za-z][A-Za-z0-9_]*")
 
