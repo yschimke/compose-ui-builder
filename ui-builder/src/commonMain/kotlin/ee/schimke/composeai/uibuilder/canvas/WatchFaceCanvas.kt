@@ -30,8 +30,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -50,6 +53,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
@@ -58,6 +63,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WatchFaceComplicationBounds
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
+import ee.schimke.composeai.uibuilder.rememberAssetBitmap
 import ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock
 import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonPrimitive
@@ -329,9 +335,15 @@ private fun WatchFaceNode(
           "[COMPLICATION.SMALL_IMAGE]" -> preview.complication.image
           else -> null
         }
+      // Any other resource names a design asset (`ui_builder_put_asset`): the bitmap the bundle
+      // packs as that drawable, stretched to the part's box as the watch draws it.
+      val bitmap = if (image == null) document.rememberAssetBitmap(source) else null
       if (image != null) {
         val tint = node.wffColor("tintColor", Color.White)
         Box(modifier.drawBehind { drawWffGlyph(image, tint, Offset.Zero, size) })
+      } else if (bitmap != null) {
+        val filter = wffTintFilter(node.wffColor("tintColor", Color.Unspecified))
+        Box(modifier.drawBehind { drawWffBitmap(bitmap, Offset.Zero, size, filter) })
       } else
         Box(modifier.border(1.dp, Color(0x66FFFFFF)), contentAlignment = Alignment.Center) {
           Text(
@@ -383,6 +395,10 @@ private fun WatchFaceNode(
         val tint = hand.wffColor("tintColor", Color.White)
         tint.copy(alpha = tint.alpha * hand.float("alpha", 255f).coerceIn(0f, 255f) / 255f)
       }
+      // A hand whose `resource` is a design asset draws that bitmap, tinted only when it sets a
+      // `tintColor`; one with no bitmap here draws as a bar in its tint.
+      val bitmaps = hands.map { document.rememberAssetBitmap(it.string("resource")) }
+      val filters = hands.map { wffTintFilter(it.wffColor("tintColor", Color.Unspecified)) }
       Box(
         modifier.drawBehind {
           hands.forEachIndexed { index, hand ->
@@ -399,7 +415,18 @@ private fun WatchFaceNode(
             val h = hand.float("height") * scale
             val pivot =
               Offset(x + hand.float("pivotX", 0.5f) * w, y + hand.float("pivotY", 0.5f) * h)
-            rotate(degrees, pivot) { drawRect(tints[index], Offset(x, y), Size(w, h)) }
+            val bitmap = bitmaps[index]
+            rotate(degrees, pivot) {
+              if (bitmap == null) drawRect(tints[index], Offset(x, y), Size(w, h))
+              else
+                drawWffBitmap(
+                  bitmap,
+                  Offset(x, y),
+                  Size(w, h),
+                  filters[index],
+                  alpha = hand.float("alpha", 255f).coerceIn(0f, 255f) / 255f,
+                )
+            }
           }
         },
       )
@@ -1037,4 +1064,29 @@ internal fun UiBuilderDocument.isRoundWatchFace(): Boolean {
   val scene = roots.firstNotNullOfOrNull { nodes[it] } ?: return false
   return scene.componentId == WatchFaceXmlExporter.SCENE &&
     scene.string("clipShape").ifEmpty { "CIRCLE" } == "CIRCLE"
+}
+
+/**
+ * A Watch Face Format `tintColor` on a bitmap: the image's colours multiplied by it, so a white
+ * mark takes the tint and its alpha is kept. No tint ([Color.Unspecified]) draws the bitmap as is.
+ */
+internal fun wffTintFilter(tint: Color): ColorFilter? =
+  if (tint == Color.Unspecified) null else ColorFilter.tint(tint, BlendMode.Modulate)
+
+/** [bitmap] stretched to [extent] at [origin], through [filter], as `PartImage` draws it. */
+internal fun DrawScope.drawWffBitmap(
+  bitmap: ImageBitmap,
+  origin: Offset,
+  extent: Size,
+  filter: ColorFilter?,
+  alpha: Float = 1f,
+) {
+  if (extent.width <= 0f || extent.height <= 0f) return
+  drawImage(
+    bitmap,
+    dstOffset = IntOffset(origin.x.roundToInt(), origin.y.roundToInt()),
+    dstSize = IntSize(extent.width.roundToInt(), extent.height.roundToInt()),
+    alpha = alpha,
+    colorFilter = filter,
+  )
 }

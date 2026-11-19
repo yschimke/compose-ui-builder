@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.ImageBitmap
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
@@ -147,6 +149,23 @@ private fun JsonObject.text(name: String): String? =
   } catch (_: IllegalArgumentException) {
     null
   }
+
+/**
+ * The pixels behind [assetKey] in this document's registry, as an `asset/image` would draw them:
+ * embedded bytes decoded once per digest, uploaded ones from [LocalUiBuilderAssetBitmaps]. Null for
+ * a key with no bitmap here (yet), so the caller draws its own placeholder.
+ */
+@Composable
+internal fun UiBuilderDocument.rememberAssetBitmap(assetKey: String): ImageBitmap? {
+  if (assetKey.isEmpty()) return null
+  val resolved = remember(assets, assetKey) { resolveAsset(assetKey) }
+  return when (resolved) {
+    is ResolvedUiBuilderAsset.Embedded ->
+      remember(assetKey, resolved.contentDigest) { decodeUiBuilderAssetBitmap(resolved.bytes) }
+    is ResolvedUiBuilderAsset.Uploaded -> LocalUiBuilderAssetBitmaps.current(resolved.contentDigest)
+    else -> null
+  }
+}
 
 /** The registry entries of this document that a host must fetch, keyed by asset key. */
 internal fun UiBuilderDocument.uploadedAssets(): Map<String, ResolvedUiBuilderAsset.Uploaded> =
