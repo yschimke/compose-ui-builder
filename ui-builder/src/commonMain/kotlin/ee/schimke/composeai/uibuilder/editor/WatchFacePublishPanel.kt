@@ -114,7 +114,10 @@ private fun ReadyBody(
 ) {
   val publication = view.publication
   Text(publicationLine(publication), style = MaterialTheme.typography.bodyMedium)
-  publication.build?.let { WatchBuildChip(it, publication.version) }
+  publication.build?.let { build ->
+    WatchBuildChip(build, publication.version)
+    if (build.state == BUILD_REFUSED && build.diagnostics.isNotEmpty()) Diagnostics(build.diagnostics)
+  }
   val pinned = publication.revision
   if (publication.published && pinned != null && pinned < revision) {
     Text(
@@ -124,6 +127,7 @@ private fun ReadyBody(
     )
   }
   apkLine(publication)?.let { Note(it) }
+  publication.apk?.diagnostics?.takeIf { it.isNotEmpty() }?.let { Diagnostics(it) }
   if (publication.refusal.isNotEmpty()) {
     Note("The packager refused the latest build; watches keep the version they have.")
     Diagnostics(publication.refusal)
@@ -200,7 +204,7 @@ private fun apkLine(publication: WatchFacePublication): String? =
     "unavailable" ->
       publication.packaging?.reason?.let { "This server cannot build APKs: $it" }
         ?: "This server cannot build APKs right now."
-    "failed" -> "The last APK build failed."
+    "failed" -> publication.apk.reason?.let { "The last APK build failed: $it" } ?: "The last APK build failed."
     else -> null
   }
 

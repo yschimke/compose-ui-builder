@@ -67,7 +67,9 @@ internal class BrowserWatchFacePublishHost(
         .getOrNull() ?: PublishRefusal()
     val code = refusal.error ?: refusal.code
     return when {
-      code == "packaging_failed" ->
+      // The packager's own refusal, and the up-front ones (not_exportable,
+      // WFF_BUNDLE_MISSING_RESOURCE, …) that name the lines to fix.
+      code == "packaging_failed" || (response.status == 422 && refusal.diagnostics.isNotEmpty()) ->
         WatchFacePublicationAnswer.PackagingFailed(
           refusal.message ?: "The packager refused this face.",
           refusal.diagnostics,

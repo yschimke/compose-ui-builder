@@ -49,19 +49,24 @@ data class WatchFacePublication(
 data class WatchFacePublicationBuild(
   /** `pending`, `queued`, `building`, `built`, `refused` or `failed`. */
   val state: String,
+  /** Why it is in this state, in the server's words, where it says. */
+  val reason: String? = null,
   /** `pending`: when the debounced build is due. */
   val scheduledAtEpochMillis: Long? = null,
   /** `queued`: builds ahead of this one in the server's one-at-a-time packager queue. */
   val queueAhead: Int? = null,
   /** `building`: what the packager is doing now, in its words. */
   val stage: String? = null,
+  val startedAtEpochMillis: Long? = null,
   val elapsedMillis: Long? = null,
   /** `built`: the version now on watches. */
   val version: Long? = null,
   /** `refused`: the packager's lines. */
   val diagnostics: List<String> = emptyList(),
-  /** `failed`: a failure around the packager, tried again at this time. */
+  /** `failed`: a failure around the packager, tried again at this time (automatic builds). */
   val nextRetryAtEpochMillis: Long? = null,
+  /** A build of the automatic listing of a public design, rather than of an owner's publish. */
+  val automatic: Boolean = false,
 )
 
 const val BUILD_PENDING = "pending"
@@ -71,8 +76,11 @@ const val BUILD_BUILT = "built"
 const val BUILD_REFUSED = "refused"
 const val BUILD_FAILED = "failed"
 
-/** How often a build that is queued or building is read again. Gentle: builds take minutes. */
-const val BUILD_POLL_MILLIS = 7_000L
+/**
+ * How often a build that is queued or building is read again: gentle (builds take minutes), and
+ * well under the server's 30 requests a minute per account.
+ */
+const val BUILD_POLL_MILLIS = 5_000L
 
 /** The longest a scheduled re-read waits, so a far-off build is still noticed when it starts. */
 private const val BUILD_WAKE_MAX_MILLIS = 10 * 60_000L
@@ -136,6 +144,10 @@ data class WatchFacePublicationApk(
   val status: String = "pending",
   val sha256: String? = null,
   val sizeBytes: Long? = null,
+  /** `unavailable` or `failed`: why, as a code and a sentence, and the packager's lines. */
+  val code: String? = null,
+  val reason: String? = null,
+  val diagnostics: List<String> = emptyList(),
 )
 
 @Serializable
