@@ -444,6 +444,14 @@ public class PersistentUiBuilderService(
    * so none is lost unless the process stops first. Written under [lock] only.
    */
   private val undurable = mutableMapOf<String, PersistedDesignV1>()
+
+  /**
+   * The export audit records [holdUndurable] added to a design that no commit has written yet, by
+   * id. A writer may have read the design before they arrived — while an earlier commit of the same
+   * request had released [lock] — so [commitDesign] carries over any its value lacks rather than
+   * replace them. Written under [lock] only.
+   */
+  private val heldAudit = mutableMapOf<String, List<AuditRecordV1>>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
   private val exportTaskRunner = BoundedUiBuilderExportTaskRunner(limits.maximumConcurrentExports)
@@ -3009,12 +3017,10 @@ public class PersistentUiBuilderService(
           exportFormat = request.format,
           atEpochMillis = clock.millis(),
         )
-      val updated =
-        design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
       // Not committed: the store would force every part to disk under the lock, so every read of
       // every design would queue behind each thumbnail. The record is kept in memory and written
       // with the design's next commit.
-      holdUndurable(request.designId, updated)
+      holdUndurable(request.designId, design, audit)
     }
     return outcome
   }
@@ -4943,6 +4949,7 @@ public class PersistentUiBuilderService(
   ): List<SubscriberMailbox> {
     storeIo { store.commit(designId, undurable[designId] ?: design, trashed) }
     undurable.remove(designId)
+    heldAudit.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
     trash[designId] = trashed
     unusableDesigns.remove(designId)
@@ -5032,39 +5039,40 @@ public class PersistentUiBuilderService(
    * writes only what differs, keeping an edit's cost proportional to that design.
    */
   private fun commitDesign(designId: String, updated: PersistedDesignV1) {
-    val before = persisted.designs[designId]
-    storeIo { store.commit(designId, undurable[designId] ?: before, updated) }
-    // Only an export's audit record can replace the design while [storeIo] has released the lock
-    // (see [holdUndurable]); it is carried onto the committed value, still held back from disk.
-    val current = persisted.designs[designId]
-    if (before != null && current != null && current !== before) {
-      val known = before.audit.toSet()
-      val held = current.audit.filter { it !in known }
-      if (held.isNotEmpty()) {
-        undurable[designId] = updated
-        val merged =
-          updated.copy(audit = (updated.audit + held).takeLast(limits.retainedAuditRecords))
-        persisted = persisted.copy(designs = persisted.designs + (designId to merged))
-        return
-      }
+    storeIo { store.commit(designId, undurable[designId] ?: persisted.designs[designId], updated) }
+    // Export audit records [updated] lacks were held after its writer read the design, before or
+    // during this I/O; they are carried onto the committed value, still held back from disk.
+    val committed = updated.audit.toSet()
+    val held = heldAudit[designId].orEmpty().filter { it !in committed }
+    if (held.isNotEmpty()) {
+      undurable[designId] = updated
+      heldAudit[designId] = held
+      val merged =
+        updated.copy(audit = (updated.audit + held).takeLast(limits.retainedAuditRecords))
+      persisted = persisted.copy(designs = persisted.designs + (designId to merged))
+      return
     }
     undurable.remove(designId)
+    heldAudit.remove(designId)
     persisted = persisted.copy(designs = persisted.designs + (designId to updated))
   }
 
   /**
-   * Replaces a design's value in memory only, remembering what the store still holds so the next
-   * [commitDesign] writes the difference. For changes that may be lost on a crash.
+   * Adds an export audit record to [design], the design's current value, in memory only,
+   * remembering what the store still holds so the next [commitDesign] writes the difference. Lost
+   * if the process stops first.
    */
-  private fun holdUndurable(designId: String, updated: PersistedDesignV1) {
-    val current = persisted.designs[designId] ?: return
-    undurable.putIfAbsent(designId, current)
+  private fun holdUndurable(designId: String, design: PersistedDesignV1, audit: AuditRecordV1) {
+    undurable.putIfAbsent(designId, design)
+    heldAudit[designId] = heldAudit[designId].orEmpty() + audit
+    val updated = design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
     persisted = persisted.copy(designs = persisted.designs + (designId to updated))
   }
 
   private fun removeDesign(designId: String) {
     storeIo { store.remove(designId) }
     undurable.remove(designId)
+    heldAudit.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
   }
 

@@ -5,6 +5,9 @@ import java.nio.file.Path
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.startCoroutine
@@ -523,6 +526,83 @@ class DesignBranchesTest {
   // ------------------------------------------------------------------------------------ helpers
 
   /** A design whose root holds one Text node, `title`, at revision 1. */
+  /**
+   * A merge commits the parent and then the branch, and the parent's commit releases the state lock
+   * for its I/O. An export of the branch that lands then must keep its audit record, although the
+   * branch value the merge commits next was read before it.
+   */
+  @Test
+  fun `an export audit record held during a merge's parent commit survives the branch commit`() {
+    val root = createTempDirectory("branches")
+    val store = ParentGatedStore(UiBuilderDesignStateStore.open(root).store)
+    val service =
+      PersistentUiBuilderService(
+        designStore = UiBuilderDesignStateStore(store),
+        catalogs = TestCatalogs,
+        exporter =
+          UiBuilderExportExecutor { request ->
+            val content = "<svg/>"
+            ExportArtifactV1(
+              request.format,
+              "image/svg+xml",
+              ExportEncodingV1.UTF8,
+              content,
+              java.security.MessageDigest.getInstance("SHA-256")
+                .digest(content.encodeToByteArray())
+                .joinToString("") { "%02x".format(it) },
+            )
+          },
+        clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+      )
+    seed(service)
+    branch(service, owner, "A", branchId = "design-a")
+    accepted(service, owner, setText("design-a", "a-1", 1, "From the branch"))
+
+    store.blocked = true
+    val merger = thread { merge(service, owner, "design-a") }
+    try {
+      assertTrue(
+        store.parked.tryAcquire(5, TimeUnit.SECONDS),
+        "the parent commit reached the store",
+      )
+      val exported =
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design-a", null, ExportFormatV1.SVG),
+        )
+      assertIs<UiBuilderServiceResponse.Export>(exported, "$exported")
+    } finally {
+      store.blocked = false
+      merger.join(5_000)
+    }
+    assertFalse(merger.isAlive)
+    assertEquals(UiBuilderBranchStatus.MERGED, get(service, owner, "design-a").status)
+
+    // The record is held back from disk, so it shows in the branch's next commit: moving it to
+    // the trash is one.
+    assertIs<UiBuilderServiceResponse.DesignDeleted>(
+      execute(service, owner, UiBuilderServiceRequest.DeleteDesign("design-a")),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design-a")
+    assertEquals(1, stored.audit.count { it.kind == AuditKindV1.EXPORT })
+  }
+
+  /** Parks commits of the parent design while [blocked]; [parked] gains a permit as each parks. */
+  private class ParentGatedStore(private val delegate: UiBuilderDesignStore) :
+    UiBuilderDesignStore by delegate {
+    val parked = Semaphore(0)
+    @Volatile var blocked = false
+
+    override fun commit(designId: String, previous: PersistedDesignV1?, next: PersistedDesignV1) {
+      if (designId == "design" && blocked) {
+        parked.release()
+        while (blocked) Thread.sleep(10)
+      }
+      delegate.commit(designId, previous, next)
+    }
+  }
+
   private fun seed(service: PersistentUiBuilderService) {
     assertIs<UiBuilderServiceResponse.Snapshot>(
       execute(service, owner, UiBuilderServiceRequest.CreateDesign(designDocument())),
@@ -805,6 +885,9 @@ class DesignBranchesTest {
               .build(),
           ),
         )
+        .also {
+          it.exportCapabilities = ExportCapabilitiesV1.Builder().also { it.svg = true }.build()
+        }
         .build()
   }
 }
