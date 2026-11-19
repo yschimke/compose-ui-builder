@@ -48,7 +48,7 @@ internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
           if (node.componentId == WatchFaceXmlExporter.TRANSFORM && name == "rotateWith")
             WatchFaceXmlExporter.ROTATE_WITH[value]
           else value
-        expression != null && SUB_SECOND_SOURCES.any { it in expression }
+        expression != null && SUB_SECOND_SOURCE.containsMatchIn(expression)
       }
     }
 
@@ -94,5 +94,8 @@ internal fun wffVisibleIn(node: UiBuilderNode, preview: WffPreviewContext): Bool
 internal fun UiBuilderDocument.wffHasGyro(): Boolean =
   nodes.values.any { it.componentId == WatchFaceXmlExporter.GYRO }
 
-/** The sources that change within a second. */
-private val SUB_SECOND_SOURCES = listOf("[SECOND_MILLISECOND]", "[MILLISECOND]", "[UTC_TIMESTAMP]")
+/**
+ * A source that changes within a second, bracketed as an expression reads it: the parser trims the
+ * name, so `[ SECOND_MILLISECOND ]` is the same source.
+ */
+private val SUB_SECOND_SOURCE = Regex("""\[\s*(SECOND_MILLISECOND|MILLISECOND|UTC_TIMESTAMP)\s*]""")

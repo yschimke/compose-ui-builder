@@ -67,6 +67,8 @@ class WffTimeSourceTest {
       )
     assertTrue(face("[MILLISECOND] / 4").wffReadsSubSecond())
     assertTrue(face("[UTC_TIMESTAMP] % 255").wffReadsSubSecond())
+    assertTrue(face("[ SECOND_MILLISECOND ] * 6").wffReadsSubSecond())
+    assertTrue(face("[SECOND_MILLISECOND]*6").wffReadsSubSecond())
     assertFalse(face("[SECOND] * 4").wffReadsSubSecond())
   }
 }
