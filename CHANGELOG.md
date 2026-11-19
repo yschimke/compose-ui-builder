@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.139.0](https://github.com/yschimke/compose-ui-builder/compare/v3.138.0...v3.139.0) (2026-11-19)
+
+
+### Features
+
+* **ui-builder:** publish a watch-face design to a watch from the editor ([#1304](https://github.com/yschimke/compose-ui-builder/issues/1304)) ([5dda152](https://github.com/yschimke/compose-ui-builder/commit/5dda15204b338ee4207df66649c077b688f1cd81))
+* **ui-builder:** validate a watch-face design and show its watches ([#1294](https://github.com/yschimke/compose-ui-builder/issues/1294)) ([52c06a6](https://github.com/yschimke/compose-ui-builder/commit/52c06a65f06532576c05aa6a4d40a0a1f538d6a0))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.watchface:watchface-tools-bom to v0.9.0 ([#1303](https://github.com/yschimke/compose-ui-builder/issues/1303)) ([8a75b25](https://github.com/yschimke/compose-ui-builder/commit/8a75b2571d32fb9b3b3ce9ec29d2db52433d0eec))
+
 ## [3.138.0](https://github.com/yschimke/compose-ui-builder/compare/v3.137.0...v3.138.0) (2026-11-19)
 
 
