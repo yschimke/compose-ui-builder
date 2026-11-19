@@ -120,6 +120,7 @@ internal fun WatchFaceRuntimePane(
         null
       }
     checking = false
+    // A host with native preview switched off is never asked for a session.
     if (unavailable == null) startSession()
   }
   DisposableEffect(Unit) {
@@ -148,9 +149,11 @@ internal fun WatchFaceRuntimePane(
     else it.elapsedMillis + received.elapsedNow().inWholeMilliseconds
   }
   val sendControls = outcome?.sendControls
+  val disabled = watchFaceNativePreviewDisabled(unavailable) || outcome?.disabled == true
   WatchFaceRuntimePaneContent(
     modifier = modifier,
-    unavailable = unavailable,
+    disabled = disabled,
+    unavailable = unavailable.takeUnless { disabled },
     canReload = !starting && !checking && start != null,
     starting = starting,
     stage = stage,
@@ -181,6 +184,8 @@ internal fun WatchFaceRuntimePane(
 @Composable
 internal fun WatchFaceRuntimePaneContent(
   modifier: Modifier = Modifier,
+  /** Native preview is switched off on this host: a greyed note, no reload, no session. */
+  disabled: Boolean = false,
   unavailable: String? = null,
   canReload: Boolean = true,
   starting: Boolean = false,
@@ -199,6 +204,10 @@ internal fun WatchFaceRuntimePaneContent(
   onReload: () -> Unit = {},
   onOpenTab: (String) -> Unit = {},
 ) {
+  if (disabled) {
+    WatchFaceNativePreviewOff(modifier)
+    return
+  }
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(
       Modifier.fillMaxSize().padding(12.dp),
@@ -305,6 +314,35 @@ internal fun WatchFaceRuntimePaneContent(
       }
       // From the `202` on: the tab shows the same session, stages included.
       pagePath?.let { page -> TextButton(onClick = { onOpenTab(page) }) { Text("Open in a tab") } }
+    }
+  }
+}
+
+/** The pane on a host whose native-preview flag is off: greyed, and pointing to the watch. */
+@Composable
+private fun WatchFaceNativePreviewOff(modifier: Modifier) {
+  Surface(modifier, color = MaterialTheme.colorScheme.surfaceVariant) {
+    Column(
+      Modifier.fillMaxSize().padding(12.dp).semantics(mergeDescendants = true) {
+        contentDescription = "Native preview is turned off"
+      },
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      Text(
+        "Native · Wear OS watch-face runtime",
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        style = MaterialTheme.typography.labelSmall,
+      )
+      Text(
+        "Native preview is turned off on this server.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodyMedium,
+      )
+      Text(
+        "The canvas still draws the face. To see it on the real runtime, use Test on your watch.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+        style = MaterialTheme.typography.bodySmall,
+      )
     }
   }
 }

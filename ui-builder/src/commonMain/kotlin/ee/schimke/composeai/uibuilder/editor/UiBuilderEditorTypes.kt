@@ -105,6 +105,11 @@ data class UiBuilderWatchFaceStart(
    * the host notices the socket has gone. Null where the host gave no session id.
    */
   val release: (() -> Unit)? = null,
+  /**
+   * The host has native preview switched off ([WATCH_FACE_NATIVE_PREVIEW_DISABLED]): the pane shows
+   * that instead of a failure, and offers no reload.
+   */
+  val disabled: Boolean = false,
 ) {
   /** Closes the stream and releases the session; what a Reload and a closed pane do. */
   fun end() {
@@ -112,6 +117,18 @@ data class UiBuilderWatchFaceStart(
     release?.invoke()
   }
 }
+
+/**
+ * The code a host answers with when native preview is switched off on it: in `dwf-preview/status`,
+ * and as a start's `503`. A pane status that starts with it puts the pane in its turned-off state,
+ * which never starts a session.
+ */
+const val WATCH_FACE_NATIVE_PREVIEW_DISABLED: String = "native_preview_disabled"
+
+/** Whether a status reason (`CODE: reason`) says native preview is switched off. */
+fun watchFaceNativePreviewDisabled(reason: String?): Boolean =
+  reason != null &&
+    reason.substringBefore(':').trim().equals(WATCH_FACE_NATIVE_PREVIEW_DISABLED, ignoreCase = true)
 
 /**
  * One loading stage of a watch-face runtime session (`compose-preview/ui-builder-dwf-preview-

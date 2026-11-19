@@ -402,4 +402,47 @@ class WatchFaceRuntimePaneTest {
     // An older host's 201 states no stage.
     assertEquals(null, UiBuilderWatchFaceStage.of("""{"pagePath":"/tab","socketPath":"/ws"}"""))
   }
+
+  @Test
+  fun `a host with native preview switched off greys the pane and never starts a session`() =
+    runDesktopComposeUiTest(width = 420, height = 360) {
+      var starts = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 360.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                starts++
+                UiBuilderWatchFaceStart()
+              },
+              status = { "native_preview_disabled" },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(0, starts)
+      onNodeWithContentDescription("Native preview is turned off").assertExists()
+      onNodeWithText("Reload with the current design").assertDoesNotExist()
+    }
+
+  @Test
+  fun `a start the host refuses as switched off shows the same turned-off state`() =
+    runDesktopComposeUiTest(width = 420, height = 360) {
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 360.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = { UiBuilderWatchFaceStart(disabled = true) },
+              status = { null },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      onNodeWithContentDescription("Native preview is turned off").assertExists()
+      onNodeWithText("Reload with the current design").assertDoesNotExist()
+    }
 }

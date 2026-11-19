@@ -161,6 +161,13 @@ fun WatchFaceNativePaneUnavailablePreview() = NativePaneFrame {
   )
 }
 
+/** The host's native-preview flag is off: greyed, never starting a session. */
+@Preview(widthDp = 360, heightDp = 220)
+@Composable
+fun WatchFaceNativePaneTurnedOffPreview() = NativePaneFrame {
+  WatchFaceRuntimePaneContent(modifier = Modifier.fillMaxSize(), disabled = true)
+}
+
 /** A stand-in for a runtime frame: a dark dial with a ring, drawn rather than shipped. */
 private fun sampleRuntimeFrame(): ImageBitmap =
   ImageBitmap(300, 300).also { bitmap ->

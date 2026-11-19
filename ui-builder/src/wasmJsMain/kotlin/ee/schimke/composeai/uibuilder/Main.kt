@@ -59,8 +59,10 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStage
 import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStart
+import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_NATIVE_PREVIEW_DISABLED
 import ee.schimke.composeai.uibuilder.editor.WatchFaceSocket
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.watchFaceNativePreviewDisabled
 import ee.schimke.composeai.uibuilder.editor.watchFaceStartOf
 import ee.schimke.composeai.uibuilder.editor.wearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
@@ -3115,6 +3117,10 @@ internal suspend fun requestWatchFacePreview(
             ),
         ),
       )
+  // The host's flag is off: not a failure, the pane's turned-off state.
+  if (response.statusCode == 503 && WATCH_FACE_NATIVE_PREVIEW_DISABLED in response.body) {
+    return UiBuilderWatchFaceStart(disabled = true)
+  }
   return when (response.statusCode) {
     201,
     202 ->
@@ -3199,6 +3205,9 @@ private class WatchFaceRefusal(val reasons: List<String> = emptyList())
 internal suspend fun requestWatchFaceRuntimeStatus(designId: String): String? {
   val body = fetchText("/api/ui-builder/v1/designs/$designId/dwf-preview/status")
   val status = nativePreviewJson.decodeFromString(WatchFaceStatus.serializer(), body)
+  // Switched off by the host's flag: the code alone, which the pane reads as its turned-off state.
+  if (!status.enabled || watchFaceNativePreviewDisabled(status.code))
+    return WATCH_FACE_NATIVE_PREVIEW_DISABLED
   if (status.available) return null
   return listOfNotNull(status.code, status.reason).joinToString(": ").ifBlank {
     "the watch-face runtime is not available on this host"
@@ -3208,6 +3217,8 @@ internal suspend fun requestWatchFaceRuntimeStatus(designId: String): String? {
 @kotlinx.serialization.Serializable
 private class WatchFaceStatus(
   val available: Boolean = false,
+  /** False when the host's native-preview flag is off. */
+  val enabled: Boolean = true,
   val code: String? = null,
   val reason: String? = null,
 )
