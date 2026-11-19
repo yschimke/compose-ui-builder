@@ -18,6 +18,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,13 +27,23 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextAlign
@@ -62,6 +73,19 @@ private val LocalWffFace = compositionLocalOf { WffFace(450f, 450f, 0.5f) }
 private val LocalWffPreview = compositionLocalOf { WffPreviewContext() }
 
 /**
+ * Whether the face is drawn for an export whose recorder writes the canvas out as SVG, which keeps
+ * only what reaches the canvas as plain drawing:
+ * - a rotated element is turned while it draws (a canvas `rotate` around its content), not by a
+ *   `graphicsLayer`, whose transform such a recorder can drop — which left every index and hand of
+ *   a rotated `wff/group` at its unrotated place;
+ * - a sweep gradient, which SVG has no element for, is drawn as thin wedges of its colours.
+ *
+ * The editor leaves it off: its hit testing and selection boxes read a layer's rotation from the
+ * layout, and a shader draws a sweep in one pass.
+ */
+internal val LocalWffCanvasExport = staticCompositionLocalOf { false }
+
+/**
  * A drawing of a Watch Face Format node from its absolute bounds: shapes, text with its templates
  * filled from a preview clock, and rotated groups, cut to the face's shape. Not what the watch
  * draws, but close: a face reads as itself here.
@@ -75,9 +99,11 @@ internal fun WatchFaceCanvas(
 ) {
   val face = LocalWffFace.current
   val preview = LocalWffPreview.current
+  val forExport = LocalWffCanvasExport.current
   // In ambient mode the node as its `<Variant mode="AMBIENT">` children make it.
   @Suppress("NAME_SHADOWING") val node = wffNodeIn(document, node, preview)
-  fun place(id: String) = wffPlace(document, id, face.widthPx, face.heightPx, face.dpPerPx, preview)
+  fun place(id: String) =
+    wffPlace(document, id, face.widthPx, face.heightPx, face.dpPerPx, preview, forExport)
   val placed = { slot: String ->
     node.slots[slot].orEmpty().filter { id ->
       val candidate = document.nodes[id]
@@ -179,7 +205,7 @@ internal fun WatchFaceCanvas(
                         wffVisibleIn(wffNodeIn(document, candidate, context), context)
                     }
                     .forEach { id ->
-                      child(id, wffPlace(document, id, width, height, scale, context))
+                      child(id, wffPlace(document, id, width, height, scale, context, forExport))
                     }
                 }
               }
@@ -213,10 +239,17 @@ internal fun WatchFaceCanvas(
                 ?.let { wffNodeIn(document, it, preview) }
             val fillNode = paint(WatchFaceXmlExporter.FILL)
             val strokeNode = paint(WatchFaceXmlExporter.STROKE)
+            val fillGradient = WffGradient.of(document, fillNode, preview)
+            val strokeGradient = WffGradient.of(document, strokeNode, preview)
             WffShapeDrawing(
               kind = shape.string("shape").ifEmpty { "ellipse" },
-              fill = fillNode?.wffColor("color", Color.Unspecified) ?: Color.Unspecified,
-              stroke = strokeNode?.wffColor("color", Color.Unspecified) ?: Color.Unspecified,
+              // A gradient paints where its colour would; one with no flat colour still draws.
+              fill =
+                fillNode?.wffColor("color", Color.Unspecified)?.takeIf { it != Color.Unspecified }
+                  ?: (if (fillGradient != null) Color.Black else Color.Unspecified),
+              stroke =
+                strokeNode?.wffColor("color", Color.Unspecified)?.takeIf { it != Color.Unspecified }
+                  ?: (if (strokeGradient != null) Color.Black else Color.Unspecified),
               strokeWidth = (strokeNode?.float("thickness", 1f) ?: 1f) * face.dpPerPx,
               ends = listOf("startX", "startY", "endX", "endY").map { shape.float(it) },
               box = shapeBox(shape),
@@ -225,6 +258,8 @@ internal fun WatchFaceCanvas(
               startAngle = shape.float("startAngle"),
               endAngle = shape.float("endAngle", 360f),
               clockwise = shape.string("direction") != "COUNTER_CLOCKWISE",
+              fillGradient = fillGradient,
+              strokeGradient = strokeGradient,
             )
           }
           .ifEmpty {
@@ -235,7 +270,7 @@ internal fun WatchFaceCanvas(
                 stroke = node.wffColor("strokeColor", Color.Unspecified),
                 strokeWidth = node.float("strokeWidth", 1f) * face.dpPerPx,
                 ends = listOf("startX", "startY", "endX", "endY").map { node.float(it) },
-                box = null,
+                box = legacyArcBox(node),
                 cornerX = node.float("cornerRadiusX"),
                 cornerY = node.float("cornerRadiusY"),
                 startAngle = node.float("startAngle"),
@@ -247,7 +282,7 @@ internal fun WatchFaceCanvas(
       Box(
         modifier.drawBehind {
           val k = face.dpPerPx.dp.toPx()
-          for (drawing in shapes) drawWffShape(drawing, k)
+          for (drawing in shapes) drawWffShape(drawing, k, forExport)
         },
       )
     }
@@ -450,6 +485,7 @@ private fun wffPlace(
   sceneHeight: Float,
   scale: Float,
   preview: WffPreviewContext,
+  drawnRotation: Boolean = false,
 ): Modifier {
   val target = document.nodes[id]?.let { wffNodeIn(document, it, preview) } ?: return Modifier
   val box =
@@ -466,14 +502,42 @@ private fun wffPlace(
   val alpha = target.float("alpha", 255f).coerceIn(0f, 255f) / 255f
   val scaleX = target.float("scaleX", 1f)
   val scaleY = target.float("scaleY", 1f)
-  return if (degrees == 0f && alpha == 1f && scaleX == 1f && scaleY == 1f) box
+  val pivotX = target.float("pivotX", 0.5f)
+  val pivotY = target.float("pivotY", 0.5f)
+  val transformed = degrees != 0f || scaleX != 1f || scaleY != 1f
+  return if (!transformed && alpha == 1f) box
+  else if (drawnRotation)
+    box.then(
+      if (!transformed) Modifier.graphicsLayer { this.alpha = alpha }
+      else
+        Modifier.drawWithContent {
+          val pivot = Offset(size.width * pivotX, size.height * pivotY)
+          // As the layer would: scaled, then turned, both about the pivot. The opacity is applied
+          // inside the turn, over the node's own box there, as the editor's turned layer applies
+          // it; a layer outside the turn would cut off what the turn moves past the box.
+          withTransform(
+            {
+              rotate(degrees, pivot)
+              scale(scaleX, scaleY, pivot)
+            },
+          ) {
+            if (alpha < 1f)
+              drawContext.canvas.saveLayer(
+                Rect(Offset.Zero, size),
+                Paint().also { it.alpha = alpha },
+              )
+            this@drawWithContent.drawContent()
+            if (alpha < 1f) drawContext.canvas.restore()
+          }
+        },
+    )
   else
     box.graphicsLayer {
       rotationZ = degrees
       this.alpha = alpha
       this.scaleX = scaleX
       this.scaleY = scaleY
-      transformOrigin = TransformOrigin(target.float("pivotX", 0.5f), target.float("pivotY", 0.5f))
+      transformOrigin = TransformOrigin(pivotX, pivotY)
     }
 }
 
@@ -492,16 +556,6 @@ private val WFF_NOT_DRAWN =
     WatchFaceXmlExporter.RAW,
   )
 
-/**
- * The signed sweep, in degrees, from an arc's `startAngle` to its `endAngle` the way its
- * `direction` goes: the end is a position either way, so counter-clockwise from 0 to 90 is -270,
- * not -90. Angles a whole turn apart are a full ring.
- */
-internal fun wffArcSweep(start: Float, end: Float, clockwise: Boolean): Float {
-  val turn = if (clockwise) (end - start).mod(360f) else -(start - end).mod(360f)
-  return if (turn == 0f && end != start) (if (clockwise) 360f else -360f) else turn
-}
-
 /** One shape of a part, resolved for drawing. */
 internal class WffShapeDrawing(
   val kind: String,
@@ -514,11 +568,29 @@ internal class WffShapeDrawing(
   /** The corner radii of a `round-rectangle`, px of the face. */
   val cornerX: Float = 0f,
   val cornerY: Float = 0f,
-  /** An `arc`'s angles, degrees clockwise from 12 o'clock, and its direction. */
+  /** An `arc`'s ends, WFF degrees: from twelve o'clock, growing clockwise. */
   val startAngle: Float = 0f,
   val endAngle: Float = 360f,
+  /** An `arc`'s `direction`. */
   val clockwise: Boolean = true,
+  /** A gradient the `<Fill>` or `<Stroke>` holds, painted in place of its flat colour. */
+  val fillGradient: WffGradient? = null,
+  val strokeGradient: WffGradient? = null,
 )
+
+/** A legacy arc part's box, from its `centerX`/`centerY`/`shapeWidth`/`shapeHeight`; else null. */
+internal fun legacyArcBox(part: UiBuilderNode): List<Float>? {
+  if (part.string("shape") != "arc") return null
+  val width = part.float("shapeWidth", -1f)
+  val height = part.float("shapeHeight", -1f)
+  if (width < 0 || height < 0) return null
+  return listOf(
+    part.float("centerX") - width / 2,
+    part.float("centerY") - height / 2,
+    width,
+    height,
+  )
+}
 
 /** A shape node's box: its own `x`/`y`/`width`/`height`, or an arc's from its centre. */
 internal fun shapeBox(shape: UiBuilderNode): List<Float>? {
@@ -563,10 +635,16 @@ internal fun previewTime(format: String, preview: WffPreviewContext, twelveHour:
  * Draws [drawing] into this scope: [pxPerWffPx] canvas pixels to a face pixel. A shape with a box
  * draws only inside it (fill and stroke both), else it fills the whole scope, as the part does.
  */
-internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float) {
+internal fun DrawScope.drawWffShape(
+  drawing: WffShapeDrawing,
+  pxPerWffPx: Float,
+  /** [LocalWffCanvasExport]: a sweep gradient is drawn as wedges. */
+  forExport: Boolean = false,
+) {
   val shape = drawing.kind
   if (shape == "none") return
-  val ellipse = shape == "ellipse" || shape == "arc"
+  val ellipse = shape == "ellipse"
+  val arc = shape == "arc"
   val rounded = shape == "round-rectangle"
   // A hairline is drawn a device pixel wide, as Skia draws a stroke of no width: a 1px stroke on a
   // face drawn at half size would otherwise be half a pixel and all but vanish.
@@ -577,13 +655,38 @@ internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float)
           if (drawing.strokeWidth > 0f) it.coerceAtLeast(1f) else it
         },
     )
+  val fill: Brush? =
+    drawing.fillGradient?.brush(pxPerWffPx)
+      ?: drawing.fill.takeIf { it != Color.Unspecified }?.let(::SolidColor)
+  val stroke: Brush? =
+    drawing.strokeGradient?.brush(pxPerWffPx)
+      ?: drawing.stroke.takeIf { it != Color.Unspecified }?.let(::SolidColor)
+  // The width the editor's stroke covers: a stroke of no width is Skia's hairline, a device pixel
+  // centred on the path. An export band of no width would paint nothing.
+  val covered = if (line.width > 0f) line.width else 1f
   if (shape == "line") {
-    if (drawing.stroke != Color.Unspecified) {
-      val k = pxPerWffPx
+    val k = pxPerWffPx
+    val start = Offset(drawing.ends[0] * k, drawing.ends[1] * k)
+    val end = Offset(drawing.ends[2] * k, drawing.ends[3] * k)
+    val sweepLine = drawing.strokeGradient?.takeIf { forExport && it.kind == WffGradient.SWEEP }
+    if (sweepLine != null && start != end) {
+      // As every other shape's: the area a butt-capped line covers, filled with the wedges.
+      val along = end - start
+      val normal = Offset(-along.y, along.x) / along.getDistance() * (covered / 2)
+      val band =
+        Path().apply {
+          moveTo(start.x + normal.x, start.y + normal.y)
+          lineTo(end.x + normal.x, end.y + normal.y)
+          lineTo(end.x - normal.x, end.y - normal.y)
+          lineTo(start.x - normal.x, start.y - normal.y)
+          close()
+        }
+      drawSweepWedges(sweepLine, pxPerWffPx, band)
+    } else if (stroke != null) {
       drawLine(
-        drawing.stroke,
-        Offset(drawing.ends[0] * k, drawing.ends[1] * k),
-        Offset(drawing.ends[2] * k, drawing.ends[3] * k),
+        stroke,
+        start,
+        end,
         strokeWidth = line.width,
       )
     }
@@ -593,12 +696,25 @@ internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float)
   val origin = if (box == null) Offset.Zero else Offset(box[0] * pxPerWffPx, box[1] * pxPerWffPx)
   val extent =
     if (box == null) size else Size(hairline(box[2] * pxPerWffPx), hairline(box[3] * pxPerWffPx))
-  if (drawing.fill != Color.Unspecified) {
-    if (ellipse) drawOval(drawing.fill, origin, extent)
-    else if (rounded) drawRoundRect(drawing.fill, origin, extent, corner(drawing, pxPerWffPx))
-    else drawRect(drawing.fill, origin, extent)
+  // WFF angles start at twelve o'clock, Compose's at three; both grow clockwise.
+  val start = composeAngle(drawing.startAngle)
+  val sweep = wffArcSweep(drawing.startAngle, drawing.endAngle, drawing.clockwise)
+  if (forExport && drawing.fillGradient?.kind == WffGradient.SWEEP) {
+    val area = Path()
+    when {
+      ellipse -> area.addOval(Rect(origin, extent))
+      arc -> area.addArc(Rect(origin, extent), start, sweep)
+      rounded -> area.addRoundRect(RoundRect(Rect(origin, extent), corner(drawing, pxPerWffPx)))
+      else -> area.addRect(Rect(origin, extent))
+    }
+    drawSweepWedges(drawing.fillGradient, pxPerWffPx, area)
+  } else if (fill != null) {
+    if (ellipse) drawOval(fill, origin, extent)
+    else if (arc) drawArc(fill, start, sweep, useCenter = false, origin, extent)
+    else if (rounded) drawRoundRect(fill, origin, extent, corner(drawing, pxPerWffPx))
+    else drawRect(fill, origin, extent)
   }
-  if (drawing.stroke != Color.Unspecified) {
+  if (stroke != null) {
     // Inset by half the line so the stroke stays inside the shape's bounds, as WFF draws it.
     val inset = line.width / 2
     val topLeft = Offset(origin.x + inset, origin.y + inset)
@@ -607,23 +723,236 @@ internal fun DrawScope.drawWffShape(drawing: WffShapeDrawing, pxPerWffPx: Float)
         (extent.width - line.width).coerceAtLeast(0f),
         (extent.height - line.width).coerceAtLeast(0f),
       )
-    if (shape == "arc") {
-      // WFF measures from 12 o'clock, Compose from 3.
-      drawArc(
-        drawing.stroke,
-        drawing.startAngle - 90f,
-        wffArcSweep(drawing.startAngle, drawing.endAngle, drawing.clockwise),
-        useCenter = false,
-        topLeft = topLeft,
-        size = inner,
-        style = line,
-      )
-    } else if (ellipse) drawOval(drawing.stroke, topLeft, inner, style = line)
+    val band =
+      if (forExport && drawing.strokeGradient?.kind == WffGradient.SWEEP) {
+        // A hairline is centred on the box's edge, not inset: the band straddles it.
+        val grow = (covered - line.width) / 2
+        strokeBand(
+          drawing,
+          pxPerWffPx,
+          Offset(origin.x - grow, origin.y - grow),
+          Size(extent.width + 2 * grow, extent.height + 2 * grow),
+          covered,
+          start,
+          sweep,
+        )
+      } else null
+    if (band != null) drawSweepWedges(drawing.strokeGradient!!, pxPerWffPx, band)
+    else if (ellipse) drawOval(stroke, topLeft, inner, style = line)
+    else if (arc) drawArc(stroke, start, sweep, useCenter = false, topLeft, inner, style = line)
     else if (rounded)
-      drawRoundRect(drawing.stroke, topLeft, inner, corner(drawing, pxPerWffPx), style = line)
-    else drawRect(drawing.stroke, topLeft, inner, style = line)
+      drawRoundRect(stroke, topLeft, inner, corner(drawing, pxPerWffPx), style = line)
+    else drawRect(stroke, topLeft, inner, style = line)
   }
 }
+
+/**
+ * The area a butt-capped stroke of [width] inside the box covers: between the shape and the same
+ * shape [width] inside it, or the whole shape when the stroke is that wide. Null for a shape whose
+ * stroke is not such a band.
+ */
+private fun strokeBand(
+  drawing: WffShapeDrawing,
+  pxPerWffPx: Float,
+  origin: Offset,
+  extent: Size,
+  width: Float,
+  start: Float,
+  sweep: Float,
+): Path? {
+  val outer = Rect(origin, extent)
+  val inner = outer.deflate(width)
+  val collapsed = inner.width <= 0f || inner.height <= 0f
+  // An oval that is not a circle: its stroke's edges are offset curves, not ovals, so the band is
+  // traced from the centre line the editor strokes rather than two ovals.
+  val centre = outer.deflate(width / 2)
+  // An arc whose stroke fills its hole is traced the same way, circle or not: the stroke reaches
+  // past the centre into angles outside the arc's sector, so a sector would cut it short.
+  val oval = drawing.kind == "ellipse" || drawing.kind == "arc"
+  if (
+    oval &&
+      (kotlin.math.abs(centre.width - centre.height) > 0.01f ||
+        (collapsed && drawing.kind == "arc"))
+  ) {
+    val ring = drawing.kind == "ellipse"
+    return offsetBand(
+      centre,
+      width / 2,
+      if (ring) 0f else start,
+      if (ring) 360f else sweep,
+      ring,
+      collapsed,
+    )
+  }
+  // A stroke as wide as the shape leaves no hole: it covers the whole shape, an arc's sector.
+  if (collapsed)
+    return Path().apply {
+      when (drawing.kind) {
+        "ellipse" -> addOval(outer)
+        "arc" -> {
+          moveTo(outer.center.x, outer.center.y)
+          arcTo(outer, start, sweep, forceMoveTo = false)
+          close()
+        }
+        "rectangle" -> addRect(outer)
+        "round-rectangle" ->
+          addRoundRect(RoundRect(outer, corner(drawing, pxPerWffPx).grownBy(width / 2)))
+        else -> return null
+      }
+    }
+  return Path().apply {
+    when (drawing.kind) {
+      "ellipse" -> {
+        fillType = PathFillType.EvenOdd
+        addOval(outer)
+        addOval(inner)
+      }
+      "arc" -> {
+        arcTo(outer, start, sweep, forceMoveTo = true)
+        arcTo(inner, start + sweep, -sweep, forceMoveTo = false)
+        close()
+      }
+      "rectangle" -> {
+        fillType = PathFillType.EvenOdd
+        addRect(outer)
+        addRect(inner)
+      }
+      "round-rectangle" -> {
+        fillType = PathFillType.EvenOdd
+        // The editor strokes the corner's radius centred on the line half a width in, so the
+        // band's outside corner is half a width rounder and its inside one half a width tighter.
+        val radius = corner(drawing, pxPerWffPx)
+        addRoundRect(RoundRect(outer, radius.grownBy(width / 2)))
+        addRoundRect(RoundRect(inner, radius.grownBy(-width / 2)))
+      }
+      else -> return null
+    }
+  }
+}
+
+/**
+ * [gradient], a sweep, drawn inside [area] as wedges of its colours a degree and a half wide, each
+ * opaque one reaching a little over the next so no seam shows between them: what an SVG recorder
+ * can keep.
+ */
+private fun DrawScope.drawSweepWedges(gradient: WffGradient, pxPerWffPx: Float, area: Path) {
+  val center =
+    Offset(
+      (gradient.numbers["centerX"] ?: 0f) * pxPerWffPx,
+      (gradient.numbers["centerY"] ?: 0f) * pxPerWffPx,
+    )
+  val stops =
+    sweepStops(
+      gradient.numbers["startAngle"] ?: 0f,
+      gradient.numbers["endAngle"] ?: 360f,
+      gradient.clockwise,
+      gradient.positions,
+      gradient.colors,
+    )
+  val bounds = area.getBounds()
+  // Far enough that each wedge's outer edge is past every corner of the area.
+  val reach =
+    2f *
+      listOf(bounds.topLeft, bounds.topRight, bounds.bottomLeft, bounds.bottomRight).maxOf {
+        (it - center).getDistance()
+      } + 1f
+  clipPath(area) {
+    val steps = WEDGES
+    val colors = List(steps) { i -> sweepColorAt(stops, (i + 0.5f) / steps) }
+    for (i in 0 until steps) {
+      val color = colors[i]
+      val from = i / steps.toFloat()
+      // Reaching half a wedge over the next hides the seam antialiasing leaves between two opaque
+      // wedges; where either is translucent the overlap would be painted twice and show as a
+      // band, so they meet edge to edge.
+      val overlap = color.alpha >= 1f && colors[(i + 1) % steps].alpha >= 1f
+      val to = (i + if (overlap) 1.5f else 1f) / steps
+      fun point(fraction: Float): Offset {
+        val radians = fraction * 2.0 * kotlin.math.PI
+        return Offset(
+          center.x + reach * kotlin.math.cos(radians).toFloat(),
+          center.y + reach * kotlin.math.sin(radians).toFloat(),
+        )
+      }
+      val wedge =
+        Path().apply {
+          moveTo(center.x, center.y)
+          point(from).let { lineTo(it.x, it.y) }
+          point((from + to) / 2).let { lineTo(it.x, it.y) }
+          point(to).let { lineTo(it.x, it.y) }
+          close()
+        }
+      drawPath(wedge, color)
+    }
+  }
+}
+
+private const val WEDGES = 240
+
+/**
+ * The area a stroke of half-width [half] along the oval [centre] covers, from [start] for [sweep]
+ * degrees (Compose's, which on an oval are its parametric angles, as `drawArc` takes them): each
+ * edge is the centre line moved [half] along its normal. A [ring] is closed; an arc's ends are cut
+ * square, as a butt cap is. [collapsed]: the stroke leaves no hole, so a ring keeps only its outer
+ * edge; an arc keeps both, for its square ends.
+ */
+private fun offsetBand(
+  centre: Rect,
+  half: Float,
+  start: Float,
+  sweep: Float,
+  ring: Boolean,
+  collapsed: Boolean,
+): Path {
+  val steps = (kotlin.math.abs(sweep) * 2).toInt().coerceAtLeast(16)
+  val a = centre.width / 2
+  val b = centre.height / 2
+  fun edge(i: Int, side: Float): Offset {
+    val t = (start + sweep * i / steps) * kotlin.math.PI / 180
+    val cos = kotlin.math.cos(t).toFloat()
+    val sin = kotlin.math.sin(t).toFloat()
+    val nx = b * cos
+    val ny = a * sin
+    val length = kotlin.math.sqrt(nx * nx + ny * ny).takeIf { it > 0f } ?: 1f
+    return Offset(
+      centre.center.x + a * cos + side * half * nx / length,
+      centre.center.y + b * sin + side * half * ny / length,
+    )
+  }
+  return Path().apply {
+    // Non-zero winding with the inner edge run backwards: the hole cancels out, and where a thick
+    // stroke's inner edge loops back on itself the loop stays filled, as the editor's stroke is.
+    fillType = PathFillType.NonZero
+    val outer = (0..steps).map { edge(it, 1f) }
+    if (ring) {
+      outer.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+      close()
+      if (!collapsed) {
+        (steps downTo 0)
+          .map { edge(it, -1f) }
+          .forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+        close()
+      }
+      return@apply
+    }
+    // An arc keeps both edges even when the stroke fills its hole: its ends are cut square along
+    // the end normals, which on an oval miss the centre, so closing through the centre (a sector)
+    // would add or cut triangles at each end. A self-crossing inner edge stays filled.
+    outer.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+    (steps downTo 0).forEach { i -> edge(i, -1f).let { lineTo(it.x, it.y) } }
+    close()
+  }
+}
+
+/**
+ * This radius [by] larger each way (smaller when negative), never below square. A square corner
+ * stays square, as a stroke's mitred corner is.
+ */
+private fun CornerRadius.grownBy(by: Float) =
+  CornerRadius(
+    if (x > 0f) (x + by).coerceAtLeast(0f) else 0f,
+    if (y > 0f) (y + by).coerceAtLeast(0f) else 0f,
+  )
 
 /** A length of [px] canvas pixels, at least one when it is any at all, so a hairline shows. */
 private fun hairline(px: Float): Float = if (px > 0f) px.coerceAtLeast(1f) else px

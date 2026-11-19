@@ -15,6 +15,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
+import ee.schimke.composeai.uibuilder.canvas.LocalWffCanvasExport
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
@@ -62,8 +63,11 @@ object JvmDocumentRasterizer {
       )
     return try {
       scene.setContent {
+        // An export: rotation is drawn, as the SVG recorder draws it; see the local.
         if (catalog == null) {
-          UiBuilderSurface(document = document, editorOverlay = false)
+          CompositionLocalProvider(LocalWffCanvasExport provides true) {
+            UiBuilderSurface(document = document, editorOverlay = false)
+          }
         } else {
           // The catalog-derived half of what the editor provides around its canvas.
           CompositionLocalProvider(
@@ -73,6 +77,7 @@ object JvmDocumentRasterizer {
             LocalUiBuilderCanvasAdapterMappings provides catalog.canvasAdapterMappings,
             LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
             LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
+            LocalWffCanvasExport provides true,
           ) {
             UiBuilderSurface(document = document, editorOverlay = false)
           }

@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
+import ee.schimke.composeai.uibuilder.canvas.LocalWffCanvasExport
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -52,6 +53,8 @@ internal fun ProductionUiBuilderSurface(
     CompositionLocalProvider(
       LocalUiBuilderFontFamilies provides fonts,
       LocalUiBuilderFontVariants provides (fonts as? UiBuilderFontVariants),
+      // The daemon's recorder writes this frame's SVG; it keeps a canvas rotation, not a layer's.
+      LocalWffCanvasExport provides true,
     ) {
       UiBuilderSurface(document = document, editorOverlay = false)
     }
