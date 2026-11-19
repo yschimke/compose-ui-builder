@@ -95,7 +95,115 @@ data class UiBuilderWatchFaceStart(
    * `{"ambient":true}`. Null with no [stream].
    */
   val sendControls: ((String) -> Unit)? = null,
-)
+  /**
+   * Where an asynchronous start stood when the host answered (`202`), before the socket reports
+   * anything. Null from a host that starts synchronously, which reports no stages at all.
+   */
+  val stage: UiBuilderWatchFaceStage? = null,
+  /**
+   * Frees the session's runtime slot at once (`DELETE …/dwf-preview/{sessionId}`), rather than when
+   * the host notices the socket has gone. Null where the host gave no session id.
+   */
+  val release: (() -> Unit)? = null,
+) {
+  /** Closes the stream and releases the session; what a Reload and a closed pane do. */
+  fun end() {
+    stream?.close()
+    release?.invoke()
+  }
+}
+
+/**
+ * One loading stage of a watch-face runtime session (`compose-preview/ui-builder-dwf-preview-
+ * session/v1`), from the start's `202`, the status route or a `{"type":"stage"}` socket message.
+ *
+ * [stage] is one of [QUEUED], [EXPORTING], [PACKAGING], [STARTING_RUNTIME], [INSTALLING],
+ * [LOADING_FACE], [LIVE] or [FAILED]. [label] is the host's sentence for it, and on a failure its
+ * diagnostic; [reason] is the packager's own text, shown verbatim.
+ */
+data class UiBuilderWatchFaceStage(
+  val stage: String,
+  /** 0 while queued, 1–5 while working, [steps] once live; on [FAILED], the step it failed at. */
+  val step: Int = 0,
+  val steps: Int = DEFAULT_STEPS,
+  val label: String = "",
+  /** Since the start request, as the host measured it when it sent this. */
+  val elapsedMillis: Long = 0,
+  val stageElapsedMillis: Long = 0,
+  /** The package came from the host's digest cache, so the packager did not run. */
+  val cachedPackage: Boolean = false,
+  /** Sessions ahead of this one, only while [QUEUED]. */
+  val queueAhead: Int? = null,
+  val code: String? = null,
+  val reason: String? = null,
+  /** How often a live session redraws. */
+  val frameIntervalMillis: Long? = null,
+) {
+  val queued: Boolean
+    get() = stage == QUEUED
+
+  val live: Boolean
+    get() = stage == LIVE
+
+  val failed: Boolean
+    get() = stage == FAILED
+
+  /** Whether the host will report no further stage. */
+  val settled: Boolean
+    get() = live || failed
+
+  companion object {
+    const val QUEUED: String = "queued"
+    const val EXPORTING: String = "exporting"
+    const val PACKAGING: String = "packaging"
+    const val STARTING_RUNTIME: String = "starting-runtime"
+    const val INSTALLING: String = "installing"
+    const val LOADING_FACE: String = "loading-face"
+    const val LIVE: String = "live"
+    const val FAILED: String = "failed"
+    const val DEFAULT_STEPS: Int = 5
+
+    /**
+     * The stage [message] states, or null when it states none: an older host's start, or a socket
+     * message that is not about stages. `stage` may be the stage's name with its fields beside it,
+     * or an object holding them.
+     */
+    fun of(message: kotlinx.serialization.json.JsonObject): UiBuilderWatchFaceStage? {
+      val nested = message["stage"] as? kotlinx.serialization.json.JsonObject
+      val fields = nested ?: message
+      val name = fields.text("stage") ?: return null
+      return UiBuilderWatchFaceStage(
+        stage = name,
+        step = fields.number("step")?.toInt() ?: 0,
+        steps = fields.number("steps")?.toInt()?.takeIf { it > 0 } ?: DEFAULT_STEPS,
+        label = fields.text("label").orEmpty(),
+        elapsedMillis = fields.number("elapsedMillis")?.toLong() ?: 0,
+        stageElapsedMillis = fields.number("stageElapsedMillis")?.toLong() ?: 0,
+        cachedPackage = fields.text("cachedPackage") == "true",
+        queueAhead = fields.number("queueAhead")?.toInt(),
+        code = fields.text("code"),
+        reason = fields.text("reason"),
+        frameIntervalMillis = fields.number("frameIntervalMillis")?.toLong(),
+      )
+    }
+
+    /** [of] for a JSON body; null when it is not an object or states no stage. */
+    fun of(json: String): UiBuilderWatchFaceStage? = runCatching {
+      kotlinx.serialization.json.Json.parseToJsonElement(json)
+        as? kotlinx.serialization.json.JsonObject
+    }
+      .getOrNull()
+      ?.let(::of)
+
+    private fun kotlinx.serialization.json.JsonObject.text(name: String): String? =
+      (get(name) as? kotlinx.serialization.json.JsonPrimitive)
+        ?.takeIf { it !is kotlinx.serialization.json.JsonNull }
+        ?.content
+
+    private fun kotlinx.serialization.json.JsonObject.number(name: String): Double? =
+      text(name)?.toDoubleOrNull()
+  }
+}
 
 /** A watch-face session's socket: its frames, and a state-based way to send it `controls`. */
 class WatchFaceSocket(val stream: UiBuilderNativeStream, val sendControls: (String) -> Unit)
@@ -142,6 +250,8 @@ class WatchFaceDesiredControls(private val transmit: (String) -> Boolean) {
 fun watchFaceStartOf(
   pagePath: String,
   socketPath: String?,
+  stage: UiBuilderWatchFaceStage? = null,
+  release: (() -> Unit)? = null,
   openSocket: (String) -> WatchFaceSocket?,
 ): UiBuilderWatchFaceStart {
   val socket =
@@ -150,6 +260,8 @@ fun watchFaceStartOf(
     pagePath = pagePath,
     stream = socket?.stream,
     sendControls = socket?.sendControls,
+    stage = stage,
+    release = release,
   )
 }
 
@@ -187,6 +299,13 @@ interface UiBuilderNativeStream {
 
   /** Why there is no frame, or null while the stream is healthy or still connecting. */
   val failure: String?
+
+  /**
+   * The newest loading stage the session reported (`{"type":"stage"}`), or null from a host that
+   * reports none.
+   */
+  val stage: UiBuilderWatchFaceStage?
+    get() = null
 
   /** Dispatch one input; dropped silently while the socket is not open. */
   fun send(input: UiBuilderNativeInput)

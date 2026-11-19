@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
+import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStage
 import ee.schimke.composeai.uibuilder.editor.WatchFaceDesiredControls
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -42,6 +43,10 @@ internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
   override var failure: String? by mutableStateOf(null)
     private set
 
+  /** The newest `{"type":"stage"}` a watch-face session sent; null from a lane that sends none. */
+  override var stage: UiBuilderWatchFaceStage? by mutableStateOf(null)
+    private set
+
   /**
    * The newest sequence painted, so out-of-order frames are dropped. `seq` restarts on reconnect,
    * but each session gets a new instance.
@@ -59,7 +64,8 @@ internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
         onOpened = { controls.opened() },
         onClosed = {
           // Only a close before the first frame is a failure; afterwards the last frame stays.
-          if (!closed && frame == null && failure == null) {
+          // A failed stage already says why, in the host's words.
+          if (!closed && frame == null && failure == null && stage?.failed != true) {
             failure = "the live native session closed before it drew a frame"
           }
         },
@@ -127,6 +133,8 @@ internal class BrowserNativeStream(url: String) : UiBuilderNativeStream {
         failure = null
         frame = UiBuilderNativeFrame(image = decoded, sequence = sequence)
       }
+      // A watch-face session's loading stages. The pane counts the elapsed time on between them.
+      "stage" -> UiBuilderWatchFaceStage.of(message)?.let { stage = it }
       // Reported rather than thrown: the lane sends these for a bad override or a backend that
       // cannot stream, and the pane has a still to fall back on either way.
       "error" ->

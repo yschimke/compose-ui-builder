@@ -57,6 +57,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStage
 import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStart
 import ee.schimke.composeai.uibuilder.editor.WatchFaceSocket
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
@@ -3088,6 +3089,11 @@ internal suspend fun renameServerDesign(designId: String, title: String): String
  * Starts a real watch-face runtime session for [designId] with the editor's own exported WFF, and
  * returns the tab to open. A refusal (runtime missing, not signed in, ...) comes back as the host's
  * own words, never as an error about the design.
+ *
+ * Asks for an asynchronous start: a host that supports it answers `202` at once with the first
+ * stage, and the socket then reports each stage up to the first frame
+ * (compose-preview-server #2016). An older host ignores `async` and answers `201` once the session
+ * is live, without a stage; the pane then waits for the first frame as it always did.
  */
 internal suspend fun requestWatchFacePreview(
   designId: String,
@@ -3105,15 +3111,31 @@ internal suspend fun requestWatchFacePreview(
           body =
             nativePreviewJson.encodeToString(
               WatchFaceStartBody.serializer(),
-              WatchFaceStartBody(wffXml),
+              WatchFaceStartBody(wffXml, async = true),
             ),
         ),
       )
   return when (response.statusCode) {
-    201 ->
+    201,
+    202 ->
       nativePreviewJson.decodeFromString(WatchFaceStarted.serializer(), response.body).let {
         // The same session the tab shows, drawn inline too.
-        watchFaceStartOf(it.pagePath, it.socketPath) { socketPath ->
+        watchFaceStartOf(
+          it.pagePath,
+          it.socketPath,
+          stage = UiBuilderWatchFaceStage.of(response.body),
+          release =
+            it.sessionId?.takeIf(String::isNotBlank)?.let { session ->
+              {
+                releaseWatchFaceSession(
+                  sameOriginRequestUrl(
+                    "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/dwf-preview/" +
+                      encodeUriComponent(session),
+                  ),
+                )
+              }
+            },
+        ) { socketPath ->
           val stream = BrowserNativeStream(sessionSocketUrl(socketPath))
           WatchFaceSocket(stream, stream::sendControls)
         }
@@ -3139,10 +3161,33 @@ internal suspend fun requestWatchFacePreview(
   }
 }
 
-@kotlinx.serialization.Serializable private class WatchFaceStartBody(val wffXml: String)
+@kotlinx.serialization.Serializable
+private class WatchFaceStartBody(
+  val wffXml: String,
+  /** Answer `202` at once and report stages; an older host ignores it. */
+  val async: Boolean,
+)
 
 @kotlinx.serialization.Serializable
-private class WatchFaceStarted(val pagePath: String, val socketPath: String)
+private class WatchFaceStarted(
+  val pagePath: String,
+  val socketPath: String,
+  val sessionId: String? = null,
+)
+
+/**
+ * Frees a watch-face session's runtime slot. Fire and forget, and `keepalive` so it still goes out
+ * when the pane closes with the page: the host releases a socket-less session within a minute
+ * anyway, this only makes it immediate.
+ */
+@JsFun(
+  """(url) => {
+    try {
+      fetch(url, { method: 'DELETE', credentials: 'same-origin', keepalive: true }).catch(() => {});
+    } catch (e) {}
+  }""",
+)
+private external fun releaseWatchFaceSession(url: String)
 
 @kotlinx.serialization.Serializable
 private class WatchFaceRefusal(val reasons: List<String> = emptyList())

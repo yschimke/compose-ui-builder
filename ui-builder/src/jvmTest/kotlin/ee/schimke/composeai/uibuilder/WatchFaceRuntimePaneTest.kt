@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
+import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStage
 import ee.schimke.composeai.uibuilder.editor.UiBuilderWatchFaceStart
 import ee.schimke.composeai.uibuilder.editor.WatchFaceRuntimePane
 import java.io.File
@@ -44,6 +45,7 @@ class WatchFaceRuntimePaneTest {
     var closes = 0
     override var frame: UiBuilderNativeFrame? by mutableStateOf(null)
     override var failure: String? by mutableStateOf(null)
+    override var stage: UiBuilderWatchFaceStage? by mutableStateOf(null)
 
     override fun send(input: UiBuilderNativeInput) = Unit
 
@@ -229,4 +231,175 @@ class WatchFaceRuntimePaneTest {
       onNodeWithText("Ambient").assertDoesNotExist()
       assertEquals(emptyList(), controls)
     }
+
+  @Test
+  fun `an async start shows each stage the host reports, then the frame`() =
+    runDesktopComposeUiTest(width = 420, height = 520) {
+      val stream = FakeStream()
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 520.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                UiBuilderWatchFaceStart(
+                  pagePath = "/tab",
+                  stream = stream,
+                  stage =
+                    UiBuilderWatchFaceStage(
+                      stage = UiBuilderWatchFaceStage.QUEUED,
+                      label = "Waiting for a free runtime (2 ahead)",
+                      queueAhead = 2,
+                    ),
+                )
+              },
+              status = { null },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      onNodeWithText("Waiting for a free runtime (2 ahead)").assertExists()
+      onNodeWithText("Queued · 2 sessions ahead").assertExists()
+      // Available from the 202 on, before any frame.
+      onNodeWithText("Open in a tab").assertExists()
+      stream.stage =
+        UiBuilderWatchFaceStage(
+          stage = UiBuilderWatchFaceStage.PACKAGING,
+          step = 2,
+          label = "Using the cached package",
+          elapsedMillis = 14_000,
+          cachedPackage = true,
+        )
+      waitForIdle()
+      onNodeWithText("Using the cached package").assertExists()
+      onNodeWithText("Step 2 of 5 · cached package").assertExists()
+      onNodeWithText("14 s", substring = true).assertExists()
+      stream.stage =
+        UiBuilderWatchFaceStage(
+          stage = UiBuilderWatchFaceStage.LIVE,
+          step = 5,
+          label = "Live",
+          elapsedMillis = 41_000,
+          frameIntervalMillis = 250,
+        )
+      stream.frame = UiBuilderNativeFrame(solid(Color(0xFF12E3A2)), 1)
+      waitForIdle()
+      onNodeWithContentDescription("Watch face on the real runtime").assertExists()
+      onNodeWithText("Live · ready in 41 s · redraws every 250 ms").assertExists()
+    }
+
+  @Test
+  fun `a failed stage shows the packager's reason verbatim and no socket error over it`() =
+    runDesktopComposeUiTest(width = 420, height = 520) {
+      val reason =
+        "aapt2: error: res/raw/watchface.xml:12: <PartText> width=\"-4\" is not a valid dimension"
+      val stream = FakeStream()
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 520.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = { UiBuilderWatchFaceStart(pagePath = "/tab", stream = stream) },
+              status = { null },
+            )
+          }
+        }
+      }
+      waitForIdle()
+      stream.stage =
+        UiBuilderWatchFaceStage(
+          stage = UiBuilderWatchFaceStage.FAILED,
+          step = 2,
+          label = "Packaging failed",
+          code = "DWF_PACKAGING_FAILED",
+          reason = reason,
+        )
+      stream.failure = "the live native lane failed"
+      waitForIdle()
+      onNodeWithText("Failed at step 2 of 5: Package").assertExists()
+      onNodeWithText("DWF_PACKAGING_FAILED").assertExists()
+      onNodeWithText(reason).assertExists()
+      onNodeWithText("the live native lane failed").assertDoesNotExist()
+    }
+
+  @Test
+  fun `a reload and a closed pane release the session they end`() =
+    runDesktopComposeUiTest(width = 420, height = 460) {
+      val releases = mutableListOf<Int>()
+      var calls = 0
+      var open by mutableStateOf(true)
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 460.dp)) {
+            if (open)
+              WatchFaceRuntimePane(
+                wffXml = { "<WatchFace/>" },
+                start = {
+                  val session = calls++
+                  UiBuilderWatchFaceStart(
+                    pagePath = "/tab",
+                    stream = FakeStream(),
+                    release = { releases += session },
+                  )
+                },
+                status = { null },
+              )
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(emptyList(), releases)
+      onNodeWithText("Reload with the current design").performClick()
+      waitForIdle()
+      assertEquals(listOf(0), releases)
+      open = false
+      waitForIdle()
+      assertEquals(listOf(0, 1), releases)
+    }
+
+  @Test
+  fun `a closed pane starts nothing`() =
+    runDesktopComposeUiTest(width = 420, height = 460) {
+      var starts = 0
+      var statuses = 0
+      val open by mutableStateOf(false)
+      setContent {
+        MaterialTheme {
+          if (open)
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                starts++
+                UiBuilderWatchFaceStart()
+              },
+              status = {
+                statuses++
+                null
+              },
+            )
+        }
+      }
+      waitForIdle()
+      assertEquals(0 to 0, starts to statuses)
+    }
+
+  @Test
+  fun `stages parse from the start's body and the socket's messages`() {
+    val started =
+      UiBuilderWatchFaceStage.of(
+        """{"sessionId":"s1","socketPath":"/ws","pagePath":"/tab","statusPath":"/st","stage":"queued","step":0,"steps":5,"label":"Waiting for a free runtime (next in line)","queueAhead":0}""",
+      )
+    assertEquals(UiBuilderWatchFaceStage.QUEUED, started?.stage)
+    assertEquals(0, started?.queueAhead)
+    val message =
+      UiBuilderWatchFaceStage.of(
+        """{"type":"stage","stage":"failed","step":2,"steps":5,"label":"x","elapsedMillis":9100,"code":"DWF_PACKAGING_FAILED","reason":"line 1\nline 2","cachedPackage":false}""",
+      )
+    assertEquals(2, message?.step)
+    assertEquals(9100L, message?.elapsedMillis)
+    assertEquals("line 1\nline 2", message?.reason)
+    // An older host's 201 states no stage.
+    assertEquals(null, UiBuilderWatchFaceStage.of("""{"pagePath":"/tab","socketPath":"/ws"}"""))
+  }
 }
