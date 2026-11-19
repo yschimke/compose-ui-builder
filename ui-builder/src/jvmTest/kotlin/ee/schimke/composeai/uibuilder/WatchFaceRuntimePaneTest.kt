@@ -137,6 +137,135 @@ class WatchFaceRuntimePaneTest {
     }
 
   @Test
+  fun `design edits never start a session, they offer a Refresh that does`() =
+    runDesktopComposeUiTest(width = 420, height = 560) {
+      val streams = mutableListOf<FakeStream>()
+      var revision by mutableStateOf(3)
+      var starts = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 560.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace revision=\"$revision\"/>" },
+              start = {
+                starts++
+                val stream = FakeStream().also(streams::add)
+                stream.frame = UiBuilderNativeFrame(solid(Color(0xFF12E3A2)), 1)
+                UiBuilderWatchFaceStart(pagePath = "/tab", stream = stream)
+              },
+              status = { null },
+              revision = revision,
+            )
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(1, starts)
+      onNodeWithContentDescription("Design changed").assertDoesNotExist()
+      // Several edits, and long enough for any debounce or idle timer to have fired.
+      repeat(5) {
+        revision++
+        waitForIdle()
+      }
+      mainClock.advanceTimeBy(120_000)
+      waitForIdle()
+      assertEquals(1, starts, "an edit must not start, package or install a session")
+      assertEquals(0, streams.single().closes)
+      onNodeWithContentDescription("Design changed").assertExists()
+      save("native-stale.png", onRoot().captureToImage())
+
+      onNodeWithText("Refresh").performClick()
+      waitForIdle()
+      assertEquals(2, starts)
+      assertEquals(1, streams.first().closes)
+      onNodeWithContentDescription("Design changed").assertDoesNotExist()
+    }
+
+  @Test
+  fun `the host's stale verdict wins over the revision compare`() =
+    runDesktopComposeUiTest(width = 420, height = 560) {
+      var revision by mutableStateOf(3)
+      var hostSays: Boolean? = false
+      var asked = 0
+      var starts = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 560.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                starts++
+                UiBuilderWatchFaceStart(
+                  pagePath = "/tab",
+                  stream = FakeStream(),
+                  staleness = {
+                    asked++
+                    hostSays
+                  },
+                )
+              },
+              status = { null },
+              revision = revision,
+            )
+          }
+        }
+      }
+      waitForIdle()
+      revision++
+      mainClock.advanceTimeBy(5_000)
+      waitForIdle()
+      assertEquals(1, asked)
+      // A selection-only revision bump the host does not count: no note.
+      onNodeWithContentDescription("Design changed").assertDoesNotExist()
+      hostSays = true
+      revision++
+      mainClock.advanceTimeBy(5_000)
+      waitForIdle()
+      onNodeWithContentDescription("Design changed").assertExists()
+      assertEquals(1, starts)
+    }
+
+  @Test
+  fun `the optional idle refresh happens once, after 30 s without an edit`() =
+    runDesktopComposeUiTest(width = 420, height = 560) {
+      var revision by mutableStateOf(1)
+      var starts = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 560.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                starts++
+                UiBuilderWatchFaceStart(pagePath = "/tab", stream = FakeStream())
+              },
+              status = { null },
+              revision = revision,
+              autoRefreshWhenIdle = true,
+            )
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(1, starts)
+      revision++
+      mainClock.advanceTimeBy(20_000)
+      // Still editing: the timer starts again.
+      revision++
+      mainClock.advanceTimeBy(20_000)
+      waitForIdle()
+      assertEquals(1, starts)
+      mainClock.advanceTimeBy(15_000)
+      waitForIdle()
+      assertEquals(2, starts)
+      revision++
+      mainClock.advanceTimeBy(120_000)
+      waitForIdle()
+      assertEquals(2, starts, "one gentle refresh, not one per edit")
+      onNodeWithContentDescription("Design changed").assertExists()
+    }
+
+  @Test
   fun `a reload the export refuses still closes the stream it replaces`() =
     runDesktopComposeUiTest(width = 420, height = 460) {
       val stream = FakeStream()

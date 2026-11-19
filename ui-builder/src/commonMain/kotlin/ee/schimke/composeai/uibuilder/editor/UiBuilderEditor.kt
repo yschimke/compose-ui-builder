@@ -2299,6 +2299,8 @@ fun UiBuilderEditor(
         },
         start = onStartWatchFacePreview,
         status = onWatchFaceRuntimeStatus,
+        // Only to say the session is behind: an edit never starts or repackages one.
+        revision = state.document.revision,
         modifier = paneModifier,
       )
     } else
