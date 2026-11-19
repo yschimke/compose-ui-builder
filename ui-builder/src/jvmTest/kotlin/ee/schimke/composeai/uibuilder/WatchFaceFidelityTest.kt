@@ -206,6 +206,56 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a sweep-stroked hairline is exported a device pixel wide, as the editor draws it`() {
+    // thickness 0: Skia draws a hairline, one device pixel wide, so the export band must not be
+    // zero-area. A line and a rectangle, both white all round.
+    val white =
+      """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+        """colors="#ffffffff #ffffffff"/>"""
+    val face =
+      wffFace(
+        listOf("hand", "box"),
+        (paintedPart(
+            "hand",
+            mapOf("shape" to "line", "startX" to 60, "startY" to 40, "endX" to 60, "endY" to 400),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 0),
+            white,
+          ) +
+            paintedPart(
+              "box",
+              mapOf(
+                "shape" to "rectangle",
+                "x" to 120,
+                "y" to 120,
+                "width" to 210,
+                "height" to 210,
+              ),
+              "wff/stroke",
+              mapOf("color" to "#ffffffff", "thickness" to 0),
+              white,
+            ))
+          .joinToString(","),
+      )
+    val editor = renderWffFace(face)
+    val exported = export(face)
+    fun lit(bitmap: Bitmap, x0: Int, x1: Int, y0: Int, y1: Int): Int {
+      var n = 0
+      for (y in y0 until y1) for (x in x0 until x1) if (bitmap.argb(x, y)[1] > 60) n++
+      return n
+    }
+    // The line, around canvas x 60 (face 60 × 454/450), and the rectangle's left edge, near 121.
+    for ((name, area) in
+      listOf("line" to listOf(50, 72, 60, 380), "box" to listOf(110, 132, 140, 310))) {
+      val (x0, x1, y0, y1) = area
+      val a = lit(editor, x0, x1, y0, y1)
+      val b = lit(exported, x0, x1, y0, y1)
+      assertTrue(a > 100, "$name editor lit $a")
+      assertTrue(b >= a / 2, "$name export lit $b of the editor's $a")
+    }
+  }
+
+  @Test
   fun `a sweep stroke as wide as its shape is exported as wedges, not dropped`() {
     // A 60px stroke on a 100px rectangle leaves no hole; it still paints the sweep in the SVG.
     val face =

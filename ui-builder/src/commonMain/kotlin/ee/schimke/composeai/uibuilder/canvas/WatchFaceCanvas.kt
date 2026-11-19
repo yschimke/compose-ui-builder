@@ -661,6 +661,9 @@ internal fun DrawScope.drawWffShape(
   val stroke: Brush? =
     drawing.strokeGradient?.brush(pxPerWffPx)
       ?: drawing.stroke.takeIf { it != Color.Unspecified }?.let(::SolidColor)
+  // The width the editor's stroke covers: a stroke of no width is Skia's hairline, a device pixel
+  // centred on the path. An export band of no width would paint nothing.
+  val covered = if (line.width > 0f) line.width else 1f
   if (shape == "line") {
     val k = pxPerWffPx
     val start = Offset(drawing.ends[0] * k, drawing.ends[1] * k)
@@ -669,7 +672,7 @@ internal fun DrawScope.drawWffShape(
     if (sweepLine != null && start != end) {
       // As every other shape's: the area a butt-capped line covers, filled with the wedges.
       val along = end - start
-      val normal = Offset(-along.y, along.x) / along.getDistance() * (line.width / 2)
+      val normal = Offset(-along.y, along.x) / along.getDistance() * (covered / 2)
       val band =
         Path().apply {
           moveTo(start.x + normal.x, start.y + normal.y)
@@ -722,7 +725,17 @@ internal fun DrawScope.drawWffShape(
       )
     val band =
       if (forExport && drawing.strokeGradient?.kind == WffGradient.SWEEP) {
-        strokeBand(drawing, pxPerWffPx, origin, extent, line.width, start, sweep)
+        // A hairline is centred on the box's edge, not inset: the band straddles it.
+        val grow = (covered - line.width) / 2
+        strokeBand(
+          drawing,
+          pxPerWffPx,
+          Offset(origin.x - grow, origin.y - grow),
+          Size(extent.width + 2 * grow, extent.height + 2 * grow),
+          covered,
+          start,
+          sweep,
+        )
       } else null
     if (band != null) drawSweepWedges(drawing.strokeGradient!!, pxPerWffPx, band)
     else if (ellipse) drawOval(stroke, topLeft, inner, style = line)
