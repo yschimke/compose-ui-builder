@@ -397,7 +397,22 @@ public class PersistentUiBuilderService(
     data class Refused(val message: String) : WholeDocumentCandidate
   }
 
+  /**
+   * Guards every in-memory field. Held only while computing: a writer releases it while the store
+   * forces its parts to disk ([storeIo]), so a read never waits on an fsync and sees the last
+   * committed state meanwhile.
+   */
   private val lock = ReentrantLock()
+
+  /**
+   * Serializes every path that may write the store, and is always taken before [lock]. While a
+   * writer has released [lock] for its I/O this is still held, so no other writer can compute
+   * against the state the store is mid-way through replacing.
+   */
+  private val writeLock = ReentrantLock()
+
+  /** True while a writer has released [lock] for store I/O. Read and written under [lock]. */
+  private var storeIoInFlight = false
   private val store: UiBuilderDesignStore = designStore.store
   private val loadedPersistence = store.load()
   private var persisted: PersistedServiceV1 =
@@ -714,16 +729,66 @@ public class PersistentUiBuilderService(
         call.request is UiBuilderServiceRequest.ExportDocument
     )
       return export(call)
-    val execution = lock.withLock { executeLocked(call) }
+    val execution =
+      if (call.request.isRead()) lock.withLock { executeLocked(call) }
+      else writing { executeLocked(call) }
     drain(execution.mailboxes)
     return execution.response
+  }
+
+  /**
+   * Requests that never write the store, so they take only [lock] and are answered while another
+   * request's I/O is in flight. A request listed here that did reach the store would be refused by
+   * [storeIo] rather than interleave with that I/O.
+   */
+  private fun UiBuilderServiceRequest.isRead(): Boolean =
+    when (this) {
+      UiBuilderServiceRequest.ListCatalogs,
+      is UiBuilderServiceRequest.ListDesigns,
+      is UiBuilderServiceRequest.OpenDesign,
+      is UiBuilderServiceRequest.GetDesignAccess,
+      is UiBuilderServiceRequest.GetDesignActions,
+      is UiBuilderServiceRequest.PreviewCatalogUpgrade,
+      is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade,
+      is UiBuilderServiceRequest.GetSnapshot,
+      is UiBuilderServiceRequest.GetDelta,
+      is UiBuilderServiceRequest.UpdatePresence,
+      is UiBuilderServiceRequest.ListTrash,
+      is UiBuilderServiceRequest.ListRevisions -> true
+      else -> false
+    }
+
+  /** Runs [block] as a writer: [writeLock], then [lock]. */
+  private inline fun <T> writing(block: () -> T): T = writeLock.withLock { lock.withLock(block) }
+
+  /**
+   * Runs store I/O for the caller, which holds [lock]. A writer releases [lock] for the duration,
+   * so reads proceed against the state committed before it; the caller re-reads anything a reader
+   * may have changed meanwhile (see [commitDesign]). Without [writeLock] the I/O stays under
+   * [lock], and is refused if a writer's is in flight: the store diffs against the value it last
+   * committed, so two interleaved commits would corrupt a design's journal.
+   */
+  private fun <T> storeIo(io: () -> T): T {
+    if (!writeLock.isHeldByCurrentThread) {
+      check(!storeIoInFlight) { "store write outside the writer lock while another is in flight" }
+      return io()
+    }
+    val holds = lock.holdCount
+    storeIoInFlight = true
+    repeat(holds) { lock.unlock() }
+    try {
+      return io()
+    } finally {
+      repeat(holds) { lock.lock() }
+      storeIoInFlight = false
+    }
   }
 
   override suspend fun putAsset(write: UiBuilderAssetWrite): UiBuilderServiceResponse {
     unusableDesigns[write.designId]?.let {
       return UiBuilderServiceResponse.Error(UiBuilderServiceError(it.code, it.reason))
     }
-    val execution = lock.withLock { putAssetLocked(write) }
+    val execution = writing { putAssetLocked(write) }
     drain(execution.mailboxes)
     return execution.response
   }
@@ -1590,7 +1655,7 @@ public class PersistentUiBuilderService(
       if (!header.access.deletableBy(actor, header.createdByDelegateActorId)) {
         return serviceError(forbidden("delete", designId))
       }
-      store.remove(designId)
+      storeIo { store.remove(designId) }
       // A stale entry would answer this id with the reason rather than "not found", even for a
       // re-created design.
       unusableDesigns.remove(designId)
@@ -2288,7 +2353,7 @@ public class PersistentUiBuilderService(
     unusableDesigns[named]?.let {
       return UiBuilderBranchResponse.Error(UiBuilderServiceError(it.code, it.reason))
     }
-    val execution = lock.withLock {
+    val execution = writing {
       when (val request = call.request) {
         is UiBuilderBranchRequest.CreateBranch -> createBranch(call.actor, request)
         is UiBuilderBranchRequest.ListBranches -> listBranches(call.actor, request)
@@ -4769,7 +4834,7 @@ public class PersistentUiBuilderService(
    * that quarantined it. History is replaced and the sequence continues upward.
    */
   override fun adminRepairDesign(designId: String, documentJson: String): UiBuilderAdminRepair =
-    lock.withLock {
+    writing {
       val existing = persisted.designs[designId] ?: return UiBuilderAdminRepair.NotFound(designId)
       val unusable =
         unusableDesigns[designId]
@@ -4826,21 +4891,21 @@ public class PersistentUiBuilderService(
     }
 
   override fun adminDeleteDesign(designId: String): Boolean {
-    val closed: List<SubscriberMailbox> = lock.withLock {
+    val closed: List<SubscriberMailbox> = writing {
       // The operator's delete is permanent, so it also empties a design out of the trash.
       if (designId in trash) {
         // Durable first: were the unlink to fail, the trash entry still holds the id.
-        store.remove(designId)
+        storeIo { store.remove(designId) }
         trash.remove(designId)
-        return@withLock emptyList()
+        return@writing emptyList()
       }
       // An unreadable design is not in the map but is still on disk; retiring it must keep working.
       if (designId !in persisted.designs) {
         if (unusableDesigns[designId]?.storeQuarantine != true) return false
-        store.remove(designId)
+        storeIo { store.remove(designId) }
         unusableDesigns.remove(designId)
         quarantinedDesigns.remove(designId)
-        return@withLock emptyList()
+        return@writing emptyList()
       }
       removeLocked(designId)
     }
@@ -4876,7 +4941,7 @@ public class PersistentUiBuilderService(
     design: PersistedDesignV1,
     trashed: PersistedDesignV1,
   ): List<SubscriberMailbox> {
-    store.commit(designId, undurable[designId] ?: design, trashed)
+    storeIo { store.commit(designId, undurable[designId] ?: design, trashed) }
     undurable.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
     trash[designId] = trashed
@@ -4902,7 +4967,7 @@ public class PersistentUiBuilderService(
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design $designId already exists")
     }
     val restored = trashed.copy(trashedAtEpochMillis = null, trashedByActorId = null)
-    store.commit(designId, trashed, restored)
+    storeIo { store.commit(designId, trashed, restored) }
     trash.remove(designId)
     persisted = persisted.copy(designs = persisted.designs + (designId to restored))
     runtime[designId] = RuntimeDesign()
@@ -4942,7 +5007,7 @@ public class PersistentUiBuilderService(
     trash.values.map(::trashedDesignOf).sortedTrash()
   }
 
-  override fun purgeExpiredTrash(): List<String> = lock.withLock {
+  override fun purgeExpiredTrash(): List<String> = writing {
     val now = clock.millis()
     val expired =
       trash.values
@@ -4953,7 +5018,7 @@ public class PersistentUiBuilderService(
     // purge, and every design already gone is still reported so the host can drop its records.
     expired.filter { designId ->
       try {
-        store.remove(designId)
+        storeIo { store.remove(designId) }
         trash.remove(designId)
         true
       } catch (_: UiBuilderPersistenceException) {
@@ -4967,7 +5032,22 @@ public class PersistentUiBuilderService(
    * writes only what differs, keeping an edit's cost proportional to that design.
    */
   private fun commitDesign(designId: String, updated: PersistedDesignV1) {
-    store.commit(designId, undurable[designId] ?: persisted.designs[designId], updated)
+    val before = persisted.designs[designId]
+    storeIo { store.commit(designId, undurable[designId] ?: before, updated) }
+    // Only an export's audit record can replace the design while [storeIo] has released the lock
+    // (see [holdUndurable]); it is carried onto the committed value, still held back from disk.
+    val current = persisted.designs[designId]
+    if (before != null && current != null && current !== before) {
+      val known = before.audit.toSet()
+      val held = current.audit.filter { it !in known }
+      if (held.isNotEmpty()) {
+        undurable[designId] = updated
+        val merged =
+          updated.copy(audit = (updated.audit + held).takeLast(limits.retainedAuditRecords))
+        persisted = persisted.copy(designs = persisted.designs + (designId to merged))
+        return
+      }
+    }
     undurable.remove(designId)
     persisted = persisted.copy(designs = persisted.designs + (designId to updated))
   }
@@ -4983,7 +5063,7 @@ public class PersistentUiBuilderService(
   }
 
   private fun removeDesign(designId: String) {
-    store.remove(designId)
+    storeIo { store.remove(designId) }
     undurable.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
   }
@@ -4995,7 +5075,7 @@ public class PersistentUiBuilderService(
    *
    * The per-design store migrates on open, so on such a host this answers "already at the latest".
    */
-  public fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = lock.withLock {
+  public fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = writing {
     val legacy =
       store as? LegacyStateStorageDesignStore
         ?: return UiBuilderPersistenceMigrationResult(
