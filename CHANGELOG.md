@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.140.0](https://github.com/yschimke/compose-ui-builder/compare/v3.139.0...v3.140.0) (2026-11-19)
+
+
+### Bug Fixes
+
+* **ui-builder:** draw a WFF part image's uploaded asset with its tint ([#1309](https://github.com/yschimke/compose-ui-builder/issues/1309)) ([a7385df](https://github.com/yschimke/compose-ui-builder/commit/a7385df749aea8712d3cdd4b91553686b1a9826d))
+* **ui-builder:** draw a WFF slot's EMPTY complication while no provider is chosen ([#1308](https://github.com/yschimke/compose-ui-builder/issues/1308)) ([aed8e76](https://github.com/yschimke/compose-ui-builder/commit/aed8e760e46527806e3c9920938b67389b22b745))
+* **ui-builder:** evaluate WFF [MILLISECOND] and [UTC_TIMESTAMP] in the preview ([#1313](https://github.com/yschimke/compose-ui-builder/issues/1313)) ([a599244](https://github.com/yschimke/compose-ui-builder/commit/a5992442aa695f6156338297dad771ad7245b474))
+* **ui-builder:** keep the watch-face Native pane on its session and offer Refresh when the design moves on ([#1314](https://github.com/yschimke/compose-ui-builder/issues/1314)) ([1f383f9](https://github.com/yschimke/compose-ui-builder/commit/1f383f9b75a9c1551218862b5cb8d3037946850e))
+
 ## [3.139.0](https://github.com/yschimke/compose-ui-builder/compare/v3.138.0...v3.139.0) (2026-11-19)
 
 
