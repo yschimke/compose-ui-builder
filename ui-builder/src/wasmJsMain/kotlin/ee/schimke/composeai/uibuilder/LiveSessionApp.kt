@@ -57,6 +57,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorLibraryComponent
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.LocalWatchFaceValidation
 import ee.schimke.composeai.uibuilder.editor.NewDesignCallback
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentHost
@@ -73,6 +74,8 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
+import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_NATIVE_BACKEND
+import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationController
 import ee.schimke.composeai.uibuilder.editor.agentChatContext
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
@@ -1628,7 +1631,30 @@ private fun LiveSessionApp(
       guidelines.loadAccess()
       guidelines.loadShared()
     }
-    CompositionLocalProvider(LocalDesignGuidelineCheck provides guidelines) {
+    // The Issues panel's Validate section, for a Watch Face Format design only. A design kept in
+    // this browser, or one this caller may not edit, still gets the section, saying why not.
+    val watchFaceValidationScope = rememberCoroutineScope()
+    val watchFaceValidation =
+      remember(config.designId, config.localStorage, config.canWrite, loadedCatalog) {
+        if (loadedCatalog.previewSurfaces.native.backend != WATCH_FACE_NATIVE_BACKEND) null
+        else
+          WatchFaceValidationController(
+            BrowserWatchFaceValidationHost(
+              config.designId,
+              unavailableReason =
+                when {
+                  config.localStorage -> LOCAL_WATCH_FACE_VALIDATION_UNAVAILABLE
+                  !config.canWrite -> serverOnlyRefusal(config)
+                  else -> null
+                },
+            ),
+            watchFaceValidationScope,
+          )
+      }
+    CompositionLocalProvider(
+      LocalDesignGuidelineCheck provides guidelines,
+      LocalWatchFaceValidation provides watchFaceValidation,
+    ) {
       UiBuilderEditor(
         document = loadedDocument,
         agentHost = agentHost,
@@ -2146,6 +2172,11 @@ internal class RefusedEdit(val submission: EditorSubmission, val reason: String)
  * Why a server-drawn or server-stored feature — export, native render, reference pictures — is not
  * available to a caller who may not write: the server's own reason where it gave one.
  */
+/** Why a design kept in this browser has no watch-face validation or watch installs. */
+internal const val LOCAL_WATCH_FACE_VALIDATION_UNAVAILABLE =
+  "This design is kept in this browser. Validation and watch installs run on the server against " +
+    "a stored revision; save the design to the server to validate it."
+
 internal fun serverOnlyRefusal(config: LiveSessionConfig): String =
   listOfNotNull(
       "The server does this only for accounts that can save designs here.",

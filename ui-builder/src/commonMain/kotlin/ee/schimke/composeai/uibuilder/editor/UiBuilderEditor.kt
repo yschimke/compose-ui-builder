@@ -181,7 +181,7 @@ private val CODE_DOCK_WIDTH = 520.dp
 
 /** Pixels per dp for a flattened reference: 2× so hairline strokes survive being re-fitted. */
 /** `statusSemantics.previewSurfaces.native.backend` of a Watch Face Format catalog. */
-private const val WATCH_FACE_NATIVE_BACKEND = "android-dwf"
+internal const val WATCH_FACE_NATIVE_BACKEND = "android-dwf"
 
 private const val FLATTEN_SCALE = 2
 
@@ -2660,6 +2660,13 @@ fun UiBuilderEditor(
   // Provided once here rather than at each surface: the canvas, every palette thumbnail and the
   // preview frame all draw a pack component, and all of them should draw its placeholder.
   CompositionLocalProvider(
+    // Both layouts at once: the wide one draws the dock from the flag, the compact one its sheet
+    // from [mobilePanel], and only the one on screen shows.
+    LocalShowGeneratedCode provides
+      {
+        if (!state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
+        mobilePanel = MobileEditorPanel.Code
+      },
     LocalHoveredCommentThread provides hoveredThread,
     LocalWffComplicationPicks provides complicationPicks,
     LocalUiBuilderChrome provides chrome,
