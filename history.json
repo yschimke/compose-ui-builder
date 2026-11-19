@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "aaa311cf6d69e94c7be92950dfd2c9ca183e7442",
+    "generatedFrom": "827993e6104dcdf7d66dfecde939b44040f00467",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -6819,6 +6819,246 @@
                     "commit": "6508f90accd61fbdc718ec2297de980def9e6c03",
                     "date": "2026-11-19T10:23:19Z",
                     "sourceSha": "6e9abe87",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBehindPreview": {
+            "path": "renders/ui-builder/TestOnWatchBehindPreview-31c1ad92.png",
+            "versions": [
+                {
+                    "blob": "b5d998e44b1b58a32e6ec76be6662bc4c105b989",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildBuildingPreview": {
+            "path": "renders/ui-builder/TestOnWatchBuildBuildingPreview-46b273d7.png",
+            "versions": [
+                {
+                    "blob": "8c8ef4bd407b791c1ff987fb2c3a7b39713fa78d",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildBuiltPreview": {
+            "path": "renders/ui-builder/TestOnWatchBuildBuiltPreview-1a2a2eb3.png",
+            "versions": [
+                {
+                    "blob": "fd14f4d36ae253867084e4417d942b1aae683552",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildFailedPreview": {
+            "path": "renders/ui-builder/TestOnWatchBuildFailedPreview-57affb26.png",
+            "versions": [
+                {
+                    "blob": "7bf9635c41ece59832ccb540bab163277a69d006",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildPendingPreview": {
+            "path": "renders/ui-builder/TestOnWatchBuildPendingPreview-21faf689.png",
+            "versions": [
+                {
+                    "blob": "06068532c571b73cab486427318682146b3df39a",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildQueuedPreview": {
+            "path": "renders/ui-builder/TestOnWatchBuildQueuedPreview-f3510099.png",
+            "versions": [
+                {
+                    "blob": "518e8be3cad704826eb485805f3ce2c8316d4924",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildRefusedPreview": {
+            "path": "renders/ui-builder/TestOnWatchBuildRefusedPreview-e0c775e2.png",
+            "versions": [
+                {
+                    "blob": "a3821ea1406536f7455a9d1b970cc4f6f06c16d5",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchInValidatePanelPreview": {
+            "path": "renders/ui-builder/TestOnWatchInValidatePanelPreview-f2f006c1.png",
+            "versions": [
+                {
+                    "blob": "7f9fd5f7978dd2a863a1e3605721cdd32b6ba002",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchLinkedPreview": {
+            "path": "renders/ui-builder/TestOnWatchLinkedPreview-5a3316e4.png",
+            "versions": [
+                {
+                    "blob": "b4ddcd778e6154140e3a107f75469b1135740b12",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchNotLinkedPreview": {
+            "path": "renders/ui-builder/TestOnWatchNotLinkedPreview-50820822.png",
+            "versions": [
+                {
+                    "blob": "3feb8e6ac46cf5ac3404785a9727d6f3a56e1bed",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchNotPublishedPreview": {
+            "path": "renders/ui-builder/TestOnWatchNotPublishedPreview-d20e3805.png",
+            "versions": [
+                {
+                    "blob": "1a37de285c5ff28da7a7dffe79e36204431f0cfc",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchOwnerOnlyPreview": {
+            "path": "renders/ui-builder/TestOnWatchOwnerOnlyPreview-9eefbaab.png",
+            "versions": [
+                {
+                    "blob": "18d3d749ddd1179e7633884499311a1f00b64606",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPackagingFailedPreview": {
+            "path": "renders/ui-builder/TestOnWatchPackagingFailedPreview-d9964e22.png",
+            "versions": [
+                {
+                    "blob": "2cc9b5ea015347a1c5468e277510ff550a8e2a1b",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPackagingUnavailablePreview": {
+            "path": "renders/ui-builder/TestOnWatchPackagingUnavailablePreview-b7f67a17.png",
+            "versions": [
+                {
+                    "blob": "8e93aade18b5068d6a8ff8bdc463cdb8299d36dd",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPublishingPreview": {
+            "path": "renders/ui-builder/TestOnWatchPublishingPreview-19bfe26d.png",
+            "versions": [
+                {
+                    "blob": "5954ab279023d18561cc8f7705fc6e77d561035b",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.WatchBuildChipStatesPreview": {
+            "path": "renders/ui-builder/WatchBuildChipStatesPreview-dcbb066f.png",
+            "versions": [
+                {
+                    "blob": "91b3750c1af0abd7133ae6f3e90be73275efbef4",
+                    "commit": "827993e6104dcdf7d66dfecde939b44040f00467",
+                    "date": "2026-11-19T12:00:38Z",
+                    "sourceSha": "5dda1520",
                     "commits": 1
                 }
             ],
