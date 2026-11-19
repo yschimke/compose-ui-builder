@@ -198,10 +198,14 @@ private fun ValidationBody(
       )
     }
   }
-  report.checks
-    .firstOrNull { it.memory != null }
-    ?.memory
-    ?.let { MemoryBars(it, onSelectContributor, Modifier.padding(top = 8.dp)) }
+  val memoryCheck =
+    report.checks.firstOrNull { it.id == WATCH_FACE_MEMORY_CHECK }
+      ?: report.checks.firstOrNull { it.memory != null }
+  memoryCheck
+    ?.takeIf { it.memory != null || contributorsOf(it).isNotEmpty() }
+    ?.let {
+      MemoryBars(it.memory, contributorsOf(it), onSelectContributor, Modifier.padding(top = 8.dp))
+    }
   PushValidatorLine(report)
 }
 
@@ -352,25 +356,29 @@ private fun SuggestionLine(suggestion: String) {
 
 @Composable
 private fun MemoryBars(
-  memory: WatchFaceMemoryFootprint,
+  /** Null when Google's evaluator failed; the contributors are still listed. */
+  memory: WatchFaceMemoryFootprint?,
+  contributors: List<WatchFaceMemoryContributor>,
   onSelectContributor: (WatchFaceMemoryContributor) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    Text(
-      "Memory · ${formatBytes(memory.totalBytes)} of assets",
-      style = MaterialTheme.typography.labelMedium,
-    )
-    MemoryBar("Active", memory.maxActiveBytes, memory.activeLimitBytes)
-    MemoryBar("Ambient", memory.maxAmbientBytes, memory.ambientLimitBytes)
-    val top = topContributors(memory)
+    if (memory != null) {
+      Text(
+        "Memory · ${formatBytes(memory.totalBytes)} of assets",
+        style = MaterialTheme.typography.labelMedium,
+      )
+      MemoryBar("Active", memory.maxActiveBytes, memory.activeLimitBytes)
+      MemoryBar("Ambient", memory.maxAmbientBytes, memory.ambientLimitBytes)
+    }
+    val top = topContributors(contributors)
     if (top.isNotEmpty()) {
       Text(
         "Largest contributors",
         Modifier.padding(top = 4.dp),
         style = MaterialTheme.typography.labelMedium,
       )
-      top.forEach { ContributorRow(it, memory, onSelectContributor) }
+      top.forEach { ContributorRow(it, memory?.activeLimitBytes ?: 0, onSelectContributor) }
     }
   }
 }
@@ -379,17 +387,33 @@ private fun MemoryBars(
 private const val TOP_CONTRIBUTORS = 5
 
 /** A contributor's weight against the active budget: what it costs while the face is awake. */
-private fun WatchFaceMemoryContributor.cost(): Long =
-  activeBytes ?: decodedBytes ?: ambientBytes ?: 0
+private fun WatchFaceMemoryContributor.cost(): Long = costOrNull() ?: fileBytes ?: 0
 
-internal fun topContributors(memory: WatchFaceMemoryFootprint): List<WatchFaceMemoryContributor> =
-  memory.contributors.sortedByDescending { it.cost() }.take(TOP_CONTRIBUTORS)
+private fun WatchFaceMemoryContributor.costOrNull(): Long? =
+  activeBytes ?: decodedBytes ?: ambientBytes
+
+/** Missing resources first (they fail the package), then the largest. */
+internal fun topContributors(
+  contributors: List<WatchFaceMemoryContributor>,
+): List<WatchFaceMemoryContributor> =
+  contributors
+    .sortedWith(
+      compareByDescending<WatchFaceMemoryContributor> { it.missing }.thenByDescending { it.cost() },
+    )
+    .take(TOP_CONTRIBUTORS)
+
+/** A memory check's contributors: on the check, else inside its footprint (older servers). */
+internal fun contributorsOf(check: WatchFaceValidationCheck): List<WatchFaceMemoryContributor> =
+  check.contributors.ifEmpty { check.memory?.contributors.orEmpty() }
 
 /**
  * What to do about [this], worked out here when the server sends sizes: an asset stored larger than
  * the face ever draws it is downscaled to the drawn size.
  */
 internal fun WatchFaceMemoryContributor.suggestion(): String? {
+  suggestion?.let {
+    return it
+  }
   val w = width ?: return null
   val h = height ?: return null
   val drawnW = renderedMaxWidth ?: return null
@@ -401,12 +425,14 @@ internal fun WatchFaceMemoryContributor.suggestion(): String? {
 @Composable
 private fun ContributorRow(
   contributor: WatchFaceMemoryContributor,
-  memory: WatchFaceMemoryFootprint,
+  activeLimitBytes: Long,
   onSelectContributor: (WatchFaceMemoryContributor) -> Unit,
 ) {
   val cost = contributor.cost()
   val share =
-    if (memory.activeLimitBytes > 0) (cost * 100 / memory.activeLimitBytes).toInt() else null
+    if (activeLimitBytes > 0 && contributor.costOrNull() != null)
+      (cost * 100 / activeLimitBytes).toInt()
+    else null
   Column(
     Modifier.fillMaxWidth()
       .clip(RoundedCornerShape(4.dp))
@@ -422,7 +448,11 @@ private fun ContributorRow(
         style = MaterialTheme.typography.bodySmall,
       )
       Text(
-        formatBytes(cost) + (share?.let { " · $it% of active" } ?: ""),
+        if (contributor.missing) "Missing"
+        else formatBytes(cost) + (share?.let { " · $it% of active" } ?: ""),
+        color =
+          if (contributor.missing) MaterialTheme.colorScheme.error
+          else MaterialTheme.colorScheme.onSurface,
         style = MaterialTheme.typography.bodySmall,
       )
     }

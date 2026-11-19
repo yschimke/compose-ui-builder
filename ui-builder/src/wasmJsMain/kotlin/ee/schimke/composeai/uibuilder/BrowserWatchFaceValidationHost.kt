@@ -52,8 +52,9 @@ internal class BrowserWatchFaceValidationHost(
             .installs,
         )
       401,
-      403 -> WatchInstallsAnswer.Refused("Only the design's owner sees which watches it is on.")
-      404 -> WatchInstallsAnswer.Listed(emptyList())
+      403,
+      // A caller who cannot read the design at all; an owner with no watches gets an empty list.
+      404 -> WatchInstallsAnswer.Refused("Only the design's owner sees which watches it is on.")
       else -> WatchInstallsAnswer.Refused(refusal(response, "a watch installs read"))
     }
   }
@@ -73,7 +74,11 @@ internal class BrowserWatchFaceValidationHost(
       403 -> "Sign in with an account that can edit this design to validate it."
       else -> runCatching {
           WatchFaceValidationJson.decodeFromString(ValidationRefusal.serializer(), response.body)
-            .let { it.reasons.joinToString(" ").ifBlank { it.error.orEmpty() } }
+            .let { refusal ->
+              refusal.reasons.joinToString(" ").ifBlank {
+                refusal.message ?: refusal.error.orEmpty()
+              }
+            }
         }
           .getOrNull()
           ?.takeIf { it.isNotBlank() } ?: "the host answered ${response.status} to $what"
@@ -91,4 +96,10 @@ internal class BrowserWatchFaceValidationHost(
 @Serializable private class FetchedResponse(val status: Int, val body: String = "")
 
 @Serializable
-private class ValidationRefusal(val reasons: List<String> = emptyList(), val error: String? = null)
+private class ValidationRefusal(
+  /** The dwf-preview refusal schema's sentences (`{"code", "reasons": […]}`). */
+  val reasons: List<String> = emptyList(),
+  /** The push API's shape, which `watch-installs` answers with (`{"error", "message"}`). */
+  val error: String? = null,
+  val message: String? = null,
+)

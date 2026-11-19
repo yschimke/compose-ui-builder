@@ -310,11 +310,8 @@ private val memoryOverReport =
                 ),
               ),
             memory =
-              passedMemory.copy(
-                maxActiveBytes = 11 * MB,
-                maxAmbientBytes = 2 * MB + 600 * 1024,
-                contributors = memoryContributors,
-              ),
+              passedMemory.copy(maxActiveBytes = 11 * MB, maxAmbientBytes = 2 * MB + 600 * 1024),
+            contributors = memoryContributors,
           )
       },
   )

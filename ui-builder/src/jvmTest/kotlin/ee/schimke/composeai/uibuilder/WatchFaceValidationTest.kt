@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import ee.schimke.composeai.uibuilder.editor.WATCH_INSTALLS_UNAVAILABLE
+import ee.schimke.composeai.uibuilder.editor.WatchFaceMemoryContributor
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationAnswer
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationController
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationFinding
@@ -17,6 +18,7 @@ import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationView
 import ee.schimke.composeai.uibuilder.editor.WatchInstalls
 import ee.schimke.composeai.uibuilder.editor.WatchInstallsAnswer
 import ee.schimke.composeai.uibuilder.editor.WatchInstallsView
+import ee.schimke.composeai.uibuilder.editor.contributorsOf
 import ee.schimke.composeai.uibuilder.editor.formatBytes
 import ee.schimke.composeai.uibuilder.editor.formatEpochMillis
 import ee.schimke.composeai.uibuilder.editor.nodeForResource
@@ -60,16 +62,20 @@ class WatchFaceValidationTest {
     assertEquals(listOf("manifest"), report.checks[2].passedChecks)
     assertEquals(1_795_081_320_000, report.ranAtEpochMillis)
     assertEquals("remove the angle", finding.suggestion)
-    assertEquals(2, report.checks[1].memory?.contributors?.size)
+    assertEquals(3, report.checks[1].contributors.size)
   }
 
   @Test
   fun `the largest contributor leads and an oversized one is told its drawn size`() {
-    val memory = report().checks[1].memory!!
-    val top = topContributors(memory)
-    assertEquals("drawable/background.png", top.first().resource)
-    assertEquals("downscale to 450x450", top.first().suggestion())
+    val top = topContributors(contributorsOf(report().checks[1]))
+    // A missing resource fails the package, so it leads; then the largest.
+    assertEquals(listOf("gone", "drawable/background.png", "small"), top.map { it.resource })
+    assertEquals("downscale to 450x450", top[1].suggestion())
     assertNull(top.last().suggestion())
+    assertEquals(
+      "use WEBP",
+      WatchFaceMemoryContributor("x", suggestion = "use WEBP").suggestion(),
+    )
   }
 
   @Test
@@ -286,12 +292,13 @@ class WatchFaceValidationTest {
                       "path":"/WatchFace/Scene","suggestion":"remove the angle"}]},
         {"id":"memory-footprint","title":"Memory footprint","status":"failed","findings":[],
          "memory":{"totalBytes":3000000,"maxActiveBytes":11534336,"maxAmbientBytes":1000000,
-                   "activeLimitBytes":10485760,"ambientLimitBytes":2097152,
-                   "contributors":[
+                   "activeLimitBytes":10485760,"ambientLimitBytes":2097152},
+         "contributors":[
                      {"resource":"small","activeBytes":1000},
                      {"resource":"drawable/background.png","kind":"image","width":900,
                       "height":900,"format":"PNG","activeBytes":3240000,
-                      "renderedMaxWidth":450,"renderedMaxHeight":450}]}},
+                      "renderedMaxWidth":450,"renderedMaxHeight":450,"fileBytes":200000},
+                     {"resource":"gone","kind":"image","fileBytes":0,"missing":true}]},
         {"id":"push-validator","title":"Push validator","status":"passed","findings":[],
          "passedChecks":["manifest"],"tokenIssued":false}
        ]}

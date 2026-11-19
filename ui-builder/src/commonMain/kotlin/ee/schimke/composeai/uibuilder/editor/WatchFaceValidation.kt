@@ -44,6 +44,11 @@ data class WatchFaceValidationCheck(
   val memory: WatchFaceMemoryFootprint? = null,
   val passedChecks: List<String>? = null,
   val tokenIssued: Boolean? = null,
+  /**
+   * What the memory footprint is made of, on the `memory-footprint` check beside [memory]: the
+   * server lists it even when Google's evaluator fails, so it can arrive without [memory].
+   */
+  val contributors: List<WatchFaceMemoryContributor> = emptyList(),
 )
 
 @Serializable
@@ -65,7 +70,7 @@ data class WatchFaceMemoryFootprint(
   val maxAmbientBytes: Long = 0,
   val activeLimitBytes: Long = 0,
   val ambientLimitBytes: Long = 0,
-  /** What the footprint is made of, largest first where the server sorts; may be absent. */
+  /** Older placement of [WatchFaceValidationCheck.contributors]; read only when that is empty. */
   val contributors: List<WatchFaceMemoryContributor> = emptyList(),
 )
 
@@ -74,16 +79,24 @@ data class WatchFaceMemoryFootprint(
 data class WatchFaceMemoryContributor(
   /** The resource as the exported WFF names it; matched against the design to select it. */
   val resource: String,
+  /** `image`, `font` or `other`. */
   val kind: String? = null,
   val width: Int? = null,
   val height: Int? = null,
+  /** Absent when the resource is [missing]. */
   val format: String? = null,
+  /** Its size in the package. */
+  val fileBytes: Long? = null,
   val decodedBytes: Long? = null,
   val activeBytes: Long? = null,
   val ambientBytes: Long? = null,
   /** The largest size the face ever draws it at; past it, the asset carries pixels nobody sees. */
   val renderedMaxWidth: Int? = null,
   val renderedMaxHeight: Int? = null,
+  /** The design names it but the package has no such file. */
+  val missing: Boolean = false,
+  /** The server's own advice, preferred over the downscale this editor works out. */
+  val suggestion: String? = null,
 )
 
 /** `GET /api/ui-builder/v1/designs/{id}/watch-installs`: where the owner's watches stand. */
