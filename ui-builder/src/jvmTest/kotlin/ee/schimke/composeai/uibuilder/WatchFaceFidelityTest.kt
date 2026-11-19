@@ -366,6 +366,45 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a thick sweep-stroked circular arc past half a turn keeps its stroke near the centre`() {
+    // 300×300, stroke 180: the centre line's radius (60) is under the half width (90), so the
+    // stroke covers points near the centre at angles outside the arc's sector.
+    val face =
+      wffFace(
+        listOf("hook"),
+        paintedPart(
+            "hook",
+            mapOf(
+              "shape" to "arc",
+              "centerX" to 225,
+              "centerY" to 225,
+              "width" to 300,
+              "height" to 300,
+              "startAngle" to 0,
+              "endAngle" to 270,
+            ),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 180),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffffffff #ffffffff"/>""",
+          )
+          .joinToString(","),
+      )
+    val editor = renderWffFace(face)
+    val exported = export(face)
+    var differing = 0
+    var lit = 0
+    for (y in 0 until editor.height step 2) for (x in 0 until editor.width step 2) {
+      val a = editor.argb(x, y)[1]
+      val b = exported.argb(x, y)[1]
+      if (a > 128) lit++
+      if ((a > 128) != (b > 128)) differing++
+    }
+    assertTrue(lit > 500, "lit $lit")
+    assertTrue(differing < lit / 25, "$differing of $lit pixels differ")
+  }
+
+  @Test
   fun `a gradient in a stroke paints the stroke`() {
     val face =
       wffFace(

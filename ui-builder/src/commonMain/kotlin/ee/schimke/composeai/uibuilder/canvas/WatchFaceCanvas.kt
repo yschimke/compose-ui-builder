@@ -715,8 +715,14 @@ private fun strokeBand(
   // An oval that is not a circle: its stroke's edges are offset curves, not ovals, so the band is
   // traced from the centre line the editor strokes rather than two ovals.
   val centre = outer.deflate(width / 2)
+  // An arc whose stroke fills its hole is traced the same way, circle or not: the stroke reaches
+  // past the centre into angles outside the arc's sector, so a sector would cut it short.
   val oval = drawing.kind == "ellipse" || drawing.kind == "arc"
-  if (oval && kotlin.math.abs(centre.width - centre.height) > 0.01f) {
+  if (
+    oval &&
+      (kotlin.math.abs(centre.width - centre.height) > 0.01f ||
+        (collapsed && drawing.kind == "arc"))
+  ) {
     val ring = drawing.kind == "ellipse"
     return offsetBand(
       centre,
