@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
@@ -325,7 +327,7 @@ fun UiBuilderDocument.nodeForResource(resource: String): String? {
   val bare = resource.substringAfterLast('/').substringBeforeLast('.')
   return nodes.values
     .firstOrNull { node ->
-      val named = (node.properties["resource"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+      val named = resourceName(node.properties["resource"])
       named != null &&
         (named == resource || named == bare || named.substringBeforeLast('.') == bare)
     }
@@ -337,3 +339,12 @@ fun UiBuilderDocument.nodeForResource(resource: String): String? {
  * compact layout's Code sheet. Provided by the editor; null outside it.
  */
 internal val LocalShowGeneratedCode = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/**
+ * A `resource` property's name, whichever way the document stores it: typed, as `{"type": "string",
+ * "value": "dial"}` (how designs are saved), or as a bare string.
+ */
+private fun resourceName(property: JsonElement?): String? {
+  val value = (property as? JsonObject)?.get("value") ?: property
+  return (value as? JsonPrimitive)?.takeIf { it.isString }?.content
+}

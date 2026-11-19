@@ -78,7 +78,16 @@ class WatchFaceValidationTest {
       UiBuilderNode(
         id,
         "wff/part-image",
-        properties = JsonObject(mapOf("resource" to JsonPrimitive(resource))),
+        // Typed, as saved designs store it (see the bitmap-analog fixture).
+        properties =
+          JsonObject(
+            mapOf(
+              "resource" to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(resource)),
+                ),
+            ),
+          ),
       )
     }
     val document =
@@ -95,6 +104,7 @@ class WatchFaceValidationTest {
       )
     assertEquals("bg", document.nodeForResource("drawable/background.png"))
     assertEquals("dial", document.nodeForResource("dial"))
+    assertEquals("dial", document.nodeForResource("drawable/dial.png"))
     assertNull(document.nodeForResource("font_digits"))
   }
 
