@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -80,14 +79,14 @@ internal fun WatchFaceValidationPanel(
 ) {
   // The first item of the Issues list, which scrolls as one; no inner scroll box of its own.
   Column(modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-    Line("Watch face validation", style = MaterialTheme.typography.labelLarge)
+    Text("Watch face validation", style = MaterialTheme.typography.labelLarge)
     if (validation is WatchFaceValidationView.Unavailable) {
       UnavailableNote(validation.reason)
     } else {
       ValidationBody(validation, revision, onRun, onOpenFinding, onSelectContributor)
     }
     HorizontalDivider(Modifier.padding(vertical = 10.dp))
-    Line("On your watch", style = MaterialTheme.typography.labelLarge)
+    Text("On your watch", style = MaterialTheme.typography.labelLarge)
     InstallsBody(installs, revision)
     HorizontalDivider(Modifier.padding(top = 10.dp))
   }
@@ -95,10 +94,11 @@ internal fun WatchFaceValidationPanel(
 
 @Composable
 private fun UnavailableNote(reason: String) {
-  Line(
+  Text(
     reason,
     Modifier.padding(top = 4.dp),
-    muted = true,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.bodySmall,
   )
 }
 
@@ -112,10 +112,11 @@ private fun ValidationBody(
 ) {
   val running = validation is WatchFaceValidationView.Running
   val report = validation.report()
-  Line(
+  Text(
     "Checks this revision's exported Watch Face Format against the schema, the XSD, the " +
       "watch's memory limits and the push validator, on the server.",
-    muted = true,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.bodySmall,
   )
   Row(
     Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -134,7 +135,7 @@ private fun ValidationBody(
         },
       )
     }
-    Line(
+    Text(
       when (validation) {
         WatchFaceValidationView.Loading -> "Reading the last result…"
         WatchFaceValidationView.NotRun -> "Not run for revision $revision."
@@ -151,29 +152,33 @@ private fun ValidationBody(
             MaterialTheme.colorScheme.error
           else -> MaterialTheme.colorScheme.onSurfaceVariant
         },
+      style = MaterialTheme.typography.bodySmall,
     )
   }
   if (validation is WatchFaceValidationView.Failed) {
-    Line(
+    Text(
       validation.reason,
       Modifier.padding(top = 4.dp),
       color = MaterialTheme.colorScheme.error,
+      style = MaterialTheme.typography.bodySmall,
     )
   }
   report ?: return
   if (report.revision != revision) {
-    Line(
+    Text(
       "Shown: revision ${report.revision}. The design is now at revision $revision; validate " +
         "again to check it.",
       Modifier.padding(top = 4.dp),
-      muted = true,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
     )
   }
   versionLine(report)?.let {
-    Line(
+    Text(
       it,
       Modifier.padding(top = 4.dp),
-      muted = true,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
     )
   }
   // Failed checks open; the rest collapsed. Keyed on the report so a new run re-decides.
@@ -268,8 +273,8 @@ private fun CheckRow(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       Box(Modifier.size(8.dp).clip(CircleShape).background(statusColor(check.status)))
-      Line(check.title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-      Line(
+      Text(check.title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+      Text(
         buildString {
           append(statusLabel(check.status))
           if (check.findings.isNotEmpty()) append(" · ${check.findings.size}")
@@ -288,9 +293,10 @@ private fun CheckRow(
         check.passedChecks
           ?.takeIf { it.isNotEmpty() }
           ?.let {
-            Line(
+            Text(
               "Passed: ${it.joinToString(", ")}",
-              muted = true,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
             )
           }
       }
@@ -313,11 +319,12 @@ private fun FindingRow(
       )
       .padding(vertical = 2.dp),
   ) {
-    Line(
+    Text(
       finding.message,
       color =
         if (finding.severity == "warning") MaterialTheme.colorScheme.onSurface
         else MaterialTheme.colorScheme.error,
+      style = MaterialTheme.typography.bodySmall,
     )
     val where =
       listOfNotNull(
@@ -326,7 +333,7 @@ private fun FindingRow(
           finding.path,
         )
         .joinToString(" · ")
-    Line(
+    Text(
       if (located) "$where · show in XML" else where,
       color =
         if (located) MaterialTheme.colorScheme.primary
@@ -340,9 +347,10 @@ private fun FindingRow(
 
 @Composable
 private fun SuggestionLine(suggestion: String) {
-  Line(
+  Text(
     "→ ${suggestion.replaceFirstChar { it.uppercase() }}",
     color = PASSED_GREEN,
+    style = MaterialTheme.typography.bodySmall,
   )
 }
 
@@ -356,7 +364,7 @@ private fun MemoryBars(
 ) {
   Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
     if (memory != null) {
-      Line(
+      Text(
         "Memory · ${formatBytes(memory.totalBytes)} of assets",
         style = MaterialTheme.typography.labelMedium,
       )
@@ -365,7 +373,7 @@ private fun MemoryBars(
     }
     val top = topContributors(contributors)
     if (top.isNotEmpty()) {
-      Line(
+      Text(
         "Largest contributors",
         Modifier.padding(top = 4.dp),
         style = MaterialTheme.typography.labelMedium,
@@ -433,17 +441,19 @@ private fun ContributorRow(
       .semantics { contentDescription = "Select ${contributor.resource}" },
   ) {
     Row(Modifier.fillMaxWidth()) {
-      Line(
+      Text(
         contributor.resource,
         Modifier.weight(1f),
         fontFamily = FontFamily.Monospace,
+        style = MaterialTheme.typography.bodySmall,
       )
-      Line(
+      Text(
         if (contributor.missing) "Missing"
         else formatBytes(cost) + (share?.let { " · $it% of active" } ?: ""),
         color =
           if (contributor.missing) MaterialTheme.colorScheme.error
           else MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.bodySmall,
       )
     }
     val facts =
@@ -458,9 +468,9 @@ private fun ContributorRow(
         else null,
       )
     if (facts.isNotEmpty()) {
-      Line(
+      Text(
         facts.joinToString(" · "),
-        muted = true,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
       )
     }
@@ -480,11 +490,12 @@ private fun MemoryBar(label: String, used: Long, limit: Long) {
     },
   ) {
     Row(Modifier.fillMaxWidth()) {
-      Line(label, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-      Line(
+      Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+      Text(
         "${formatBytes(used)} / ${if (limit > 0) formatBytes(limit) else "no limit"}" +
           if (over) " · over by ${formatBytes(used - limit)}" else "",
         color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.bodySmall,
       )
     }
     Box(
@@ -508,10 +519,11 @@ private fun PushValidatorLine(report: WatchFaceValidationReport) {
       push.tokenIssued == true -> "yes"
       else -> "no"
     }
-  Line(
+  Text(
     "Push validator: token issued — $issued",
     Modifier.padding(top = 8.dp),
     color = if (push.tokenIssued == true) PASSED_GREEN else MaterialTheme.colorScheme.onSurface,
+    style = MaterialTheme.typography.bodySmall,
   )
 }
 
@@ -555,12 +567,12 @@ private fun InstallRow(install: WatchInstall, revision: Long) {
             },
           ),
       )
-      Line(
+      Text(
         install.deviceName.ifBlank { install.deviceModel ?: "Watch" },
         Modifier.padding(start = 8.dp).weight(1f),
         style = MaterialTheme.typography.bodyMedium,
       )
-      Line(
+      Text(
         when {
           failed -> "Install failed"
           behind -> "Behind"
@@ -575,7 +587,7 @@ private fun InstallRow(install: WatchInstall, revision: Long) {
         style = MaterialTheme.typography.labelSmall,
       )
     }
-    Line(
+    Text(
       listOfNotNull(
           install.deviceModel?.takeIf { install.deviceName.isNotBlank() },
           install.wearOsApi?.let { "API $it" },
@@ -583,9 +595,10 @@ private fun InstallRow(install: WatchInstall, revision: Long) {
         )
         .joinToString(" · "),
       Modifier.padding(start = 16.dp),
-      muted = true,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
     )
-    Line(
+    Text(
       buildList {
           add(
             when {
@@ -602,6 +615,7 @@ private fun InstallRow(install: WatchInstall, revision: Long) {
       color =
         if (failed || install.activation == "failed") MaterialTheme.colorScheme.error
         else MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
     )
   }
 }
@@ -627,26 +641,3 @@ internal fun formatEpochMillis(epochMillis: Long): String =
     // ISO-8601 in UTC: `2026-11-19T09:42:00Z` (seconds and fractions vary); keep to the minute.
     it.take(16).replace('T', ' ') + " UTC"
   }
-
-/**
- * One line of the section: small text unless [style] says otherwise, and the variant colour when
- * [muted]. The section's only `Text` call site, which matters in the Wasm build, where each call
- * site of `Text` carries all of its parameters.
- */
-@Composable
-private fun Line(
-  text: String,
-  modifier: Modifier = Modifier,
-  color: Color = Color.Unspecified,
-  muted: Boolean = false,
-  fontFamily: FontFamily? = null,
-  style: TextStyle = MaterialTheme.typography.bodySmall,
-) {
-  Text(
-    text,
-    modifier,
-    color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else color,
-    fontFamily = fontFamily,
-    style = style,
-  )
-}
