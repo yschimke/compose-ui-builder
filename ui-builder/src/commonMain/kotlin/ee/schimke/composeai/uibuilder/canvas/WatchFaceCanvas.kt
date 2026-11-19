@@ -45,14 +45,19 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock
+import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
@@ -488,9 +493,9 @@ private fun wffPlace(
       // At its own size even past its parent's edge: a 500px group at -25,-25 on a 450px face
       // was cut to 450 by the parent's constraints, which moved its centre, the pivot it turns on.
       .wrapContentSize(Alignment.TopStart, unbounded = true)
-      .size(
-        (target.float("width", sceneWidth) * scale).dp,
-        (target.float("height", sceneHeight) * scale).dp,
+      .wffSize(
+        target.float("width", sceneWidth) * scale,
+        target.float("height", sceneHeight) * scale,
       )
   // The angle, alpha and scale with the node's transforms applied (see [wffNodeIn]).
   val degrees = target.float("angle")
@@ -641,7 +646,15 @@ internal fun DrawScope.drawWffShape(
   val ellipse = shape == "ellipse"
   val arc = shape == "arc"
   val rounded = shape == "round-rectangle"
-  val line = Stroke(width = drawing.strokeWidth.dp.toPx())
+  // A hairline is drawn a device pixel wide, as Skia draws a stroke of no width: a 1px stroke on a
+  // face drawn at half size would otherwise be half a pixel and all but vanish.
+  val line =
+    Stroke(
+      width =
+        drawing.strokeWidth.dp.toPx().let {
+          if (drawing.strokeWidth > 0f) it.coerceAtLeast(1f) else it
+        },
+    )
   val fill: Brush? =
     drawing.fillGradient?.brush(pxPerWffPx)
       ?: drawing.fill.takeIf { it != Color.Unspecified }?.let(::SolidColor)
@@ -678,7 +691,8 @@ internal fun DrawScope.drawWffShape(
   }
   val box = drawing.box
   val origin = if (box == null) Offset.Zero else Offset(box[0] * pxPerWffPx, box[1] * pxPerWffPx)
-  val extent = if (box == null) size else Size(box[2] * pxPerWffPx, box[3] * pxPerWffPx)
+  val extent =
+    if (box == null) size else Size(hairline(box[2] * pxPerWffPx), hairline(box[3] * pxPerWffPx))
   // WFF angles start at twelve o'clock, Compose's at three; both grow clockwise.
   val start = composeAngle(drawing.startAngle)
   val sweep = wffArcSweep(drawing.startAngle, drawing.endAngle, drawing.clockwise)
@@ -701,7 +715,11 @@ internal fun DrawScope.drawWffShape(
     // Inset by half the line so the stroke stays inside the shape's bounds, as WFF draws it.
     val inset = line.width / 2
     val topLeft = Offset(origin.x + inset, origin.y + inset)
-    val inner = Size(extent.width - line.width, extent.height - line.width)
+    val inner =
+      Size(
+        (extent.width - line.width).coerceAtLeast(0f),
+        (extent.height - line.width).coerceAtLeast(0f),
+      )
     val band =
       if (forExport && drawing.strokeGradient?.kind == WffGradient.SWEEP) {
         strokeBand(drawing, pxPerWffPx, origin, extent, line.width, start, sweep)
@@ -922,6 +940,27 @@ private fun CornerRadius.grownBy(by: Float) =
     if (x > 0f) (x + by).coerceAtLeast(0f) else 0f,
     if (y > 0f) (y + by).coerceAtLeast(0f) else 0f,
   )
+
+/** A length of [px] canvas pixels, at least one when it is any at all, so a hairline shows. */
+private fun hairline(px: Float): Float = if (px > 0f) px.coerceAtLeast(1f) else px
+
+/**
+ * An element's box, [widthDp] × [heightDp]: rounded to whole pixels as layout rounds it, but at
+ * least one pixel each way when it has any size at all. A 1px index on a face drawn at half size is
+ * half a pixel, which layout rounds to nothing, so it was not drawn.
+ */
+private fun Modifier.wffSize(widthDp: Float, heightDp: Float): Modifier =
+  layout { measurable, constraints ->
+    fun px(dp: Float): Int {
+      if (dp <= 0f) return 0
+      return dp.dp.toPx().roundToInt().coerceAtLeast(1)
+    }
+    // Within what the parent allows, as `size` keeps it.
+    val width = constraints.constrainWidth(px(widthDp))
+    val height = constraints.constrainHeight(px(heightDp))
+    val placeable = measurable.measure(Constraints.fixed(width, height))
+    layout(width, height) { placeable.place(0, 0) }
+  }
 
 private fun corner(drawing: WffShapeDrawing, pxPerWffPx: Float) =
   CornerRadius(
