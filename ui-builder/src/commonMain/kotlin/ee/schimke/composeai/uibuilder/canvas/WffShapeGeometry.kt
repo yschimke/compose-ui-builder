@@ -64,7 +64,8 @@ internal class WffGradient(
     const val RADIAL = "RadialGradient"
     const val SWEEP = "SweepGradient"
 
-    private val ATTRIBUTE = Regex("""(\w+)\s*=\s*"([^"]*)"""")
+    /** `name="value"` or `name='value'`, as XML allows either. */
+    private val ATTRIBUTE = Regex("""(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
     private val TAG = Regex("""^\s*<(LinearGradient|RadialGradient|SweepGradient)\b""")
 
     /**
@@ -85,7 +86,11 @@ internal class WffGradient(
     fun parse(xml: String, preview: WffPreviewContext = WffPreviewContext()): WffGradient? {
       val kind = TAG.find(xml)?.groupValues?.get(1) ?: return null
       val head = xml.substringBefore('>')
-      val attributes = ATTRIBUTE.findAll(head).associate { it.groupValues[1] to it.groupValues[2] }
+      // The node carries the element as XML, so `<` in an expression is `&lt;` there.
+      val attributes =
+        ATTRIBUTE.findAll(head).associate {
+          it.groupValues[1] to decodeXmlEntities(it.groupValues[2].ifEmpty { it.groupValues[3] })
+        }
       val colors =
         attributes["colors"]
           ?.trim()
@@ -252,3 +257,36 @@ private fun lerpSrgb(from: Color, to: Color, t: Float): Color =
     blue = from.blue + (to.blue - from.blue) * t,
     alpha = from.alpha + (to.alpha - from.alpha) * t,
   )
+
+/** [value] with XML's five named entities and its numeric character references decoded. */
+internal fun decodeXmlEntities(value: String): String {
+  if ('&' !in value) return value
+  return XML_ENTITY.replace(value) { match ->
+    val name = match.groupValues[1]
+    when {
+        name.startsWith("#x") || name.startsWith("#X") -> name.drop(2).toIntOrNull(16)
+        name.startsWith("#") -> name.drop(1).toIntOrNull()
+        else -> null
+      }
+      ?.takeIf { it in 0..0x10FFFF }
+      ?.let { codePointString(it) }
+      ?: when (name) {
+        "lt" -> "<"
+        "gt" -> ">"
+        "amp" -> "&"
+        "quot" -> "\""
+        "apos" -> "'"
+        else -> match.value
+      }
+  }
+}
+
+private val XML_ENTITY = Regex("&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);")
+
+private fun codePointString(codePoint: Int): String =
+  if (codePoint < 0x10000) codePoint.toChar().toString()
+  else {
+    val offset = codePoint - 0x10000
+    charArrayOf((0xD800 + (offset shr 10)).toChar(), (0xDC00 + (offset and 0x3FF)).toChar())
+      .concatToString()
+  }

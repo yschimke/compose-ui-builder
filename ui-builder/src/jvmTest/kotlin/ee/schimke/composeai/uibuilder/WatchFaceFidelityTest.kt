@@ -428,6 +428,31 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a gradient's attributes are read with their XML entities decoded`() {
+    // `<` and `&` in an expression are written as entities in the XML the node carries. At the
+    // preview's 10:08:32, [SECOND] < 30 is false, so the radius is 50.
+    val radial =
+      WffGradient.parse(
+        """<RadialGradient centerX="225" centerY="225" radius="50 + 100 * ([SECOND] &lt; 30)" """ +
+          """colors="#ffff0000 #ff0000ff"/>""",
+      )
+    assertNotNull(radial)
+    assertEquals(50f, radial.numbers["radius"])
+    val early =
+      WffGradient.parse(
+        """<RadialGradient centerX="225" centerY="225" radius="50 + 100 * ([SECOND] &#62; 30)" """ +
+          """colors="#ffff0000 #ff0000ff"/>""",
+      )
+    assertEquals(150f, early?.numbers?.get("radius"))
+    // Single quotes are XML too.
+    val quoted =
+      WffGradient.parse(
+        "<LinearGradient startX='0' startY='0' endX='450' endY='0' colors='#ffff0000 #ff0000ff'/>",
+      )
+    assertEquals(450f, quoted?.numbers?.get("endX"))
+  }
+
+  @Test
   fun `a gradient whose colours are configuration references falls back to the flat colour`() {
     assertEquals(
       null,
