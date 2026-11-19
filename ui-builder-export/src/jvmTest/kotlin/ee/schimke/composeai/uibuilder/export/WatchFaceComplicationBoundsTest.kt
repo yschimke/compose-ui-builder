@@ -107,4 +107,31 @@ class WatchFaceComplicationBoundsTest {
       )
     assertEquals(emptyList(), WatchFaceComplicationBounds.issues(document))
   }
+
+  @Test
+  fun `transforms are applied before judging, as the canvas places parts`() {
+    // A 20×20 label at the group's origin; the 100×100 group at 252,306 turned 180° moves it to
+    // the group's far corner, which is inside the 96×96 box only once the turn is applied.
+    fun turned(angle: Int) =
+      face(
+        """<Group name="g" x="248" y="302" width="100" height="100" angle="$angle">""" +
+          text(0, 0, 20, 20) +
+          "</Group>",
+      )
+    // Unturned, the label sits at 248,302: past the box's top-left corner.
+    assertEquals(
+      WatchFaceComplicationBounds.Area(248f, 302f, 20f, 20f),
+      WatchFaceComplicationBounds.clipped(document(turned(0))).single().outside.single().area,
+    )
+    // Turned, it sits at 328,382 to 348,402: inside.
+    assertEquals(emptyList(), WatchFaceComplicationBounds.issues(document(turned(180))))
+    // A part scaled up about its centre reaches past a box it would otherwise fit.
+    val scaled =
+      """<PartText x="260" y="320" width="80" height="20" scaleX="2" scaleY="1">""" +
+        text(0, 0, 80, 20).removePrefix("""<PartText x="0" y="0" width="80" height="20">""")
+    assertEquals(
+      WatchFaceComplicationBounds.Area(220f, 320f, 160f, 20f),
+      WatchFaceComplicationBounds.clipped(document(face(scaled))).single().outside.single().area,
+    )
+  }
 }

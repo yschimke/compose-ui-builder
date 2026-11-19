@@ -120,22 +120,30 @@ object WatchFaceComplicationBounds {
     val area = boundingArea(slot, width, height)
     val outside = mutableListOf<Outside>()
     val visited = mutableSetOf<String>()
-    fun walk(node: UiBuilderNode, originX: Float, originY: Float, boxW: Float, boxH: Float) {
+    // [toSlot] takes a point in [node]'s box to the slot's coordinates: every ancestor's offset,
+    // and its angle and scale about its pivot, as the canvas places it (`wffPlace`).
+    fun walk(node: UiBuilderNode, toSlot: Affine, boxW: Float, boxH: Float) {
       if (!visited.add(node.id)) return
       for (child in children(document, node)) {
         val props = WatchFaceXmlExporter.Props(child, mutableListOf())
+        val w = props.float("width") ?: boxW
+        val h = props.float("height") ?: boxH
+        val pivotX = (props.float("pivotX") ?: 0.5f) * w
+        val pivotY = (props.float("pivotY") ?: 0.5f) * h
+        // Scaled, then turned, both about the pivot.
         val placed =
-          Area(
-            originX + (props.float("x") ?: 0f),
-            originY + (props.float("y") ?: 0f),
-            props.float("width") ?: boxW,
-            props.float("height") ?: boxH,
-          )
+          toSlot
+            .translate(props.float("x") ?: 0f, props.float("y") ?: 0f)
+            .translate(pivotX, pivotY)
+            .rotate(props.float("angle") ?: 0f)
+            .scale(props.float("scaleX") ?: 1f, props.float("scaleY") ?: 1f)
+            .translate(-pivotX, -pivotY)
+        val drawn = placed.bounds(w, h)
         // A container is judged by what it draws, not by its box: a full-face group around one
         // small label is not cut anywhere the label is not.
-        if (child.componentId in DRAWS && !area.covers(placed)) {
-          outside += Outside(child.id, child.componentId, placed)
-        } else walk(child, placed.x, placed.y, placed.width, placed.height)
+        if (child.componentId in DRAWS && !area.covers(drawn)) {
+          outside += Outside(child.id, child.componentId, drawn)
+        } else walk(child, placed, w, h)
       }
     }
     // Each `<Complication>` fills its slot, so its content is placed in the slot's own box.
@@ -143,8 +151,60 @@ object WatchFaceComplicationBounds {
       .orEmpty()
       .mapNotNull { document.nodes[it] }
       .filter { it.componentId == WatchFaceXmlExporter.COMPLICATION }
-      .forEach { walk(it, 0f, 0f, width, height) }
+      .forEach { walk(it, Affine.IDENTITY, width, height) }
     return if (outside.isEmpty()) null else Clipped(slot.id, area, outside)
+  }
+
+  /** A 2D affine transform, `x' = a·x + c·y + e`, `y' = b·x + d·y + f`. */
+  private data class Affine(
+    val a: Float,
+    val b: Float,
+    val c: Float,
+    val d: Float,
+    val e: Float,
+    val f: Float,
+  ) {
+    private fun then(o: Affine) =
+      Affine(
+        a * o.a + c * o.b,
+        b * o.a + d * o.b,
+        a * o.c + c * o.d,
+        b * o.c + d * o.d,
+        a * o.e + c * o.f + e,
+        b * o.e + d * o.f + f,
+      )
+
+    fun translate(x: Float, y: Float) = then(Affine(1f, 0f, 0f, 1f, x, y))
+
+    fun scale(x: Float, y: Float) = then(Affine(x, 0f, 0f, y, 0f, 0f))
+
+    fun rotate(degrees: Float): Affine {
+      if (degrees == 0f) return this
+      val radians = degrees * kotlin.math.PI / 180.0
+      val cos = kotlin.math.cos(radians).toFloat()
+      val sin = kotlin.math.sin(radians).toFloat()
+      return then(Affine(cos, sin, -sin, cos, 0f, 0f))
+    }
+
+    /** The axis-aligned box a [width] × [height] rectangle at the origin covers once moved. */
+    fun bounds(width: Float, height: Float): Area {
+      val xs = mutableListOf<Float>()
+      val ys = mutableListOf<Float>()
+      for ((x, y) in listOf(0f to 0f, width to 0f, 0f to height, width to height)) {
+        xs += a * x + c * y + e
+        ys += b * x + d * y + f
+      }
+      val left = xs.min()
+      val top = ys.min()
+      return Area(round(left), round(top), round(xs.max() - left), round(ys.max() - top))
+    }
+
+    companion object {
+      val IDENTITY = Affine(1f, 0f, 0f, 1f, 0f, 0f)
+
+      /** Trig noise off a whole-pixel result, so a 180° turn still reads as 80,80. */
+      private fun round(value: Float) = kotlin.math.round(value * 1000f) / 1000f
+    }
   }
 
   private fun children(document: UiBuilderDocument, node: UiBuilderNode): List<UiBuilderNode> =
