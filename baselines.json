@@ -1071,6 +1071,14 @@
     "sha256": "65d2a8ec1295bbc9796b045acc1ac028a33ce771cb5d5a72f6b6e71978252421",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UnadvertisedComponentPreview.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceAssetPreviewsKt.WatchFacePartImageAssetPreview": {
+    "captureLabel": "",
+    "functionName": "WatchFacePartImageAssetPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFacePartImageAssetPreview-7af3a1d4.png",
+    "sha256": "c6284286873c8bc31f04ca83ee486d9fa96357cca2ea29002feaf3c4501bc9e4",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceAssetPreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceEmptyComplicationPreview": {
     "captureLabel": "",
     "functionName": "WatchFaceEmptyComplicationPreview",
