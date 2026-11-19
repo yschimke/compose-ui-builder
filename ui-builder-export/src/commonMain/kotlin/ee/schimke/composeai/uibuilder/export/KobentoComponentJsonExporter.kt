@@ -35,7 +35,25 @@ object KobentoComponentJsonExporter {
      * `statusSemantics.kobento.staticParams`.
      */
     val staticParams: Map<String, Set<String>> = emptyMap(),
-  )
+    /**
+     * The component ids whose call takes an `onClick`, as `statusSemantics.kobento.clickable`
+     * publishes them. Null skips the check; [withCatalog] fills it from the catalog.
+     */
+    val clickable: Set<String>? = null,
+  ) {
+    /** These options with [staticParams] and [clickable] read from `statusSemantics.kobento`. */
+    fun withCatalog(kobento: JsonObject): Options =
+      copy(
+        staticParams =
+          (kobento["staticParams"] as? JsonObject).orEmpty().mapValues { (_, names) ->
+            (names as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }.toSet()
+          },
+        clickable =
+          (kobento["clickable"] as? JsonArray)
+            ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+            ?.toSet(),
+      )
+  }
 
   sealed interface Result {
     data class Emitted(val source: String) : Result
@@ -295,6 +313,10 @@ object KobentoComponentJsonExporter {
           node.eventBindings.forEach { (event, actions) ->
             if (event != "click") {
               errors += "$path.eventBindings.$event: only click has a Kobento mapping (onClick)"
+              return@forEach
+            }
+            if (options.clickable != null && node.componentId !in options.clickable) {
+              errors += "$path.eventBindings.click: ${node.componentId} takes no onClick"
               return@forEach
             }
             put("onClick", actions(actions, "$path.eventBindings.click"))

@@ -340,6 +340,43 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `a click on a component with no onClick is refused, read from the catalog`() {
+    val kobento =
+      Json.parseToJsonElement(File(fixtures, "kobento-published-v1.json").readText())
+        .jsonObject
+        .getValue("statusSemantics")
+        .jsonObject
+        .getValue("kobento")
+        .jsonObject
+    val options = KobentoComponentJsonExporter.Options().withCatalog(kobento)
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    // The sample's Button click is allowed by the same catalog data.
+    assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+      KobentoComponentJsonExporter.export(design, options),
+    )
+    val gauge = design.nodes.getValue("gauge")
+    val clicked =
+      gauge.copy(
+        eventBindings =
+          Json.parseToJsonElement(
+              """{"click": [{"type": "hostAction", "name": "gauge.tapped"}]}""",
+            )
+            .jsonObject,
+      )
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(
+          design.copy(nodes = design.nodes + ("gauge" to clicked)),
+          options,
+        ),
+      )
+    assertEquals(
+      listOf("nodes.gauge.eventBindings.click: kobento/gauge takes no onClick"),
+      refused.reasons,
+    )
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =
