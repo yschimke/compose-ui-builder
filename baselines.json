@@ -684,7 +684,7 @@
     "functionName": "UiBuilderCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCodePanePreview-308f2ba5.png",
-    "sha256": "355859cfb45b2f012cfc8c80ffcb26e24a151c7ccd5f7becf27df8630db19feb",
+    "sha256": "9ecf404ad483d6cf9ccf418c31b7b3daa306ca6874dd228a2cb1efe3dbc3ab26",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderCodePaneRefusedPreview": {
@@ -836,7 +836,7 @@
     "functionName": "UiBuilderNewDesignFromLinkPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignFromLinkPreview-8a588154.png",
-    "sha256": "ee115b61fe55b47c36a4e28d65d3caeb5813ec846154955c43a9fef070b335e7",
+    "sha256": "0936d332fc24b92afcb6933e45a1b3f4b8afe0b33b8d5f5780d43b2d2b31aaed",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPhonePreview": {
@@ -844,7 +844,7 @@
     "functionName": "UiBuilderNewDesignPhonePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignPhonePreview-eff465c5.png",
-    "sha256": "f5d25f7867d0a41eccab58330dd3948b1fbfc9da017f9d6f42c97e9b1c9a3640",
+    "sha256": "120bd45d2ca1703836befeedf72afedefeb02472dc2cfd6576e521f1f6c85efe",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPreview": {
@@ -852,7 +852,7 @@
     "functionName": "UiBuilderNewDesignPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignPreview-7e7db055.png",
-    "sha256": "535c3c4dab9e6c4dee4848c8dc89d3f4ad78ff58db2424d545cab78990824841",
+    "sha256": "cb11ec87871e8c004a59189211a019342ceedac785e289648597b0bf774e56a5",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderPreviewModePreview": {
@@ -1084,7 +1084,7 @@
     "functionName": "WatchFaceNativePaneCachedPackagePreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneCachedPackagePreview-70069d2c.png",
-    "sha256": "b49179069a25868c2de982303b5b3391d775f7693fe8c9dbf610cb6b60057614",
+    "sha256": "10ea4d310f8fbf7d61d3f87b7073be646f7c766d9faeabdae347c551590b2557",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneExportingPreview": {
@@ -1092,7 +1092,7 @@
     "functionName": "WatchFaceNativePaneExportingPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneExportingPreview-1ff4a75b.png",
-    "sha256": "5f0bab73deb267a6966835a1d7a76b44afa1dc86b14a0a12fe19a52ea53162ee",
+    "sha256": "47845e609f1379cc3e4cd01af93ee1f64804322bf862930fc99839f0cca39d2b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneFailedPreview": {
@@ -1100,7 +1100,7 @@
     "functionName": "WatchFaceNativePaneFailedPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneFailedPreview-701a1c1f.png",
-    "sha256": "758911dab59e390e30954d1658efdaf583410655c936e75e026787cb9a91c129",
+    "sha256": "e6f3acd2053c1ed529eafe969acdf3c72d8d22b758cb437f192052abc433d431",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneInstallingPreview": {
@@ -1108,7 +1108,7 @@
     "functionName": "WatchFaceNativePaneInstallingPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneInstallingPreview-98d13978.png",
-    "sha256": "0ad3cbec94b1002a2a839e785bb8fb3d8a38f78f4e679f83cd5353d86bb11a84",
+    "sha256": "ebe9da9b44fbca96a88dfc5e2d32d3b9bd310b928b1bf0c285e5d6f7fde6d7d3",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneLivePreview": {
@@ -1124,7 +1124,7 @@
     "functionName": "WatchFaceNativePaneLoadingFacePreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneLoadingFacePreview-1765a2c4.png",
-    "sha256": "759602190fae8dc04848626965f3f312733f413a517780e5bdec320033155213",
+    "sha256": "2ee0062fb1b054dfe99dfe836a2b3445632e7b6cbbb0acd4fcb3475b26a84aca",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneOlderHostPreview": {
@@ -1140,7 +1140,7 @@
     "functionName": "WatchFaceNativePanePackagingPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePanePackagingPreview-41565207.png",
-    "sha256": "a183858c6d47180a24b4eee103690364caa6c027859d6800b665d46ec13cca51",
+    "sha256": "97f58b6af16e1fff196e0fe58f2b4be9b0af896f26eebbc79251556d7da034c4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneQueuedPreview": {
@@ -1148,7 +1148,7 @@
     "functionName": "WatchFaceNativePaneQueuedPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneQueuedPreview-524390c6.png",
-    "sha256": "df52c11a291a9b99ebb83071c33a4b37f0ba8cff4c4546204c7501ba1cff9e42",
+    "sha256": "1990eede9fee2bb94032e18552af4d1c9c247198b96296f8f2264c7da2e8d798",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneStartingRuntimePreview": {
@@ -1156,7 +1156,7 @@
     "functionName": "WatchFaceNativePaneStartingRuntimePreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceNativePaneStartingRuntimePreview-a3c0d454.png",
-    "sha256": "693736b811321e4be92cdee16e6bce2cf9ab376ad6e08fa22d112fe37caf0e9b",
+    "sha256": "41e63068ef415ec79b6e39eb284e2d232cd596c844197c48b1198c8d35a82ec4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneTurnedOffPreview": {
@@ -1228,7 +1228,7 @@
     "functionName": "TestOnWatchBuildRefusedPreview",
     "module": "ui-builder",
     "renderBasename": "TestOnWatchBuildRefusedPreview-e0c775e2.png",
-    "sha256": "df63213b7e8ebccfdda1e3e0e5e8ac8507963d2dbd927d83dc743e2e50b2e8a3",
+    "sha256": "ce8c596ad273339d530ef71530227305a1155686f3afe5b8f6259745269008bc",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchInValidatePanelPreview": {
@@ -1276,7 +1276,7 @@
     "functionName": "TestOnWatchPackagingFailedPreview",
     "module": "ui-builder",
     "renderBasename": "TestOnWatchPackagingFailedPreview-d9964e22.png",
-    "sha256": "8ef1f9d0c2d6f0f2acc34f510c7c5dc746bd4f14cbb992b6ba8f171c4e979ffd",
+    "sha256": "27580c533a03ccb2ec608082229488a83c3ce777a693ff7dd1d39b7fb981d4a9",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPackagingUnavailablePreview": {
@@ -1316,7 +1316,7 @@
     "functionName": "WatchFaceValidationFailuresPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceValidationFailuresPreview-14a0dc50.png",
-    "sha256": "db906c2375e6df554a0c38cf561a94058777c39e3a1f17ea17f3ef98c0665072",
+    "sha256": "c6d3bf3dce50c92cbf5453c3067e2a2ab029e96d45ea607989dc72750f971a9b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceValidationPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceValidationPreviewsKt.WatchFaceValidationLocalDesignPreview": {
@@ -1332,7 +1332,7 @@
     "functionName": "WatchFaceValidationMemoryOverLimitPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceValidationMemoryOverLimitPreview-21be3241.png",
-    "sha256": "2b6f7ca719498131e008a29b820ae2b8d630afc3c2ae28f7d13d2370388fd413",
+    "sha256": "ee8fb6d8751f8bbb4be3497e9f88f3a4cec7bd0ade8a56d9c1485009f95a4e97",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceValidationPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceValidationPreviewsKt.WatchFaceValidationNotRunPreview": {
@@ -1556,7 +1556,7 @@
     "functionName": "WearScreenCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearScreenCodePanePreview-81971946.png",
-    "sha256": "4454491f14cbfd81024dc9b8ad4f11f02045ddc9b46a33578d7d082f576c7c5d",
+    "sha256": "bc210b00fae46cb43665175488a74322ce213384430c691e0791ff5ac27ffeef",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearScreenSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearScreenSamplePreviewKt.WearScreenSamplePreview": {
@@ -1596,7 +1596,7 @@
     "functionName": "WearWidgetCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearWidgetCodePanePreview-59a2e9f9.png",
-    "sha256": "6193e2a24b42a44ce2184819932845f07aff85eb554fcc1f62c836561a9358f4",
+    "sha256": "2fb84753e60e40e240fa6ad2b1da3d4f5f30a719f9a660ff17dd62169b2b360b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearWidgetSamplePreviewKt.WearWidgetHostShapesPreview": {

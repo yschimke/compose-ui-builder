@@ -2,17 +2,6 @@
 
 Auto-generated from `main`. Browse inline or compare against PR branches.
 
-> [!WARNING]
-> 1 preview(s) failed to render in the latest update (1 retained from the prior baseline). See **Render Failures** below.
-
-## Render Failures
-
-The render task completed but no PNG was produced for these previews. Entries with a prior baseline keep their previous image; the rest are absent from the gallery until a successful render lands.
-
-| Preview | Module | Function | Source | Baseline |
-|---------|--------|----------|--------|----------|
-| `ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderDeviceViewPreviewKt.UiBuilderWearDeviceViewPopOutPreview` | ui-builder | `UiBuilderWearDeviceViewPopOutPreview` | `src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderDeviceViewPreview.kt` | retained |
-
 ## ui-builder
 
 | Preview | Image |
@@ -89,6 +78,7 @@ The render task completed but no PNG was produced for these previews. Entries wi
 | `UiBuilderCommentPinsOverMarkupPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderCommentPinsOverMarkupPreview-0019b7e0.png" width="150" /> |
 | `UiBuilderCommentsPanelPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderCommentsPanelPreview-557e08f3.png" width="150" /> |
 | `UiBuilderDeviceViewPopOutPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderDeviceViewPopOutPreview-a1422731.png" width="150" /> |
+| `UiBuilderWearDeviceViewPopOutPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderWearDeviceViewPopOutPreview-ee606353.png" width="150" /> |
 | `UiBuilderAdaptivePaneVariantsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderAdaptivePaneVariantsPreview-0a9aedd6.png" width="150" /> |
 | `UiBuilderBesideRefusalPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderBesideRefusalPreview-9f4ae0af.png" width="150" /> |
 | `UiBuilderBoardBeforePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderBoardBeforePreview-009f1e6e.png" width="150" /> |
