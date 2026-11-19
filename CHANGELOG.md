@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.138.0](https://github.com/yschimke/compose-ui-builder/compare/v3.137.0...v3.138.0) (2026-11-19)
+
+
+### Features
+
+* **ui-builder:** keep New design choices in the URL and add one-click New watch face ([#1295](https://github.com/yschimke/compose-ui-builder/issues/1295)) ([3f51649](https://github.com/yschimke/compose-ui-builder/commit/3f51649118996039fa4761ccc4e17f20686ed416))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.101.0 ([#1289](https://github.com/yschimke/compose-ui-builder/issues/1289)) ([6558a50](https://github.com/yschimke/compose-ui-builder/commit/6558a50e7fcd56882ca6309b3e191af00766d451))
+* **deps:** update dependency ee.schimke.watchface:watchface-tools-bom to v0.8.0 ([#1300](https://github.com/yschimke/compose-ui-builder/issues/1300)) ([e66f155](https://github.com/yschimke/compose-ui-builder/commit/e66f15512b227ca382075810274eadc6b811698d))
+* **ui-builder-runtime:** answer reads while a write's store I/O is in flight ([#1298](https://github.com/yschimke/compose-ui-builder/issues/1298)) ([8946c94](https://github.com/yschimke/compose-ui-builder/commit/8946c94a7e6b7f5d2ca5d104ec60b89803a67cb6))
+* **ui-builder-runtime:** keep the export audit record out of the store lock ([#1296](https://github.com/yschimke/compose-ui-builder/issues/1296)) ([ec90c00](https://github.com/yschimke/compose-ui-builder/commit/ec90c00a58484c388fde735ab62d0f4ce2ac407c))
+* **ui-builder:** a bound-less WFF part fills the box it sits in ([#1290](https://github.com/yschimke/compose-ui-builder/issues/1290)) ([a70925a](https://github.com/yschimke/compose-ui-builder/commit/a70925a1494f17ed42fa12ade6bc3b7eda79f567))
+* **ui-builder:** keep the watch-face configuration picker off the zoom bar ([#1292](https://github.com/yschimke/compose-ui-builder/issues/1292)) ([81f9525](https://github.com/yschimke/compose-ui-builder/commit/81f952565975b151cc3aa11345f14a1812029c4c))
+
 ## [3.137.0](https://github.com/yschimke/compose-ui-builder/compare/v3.136.0...v3.137.0) (2026-11-19)
 
 
