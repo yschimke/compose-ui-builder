@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.137.0](https://github.com/yschimke/compose-ui-builder/compare/v3.136.0...v3.137.0) (2026-11-19)
+
+
+### Features
+
+* add wff/transform and wff/gyro builtins with Rotate with presets ([#1269](https://github.com/yschimke/compose-ui-builder/issues/1269)) ([a9610da](https://github.com/yschimke/compose-ui-builder/commit/a9610da7c1a542e8400c4ed92b66f35b238c664c))
+* follow the real clock and show interactive and ambient watch-face previews ([#1263](https://github.com/yschimke/compose-ui-builder/issues/1263)) ([ab3fc05](https://github.com/yschimke/compose-ui-builder/commit/ab3fc0549ef623e79553078633a79992641050a1))
+* preview complications with sample data per provider and type ([#1271](https://github.com/yschimke/compose-ui-builder/issues/1271)) ([4d79805](https://github.com/yschimke/compose-ui-builder/commit/4d798059cd4be38e6b86ae4902010804dc2048e6))
+* typed watch-face configuration containers and configuration preview ([#1270](https://github.com/yschimke/compose-ui-builder/issues/1270)) ([bb2c13c](https://github.com/yschimke/compose-ui-builder/commit/bb2c13c3386640de454fde3930d41c8bc92fbf38))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.100.0 ([#1281](https://github.com/yschimke/compose-ui-builder/issues/1281)) ([451a98e](https://github.com/yschimke/compose-ui-builder/commit/451a98e695d13d7ac7b87227dd74374851ae6c3b))
+* **ui-builder:** declared slots on insert, id reuse in a batch, WFF hairlines ([#1275](https://github.com/yschimke/compose-ui-builder/issues/1275)) ([5162f2f](https://github.com/yschimke/compose-ui-builder/commit/5162f2fafeb0f923791ce9c6839a9fb39a4c5444))
+* **ui-builder:** draw WFF gradients, arc angles and export rotation ([#1273](https://github.com/yschimke/compose-ui-builder/issues/1273)) ([340544e](https://github.com/yschimke/compose-ui-builder/commit/340544e0cdf5470105ce38738dafa4e9abcc564c))
+* **ui-builder:** WFF HH time format, groups past the face, slot placement ([#1278](https://github.com/yschimke/compose-ui-builder/issues/1278)) ([313df45](https://github.com/yschimke/compose-ui-builder/commit/313df45a69ccec0d28aa7e7ea6c6ec1a9a481909))
+* wrap a rotated watch-face part in its selection box, offer face colour options, stop cutting the editing canvas to the circle ([#1262](https://github.com/yschimke/compose-ui-builder/issues/1262)) ([6ae3488](https://github.com/yschimke/compose-ui-builder/commit/6ae3488065c1c2ccbca768dfbdda73af1fad6c5e))
+
 ## [3.136.0](https://github.com/yschimke/compose-ui-builder/compare/v3.135.0...v3.136.0) (2026-11-18)
 
 
