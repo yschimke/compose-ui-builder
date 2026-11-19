@@ -180,7 +180,7 @@ private val CODE_DOCK_WIDTH = 520.dp
 
 /** Pixels per dp for a flattened reference: 2× so hairline strokes survive being re-fitted. */
 /** `statusSemantics.previewSurfaces.native.backend` of a Watch Face Format catalog. */
-private const val WATCH_FACE_NATIVE_BACKEND = "android-dwf"
+internal const val WATCH_FACE_NATIVE_BACKEND = "android-dwf"
 
 private const val FLATTEN_SCALE = 2
 

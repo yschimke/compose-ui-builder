@@ -359,12 +359,28 @@ private fun InspectorBody(
       // One scrolling list: the guidelines section is its first item rather than a box of its
       // own above it, so nothing is squeezed into a short inner scroll that nobody notices.
       val guidelines = LocalDesignGuidelineCheck.current
+      // A Watch Face Format design's server validation, above the advisory guidelines: it is
+      // what a watch would refuse.
+      val validation = LocalWatchFaceValidation.current
       ProblemsInspector(
         problems,
         dispatch,
         header =
-          guidelines?.let {
-            { GuidelinesSection(it, state.document, onTextInputFocusChanged, dispatch) }
+          if (guidelines == null && validation == null) null
+          else {
+            {
+              Column {
+                validation?.let {
+                  WatchFaceValidationSection(it, state.document.revision.toLong()) {
+                    // The findings' lines are the exported XML's, which the Code pane shows.
+                    if (!state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
+                  }
+                }
+                guidelines?.let {
+                  GuidelinesSection(it, state.document, onTextInputFocusChanged, dispatch)
+                }
+              }
+            }
           },
       )
       return@Column
