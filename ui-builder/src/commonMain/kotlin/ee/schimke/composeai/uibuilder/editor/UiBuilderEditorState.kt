@@ -2390,7 +2390,21 @@ class UiBuilderEditorReducer(
     if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE) {
       return@runCatching when (val result = WatchFaceXmlExporter.export(document)) {
         is WatchFaceXmlExporter.Result.Emitted ->
-          ExportOutcome(dedicated = true, reasons = emptyList())
+          ExportOutcome(
+            dedicated = true,
+            reasons = emptyList(),
+            // The face writes, but the watch cuts what a complication draws past its box.
+            diagnostics =
+              ee.schimke.composeai.uibuilder.export.WatchFaceComplicationBounds.issues(document)
+                .map {
+                  ExportDiagnosticV1(
+                    severity = ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1.WARNING,
+                    code = it.code,
+                    message = it.message,
+                    nodeId = it.nodeId,
+                  )
+                },
+          )
         is WatchFaceXmlExporter.Result.Refused ->
           ExportOutcome(dedicated = true, reasons = result.reasons)
       }

@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WatchFaceComplicationBounds
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock
 import kotlin.math.roundToInt
@@ -117,7 +119,7 @@ internal fun WatchFaceCanvas(
   fun place(id: String) =
     wffPlace(document, id, box.widthPx, box.heightPx, face.dpPerPx, preview, forExport)
   CompositionLocalProvider(LocalWffBox provides box) {
-    WatchFaceNode(document, node, modifier, child, face, preview, forExport, ::place)
+    WatchFaceNode(document, node, modifier, child, face, preview, forExport, box, ::place)
   }
 }
 
@@ -130,6 +132,7 @@ private fun WatchFaceNode(
   face: WffFace,
   preview: WffPreviewContext,
   forExport: Boolean,
+  box: WffBox,
   place: (String) -> Modifier,
 ) {
   val placed = { slot: String ->
@@ -424,8 +427,22 @@ private fun WatchFaceNode(
       val drawn = variants.firstOrNull { it.string("type") == sample.type }
       val context = remember(preview, sample) { preview.withComplication(sample) }
       val side = minOf(node.float("width", 100f), node.float("height", 100f))
+      // The runtime draws a slot's content only inside its bounding area, so the canvas cuts it
+      // there too: a label past the box looks cut here exactly where the watch cuts it.
+      val area =
+        remember(node, box.widthPx, box.heightPx) {
+          WatchFaceComplicationBounds.boundingArea(node, box.widthPx, box.heightPx)
+        }
       CompositionLocalProvider(LocalWffPreview provides context) {
-        Box(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
+        Box(
+          modifier.clipToBounds().drawWithContent {
+            val scale = face.dpPerPx.dp.toPx()
+            clipRect(area.x * scale, area.y * scale, area.right * scale, area.bottom * scale) {
+              this@drawWithContent.drawContent()
+            }
+          },
+          contentAlignment = Alignment.Center,
+        ) {
           when {
             sample.type == WffComplicationSample.EMPTY -> Unit
             drawn != null -> child(drawn.id, Modifier.fillMaxSize())
