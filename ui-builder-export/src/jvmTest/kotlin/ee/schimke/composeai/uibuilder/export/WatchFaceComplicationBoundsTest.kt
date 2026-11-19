@@ -181,4 +181,28 @@ class WatchFaceComplicationBoundsTest {
       WatchFaceComplicationBounds.clipped(document(drawn(line))).single().outside.single().area,
     )
   }
+
+  @Test
+  fun `an analog clock is judged by the circles its hands sweep`() {
+    fun clock(hand: String) =
+      face(
+        """<AnalogClock x="0" y="0" width="450" height="450">""" +
+          """<MinuteHand resource="m" $hand pivotX="0.5" pivotY="1.0"/>""" +
+          "</AnalogClock>",
+      )
+    // A full-face clock whose short hand turns about 300,354, the box's centre: 6×40 reaches
+    // 40.1 px, inside the 96×96 box at any time.
+    assertEquals(
+      emptyList(),
+      WatchFaceComplicationBounds.issues(
+        document(clock("""x="297" y="314" width="6" height="40"""")),
+      ),
+    )
+    // A longer hand on the same pivot reaches past the box at some time of day.
+    val long =
+      WatchFaceComplicationBounds.clipped(
+        document(clock("""x="297" y="294" width="6" height="60"""")),
+      )
+    assertEquals(WatchFaceXmlExporter.CLOCK_HAND, long.single().outside.single().componentId)
+  }
 }

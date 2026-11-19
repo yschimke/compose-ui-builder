@@ -145,9 +145,23 @@ object WatchFaceComplicationBounds {
           if (child.componentId !in DRAWS) null
           else {
             val shapes = shapeBoxes(document, child, w, h)
-            // The first shape past the box, or none; a part without shapes paints its whole box.
-            if (shapes == null) placed.bounds(w, h)
-            else shapes.map { placed.bounds(it) }.firstOrNull { !area.covers(it) }
+            when {
+              // A hand turns with the time: it can reach anywhere on the circle its far corner
+              // sweeps around its pivot.
+              child.componentId == WatchFaceXmlExporter.CLOCK_HAND -> {
+                val pivotX = (props.float("pivotX") ?: 0.5f) * w
+                val pivotY = (props.float("pivotY") ?: 0.5f) * h
+                val reach =
+                  listOf(0f to 0f, w to 0f, 0f to h, w to h).maxOf { (x, y) ->
+                    kotlin.math.hypot(x - pivotX, y - pivotY)
+                  }
+                placed.bounds(Area(pivotX - reach, pivotY - reach, 2 * reach, 2 * reach))
+              }
+              // A part without shapes paints its whole box.
+              shapes == null -> placed.bounds(w, h)
+              // Else the first of its shapes past the box, or none.
+              else -> shapes.map { placed.bounds(it) }.firstOrNull { !area.covers(it) }
+            }
           }
         if (painted != null && !area.covers(painted)) {
           outside += Outside(child.id, child.componentId, painted)
@@ -296,7 +310,8 @@ object WatchFaceComplicationBounds {
       WatchFaceXmlExporter.PART_TEXT,
       WatchFaceXmlExporter.PART_DRAW,
       WatchFaceXmlExporter.PART_IMAGE,
-      WatchFaceXmlExporter.ANALOG_CLOCK,
+      // An `<AnalogClock>` is a container too: it paints only its hands.
+      WatchFaceXmlExporter.CLOCK_HAND,
       // A `<DigitalClock>` is a container: its `<TimeText>` children are placed on their own.
       WatchFaceXmlExporter.TIME_TEXT,
     )
