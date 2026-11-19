@@ -193,6 +193,20 @@ private fun two(value: Int) = value.toString().padStart(2, '0')
 /**
  * The value of a bracketed source such as `[HOUR_0_11]`, or null for one this preview has none of.
  */
+/** This clock's date and time, read as UTC, in milliseconds since 1970-01-01T00:00:00Z. */
+internal fun WffPreviewContext.utcMillis(): Long {
+  // Days from the civil date (Howard Hinnant's algorithm), March-based years.
+  val y = (if (month <= 2) year - 1 else year).toLong()
+  val era = (if (y >= 0) y else y - 399) / 400
+  val yoe = y - era * 400
+  val mp = (month + 9) % 12
+  val doy = (153 * mp + 2) / 5 + day - 1
+  val doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+  val days = era * 146097 + doe - 719468
+  val seconds = ((days * 24 + hour) * 60 + minute) * 60 + second
+  return seconds * 1000 + (fraction * 1000).toLong().coerceIn(0, 999)
+}
+
 internal fun WffPreviewContext.source(name: String): WffValue? {
   fun n(v: Int) = WffValue.Num(v.toDouble())
   fun s(v: String) = WffValue.Str(v)
@@ -214,6 +228,11 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "SECOND_Z" -> s(two(second))
     // Seconds with their fraction, 0 to 59.999, as the format defines it; not milliseconds.
     "SECOND_MILLISECOND" -> WffValue.Num(second + fraction)
+    // The millisecond of the second, 0 to 999.
+    "MILLISECOND" -> n((fraction * 1000).toInt().coerceIn(0, 999))
+    // Milliseconds since the epoch. The preview's clock has no zone, so its fields are read as UTC:
+    // what a fixed `...Z` time says, and within the wearer's offset of a live one.
+    "UTC_TIMESTAMP" -> WffValue.Num(utcMillis().toDouble())
     "AMPM_STATE" -> n(if (hour < 12) 0 else 1)
     "AMPM_POSITION" -> n(if (hour < 12) 0 else 1)
     "DAY" -> n(day)
