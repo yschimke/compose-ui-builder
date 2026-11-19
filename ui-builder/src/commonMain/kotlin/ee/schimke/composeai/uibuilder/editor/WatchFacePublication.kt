@@ -307,6 +307,12 @@ class WatchFacePublishController(
   /** The one scheduled re-read of a background build; replaced by every new answer. */
   private var follow: Job? = null
 
+  /**
+   * Bumped by every publish and unpublish. A read that started before one lands after it would show
+   * the publication as it was, so a read answers only if no change started while it was out.
+   */
+  private var changes = 0
+
   private val _view = MutableStateFlow<WatchFacePublishView>(WatchFacePublishView.Loading)
   val view: StateFlow<WatchFacePublishView> = _view.asStateFlow()
 
@@ -326,19 +332,21 @@ class WatchFacePublishController(
       _view.value = WatchFacePublishView.NotAllowed(WATCH_FACE_PUBLISH_OWNER_ONLY)
       return
     }
-    // A change that started while this read was out wins.
     if ((_view.value as? WatchFacePublishView.Ready)?.busy == true) return
+    val before = changes
+    val answer = attempt { host.publication() }
+    // A change that started while this read was out wins.
+    if (before != changes) return
     _view.value =
-      attempt { host.publication() }
-        .fold(
-          onSuccess = { it.toView(previous = null).also(::followBuild) },
-          onFailure = {
-            WatchFacePublishView.Ready(
-              WatchFacePublication(),
-              failure = WatchFacePublishFailure(it.message ?: "the publication could not be read"),
-            )
-          },
-        )
+      answer.fold(
+        onSuccess = { it.toView(previous = null).also(::followBuild) },
+        onFailure = {
+          WatchFacePublishView.Ready(
+            WatchFacePublication(),
+            failure = WatchFacePublishFailure(it.message ?: "the publication could not be read"),
+          )
+        },
+      )
   }
 
   fun publish(visibility: String) = change { host.publish(visibility) }
@@ -348,6 +356,7 @@ class WatchFacePublishController(
   private fun change(request: suspend () -> WatchFacePublicationAnswer) {
     val ready = _view.value as? WatchFacePublishView.Ready ?: return
     if (ready.busy) return
+    changes++
     _view.value = ready.copy(busy = true, failure = null)
     scope.launch {
       _view.value =
@@ -374,10 +383,12 @@ class WatchFacePublishController(
   }
 
   private suspend fun reread() {
+    val before = changes
     val answer = attempt { host.publication() }.getOrNull() as? WatchFacePublicationAnswer.Ok
     val ready = _view.value as? WatchFacePublishView.Ready ?: return
-    // A publish that started while this read was out answers for itself.
-    if (ready.busy) return
+    // A publish that started while this read was out answers for itself, even once it has
+    // landed: this read may be of the publication from before it.
+    if (ready.busy || before != changes) return
     // A read that failed (the network, a 5xx) keeps what is shown and tries again on the same
     // schedule, so one bad answer never stops a build being followed.
     val next = answer?.let { ready.copy(publication = it.publication) } ?: ready

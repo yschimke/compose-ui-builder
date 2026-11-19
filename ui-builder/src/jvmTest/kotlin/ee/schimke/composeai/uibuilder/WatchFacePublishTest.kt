@@ -22,12 +22,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 
 /** "Test on your watch" against compose-preview-server's `watch-face-publication` route. */
 @OptIn(ExperimentalTestApi::class)
@@ -185,6 +187,30 @@ class WatchFacePublishTest {
     design.cancel()
   }
 
+  @Test
+  fun `a refresh that lands after a publish does not undo it`() = runBlocking {
+    val host = FakeHost()
+    val design = CoroutineScope(coroutineContext + Job())
+    val controller = WatchFacePublishController(host, design, now = { 0L })
+    controller.load()
+    // A focus refresh goes out and is held, reading the publication as it was (version 3).
+    val gate = CompletableDeferred<Unit>()
+    host.beforeRead = { gate.await() }
+    controller.refresh()
+    yield()
+    // A publish starts and lands while that read is out.
+    host.next = WatchFacePublicationAnswer.Ok(PUBLISHED.copy(version = 4))
+    controller.publish("private")
+    while ((controller.view.value as? WatchFacePublishView.Ready)?.busy != false) yield()
+    gate.complete(Unit)
+    design.coroutineContext[Job]!!.children.forEach { it.join() }
+    assertEquals(
+      4,
+      assertIs<WatchFacePublishView.Ready>(controller.view.value).publication.version,
+    )
+    design.cancel()
+  }
+
   private class FakeHost(
     private val capability: WatchFacePushCapability? = WatchFacePushCapability("/p", true),
     override val unavailableReason: String? = null,
@@ -205,7 +231,11 @@ class WatchFacePublishTest {
     /** Reads (by index) that throw, as a dropped connection would. */
     var failReads = emptySet<Int>()
 
+    /** Runs before each read, so a test can hold one out. */
+    var beforeRead: suspend () -> Unit = {}
+
     override suspend fun publication(): WatchFacePublicationAnswer {
+      beforeRead()
       if (publicationReads in failReads) {
         publicationReads++
         error("connection reset")
