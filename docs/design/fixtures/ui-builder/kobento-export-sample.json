@@ -1,0 +1,107 @@
+{
+  "header": {
+    "apiLevel": 7,
+    "width": 360,
+    "height": 320,
+    "profiles": 513,
+    "contentDescription": "Thermostat"
+  },
+  "componentSets": [
+    "square"
+  ],
+  "resources": {
+    "variables": {
+      "heating": {
+        "value": 1,
+        "export": true
+      },
+      "target": {
+        "value": 21,
+        "export": true
+      }
+    }
+  },
+  "root": {
+    "column": {
+      "modifiers": [
+        "fillMaxSize",
+        {
+          "background": "@colors.background"
+        },
+        {
+          "padding": {
+            "start": 16,
+            "top": 16,
+            "end": 16,
+            "bottom": 16
+          }
+        }
+      ],
+      "children": [
+        {
+          "column": {
+            "horizontalAlignment": "center",
+            "modifiers": [
+              "fillMaxWidth",
+              {
+                "spacedBy": 12
+              }
+            ],
+            "children": [
+              {
+                "text": {
+                  "value": "Living room",
+                  "fontSize": 20,
+                  "color": "@colors.onSurface"
+                }
+              },
+              {
+                "Gauge": {
+                  "value": "@target",
+                  "min": 10,
+                  "max": 30,
+                  "label": "Target °C"
+                }
+              },
+              {
+                "row": {
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                    {
+                      "spacedBy": 12
+                    }
+                  ],
+                  "children": [
+                    {
+                      "Switch": {
+                        "checked": "@heating",
+                        "label": "Heating"
+                      }
+                    },
+                    {
+                      "Button": {
+                        "label": "Warmer",
+                        "style": "outlined",
+                        "onClick": [
+                          {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@target",
+                            "value": "@target + 1"
+                          },
+                          {
+                            "type": "hostNamedAction",
+                            "name": "thermostat.target"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
