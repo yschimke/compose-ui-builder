@@ -1,12 +1,19 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_PUBLISH_OWNER_ONLY
-import ee.schimke.composeai.uibuilder.editor.WatchFacePublication
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublicationAnswer
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishHost
 import ee.schimke.composeai.uibuilder.editor.WatchFacePushCapability
-import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationJson
-import kotlinx.serialization.Serializable
+import ee.schimke.composeai.uibuilder.editor.fieldInt
+import ee.schimke.composeai.uibuilder.editor.fieldStrings
+import ee.schimke.composeai.uibuilder.editor.fieldText
+import ee.schimke.composeai.uibuilder.editor.parseWatchFacePublication
+import ee.schimke.composeai.uibuilder.editor.parseWatchFacePushCapability
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 
 /**
  * "Test on your watch" over the design host's push routes: the capability rides on the
@@ -23,9 +30,7 @@ internal class BrowserWatchFacePublishHost(
   override suspend fun capability(): WatchFacePushCapability? {
     val response = request("GET", "$base/dwf-preview/status")
     if (response.status !in 200..299) return null
-    val capability =
-      WatchFaceValidationJson.decodeFromString(PreviewStatus.serializer(), response.body)
-        .watchFacePush ?: return null
+    val capability = parseWatchFacePushCapability(response.body) ?: return null
     // The server names its own route; keep to same-origin API paths.
     capability.publicationPath.takeIf { it.startsWith("/api/") }?.let { publicationPath = it }
     return capability
@@ -38,10 +43,7 @@ internal class BrowserWatchFacePublishHost(
       request(
         "PUT",
         publicationPath,
-        WatchFaceValidationJson.encodeToString(
-          VisibilityBody.serializer(),
-          VisibilityBody(visibility),
-        ),
+        buildJsonObject { put("visibility", JsonPrimitive(visibility)) }.toString(),
       ),
     )
 
@@ -56,23 +58,22 @@ internal class BrowserWatchFacePublishHost(
 
   private fun answer(response: FetchedPublishResponse): WatchFacePublicationAnswer {
     if (response.status in 200..299) {
-      return WatchFacePublicationAnswer.Ok(
-        WatchFaceValidationJson.decodeFromString(WatchFacePublication.serializer(), response.body),
-      )
+      return WatchFacePublicationAnswer.Ok(parseWatchFacePublication(response.body))
     }
+    // `{error, message, diagnostics}` from the push routes, `{code, reasons}` from the others.
     val refusal =
-      runCatching {
-        WatchFaceValidationJson.decodeFromString(PublishRefusal.serializer(), response.body)
-      }
-        .getOrNull() ?: PublishRefusal()
-    val code = refusal.error ?: refusal.code
+      runCatching { Json.parseToJsonElement(response.body).jsonObject }.getOrNull()
+        ?: JsonObject(emptyMap())
+    val code = refusal.fieldText("error") ?: refusal.fieldText("code")
+    val message = refusal.fieldText("message")
+    val diagnostics = refusal.fieldStrings("diagnostics")
     return when {
       // The packager's own refusal, and the up-front ones (not_exportable,
       // WFF_BUNDLE_MISSING_RESOURCE, …) that name the lines to fix.
-      code == "packaging_failed" || (response.status == 422 && refusal.diagnostics.isNotEmpty()) ->
+      code == "packaging_failed" || (response.status == 422 && diagnostics.isNotEmpty()) ->
         WatchFacePublicationAnswer.PackagingFailed(
-          refusal.message ?: "The packager refused this face.",
-          refusal.diagnostics,
+          message ?: "The packager refused this face.",
+          diagnostics,
         )
       code == "owner_session_required" || code == "owner_required" ->
         WatchFacePublicationAnswer.Refused(WATCH_FACE_PUBLISH_OWNER_ONLY)
@@ -87,8 +88,8 @@ internal class BrowserWatchFacePublishHost(
         WatchFacePublicationAnswer.Refused("Too many publishes just now; try again in a minute.")
       else ->
         WatchFacePublicationAnswer.Refused(
-          refusal.message
-            ?: refusal.reasons.joinToString(" ").takeIf { it.isNotBlank() }
+          message
+            ?: refusal.fieldStrings("reasons").joinToString(" ").takeIf { it.isNotBlank() }
             ?: "the host answered ${response.status} to a watch-face publication request",
         )
     }
@@ -99,28 +100,17 @@ internal class BrowserWatchFacePublishHost(
     path: String,
     body: String? = null,
   ): FetchedPublishResponse =
-    WatchFaceValidationJson.decodeFromString(
-      FetchedPublishResponse.serializer(),
-      awaitCommentString(
-        commentFetch(method, sameOriginRequestUrl(path), body.orEmpty(), body != null),
-      ),
-    )
+    Json.parseToJsonElement(
+        awaitCommentString(
+          commentFetch(method, sameOriginRequestUrl(path), body.orEmpty(), body != null),
+        ),
+      )
+      .jsonObject
+      .let { FetchedPublishResponse(it.fieldInt("status") ?: 0, it.fieldText("body").orEmpty()) }
 }
 
-@Serializable private class FetchedPublishResponse(val status: Int, val body: String = "")
-
-@Serializable private class PreviewStatus(val watchFacePush: WatchFacePushCapability? = null)
-
-@Serializable private class VisibilityBody(val visibility: String)
-
-@Serializable
-private class PublishRefusal(
-  val error: String? = null,
-  val code: String? = null,
-  val message: String? = null,
-  val diagnostics: List<String> = emptyList(),
-  val reasons: List<String> = emptyList(),
-)
+/** `commentFetch`'s answer: the status and the body as text. */
+private class FetchedPublishResponse(val status: Int, val body: String)
 
 /**
  * Calls [onFocus] each time the page comes back into view (tab shown or window focused); returns

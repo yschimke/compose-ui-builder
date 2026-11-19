@@ -116,7 +116,8 @@ private fun ReadyBody(
   Text(publicationLine(publication), style = MaterialTheme.typography.bodyMedium)
   publication.build?.let { build ->
     WatchBuildChip(build, publication.version)
-    if (build.state == BUILD_REFUSED && build.diagnostics.isNotEmpty()) Diagnostics(build.diagnostics)
+    if (build.state == BUILD_REFUSED && build.diagnostics.isNotEmpty())
+      Diagnostics(build.diagnostics)
   }
   val pinned = publication.revision
   if (publication.published && pinned != null && pinned < revision) {
@@ -204,7 +205,9 @@ private fun apkLine(publication: WatchFacePublication): String? =
     "unavailable" ->
       publication.packaging?.reason?.let { "This server cannot build APKs: $it" }
         ?: "This server cannot build APKs right now."
-    "failed" -> publication.apk.reason?.let { "The last APK build failed: $it" } ?: "The last APK build failed."
+    "failed" ->
+      publication.apk.reason?.let { "The last APK build failed: $it" }
+        ?: "The last APK build failed."
     else -> null
   }
 

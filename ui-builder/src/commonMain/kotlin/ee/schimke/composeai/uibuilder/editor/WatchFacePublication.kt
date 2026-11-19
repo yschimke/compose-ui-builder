@@ -9,7 +9,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Where a watch-face design is on watches: `GET`/`PUT`/`DELETE
@@ -17,7 +20,6 @@ import kotlinx.serialization.Serializable
  * `compose-preview/watchface-push-publication/v1`). A publication pins [revision]: edits reach
  * watches only when the owner publishes again.
  */
-@Serializable
 data class WatchFacePublication(
   val designId: String = "",
   val published: Boolean = false,
@@ -45,7 +47,6 @@ data class WatchFacePublication(
  * A publish answers `202` at once and builds in the background: where that build is. Every field
  * but [state] is optional, and a state this editor does not know is shown as sent.
  */
-@Serializable
 data class WatchFacePublicationBuild(
   /** `pending`, `queued`, `building`, `built`, `refused` or `failed`. */
   val state: String,
@@ -138,7 +139,6 @@ private const val CHIP_DIAGNOSTIC_CHARS = 60
 private fun minutesUntil(atMillis: Long, nowMillis: Long): Long =
   ((atMillis - nowMillis).coerceAtLeast(0) + 59_999) / 60_000
 
-@Serializable
 data class WatchFacePublicationApk(
   /** `ready`, `pending`, `unavailable` or `failed`. */
   val status: String = "pending",
@@ -150,7 +150,6 @@ data class WatchFacePublicationApk(
   val diagnostics: List<String> = emptyList(),
 )
 
-@Serializable
 data class WatchFacePackaging(
   val available: Boolean = false,
   val code: String? = null,
@@ -161,11 +160,77 @@ data class WatchFacePackaging(
  * `watchFacePush` on the `dwf-preview/status` the editor already reads: present only when this host
  * can build push APKs for this design's catalog; [canPublish] is whether this caller may.
  */
-@Serializable
 data class WatchFacePushCapability(
   val publicationPath: String = "",
   val canPublish: Boolean = false,
 )
+
+/**
+ * The publication as `watch-face-publication` answers it, read by hand like the validation report
+ * (see [parseWatchFaceValidationReport]) and as leniently.
+ */
+fun parseWatchFacePublication(text: String): WatchFacePublication =
+  Json.parseToJsonElement(text).jsonObject.let { o ->
+    WatchFacePublication(
+      designId = o.fieldText("designId").orEmpty(),
+      published = o.fieldBool("published") ?: false,
+      version = o.fieldLong("version"),
+      revision = o.fieldLong("revision"),
+      visibility = o.fieldText("visibility"),
+      requestedVisibility = o.fieldText("requestedVisibility"),
+      automatic = o.fieldBool("automatic") ?: false,
+      faceName = o.fieldText("faceName"),
+      packageName = o.fieldText("packageName"),
+      apk =
+        (o["apk"] as? JsonObject)?.let { a ->
+          WatchFacePublicationApk(
+            status = a.fieldText("status") ?: "pending",
+            sha256 = a.fieldText("sha256"),
+            sizeBytes = a.fieldLong("sizeBytes"),
+            code = a.fieldText("code"),
+            reason = a.fieldText("reason"),
+            diagnostics = a.fieldStrings("diagnostics"),
+          )
+        },
+      packaging =
+        (o["packaging"] as? JsonObject)?.let { p ->
+          WatchFacePackaging(
+            available = p.fieldBool("available") ?: false,
+            code = p.fieldText("code"),
+            reason = p.fieldText("reason"),
+          )
+        },
+      refusal = o.fieldStrings("refusal"),
+      build =
+        (o["build"] as? JsonObject)?.let { b ->
+          WatchFacePublicationBuild(
+            state = b.fieldText("state").orEmpty(),
+            reason = b.fieldText("reason"),
+            scheduledAtEpochMillis = b.fieldLong("scheduledAtEpochMillis"),
+            queueAhead = b.fieldInt("queueAhead"),
+            stage = b.fieldText("stage"),
+            startedAtEpochMillis = b.fieldLong("startedAtEpochMillis"),
+            elapsedMillis = b.fieldLong("elapsedMillis"),
+            version = b.fieldLong("version"),
+            diagnostics = b.fieldStrings("diagnostics"),
+            nextRetryAtEpochMillis = b.fieldLong("nextRetryAtEpochMillis"),
+            automatic = b.fieldBool("automatic") ?: false,
+          )
+        },
+    )
+  }
+
+/** The `watchFacePush` of a `dwf-preview/status` answer, or null when the status names none. */
+fun parseWatchFacePushCapability(statusText: String): WatchFacePushCapability? =
+  (Json.parseToJsonElement(statusText).jsonObject["watchFacePush"] as? JsonObject)?.let {
+    WatchFacePushCapability(
+      publicationPath = it.fieldText("publicationPath").orEmpty(),
+      canPublish = it.fieldBool("canPublish") ?: false,
+    )
+  }
+
+internal fun JsonObject.fieldStrings(key: String): List<String> =
+  (get(key) as? JsonArray)?.mapNotNull { it.fieldText() }.orEmpty()
 
 const val WATCH_FACE_VISIBILITY_PUBLIC = "public"
 const val WATCH_FACE_VISIBILITY_PRIVATE = "private"

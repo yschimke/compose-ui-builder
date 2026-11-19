@@ -14,8 +14,9 @@ import ee.schimke.composeai.uibuilder.editor.WatchFacePublishController
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishHost
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishView
 import ee.schimke.composeai.uibuilder.editor.WatchFacePushCapability
-import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationJson
 import ee.schimke.composeai.uibuilder.editor.buildChipText
+import ee.schimke.composeai.uibuilder.editor.parseWatchFacePublication
+import ee.schimke.composeai.uibuilder.editor.parseWatchFacePushCapability
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -33,14 +34,23 @@ import kotlinx.coroutines.withTimeout
 class WatchFacePublishTest {
   @Test
   fun `the server's publication decodes`() {
-    val publication =
-      WatchFaceValidationJson.decodeFromString(WatchFacePublication.serializer(), PUBLICATION)
+    val publication = parseWatchFacePublication(PUBLICATION)
     assertEquals(true, publication.published)
     assertEquals(3, publication.version)
     assertEquals(41, publication.revision)
     assertEquals("public", publication.visibility)
     assertEquals("ready", publication.apk?.status)
     assertEquals(listOf("error[wff-validator]: x"), publication.refusal)
+    assertEquals("queued", publication.build?.state)
+    assertEquals(2, publication.build?.queueAhead)
+  }
+
+  @Test
+  fun `the status route's capability decodes, and its absence hides the step`() {
+    val status =
+      """{"available":true,"watchFacePush":{"publicationPath":"/api/x","canPublish":true}}"""
+    assertEquals(WatchFacePushCapability("/api/x", true), parseWatchFacePushCapability(status))
+    assertNull(parseWatchFacePushCapability("""{"available":true}"""))
   }
 
   @Test
@@ -105,7 +115,10 @@ class WatchFacePublishTest {
   fun `the chip says where the background build is`() {
     val now = 1_000_000L
     fun chip(build: WatchFacePublicationBuild) = buildChipText(build, now, publishedVersion = 6)
-    assertEquals("Builds in 8 min", chip(WatchFacePublicationBuild("pending", now + 8 * 60_000)))
+    assertEquals(
+      "Builds in 8 min",
+      chip(WatchFacePublicationBuild("pending", scheduledAtEpochMillis = now + 8 * 60_000)),
+    )
     assertEquals("Queued, 1 ahead", chip(WatchFacePublicationBuild("queued", queueAhead = 1)))
     assertEquals("Queued, next", chip(WatchFacePublicationBuild("queued", queueAhead = 0)))
     assertEquals("Packaging…", chip(WatchFacePublicationBuild("building")))
@@ -198,7 +211,9 @@ class WatchFacePublishTest {
        "requestedVisibility":"public","automatic":false,"faceName":"aurora",
        "packageName":"ee.schimke.watchface.push.watchfacepush.aurora",
        "apk":{"status":"ready","sha256":"ab","sizeBytes":18213},
-       "refusal":["error[wff-validator]: x"]}
+       "refusal":["error[wff-validator]: x"],
+       "build":{"state":"queued","queueAhead":2,"automatic":false,"diagnostics":[]},
+       "apk2":{"ignored":true}}
       """
         .trimIndent()
   }
