@@ -1167,6 +1167,14 @@
     "sha256": "1990eede9fee2bb94032e18552af4d1c9c247198b96296f8f2264c7da2e8d798",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneStalePreview": {
+    "captureLabel": "",
+    "functionName": "WatchFaceNativePaneStalePreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceNativePaneStalePreview-01186f73.png",
+    "sha256": "9cadcd762b4f4264eb71c91e08a5a801b61825b93bc763dc79fbfaa6ab8eb9b6",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneStartingRuntimePreview": {
     "captureLabel": "",
     "functionName": "WatchFaceNativePaneStartingRuntimePreview",
