@@ -351,7 +351,8 @@ fun UiBuilderNewDesignFromLinkPreview() {
           templates = listOf(template("blank", "Blank screen")),
         ),
         UiBuilderNewDesignCatalog(
-          systemId = "wear-m3",
+          // Any id: the ratchet keeps real catalog ids out of main sources.
+          systemId = "wear-app",
           label = "Wear",
           primary = true,
           platform = UiBuilderCatalogPlatform.WEAR,
