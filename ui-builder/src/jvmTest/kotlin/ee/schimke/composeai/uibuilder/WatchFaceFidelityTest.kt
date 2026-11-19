@@ -450,6 +450,14 @@ class WatchFaceFidelityTest {
         "<LinearGradient startX='0' startY='0' endX='450' endY='0' colors='#ffff0000 #ff0000ff'/>",
       )
     assertEquals(450f, quoted?.numbers?.get("endX"))
+    // A literal `>` is allowed inside a quoted value: the tag ends at the first one outside quotes.
+    val literal =
+      WffGradient.parse(
+        """<RadialGradient radius="50 + 100 * ([SECOND] > 30)" colors="#ffff0000 #ff0000ff"/>""",
+      )
+    assertNotNull(literal)
+    assertEquals(150f, literal.numbers["radius"])
+    assertEquals(2, literal.colors.size)
   }
 
   @Test

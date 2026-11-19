@@ -85,7 +85,7 @@ internal class WffGradient(
 
     fun parse(xml: String, preview: WffPreviewContext = WffPreviewContext()): WffGradient? {
       val kind = TAG.find(xml)?.groupValues?.get(1) ?: return null
-      val head = xml.substringBefore('>')
+      val head = openingTag(xml)
       // The node carries the element as XML, so `<` in an expression is `&lt;` there.
       val attributes =
         ATTRIBUTE.findAll(head).associate {
@@ -290,3 +290,19 @@ private fun codePointString(codePoint: Int): String =
     charArrayOf((0xD800 + (offset shr 10)).toChar(), (0xDC00 + (offset and 0x3FF)).toChar())
       .concatToString()
   }
+
+/**
+ * [xml] up to the end of its first tag: the first `>` outside a quoted value, since XML lets a
+ * literal `>` stand inside one (`radius="50 + 100 * ([SECOND] > 30)"`). All of it when unclosed.
+ */
+internal fun openingTag(xml: String): String {
+  var quote: Char? = null
+  for ((i, c) in xml.withIndex()) {
+    when {
+      quote != null -> if (c == quote) quote = null
+      c == '"' || c == '\'' -> quote = c
+      c == '>' -> return xml.substring(0, i)
+    }
+  }
+  return xml
+}
