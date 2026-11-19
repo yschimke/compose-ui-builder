@@ -1768,6 +1768,8 @@ internal fun CanvasStatusBar(
   dropTargetLabel: String,
   dragging: Boolean,
   modifier: Modifier = Modifier,
+  /** Opens where a watch-face build's chip leads: the Issues panel's "Test on your watch". */
+  onWatchBuildChip: () -> Unit = {},
 ) {
   Surface(
     modifier.fillMaxWidth(),
@@ -1813,6 +1815,8 @@ internal fun CanvasStatusBar(
         if (outcome is CommandOutcome.Rejected) {
           StatusText("${outcome.code}: ${outcome.message}", color = MaterialTheme.colorScheme.error)
         }
+        // A watch-face publish builds in the background; this stays in view while it does.
+        WatchBuildStatusChip(onWatchBuildChip)
         Surface(
           shape = RoundedCornerShape(10.dp),
           color = LocalUiBuilderEditorPalette.current.sessionBadge,
@@ -1866,7 +1870,11 @@ internal fun EditorPane.supportingText(
     // density), never a drawn handset.
     EditorPane.Preview -> "Devices, overrides and themes · not editable · $wasmDescription"
     EditorPane.Native ->
-      if (surfaces.native.backend == UiBuilderPreviewSurfaces.BACKEND_ANDROID)
+      // A watch face is best tried on a watch ("Test on your watch", in Issues); this pane starts
+      // the host's Android runtime, which is the slower, secondary check.
+      if (surfaces.native.backend == WATCH_FACE_NATIVE_BACKEND)
+        "Preview on the Android renderer (slower)"
+      else if (surfaces.native.backend == UiBuilderPreviewSurfaces.BACKEND_ANDROID)
         "Compiled on the host · Android"
       else "Compiled on the host · the target platform"
   }

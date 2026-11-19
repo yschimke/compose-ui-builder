@@ -57,6 +57,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorLibraryComponent
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.LocalWatchFacePublish
 import ee.schimke.composeai.uibuilder.editor.LocalWatchFaceValidation
 import ee.schimke.composeai.uibuilder.editor.NewDesignCallback
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
@@ -75,6 +76,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
 import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_NATIVE_BACKEND
+import ee.schimke.composeai.uibuilder.editor.WatchFacePublishController
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationController
 import ee.schimke.composeai.uibuilder.editor.agentChatContext
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
@@ -1651,9 +1653,34 @@ private fun LiveSessionApp(
             watchFaceValidationScope,
           )
       }
+    // "Test on your watch": publish the revision as a push APK for the Faces app. Offered only
+    // where the status route says this host can build push APKs and this caller may publish.
+    val watchFacePublish =
+      remember(config.designId, config.localStorage, loadedCatalog) {
+        if (loadedCatalog.previewSurfaces.native.backend != WATCH_FACE_NATIVE_BACKEND) null
+        else
+          WatchFacePublishController(
+            BrowserWatchFacePublishHost(
+              config.designId,
+              unavailableReason =
+                LOCAL_WATCH_FACE_PUBLISH_UNAVAILABLE.takeIf { config.localStorage },
+            ),
+            watchFaceValidationScope,
+          )
+      }
+    // A publish builds in the background; it is read again while queued or building, and once
+    // whenever the page comes back into view, never on a timer otherwise.
+    // Read when the design opens, not when the Issues panel does, so the status bar's build chip
+    // and its polling start for a build already under way.
+    LaunchedEffect(watchFacePublish) { watchFacePublish?.load() }
+    DisposableEffect(watchFacePublish) {
+      val stop = watchFacePublish?.let { controller -> listenForPageFocus { controller.refresh() } }
+      onDispose { stop?.let(::stopListening) }
+    }
     CompositionLocalProvider(
       LocalDesignGuidelineCheck provides guidelines,
       LocalWatchFaceValidation provides watchFaceValidation,
+      LocalWatchFacePublish provides watchFacePublish,
     ) {
       UiBuilderEditor(
         document = loadedDocument,
@@ -2172,6 +2199,11 @@ internal class RefusedEdit(val submission: EditorSubmission, val reason: String)
  * Why a server-drawn or server-stored feature — export, native render, reference pictures — is not
  * available to a caller who may not write: the server's own reason where it gave one.
  */
+/** Why a design kept in this browser cannot be put on a watch. */
+internal const val LOCAL_WATCH_FACE_PUBLISH_UNAVAILABLE =
+  "A watch installs a face the server built from a stored design. Save this design to the " +
+    "server, then publish it to your watch."
+
 /** Why a design kept in this browser has no watch-face validation or watch installs. */
 internal const val LOCAL_WATCH_FACE_VALIDATION_UNAVAILABLE =
   "This design is kept in this browser. Validation and watch installs run on the server against " +

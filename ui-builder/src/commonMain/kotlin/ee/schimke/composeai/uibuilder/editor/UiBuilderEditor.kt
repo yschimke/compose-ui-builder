@@ -3128,6 +3128,9 @@ fun UiBuilderEditor(
                     sessionLabel = sessionLabel,
                     dropTargetLabel = dropTargetLabel,
                     dragging = draggedComponentId != null || draggedNodeId != null,
+                    onWatchBuildChip = {
+                      dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Issues))
+                    },
                   )
                 }
                 when (dock) {

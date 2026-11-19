@@ -363,6 +363,7 @@ private fun InspectorBody(
       // what a watch would refuse.
       val validation = LocalWatchFaceValidation.current
       val showCode = LocalShowGeneratedCode.current
+      val publish = LocalWatchFacePublish.current
       ProblemsInspector(
         problems,
         dispatch,
@@ -382,6 +383,17 @@ private fun InspectorBody(
                         dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
                       }
                     },
+                    testOnWatch =
+                      publish?.let { controller ->
+                        { installs ->
+                          TestOnWatchSection(
+                            controller = controller,
+                            revision = state.document.revision.toLong(),
+                            installs = installs,
+                            onPublished = { it.reloadInstalls() },
+                          )
+                        }
+                      },
                   )
                 }
                 guidelines?.let {
