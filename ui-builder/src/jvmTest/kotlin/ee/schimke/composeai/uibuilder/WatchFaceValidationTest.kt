@@ -11,9 +11,7 @@ import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationAnswer
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationController
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationFinding
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationHost
-import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationJson
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationPanel
-import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationReport
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationView
 import ee.schimke.composeai.uibuilder.editor.WatchInstalls
 import ee.schimke.composeai.uibuilder.editor.WatchInstallsAnswer
@@ -22,6 +20,8 @@ import ee.schimke.composeai.uibuilder.editor.contributorsOf
 import ee.schimke.composeai.uibuilder.editor.formatBytes
 import ee.schimke.composeai.uibuilder.editor.formatEpochMillis
 import ee.schimke.composeai.uibuilder.editor.nodeForResource
+import ee.schimke.composeai.uibuilder.editor.parseWatchFaceValidationReport
+import ee.schimke.composeai.uibuilder.editor.parseWatchInstalls
 import ee.schimke.composeai.uibuilder.editor.suggestion
 import ee.schimke.composeai.uibuilder.editor.topContributors
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -46,8 +46,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class WatchFaceValidationTest {
   @Test
   fun `the contract's report decodes, with numeric versions and unknown fields`() {
-    val report =
-      WatchFaceValidationJson.decodeFromString(WatchFaceValidationReport.serializer(), REPORT)
+    val report = parseWatchFaceValidationReport(REPORT)
     assertEquals(12, report.revision)
     assertEquals("4", report.wffVersion)
     assertEquals(
@@ -121,7 +120,7 @@ class WatchFaceValidationTest {
 
   @Test
   fun `the contract's installs decode`() {
-    val installs = WatchFaceValidationJson.decodeFromString(WatchInstalls.serializer(), INSTALLS)
+    val installs = WatchInstalls(parseWatchInstalls(INSTALLS))
     val install = installs.installs.single()
     assertEquals("Pixel Watch 3", install.deviceName)
     assertEquals(35, install.wearOsApi)
@@ -209,8 +208,7 @@ class WatchFaceValidationTest {
   @Test
   fun `failed findings are open and a located one opens the XML`() = runComposeUiTest {
     val opened = mutableListOf<WatchFaceValidationFinding>()
-    val report =
-      WatchFaceValidationJson.decodeFromString(WatchFaceValidationReport.serializer(), REPORT)
+    val report = parseWatchFaceValidationReport(REPORT)
     setContent {
       MaterialTheme {
         WatchFaceValidationPanel(
@@ -232,7 +230,7 @@ class WatchFaceValidationTest {
 
   @Test
   fun `a watch a revision behind says so`() = runComposeUiTest {
-    val installs = WatchFaceValidationJson.decodeFromString(WatchInstalls.serializer(), INSTALLS)
+    val installs = WatchInstalls(parseWatchInstalls(INSTALLS))
     setContent {
       MaterialTheme {
         WatchFaceValidationPanel(
@@ -277,8 +275,7 @@ class WatchFaceValidationTest {
     override suspend fun installs(): WatchInstallsAnswer = WatchInstallsAnswer.Listed(emptyList())
   }
 
-  private fun report() =
-    WatchFaceValidationJson.decodeFromString(WatchFaceValidationReport.serializer(), REPORT)
+  private fun report() = parseWatchFaceValidationReport(REPORT)
 
   private companion object {
     val REPORT =

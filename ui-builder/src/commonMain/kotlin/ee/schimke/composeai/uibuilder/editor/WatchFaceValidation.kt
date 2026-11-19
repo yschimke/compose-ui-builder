@@ -8,11 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 /**
  * A stored revision's watch-face validation, as
@@ -20,7 +22,6 @@ import kotlinx.serialization.json.JsonPrimitive
  * the memory footprint against the watch's limits, and the push validator. Run on the server
  * against the exported WFF of [revision], never on this browser's copy.
  */
-@Serializable
 data class WatchFaceValidationReport(
   val designId: String = "",
   val revision: Long = 0,
@@ -33,7 +34,6 @@ data class WatchFaceValidationReport(
   val checks: List<WatchFaceValidationCheck> = emptyList(),
 )
 
-@Serializable
 data class WatchFaceValidationCheck(
   /** `wff-schema`, `wff-xsd`, `memory-footprint` or `push-validator`; others are shown as sent. */
   val id: String,
@@ -51,7 +51,6 @@ data class WatchFaceValidationCheck(
   val contributors: List<WatchFaceMemoryContributor> = emptyList(),
 )
 
-@Serializable
 data class WatchFaceValidationFinding(
   /** `error` or `warning`. */
   val severity: String = "error",
@@ -63,7 +62,6 @@ data class WatchFaceValidationFinding(
   val suggestion: String? = null,
 )
 
-@Serializable
 data class WatchFaceMemoryFootprint(
   val totalBytes: Long = 0,
   val maxActiveBytes: Long = 0,
@@ -75,7 +73,6 @@ data class WatchFaceMemoryFootprint(
 )
 
 /** One asset's share of a memory footprint. Every field but [resource] is optional. */
-@Serializable
 data class WatchFaceMemoryContributor(
   /** The resource as the exported WFF names it; matched against the design to select it. */
   val resource: String,
@@ -100,9 +97,8 @@ data class WatchFaceMemoryContributor(
 )
 
 /** `GET /api/ui-builder/v1/designs/{id}/watch-installs`: where the owner's watches stand. */
-@Serializable data class WatchInstalls(val installs: List<WatchInstall> = emptyList())
+data class WatchInstalls(val installs: List<WatchInstall> = emptyList())
 
-@Serializable
 data class WatchInstall(
   val deviceName: String = "",
   val deviceModel: String? = null,
@@ -128,14 +124,107 @@ const val WATCH_INSTALLS_UNAVAILABLE =
   "Pushing to a watch needs the same: a design stored on the server."
 
 /**
- * Lenient on purpose: a version may arrive as `4` or `"4"`, and the server may add fields before
- * this editor knows them.
+ * The report as `watchface-validation` sends it. Read by hand rather than through generated
+ * serializers, which for these models cost the Wasm build more than its size budget allows; and
+ * lenient on purpose: a version may arrive as `4` or `"4"`, a field may be missing or null, and the
+ * server may add fields before this editor knows them.
  */
-val WatchFaceValidationJson = Json {
-  ignoreUnknownKeys = true
-  isLenient = true
-  coerceInputValues = true
+fun parseWatchFaceValidationReport(text: String): WatchFaceValidationReport =
+  Json.parseToJsonElement(text).jsonObject.let { o ->
+    WatchFaceValidationReport(
+      designId = o.fieldText("designId").orEmpty(),
+      revision = o.fieldLong("revision") ?: 0,
+      digest = o.fieldText("digest").orEmpty(),
+      ranAtEpochMillis = o.fieldLong("ranAtEpochMillis"),
+      schemaVersion = o.fieldText("schemaVersion"),
+      wffVersion = o.fieldText("wffVersion"),
+      minimumWffVersion = o.fieldText("minimumWffVersion"),
+      passed = o.fieldBool("passed") ?: false,
+      checks = o.fieldObjects("checks").map { it.toCheck() },
+    )
+  }
+
+/** `watch-installs`' rows, read as leniently as [parseWatchFaceValidationReport]. */
+fun parseWatchInstalls(text: String): List<WatchInstall> =
+  Json.parseToJsonElement(text).jsonObject.fieldObjects("installs").map { o ->
+    WatchInstall(
+      deviceName = o.fieldText("deviceName").orEmpty(),
+      deviceModel = o.fieldText("deviceModel"),
+      wearOsApi = o.fieldInt("wearOsApi"),
+      version = o.fieldText("version"),
+      revisionPublished = o.fieldLong("revisionPublished") ?: 0,
+      result = o.fieldText("result") ?: "installed",
+      activation = o.fieldText("activation") ?: "not_requested",
+      errorKind = o.fieldText("errorKind"),
+      atEpochMillis = o.fieldLong("atEpochMillis"),
+    )
+  }
+
+private fun JsonObject.toCheck(): WatchFaceValidationCheck {
+  val id = fieldText("id").orEmpty()
+  return WatchFaceValidationCheck(
+    id = id,
+    title = fieldText("title") ?: id,
+    status = fieldText("status").orEmpty(),
+    findings =
+      fieldObjects("findings").map { f ->
+        WatchFaceValidationFinding(
+          severity = f.fieldText("severity") ?: "error",
+          message = f.fieldText("message").orEmpty(),
+          line = f.fieldInt("line"),
+          column = f.fieldInt("column"),
+          path = f.fieldText("path"),
+          suggestion = f.fieldText("suggestion"),
+        )
+      },
+    memory =
+      (get("memory") as? JsonObject)?.let { m ->
+        WatchFaceMemoryFootprint(
+          totalBytes = m.fieldLong("totalBytes") ?: 0,
+          maxActiveBytes = m.fieldLong("maxActiveBytes") ?: 0,
+          maxAmbientBytes = m.fieldLong("maxAmbientBytes") ?: 0,
+          activeLimitBytes = m.fieldLong("activeLimitBytes") ?: 0,
+          ambientLimitBytes = m.fieldLong("ambientLimitBytes") ?: 0,
+          contributors = m.fieldObjects("contributors").map { it.toContributor() },
+        )
+      },
+    passedChecks = (get("passedChecks") as? JsonArray)?.mapNotNull { it.fieldText() },
+    tokenIssued = fieldBool("tokenIssued"),
+    contributors = fieldObjects("contributors").map { it.toContributor() },
+  )
 }
+
+private fun JsonObject.toContributor() =
+  WatchFaceMemoryContributor(
+    resource = fieldText("resource").orEmpty(),
+    kind = fieldText("kind"),
+    width = fieldInt("width"),
+    height = fieldInt("height"),
+    format = fieldText("format"),
+    fileBytes = fieldLong("fileBytes"),
+    decodedBytes = fieldLong("decodedBytes"),
+    activeBytes = fieldLong("activeBytes"),
+    ambientBytes = fieldLong("ambientBytes"),
+    renderedMaxWidth = fieldInt("renderedMaxWidth"),
+    renderedMaxHeight = fieldInt("renderedMaxHeight"),
+    missing = fieldBool("missing") ?: false,
+    suggestion = fieldText("suggestion"),
+  )
+
+/** A field as text, whether the server sent a string, a number or a boolean; null when absent. */
+internal fun JsonObject.fieldText(key: String): String? = get(key)?.fieldText()
+
+internal fun JsonElement.fieldText(): String? =
+  (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+
+internal fun JsonObject.fieldLong(key: String): Long? = fieldText(key)?.toLongOrNull()
+
+internal fun JsonObject.fieldInt(key: String): Int? = fieldText(key)?.toIntOrNull()
+
+internal fun JsonObject.fieldBool(key: String): Boolean? = fieldText(key)?.toBooleanStrictOrNull()
+
+internal fun JsonObject.fieldObjects(key: String): List<JsonObject> =
+  (get(key) as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
 
 /** What a host answered for one validation read or run. */
 sealed interface WatchFaceValidationAnswer {

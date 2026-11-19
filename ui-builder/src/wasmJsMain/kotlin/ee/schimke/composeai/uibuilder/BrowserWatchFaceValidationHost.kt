@@ -4,11 +4,15 @@ import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_VALIDATION_DISABLED
 import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_VALIDATION_DISABLED_REASON
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationAnswer
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationHost
-import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationJson
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationReport
-import ee.schimke.composeai.uibuilder.editor.WatchInstalls
 import ee.schimke.composeai.uibuilder.editor.WatchInstallsAnswer
-import kotlinx.serialization.Serializable
+import ee.schimke.composeai.uibuilder.editor.fieldInt
+import ee.schimke.composeai.uibuilder.editor.fieldText
+import ee.schimke.composeai.uibuilder.editor.parseWatchFaceValidationReport
+import ee.schimke.composeai.uibuilder.editor.parseWatchInstalls
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonObject
 
 /**
  * The Validate section over the design host's routes: `POST`/`GET
@@ -46,11 +50,7 @@ internal class BrowserWatchFaceValidationHost(
   override suspend fun installs(): WatchInstallsAnswer {
     val response = request("GET", "$base/watch-installs")
     return when (response.status) {
-      in 200..299 ->
-        WatchInstallsAnswer.Listed(
-          WatchFaceValidationJson.decodeFromString(WatchInstalls.serializer(), response.body)
-            .installs,
-        )
+      in 200..299 -> WatchInstallsAnswer.Listed(parseWatchInstalls(response.body))
       401,
       403,
       // A caller who cannot read the design at all; an owner with no watches gets an empty list.
@@ -65,41 +65,35 @@ internal class BrowserWatchFaceValidationHost(
       response.status == 503 && WATCH_FACE_VALIDATION_DISABLED in response.body
     }
 
-  private fun report(body: String): WatchFaceValidationReport =
-    WatchFaceValidationJson.decodeFromString(WatchFaceValidationReport.serializer(), body)
+  private fun report(body: String): WatchFaceValidationReport = parseWatchFaceValidationReport(body)
 
   private fun refusal(response: FetchedResponse, what: String): String =
     when (response.status) {
       401,
       403 -> "Sign in with an account that can edit this design to validate it."
+      // The dwf-preview refusal schema's sentences (`{"code", "reasons": […]}`), or the push
+      // API's shape, which `watch-installs` answers with (`{"error", "message"}`).
       else -> runCatching {
-          WatchFaceValidationJson.decodeFromString(ValidationRefusal.serializer(), response.body)
-            .let { refusal ->
-              refusal.reasons.joinToString(" ").ifBlank {
-                refusal.message ?: refusal.error.orEmpty()
-              }
-            }
+          val refusal = Json.parseToJsonElement(response.body).jsonObject
+          (refusal["reasons"] as? JsonArray)
+            ?.mapNotNull { it.fieldText() }
+            ?.joinToString(" ")
+            .orEmpty()
+            .ifBlank { refusal.fieldText("message") ?: refusal.fieldText("error").orEmpty() }
         }
           .getOrNull()
           ?.takeIf { it.isNotBlank() } ?: "the host answered ${response.status} to $what"
     }
 
   private suspend fun request(method: String, path: String, body: String? = null): FetchedResponse =
-    WatchFaceValidationJson.decodeFromString(
-      FetchedResponse.serializer(),
-      awaitCommentString(
-        commentFetch(method, sameOriginRequestUrl(path), body.orEmpty(), body != null),
-      ),
-    )
+    Json.parseToJsonElement(
+        awaitCommentString(
+          commentFetch(method, sameOriginRequestUrl(path), body.orEmpty(), body != null),
+        ),
+      )
+      .jsonObject
+      .let { FetchedResponse(it.fieldInt("status") ?: 0, it.fieldText("body").orEmpty()) }
 }
 
-@Serializable private class FetchedResponse(val status: Int, val body: String = "")
-
-@Serializable
-private class ValidationRefusal(
-  /** The dwf-preview refusal schema's sentences (`{"code", "reasons": […]}`). */
-  val reasons: List<String> = emptyList(),
-  /** The push API's shape, which `watch-installs` answers with (`{"error", "message"}`). */
-  val error: String? = null,
-  val message: String? = null,
-)
+/** `commentFetch`'s answer: the status and the body as text. */
+private class FetchedResponse(val status: Int, val body: String)
