@@ -230,7 +230,8 @@ object WatchFaceComplicationBounds {
       WatchFaceXmlExporter.PART_DRAW,
       WatchFaceXmlExporter.PART_IMAGE,
       WatchFaceXmlExporter.ANALOG_CLOCK,
-      WatchFaceXmlExporter.DIGITAL_CLOCK,
+      // A `<DigitalClock>` is a container: its `<TimeText>` children are placed on their own.
+      WatchFaceXmlExporter.TIME_TEXT,
     )
 
   /** Overrides and bookkeeping: none has a box of its own on the watch. */

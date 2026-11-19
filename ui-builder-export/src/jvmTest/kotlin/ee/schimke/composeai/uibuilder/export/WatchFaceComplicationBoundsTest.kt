@@ -134,4 +134,28 @@ class WatchFaceComplicationBoundsTest {
       WatchFaceComplicationBounds.clipped(document(face(scaled))).single().outside.single().area,
     )
   }
+
+  @Test
+  fun `a digital clock is judged by its time text`() {
+    fun clock(timeText: String) =
+      face(
+        """<DigitalClock x="252" y="306" width="96" height="96">""" +
+          """<TimeText format="hh:mm" $timeText><Font family="SYNC_TO_DEVICE" size="20" color="#ffffffff"/></TimeText>""" +
+          "</DigitalClock>",
+      )
+    // The clock fits; its text does not.
+    val past =
+      WatchFaceComplicationBounds.clipped(
+          document(clock("""x="0" y="-30" width="96" height="30"""")),
+        )
+        .single()
+    assertEquals(WatchFaceXmlExporter.TIME_TEXT, past.outside.single().componentId)
+    assertEquals(WatchFaceComplicationBounds.Area(252f, 276f, 96f, 30f), past.outside.single().area)
+    assertEquals(
+      emptyList(),
+      WatchFaceComplicationBounds.issues(
+        document(clock("""x="0" y="30" width="96" height="30"""")),
+      ),
+    )
+  }
 }
