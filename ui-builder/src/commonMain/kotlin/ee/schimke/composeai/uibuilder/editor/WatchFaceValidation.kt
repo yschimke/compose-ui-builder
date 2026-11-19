@@ -131,7 +131,20 @@ sealed interface WatchFaceValidationAnswer {
 
   /** The host's own sentence for why not (signed out, not an editor, runtime missing, ...). */
   data class Refused(val reason: String) : WatchFaceValidationAnswer
+
+  /**
+   * The server has validation switched off (`503 watch_face_validation_disabled`): nothing to
+   * retry, so the section says so and offers no button.
+   */
+  data class Disabled(val reason: String) : WatchFaceValidationAnswer
 }
+
+/** The error code a server with validation switched off answers with. */
+const val WATCH_FACE_VALIDATION_DISABLED = "watch_face_validation_disabled"
+
+/** What the section says when the server has validation switched off. */
+const val WATCH_FACE_VALIDATION_DISABLED_REASON =
+  "Watch face validation is switched off on this server."
 
 /** What a host answered for the owner's watch installs. */
 sealed interface WatchInstallsAnswer {
@@ -283,6 +296,7 @@ class WatchFaceValidationController(
       is WatchFaceValidationAnswer.Ran -> WatchFaceValidationView.Ran(report)
       WatchFaceValidationAnswer.NeverRun -> WatchFaceValidationView.NotRun
       is WatchFaceValidationAnswer.Refused -> WatchFaceValidationView.Failed(reason, previous)
+      is WatchFaceValidationAnswer.Disabled -> WatchFaceValidationView.Unavailable(reason)
     }
 }
 

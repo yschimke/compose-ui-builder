@@ -164,6 +164,15 @@ class WatchFaceValidationTest {
   }
 
   @Test
+  fun `a server with validation switched off hides the button`() = runBlocking {
+    val host = FakeHost()
+    host.latestAnswer = { WatchFaceValidationAnswer.Disabled("off here") }
+    val controller = WatchFaceValidationController(host, this)
+    controller.load(12)
+    assertEquals(WatchFaceValidationView.Unavailable("off here"), controller.validation.value)
+  }
+
+  @Test
   fun `a local design never reaches the host and says why`() = runBlocking {
     val host = FakeHost(unavailableReason = "kept in this browser")
     val controller = WatchFaceValidationController(host, this)

@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_VALIDATION_DISABLED
+import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_VALIDATION_DISABLED_REASON
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationAnswer
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationHost
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationJson
@@ -25,7 +27,9 @@ internal class BrowserWatchFaceValidationHost(
     return when (response.status) {
       in 200..299 -> WatchFaceValidationAnswer.Ran(report(response.body))
       404 -> WatchFaceValidationAnswer.NeverRun
-      else -> WatchFaceValidationAnswer.Refused(refusal(response, "a validation read"))
+      else ->
+        disabled(response)
+          ?: WatchFaceValidationAnswer.Refused(refusal(response, "a validation read"))
     }
   }
 
@@ -33,7 +37,9 @@ internal class BrowserWatchFaceValidationHost(
     val response = request("POST", "$base/watchface-validation?revision=$revision", body = "{}")
     return when (response.status) {
       in 200..299 -> WatchFaceValidationAnswer.Ran(report(response.body))
-      else -> WatchFaceValidationAnswer.Refused(refusal(response, "a validation run"))
+      else ->
+        disabled(response)
+          ?: WatchFaceValidationAnswer.Refused(refusal(response, "a validation run"))
     }
   }
 
@@ -51,6 +57,12 @@ internal class BrowserWatchFaceValidationHost(
       else -> WatchInstallsAnswer.Refused(refusal(response, "a watch installs read"))
     }
   }
+
+  /** A 503 naming [WATCH_FACE_VALIDATION_DISABLED] in its body, whichever field carries it. */
+  private fun disabled(response: FetchedResponse): WatchFaceValidationAnswer.Disabled? =
+    WatchFaceValidationAnswer.Disabled(WATCH_FACE_VALIDATION_DISABLED_REASON).takeIf {
+      response.status == 503 && WATCH_FACE_VALIDATION_DISABLED in response.body
+    }
 
   private fun report(body: String): WatchFaceValidationReport =
     WatchFaceValidationJson.decodeFromString(WatchFaceValidationReport.serializer(), body)
