@@ -186,6 +186,19 @@ class DesignUrlSelectorsTest {
   }
 
   @Test
+  fun `a design named like a reserved page still has an address that opens it`() {
+    // `/new` creates a design and `/designs` is the index, so neither path can name a design.
+    assertFalse(isDesignUrlPathSafe("new"))
+    assertFalse(isDesignUrlPathSafe("designs"))
+    assertTrue(isDesignUrlPathSafe("news"))
+    assertFailsWith<IllegalArgumentException> { designUrlPath("new") }
+    assertEquals("/?designId=new", designPageAddress("/", "new"))
+    assertEquals("/ui-builder/?designId=designs", designPageAddress("/ui-builder/", "designs"))
+    assertEquals("/?designId=hero%20design", designPageAddress("/", "hero design"))
+    assertEquals("/ui-builder/sunny-otter", designPageAddress("/ui-builder/", "sunny-otter"))
+  }
+
+  @Test
   fun `no identity key is ever written into a link`() {
     val url =
       designUrlPath(

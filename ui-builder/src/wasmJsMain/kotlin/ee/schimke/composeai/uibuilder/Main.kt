@@ -2034,7 +2034,7 @@ internal fun canonicalizeUiBuilderUrl(
   selectors: DesignUrlSelectors,
 ) =
   canonicalizeUiBuilderUrlWith(
-    uiBuilderPagePath(uiBuilderBasePath, designId),
+    designPageAddress(uiBuilderBasePath, designId),
     DESIGN_URL_IDENTITY_KEYS.joinToString(","),
     selectors.revision?.toString().orEmpty(),
     selectors.nodeId.orEmpty(),
@@ -2142,7 +2142,7 @@ internal external fun goToLatestRevision()
 private external fun enterLocalDesignUrlAt(path: String)
 
 internal fun enterLocalDesignUrl(designId: String) =
-  enterLocalDesignUrlAt(uiBuilderPagePath(uiBuilderBasePath, designId))
+  enterLocalDesignUrlAt(designPageAddress(uiBuilderBasePath, designId))
 
 /** Follow a `navigatePage` action while retaining only the identity and transport query values. */
 @JsFun(
@@ -2330,7 +2330,7 @@ private external fun navigateToDesignWith(path: String, carried: String)
 
 internal fun navigateToDesign(designId: String) =
   navigateToDesignWith(
-    uiBuilderPagePath(uiBuilderBasePath, designId),
+    designPageAddress(uiBuilderBasePath, designId),
     DESIGN_URL_IDENTITY_KEYS.joinToString(","),
   )
 
