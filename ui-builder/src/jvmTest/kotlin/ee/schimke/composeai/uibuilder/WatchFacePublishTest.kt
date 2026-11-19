@@ -211,6 +211,36 @@ class WatchFacePublishTest {
     design.cancel()
   }
 
+  @Test
+  fun `a publish that fails keeps following the build already running`() = runBlocking {
+    val host = FakeHost()
+    val design = CoroutineScope(coroutineContext + Job())
+    val controller = WatchFacePublishController(host, design, now = { 0L })
+    host.publications +=
+      listOf(
+        PUBLISHED.copy(build = WatchFacePublicationBuild("building")),
+        PUBLISHED.copy(version = 4, build = WatchFacePublicationBuild("built", version = 4)),
+      )
+    controller.load()
+    // The publish request is held open until the build's next poll has come and gone (it lands
+    // while the change is in flight, so it leaves the following to the change), and then dies on
+    // the network.
+    val held = CompletableDeferred<Unit>()
+    host.publishGate = held
+    host.publishFails = true
+    controller.publish("private")
+    withTimeout(60_000) {
+      while (host.publicationReads < 2) delay(100)
+      held.complete(Unit)
+      while (
+        (controller.view.value as? WatchFacePublishView.Ready)?.publication?.build?.state != "built"
+      ) {
+        delay(100)
+      }
+    }
+    design.cancel()
+  }
+
   private class FakeHost(
     private val capability: WatchFacePushCapability? = WatchFacePushCapability("/p", true),
     override val unavailableReason: String? = null,
@@ -246,7 +276,12 @@ class WatchFacePublishTest {
       return WatchFacePublicationAnswer.Ok(answer)
     }
 
+    var publishFails = false
+    var publishGate: CompletableDeferred<Unit>? = null
+
     override suspend fun publish(visibility: String): WatchFacePublicationAnswer {
+      publishGate?.await()
+      if (publishFails) error("connection reset")
       published += visibility
       return next
     }

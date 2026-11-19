@@ -359,16 +359,21 @@ class WatchFacePublishController(
     changes++
     _view.value = ready.copy(busy = true, failure = null)
     scope.launch {
-      _view.value =
-        attempt { request() }
-          .fold(
-            onSuccess = { it.toView(previous = ready.publication).also(::followBuild) },
-            onFailure = {
-              ready.copy(
-                failure = WatchFacePublishFailure(it.message ?: "the request did not complete"),
-              )
-            },
-          )
+      val next = attempt {
+        request()
+      }
+        .fold(
+          onSuccess = { it.toView(previous = ready.publication) },
+          onFailure = {
+            ready.copy(
+              failure = WatchFacePublishFailure(it.message ?: "the request did not complete"),
+            )
+          },
+        )
+      _view.value = next
+      // Whatever the change came to, follow the build now shown: a failed change keeps the one
+      // that was running, and a poll that landed during the change left it to this call.
+      followBuild(next)
     }
   }
 
