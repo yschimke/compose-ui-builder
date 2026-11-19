@@ -35,8 +35,8 @@ internal fun UiBuilderDocument.withWffAmbient(ambient: Boolean): UiBuilderDocume
 
 /**
  * Whether the face moves between whole seconds: it reads `[SECOND_MILLISECOND]` (a sweeping second
- * hand), or has a `<Gyro>`, which the preview sways. Without either the face only changes each
- * whole second, and is redrawn that often.
+ * hand), `[MILLISECOND]` or `[UTC_TIMESTAMP]`, or has a `<Gyro>`, which the preview sways. Without
+ * either the face only changes each whole second, and is redrawn that often.
  */
 internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
   wffHasGyro() ||
@@ -48,7 +48,7 @@ internal fun UiBuilderDocument.wffReadsSubSecond(): Boolean =
           if (node.componentId == WatchFaceXmlExporter.TRANSFORM && name == "rotateWith")
             WatchFaceXmlExporter.ROTATE_WITH[value]
           else value
-        expression?.contains("SECOND_MILLISECOND") == true
+        expression != null && SUB_SECOND_SOURCE.containsMatchIn(expression)
       }
     }
 
@@ -93,3 +93,9 @@ internal fun wffVisibleIn(node: UiBuilderNode, preview: WffPreviewContext): Bool
 /** Whether a part of the face moves with the wrist's tilt, which the preview sways. */
 internal fun UiBuilderDocument.wffHasGyro(): Boolean =
   nodes.values.any { it.componentId == WatchFaceXmlExporter.GYRO }
+
+/**
+ * A source that changes within a second, bracketed as an expression reads it: the parser trims the
+ * name, so `[ SECOND_MILLISECOND ]` is the same source.
+ */
+private val SUB_SECOND_SOURCE = Regex("""\[\s*(SECOND_MILLISECOND|MILLISECOND|UTC_TIMESTAMP)\s*]""")
