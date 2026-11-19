@@ -420,6 +420,15 @@ public class PersistentUiBuilderService(
   private val trash: MutableMap<String, PersistedDesignV1> =
     loadedPersistence.designs.filterValues { it.trashedAtEpochMillis != null }.toMutableMap()
   private val runtime = linkedMapOf<String, RuntimeDesign>()
+
+  /**
+   * What the store holds for a design whose value in [persisted] carries changes not yet written,
+   * by id; absent when the two agree. Only export audit records are held back like this: an export
+   * is a read, and a read must never wait on an fsync under [lock]. The held records reach disk
+   * with the design's next commit, which diffs against this value rather than against [persisted],
+   * so none is lost unless the process stops first. Written under [lock] only.
+   */
+  private val undurable = mutableMapOf<String, PersistedDesignV1>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
   private val exportTaskRunner = BoundedUiBuilderExportTaskRunner(limits.maximumConcurrentExports)
@@ -2937,7 +2946,10 @@ public class PersistentUiBuilderService(
         )
       val updated =
         design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
-      commitDesign(request.designId, updated)
+      // Not committed: the store would force every part to disk under the lock, so every read of
+      // every design would queue behind each thumbnail. The record is kept in memory and written
+      // with the design's next commit.
+      holdUndurable(request.designId, updated)
     }
     return outcome
   }
@@ -4864,7 +4876,8 @@ public class PersistentUiBuilderService(
     design: PersistedDesignV1,
     trashed: PersistedDesignV1,
   ): List<SubscriberMailbox> {
-    store.commit(designId, design, trashed)
+    store.commit(designId, undurable[designId] ?: design, trashed)
+    undurable.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
     trash[designId] = trashed
     unusableDesigns.remove(designId)
@@ -4954,12 +4967,24 @@ public class PersistentUiBuilderService(
    * writes only what differs, keeping an edit's cost proportional to that design.
    */
   private fun commitDesign(designId: String, updated: PersistedDesignV1) {
-    store.commit(designId, persisted.designs[designId], updated)
+    store.commit(designId, undurable[designId] ?: persisted.designs[designId], updated)
+    undurable.remove(designId)
+    persisted = persisted.copy(designs = persisted.designs + (designId to updated))
+  }
+
+  /**
+   * Replaces a design's value in memory only, remembering what the store still holds so the next
+   * [commitDesign] writes the difference. For changes that may be lost on a crash.
+   */
+  private fun holdUndurable(designId: String, updated: PersistedDesignV1) {
+    val current = persisted.designs[designId] ?: return
+    undurable.putIfAbsent(designId, current)
     persisted = persisted.copy(designs = persisted.designs + (designId to updated))
   }
 
   private fun removeDesign(designId: String) {
     store.remove(designId)
+    undurable.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
   }
 
