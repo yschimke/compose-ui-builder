@@ -3699,13 +3699,7 @@ class PersistentUiBuilderServiceTest {
   fun `an export audit record is not committed under the lock and lands with the next commit`() {
     val root = temporaryDirectory.resolve("v3")
     val store = GatedStore(UiBuilderDesignStateStore.open(root).store)
-    val service =
-      PersistentUiBuilderService(
-        designStore = UiBuilderDesignStateStore(store),
-        catalogs = TestCatalogs,
-        exporter = validExporter(),
-        clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
-      )
+    val service = gatedService(root, store)
     create(service)
     val commitsBefore = store.commits.get()
 
@@ -3746,17 +3740,247 @@ class PersistentUiBuilderServiceTest {
     )
   }
 
-  /** Counts commits, and while [blocked] parks each one until it is cleared. */
+  /**
+   * Counts commits, and while [blocked] parks each one until it is cleared; [parked] gains a permit
+   * as each parked commit starts waiting.
+   */
   private class GatedStore(private val delegate: UiBuilderDesignStore) :
     UiBuilderDesignStore by delegate {
     val commits = AtomicInteger()
+    val parked = java.util.concurrent.Semaphore(0)
     @Volatile var blocked = false
 
     override fun commit(designId: String, previous: PersistedDesignV1?, next: PersistedDesignV1) {
       commits.incrementAndGet()
+      if (blocked) parked.release()
       while (blocked) Thread.sleep(10)
       delegate.commit(designId, previous, next)
     }
+  }
+
+  private fun gatedService(root: Path, store: GatedStore): PersistentUiBuilderService =
+    PersistentUiBuilderService(
+      designStore = UiBuilderDesignStateStore(store),
+      catalogs = TestCatalogs,
+      exporter = validExporter(),
+      clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+    )
+
+  /**
+   * The production stall: on a saturated disk one design's commit takes tens of seconds, and every
+   * read of every design used to queue behind it on the service lock. Reads now take the lock only
+   * to compute, and see the state committed before the write in flight.
+   */
+  @Test
+  fun `reads answer while another write is stuck in the store`() {
+    val root = temporaryDirectory.resolve("v3")
+    val store = GatedStore(UiBuilderDesignStateStore.open(root).store)
+    val service = gatedService(root, store)
+    create(service)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document().copy(id = "other"))),
+    )
+
+    store.blocked = true
+    val writer = thread {
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
+          ),
+        ),
+      )
+    }
+    try {
+      assertTrue(store.parked.tryAcquire(5, TimeUnit.SECONDS), "the write reached the store")
+      val answered = CountDownLatch(1)
+      lateinit var ownDesign: ServiceSnapshotV1
+      val reader = thread {
+        snapshot(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("other", null)))
+        ownDesign =
+          snapshot(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", null)))
+        assertIs<UiBuilderServiceResponse.Export>(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+          ),
+        )
+        assertIs<UiBuilderServiceResponse.Designs>(
+          execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10)),
+        )
+        answered.countDown()
+      }
+      assertTrue(answered.await(5, TimeUnit.SECONDS), "reads must not wait on another write's I/O")
+      reader.join(5_000)
+      assertEquals(0, ownDesign.state.document.revision, "a read sees the last committed state")
+      assertTrue(writer.isAlive, "the write is still in the store")
+    } finally {
+      store.blocked = false
+      writer.join(5_000)
+    }
+    assertFalse(writer.isAlive)
+    assertEquals(1, currentDocument(service).revision)
+
+    // The export's audit record landed on the value the write replaced; it must survive it.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("edit", 1, SetPropertyMutationV1("node", "text", StringValueV1("edited"))),
+        ),
+      ),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(1, stored.audit.count { it.kind == AuditKindV1.EXPORT })
+  }
+
+  /**
+   * An export that finishes while the design's move to the trash is on its way to disk keeps its
+   * audit record: it lands on the trashed design, and the restore writes it.
+   */
+  @Test
+  fun `an export audit record held during a delete survives the restore`() {
+    val root = temporaryDirectory.resolve("v3")
+    val store = GatedStore(UiBuilderDesignStateStore.open(root).store)
+    val service = gatedService(root, store)
+    create(service)
+
+    store.blocked = true
+    val deleter = thread {
+      assertIs<UiBuilderServiceResponse.DesignDeleted>(
+        execute(service, owner, UiBuilderServiceRequest.DeleteDesign("design")),
+      )
+    }
+    try {
+      assertTrue(store.parked.tryAcquire(5, TimeUnit.SECONDS), "the delete reached the store")
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        ),
+      )
+    } finally {
+      store.blocked = false
+      deleter.join(5_000)
+    }
+    assertFalse(deleter.isAlive)
+    assertIs<UiBuilderServiceResponse.DesignRestored>(
+      execute(service, owner, UiBuilderServiceRequest.RestoreDesign("design")),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(1, stored.audit.count { it.kind == AuditKindV1.EXPORT })
+  }
+
+  /** Held records obey the same retention as committed ones, so none comes back after eviction. */
+  @Test
+  fun `held export audit records are bounded by audit retention`() {
+    val root = temporaryDirectory.resolve("v3")
+    val clock = MutableClock(1_000)
+    val service =
+      PersistentUiBuilderService(
+        designStore = UiBuilderDesignStateStore.open(root),
+        catalogs = TestCatalogs,
+        exporter = validExporter(),
+        clock = clock,
+        limits = UiBuilderServiceLimits(retainedAuditRecords = 2),
+      )
+    create(service)
+    repeat(3) {
+      clock.nowMillis += 1
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        ),
+      )
+    }
+    clock.nowMillis += 1
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
+        ),
+      ),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(2, stored.audit.size)
+    assertEquals(
+      listOf(AuditKindV1.EXPORT, AuditKindV1.COMMIT),
+      stored.audit.map { it.kind },
+      "the newest export, then the commit; the evicted exports stay evicted",
+    )
+    assertEquals(1_004L, stored.audit.last().atEpochMillis)
+    assertEquals(1_003L, stored.audit.first().atEpochMillis)
+
+    // And the next write does not bring an evicted export back.
+    clock.nowMillis += 1
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("edit", 1, SetPropertyMutationV1("node", "text", StringValueV1("edited"))),
+        ),
+      ),
+    )
+    val next = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(listOf(1_004L, 1_005L), next.audit.map { it.atEpochMillis })
+  }
+
+  /** Writers still go one at a time: the second computes against what the first committed. */
+  @Test
+  fun `a second write waits for the write in flight`() {
+    val root = temporaryDirectory.resolve("v3")
+    val store = GatedStore(UiBuilderDesignStateStore.open(root).store)
+    val service = gatedService(root, store)
+    create(service)
+
+    store.blocked = true
+    val first = thread {
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("first", 0, InsertNodeMutationV1(textNode("first"), NodeLocationV1())),
+          ),
+        ),
+      )
+    }
+    val secondDone = CountDownLatch(1)
+    val second: Thread
+    try {
+      assertTrue(store.parked.tryAcquire(5, TimeUnit.SECONDS))
+      second = thread {
+        accepted(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              batch("second", 1, SetPropertyMutationV1("first", "text", StringValueV1("second"))),
+            ),
+          ),
+        )
+        secondDone.countDown()
+      }
+      assertFalse(secondDone.await(200, TimeUnit.MILLISECONDS), "a writer waits for the first")
+    } finally {
+      store.blocked = false
+    }
+    first.join(5_000)
+    assertTrue(secondDone.await(5, TimeUnit.SECONDS))
+    second.join(5_000)
+    assertEquals(2, currentDocument(service).revision)
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(2, stored.document.revision, "the second write committed on top of the first")
   }
 
   @Test
