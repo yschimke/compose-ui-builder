@@ -374,12 +374,13 @@ class WatchFacePublishController(
   }
 
   private suspend fun reread() {
-    val answer =
-      attempt { host.publication() }.getOrNull() as? WatchFacePublicationAnswer.Ok ?: return
+    val answer = attempt { host.publication() }.getOrNull() as? WatchFacePublicationAnswer.Ok
     val ready = _view.value as? WatchFacePublishView.Ready ?: return
     // A publish that started while this read was out answers for itself.
     if (ready.busy) return
-    val next = ready.copy(publication = answer.publication)
+    // A read that failed (the network, a 5xx) keeps what is shown and tries again on the same
+    // schedule, so one bad answer never stops a build being followed.
+    val next = answer?.let { ready.copy(publication = it.publication) } ?: ready
     _view.value = next
     followBuild(next)
   }

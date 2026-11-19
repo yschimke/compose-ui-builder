@@ -161,6 +161,30 @@ class WatchFacePublishTest {
     design.cancel()
   }
 
+  @Test
+  fun `a failed read keeps following a build`() = runBlocking {
+    val host = FakeHost()
+    val design = CoroutineScope(coroutineContext + Job())
+    val controller = WatchFacePublishController(host, design, now = { 0L })
+    host.publications +=
+      listOf(
+        PUBLISHED.copy(build = WatchFacePublicationBuild("building")),
+        PUBLISHED.copy(version = 4, build = WatchFacePublicationBuild("built", version = 4)),
+      )
+    // The first follow-up read fails; the next one, on the same schedule, finds the build done.
+    host.failReads = setOf(1)
+    withTimeout(60_000) {
+      controller.load()
+      while (
+        (controller.view.value as? WatchFacePublishView.Ready)?.publication?.build?.state != "built"
+      ) {
+        delay(100)
+      }
+    }
+    assertEquals(3, host.publicationReads)
+    design.cancel()
+  }
+
   private class FakeHost(
     private val capability: WatchFacePushCapability? = WatchFacePushCapability("/p", true),
     override val unavailableReason: String? = null,
@@ -178,7 +202,14 @@ class WatchFacePublishTest {
     val publications = mutableListOf<WatchFacePublication>()
     var publicationReads = 0
 
+    /** Reads (by index) that throw, as a dropped connection would. */
+    var failReads = emptySet<Int>()
+
     override suspend fun publication(): WatchFacePublicationAnswer {
+      if (publicationReads in failReads) {
+        publicationReads++
+        error("connection reset")
+      }
       val answer =
         publications.getOrNull(publicationReads) ?: publications.lastOrNull() ?: PUBLISHED
       publicationReads++
