@@ -1784,7 +1784,7 @@ fun UiBuilderEditor(
     remember(document.id) { mutableStateOf(emptyMap<String, WffComplicationPick>()) }
   val canvasDocument =
     remember(drawnDocument, canvasAmbient) { drawnDocument.withWffAmbient(canvasAmbient) }
-  val designCanvasBody: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+  val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     DisposableEffect(Unit) {
       canvasesShown++
       onDispose { canvasesShown-- }
@@ -2038,23 +2038,23 @@ fun UiBuilderEditor(
             catalog.platform != UiBuilderCatalogPlatform.WEAR &&
             catalog.platform != UiBuilderCatalogPlatform.MOBILE &&
             state.panes.none { it == EditorPane.Preview || it == EditorPane.Native },
+        // A watch face's configurations are also pickable on the editing canvas, in the zoom bar's
+        // lane: beside it when there is room, above it when not, never over it.
+        bottomLane =
+          if (hasWffConfigurations) {
+            {
+              Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                tonalElevation = 3.dp,
+              ) {
+                wffPicker(Modifier)
+              }
+            }
+          } else null,
         contentAlignment = alignment,
         modifier = modifier,
       )
-    }
-  }
-  // A watch face's configurations are also pickable on the editing canvas, along its bottom edge.
-  val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
-    Box(modifier) {
-      designCanvasBody(Modifier.fillMaxSize(), alignment)
-      if (hasWffConfigurations)
-        Surface(
-          Modifier.align(Alignment.BottomCenter).padding(bottom = 36.dp),
-          shape = MaterialTheme.shapes.medium,
-          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-        ) {
-          wffPicker(Modifier)
-        }
     }
   }
   // The Tune card floats over the canvas rather than sitting in a dock, so a slider and the design
