@@ -69,6 +69,15 @@ private class WffFace(val widthPx: Float, val heightPx: Float, val dpPerPx: Floa
 
 private val LocalWffFace = compositionLocalOf { WffFace(450f, 450f, 0.5f) }
 
+/**
+ * The box, in WFF pixels, a node's children are placed in: the scene's for its own parts, else the
+ * node's own size, which a node with no `width`/`height` takes from the box it sits in. A child
+ * with no bounds of its own fills it, as the XML export writes it (yschimke/watchface-tools#59).
+ */
+private class WffBox(val widthPx: Float, val heightPx: Float)
+
+private val LocalWffBox = compositionLocalOf<WffBox?> { null }
+
 /** The clock, date and complication data the face is drawn against. */
 private val LocalWffPreview = compositionLocalOf { WffPreviewContext() }
 
@@ -102,8 +111,27 @@ internal fun WatchFaceCanvas(
   val forExport = LocalWffCanvasExport.current
   // In ambient mode the node as its `<Variant mode="AMBIENT">` children make it.
   @Suppress("NAME_SHADOWING") val node = wffNodeIn(document, node, preview)
+  // What this node's children are placed in: its own box, else the one it sits in.
+  val parentBox = LocalWffBox.current ?: WffBox(face.widthPx, face.heightPx)
+  val box = WffBox(node.float("width", parentBox.widthPx), node.float("height", parentBox.heightPx))
   fun place(id: String) =
-    wffPlace(document, id, face.widthPx, face.heightPx, face.dpPerPx, preview, forExport)
+    wffPlace(document, id, box.widthPx, box.heightPx, face.dpPerPx, preview, forExport)
+  CompositionLocalProvider(LocalWffBox provides box) {
+    WatchFaceNode(document, node, modifier, child, face, preview, forExport, ::place)
+  }
+}
+
+@Composable
+private fun WatchFaceNode(
+  document: UiBuilderDocument,
+  node: UiBuilderNode,
+  modifier: Modifier,
+  child: @Composable (String, Modifier) -> Unit,
+  face: WffFace,
+  preview: WffPreviewContext,
+  forExport: Boolean,
+  place: (String) -> Modifier,
+) {
   val placed = { slot: String ->
     node.slots[slot].orEmpty().filter { id ->
       val candidate = document.nodes[id]
@@ -187,6 +215,7 @@ internal fun WatchFaceCanvas(
                 }
               CompositionLocalProvider(
                 LocalWffFace provides WffFace(width, height, scale),
+                LocalWffBox provides WffBox(width, height),
                 LocalWffPreview provides context,
               ) {
                 val background =
@@ -478,11 +507,15 @@ internal fun WffText(
   }
 }
 
+/**
+ * Where [id] sits in its parent: at its `x`,`y` and its own size, a missing `width`/`height` taking
+ * the [parentWidth] × [parentHeight] box it sits in, WFF pixels.
+ */
 private fun wffPlace(
   document: UiBuilderDocument,
   id: String,
-  sceneWidth: Float,
-  sceneHeight: Float,
+  parentWidth: Float,
+  parentHeight: Float,
   scale: Float,
   preview: WffPreviewContext,
   drawnRotation: Boolean = false,
@@ -494,8 +527,8 @@ private fun wffPlace(
       // was cut to 450 by the parent's constraints, which moved its centre, the pivot it turns on.
       .wrapContentSize(Alignment.TopStart, unbounded = true)
       .wffSize(
-        target.float("width", sceneWidth) * scale,
-        target.float("height", sceneHeight) * scale,
+        target.float("width", parentWidth) * scale,
+        target.float("height", parentHeight) * scale,
       )
   // The angle, alpha and scale with the node's transforms applied (see [wffNodeIn]).
   val degrees = target.float("angle")

@@ -555,12 +555,17 @@ object WatchFaceXmlExporter {
   internal const val FACE_ATTR_ORDER = "faceAttrOrder"
   private val FONT_SOURCES = mapOf("family" to "family", "size" to "fontSize", "color" to "color")
 
+  /**
+   * An element's `x`/`y`/`width`/`height`: a missing offset is 0,0 in its parent and a missing size
+   * the box it sits in (the scene's for a scene's part), as the canvas draws it and as a
+   * `<TimeText>` fills its `<DigitalClock>` (yschimke/watchface-tools#59).
+   */
   private fun Props.bounds(sceneWidth: Int, sceneHeight: Int): List<Pair<String, String>> =
     listOfNotNull(
       "x" to (number("x") ?: "0"),
       "y" to (number("y") ?: "0"),
-      "width" to (number("width") ?: sceneWidth.toString()),
-      "height" to (number("height") ?: sceneHeight.toString()),
+      "width" to (number("width") ?: (parentWidth ?: sceneWidth).toString()),
+      "height" to (number("height") ?: (parentHeight ?: sceneHeight).toString()),
       number("pivotX")?.let { "pivotX" to it },
       number("pivotY")?.let { "pivotY" to it },
       number("angle")?.let { "angle" to it },
