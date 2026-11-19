@@ -1175,6 +1175,134 @@
     "sha256": "ed48fbc30c3caa126b2d8236bbdcbcfedfa2aa632339071ff77054c0bd018880",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceNativePanePreviews.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBehindPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBehindPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBehindPreview-31c1ad92.png",
+    "sha256": "d9388948d1cec18d17688c1fadc213e386ab28f1944ca571cdf2941a9c825767",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildBuildingPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBuildBuildingPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBuildBuildingPreview-46b273d7.png",
+    "sha256": "fceae1b7fd52c9aa4d2b65c4d3241add4bfc77d57b6000ba4e6fbbbd6b54d5d4",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildBuiltPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBuildBuiltPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBuildBuiltPreview-1a2a2eb3.png",
+    "sha256": "b35d7c72bdcf8edb7afbaa123a4e6d8a41cef79c88c0ee66016517b020048cbe",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildFailedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBuildFailedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBuildFailedPreview-57affb26.png",
+    "sha256": "b62232c1f87f8ec83e44526554c446e7dbf127d9ea462dbe892130a857b99554",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildPendingPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBuildPendingPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBuildPendingPreview-21faf689.png",
+    "sha256": "b1cb095350dc4746de13131a1fc4a2cb65e9dfc053780e3b5bf5a9e381e021d3",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildQueuedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBuildQueuedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBuildQueuedPreview-f3510099.png",
+    "sha256": "2a6f6261b7a861f1bea01965223444e57e7b963bd15729490c3ecf2e6d87f43d",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchBuildRefusedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchBuildRefusedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchBuildRefusedPreview-e0c775e2.png",
+    "sha256": "ce8c596ad273339d530ef71530227305a1155686f3afe5b8f6259745269008bc",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchInValidatePanelPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchInValidatePanelPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchInValidatePanelPreview-f2f006c1.png",
+    "sha256": "357facfc6aa150d713be3755c8cecd420a276aab3cd6954bd248d204cae2f154",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchLinkedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchLinkedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchLinkedPreview-5a3316e4.png",
+    "sha256": "5b7e638536b2f217806ec4609073dfcf2aea5f8568baeb72f827ffae7cf5ca98",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchNotLinkedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchNotLinkedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchNotLinkedPreview-50820822.png",
+    "sha256": "59be78d53d08e77962e73a19743d74e62b1a8d4a72b30037a3dc6b735381ca81",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchNotPublishedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchNotPublishedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchNotPublishedPreview-d20e3805.png",
+    "sha256": "03e764f67ecaf3db0f343e8360f9e6b8be241ba45a19e7113c3c9dd515cbe796",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchOwnerOnlyPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchOwnerOnlyPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchOwnerOnlyPreview-9eefbaab.png",
+    "sha256": "316c47c8712c36691058ac21cb28933219ef8737371e53e77a67438c7effacb1",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPackagingFailedPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchPackagingFailedPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchPackagingFailedPreview-d9964e22.png",
+    "sha256": "27580c533a03ccb2ec608082229488a83c3ce777a693ff7dd1d39b7fb981d4a9",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPackagingUnavailablePreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchPackagingUnavailablePreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchPackagingUnavailablePreview-b7f67a17.png",
+    "sha256": "64886dfb12a90f2653ff0ff8662609bdd8470e2406a13bb967e4df6e6a6fa4c7",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.TestOnWatchPublishingPreview": {
+    "captureLabel": "",
+    "functionName": "TestOnWatchPublishingPreview",
+    "module": "ui-builder",
+    "renderBasename": "TestOnWatchPublishingPreview-19bfe26d.png",
+    "sha256": "4b735238cf074c9ac87b0929e9fc030ce9bf58e04645ddb9f01ecc35f530e836",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFacePublishPreviewsKt.WatchBuildChipStatesPreview": {
+    "captureLabel": "",
+    "functionName": "WatchBuildChipStatesPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchBuildChipStatesPreview-dcbb066f.png",
+    "sha256": "c4cf3c1d7c62573b2b95dec887598cbb63722939edf3c066844026e5f09fa646",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFacePublishPreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceValidationPreviewsKt.WatchFaceValidationAllPassedPreview": {
     "captureLabel": "",
     "functionName": "WatchFaceValidationAllPassedPreview",
