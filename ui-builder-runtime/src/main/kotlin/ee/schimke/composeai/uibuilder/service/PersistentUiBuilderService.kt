@@ -3633,14 +3633,31 @@ public class PersistentUiBuilderService(
     try {
       when (mutation) {
         is InsertNodeMutationV1 -> {
+          // An id this same batch deleted is free again: a `deleteNode X` then an `insertNode X`
+          // replaces the node. One deleted by an earlier operation stays retired, since its
+          // tombstone is what a later `restoreNode` or undo puts back.
+          val freedInBatch =
+            mutation.node.id in working.tombstones && mutation.node.id !in original.tombstones
           if (
             mutation.node.id.isBlank() ||
               mutation.node.id in working.document.nodes ||
-              mutation.node.id in working.tombstones
+              (mutation.node.id in working.tombstones && !freedInBatch)
           ) {
+            // The words before the colon are what callers have always matched; after it, which.
+            val why =
+              when {
+                mutation.node.id.isBlank() -> "the id is blank"
+                mutation.node.id in working.document.nodes ->
+                  "`${mutation.node.id}` is a node in the design"
+                else ->
+                  "`${mutation.node.id}` was deleted by an earlier operation and stays reserved: " +
+                    "its tombstone is what `restoreNode` and undo bring back, so the id keeps " +
+                    "naming that node in the design's history. Insert under a new id, or " +
+                    "`restoreNode` it (deleting and inserting an id in one batch replaces it)"
+              }
             fail(
               RejectionCodeV1.INVALID_COMMAND,
-              "node id is blank or already used",
+              "node id is blank or already used: $why",
               index,
               mutation.node.id,
             )
@@ -3677,13 +3694,16 @@ public class PersistentUiBuilderService(
               mutation.node.id,
             )
           val positions = working.positions + (mutation.node.id to position)
+          val node = mutation.node.withDeclaredSlots(catalog)
           val withNode =
-            working.document.copy(
-              nodes = working.document.nodes + (mutation.node.id to mutation.node),
-            )
+            working.document.copy(nodes = working.document.nodes + (mutation.node.id to node))
           val document = withNode.rebuildLocation(positions, mutation.location.parent)
           MutationResult(
-            WorkingDesign(document, working.tombstones, positions),
+            WorkingDesign(
+              document,
+              if (freedInBatch) working.tombstones - mutation.node.id else working.tombstones,
+              positions,
+            ),
             StructureChangeV1(
               mutation.node.id,
               null,
@@ -5038,6 +5058,20 @@ private const val RESTORE_CLIENT_ID = "history-restore"
  * previewed catalog upgrade; see `reduceRestore`.
  */
 private const val RESTORE_DIGEST_PREFIX = "restore-revision:"
+
+/**
+ * This node with every slot its component declares, empty where it lists none, then any others it
+ * carries. A node is stored with the component's whole slot map whoever inserted it: an agent that
+ * sends `"slots": {"content": []}` for a `wff/part-draw` gets `variants` too, as the editor's own
+ * nodes have, so reading a design shows which nodes take which children.
+ */
+internal fun DesignNodeV1.withDeclaredSlots(catalog: CatalogCapabilityV1): DesignNodeV1 {
+  val declared =
+    catalog.components.firstOrNull { it.componentId == componentId }?.slots?.map { it.name }
+      ?: return this
+  if (declared.all { it in slots }) return this
+  return copy(slots = declared.associateWith { slots[it].orEmpty() } + slots)
+}
 
 private data class WorkingDesign(
   val document: DesignDocumentV1,
