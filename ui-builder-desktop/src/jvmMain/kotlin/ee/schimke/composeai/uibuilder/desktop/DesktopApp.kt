@@ -323,6 +323,7 @@ internal val OfflineCatalog.displayName: String
       OfflineCatalog.REMOTE_WIDGETS -> "Launcher widgets"
       OfflineCatalog.GLIMMER -> "Glimmer"
       OfflineCatalog.A2UI -> "A2UI"
+      OfflineCatalog.KOBENTO -> "Kobento"
     }
 
 private fun chooseDesignFile(owner: Frame, mode: Int, suggested: String? = null): Path? {

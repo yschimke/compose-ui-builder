@@ -47,6 +47,24 @@ class PublishedCatalogStoreTest {
   }
 
   @Test
+  fun `a catalog that publishes no record is composed from its policy alone`() {
+    // Kobento's components have no Kotlin call site, so its delivery branch carries a
+    // ui-builder.json of builtins and no components.json.
+    assertFalse(Files.exists(captures.resolve("kobento/components.json.gz")))
+    val load =
+      PublishedCatalogStore(Files.createTempDirectory("cache"), fromCaptures).load("kobento")
+
+    val loaded = assertIs<PublishedCatalogStore.Load.Loaded>(load)
+    val catalog = Json.parseToJsonElement(loaded.capabilityJson).jsonObject
+    val ids =
+      (catalog.getValue("components") as JsonArray).map {
+        (it.jsonObject.getValue("componentId") as JsonPrimitive).content
+      }
+    assertTrue("kobento/button" in ids && "kobento/gauge" in ids && "kobento/document" in ids)
+    assertEquals(listOf("kobento-screen", "kobento-thermostat"), loaded.templates.ids)
+  }
+
+  @Test
   fun `a catalog fetched once opens again without a network`() {
     val cache = Files.createTempDirectory("cache")
     assertIs<PublishedCatalogStore.Load.Loaded>(

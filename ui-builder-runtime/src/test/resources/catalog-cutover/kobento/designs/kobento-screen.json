@@ -1,0 +1,91 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "kobento-screen",
+  "title": "Kobento screen",
+  "revision": 0,
+  "template": "kobento-screen",
+  "catalogPin": {
+    "systemId": "kobento",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 360,
+    "heightDp": 640,
+    "density": 1.0,
+    "theme": "dark",
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": []
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "kobento/document",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 16,
+          "endDp": 16,
+          "bottomDp": 16
+        }
+      ],
+      "slots": {
+        "content": [
+          "column"
+        ]
+      }
+    },
+    "column": {
+      "id": "column",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 12
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "title"
+        ]
+      }
+    },
+    "title": {
+      "id": "title",
+      "componentId": "kobento/text",
+      "properties": {
+        "value": {
+          "type": "string",
+          "value": "Hello, Kobento"
+        },
+        "fontSize": {
+          "type": "float",
+          "value": 20
+        },
+        "color": {
+          "type": "color",
+          "value": "@colors.onSurface"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

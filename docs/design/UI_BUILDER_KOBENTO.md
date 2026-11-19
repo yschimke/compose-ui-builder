@@ -291,9 +291,13 @@ generators do.
 
 1. ~~Snapshot generator, published fixture, exporter, runtime test~~ (this slice; the generator
    has since moved to `kobento-catalog`).
-2. ~~Stand up `kobento-catalog`~~ (kobento-catalog#1). Its publishing still needs the
-   `kobento-catalog-out` repository and the `ARTIFACTS_TOKEN` and `KOBENTO_TOKEN` secrets. Once
-   it publishes, add the `PublishedCatalogLocation` row here. Ask Kobento for a published
+2. ~~Stand up `kobento-catalog`~~ (kobento-catalog#1), publishing to
+   `kobento-catalog-out` on `design-artifacts/kobento`. ~~Add the `PublishedCatalogLocation` row
+   and the desktop's `OfflineCatalog.KOBENTO`~~, so the offline hosts open it like any other
+   catalog. Its host-test capture is `catalog-cutover/kobento/`, taken with
+   `scripts/capture-catalog-cutover-fixtures.sh kobento`. ~~Seed templates~~ (kobento-catalog#2):
+   a new design opens `kobento-screen` (a `kobento/document` holding a column and a text), and
+   `kobento-thermostat` is listed under New from template. Still open: ask Kobento for a published
    manifest.
 3. Advertise the export. This needs a contracts change: `ExportFormatV1` has `JSON` and `RC` but
    no "component JSON". Add `KOBENTO_JSON` (or a generic `REMOTE_COMPONENT_JSON` with the
