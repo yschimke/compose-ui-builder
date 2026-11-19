@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "3d65828f871e0a4d70e111f7871d13e55cede135",
+    "generatedFrom": "97a31c0ba87dfd9bc16e0e95f5fd30e5ca8fd4b1",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -6933,6 +6933,21 @@
             "observations": 3,
             "unstable": false,
             "flapCount": 1
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneStalePreview": {
+            "path": "renders/ui-builder/WatchFaceNativePaneStalePreview-01186f73.png",
+            "versions": [
+                {
+                    "blob": "33e95872b33cf6703ba6bf5a9dea445278897192",
+                    "commit": "97a31c0ba87dfd9bc16e0e95f5fd30e5ca8fd4b1",
+                    "date": "2026-11-19T22:16:06Z",
+                    "sourceSha": "1f383f9b",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceNativePaneStartingRuntimePreview": {
             "path": "renders/ui-builder/WatchFaceNativePaneStartingRuntimePreview-a3c0d454.png",
