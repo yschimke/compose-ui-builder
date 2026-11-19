@@ -366,6 +366,11 @@ class WatchFaceValidationController(
       )
   }
 
+  /** [loadInstalls] in the design's scope, for a caller with no coroutine of its own. */
+  fun reloadInstalls() {
+    scope.launch { loadInstalls() }
+  }
+
   suspend fun loadInstalls() {
     if (host.unavailableReason != null) return
     _installs.value =

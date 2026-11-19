@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,6 +49,8 @@ internal fun WatchFaceValidationSection(
   revision: Long,
   onOpenFinding: (WatchFaceValidationFinding) -> Unit,
   onSelectContributor: (WatchFaceMemoryContributor) -> Unit = {},
+  /** "Test on your watch", drawn between the checks and the watches it leads to. */
+  testOnWatch: (@Composable (WatchInstallsView) -> Unit)? = null,
 ) {
   val validation by controller.validation.collectAsState()
   val installs by controller.installs.collectAsState()
@@ -63,6 +66,7 @@ internal fun WatchFaceValidationSection(
     onRun = { controller.start(revision) },
     onOpenFinding = onOpenFinding,
     onSelectContributor = onSelectContributor,
+    testOnWatch = testOnWatch?.let { step -> { step(installs) } },
   )
 }
 
@@ -76,6 +80,7 @@ internal fun WatchFaceValidationPanel(
   onOpenFinding: (WatchFaceValidationFinding) -> Unit,
   modifier: Modifier = Modifier,
   onSelectContributor: (WatchFaceMemoryContributor) -> Unit = {},
+  testOnWatch: (@Composable () -> Unit)? = null,
 ) {
   // The first item of the Issues list, which scrolls as one; no inner scroll box of its own.
   Column(modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -86,6 +91,10 @@ internal fun WatchFaceValidationPanel(
       ValidationBody(validation, revision, onRun, onOpenFinding, onSelectContributor)
     }
     HorizontalDivider(Modifier.padding(vertical = 10.dp))
+    testOnWatch?.let {
+      it()
+      Spacer(Modifier.height(10.dp))
+    }
     Text("On your watch", style = MaterialTheme.typography.labelLarge)
     InstallsBody(installs, revision)
     HorizontalDivider(Modifier.padding(top = 10.dp))
