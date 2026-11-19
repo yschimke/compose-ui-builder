@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
+import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.KotlinNpmInstallTask
+import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsEnvSpec
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnRootEnvSpec
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask
 import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnPlugin
@@ -145,33 +148,79 @@ plugins.withType<WasmYarnPlugin> {
   }
 }
 
-// An npm install that comes up short — CI has seen it leave `build/wasm/node_modules` without
-// `@js-joda/core` and no `yarn.lock` at all — otherwise surfaces minutes later as Karma's "no
-// message in 120000 ms" and "did not discover any tests", because the test bundle's first import
-// fails before the page can report. Fail at the install instead, naming what is missing.
-// By name, lazily: the root Wasm plugin registers the task only once a subproject applies it.
+// An npm install that comes up short otherwise surfaces minutes later as Karma's "no message in
+// 120000 ms" and "did not discover any tests", because the test bundle's first import fails before
+// the page can report. CI has seen yarn exit 0 after ~30s with `build/wasm/node_modules` missing
+// `@js-joda/core` and `ws`, both with and without a committed `yarn.lock`, on a fresh checkout and
+// with the task really executed (not up to date, not from cache), so no stale state is restored.
+// Yarn's own output is not logged even at --info. So: say what the tree looks like, run the same
+// yarn command once more with --force and print what it says, and fail only if that comes up short
+// too. By name, lazily: the root Wasm plugin registers the task only once a subproject applies it.
 tasks.matching { it.name == "kotlinWasmNpmInstall" }.configureEach {
   val wasmDir = layout.buildDirectory.dir("wasm").get().asFile
+  val nodeExecutable = project.extensions.findByType<WasmNodeJsEnvSpec>()?.executable
+  val yarnExecutable = project.extensions.findByType<WasmYarnRootEnvSpec>()?.executable
   doLast {
-    val declared =
-      wasmDir.resolve("packages").listFiles().orEmpty().flatMap { pkg ->
-        val json = pkg.resolve("package.json").takeIf { it.isFile }?.readText() ?: return@flatMap emptyList()
-        // `"dependencies": { "a": "1", "b": "2" }`: only the names matter here.
-        Regex(""""dependencies"\s*:\s*\{([^}]*)\}""")
-          .find(json)
-          ?.groupValues
-          ?.get(1)
-          ?.let { block -> Regex(""""([^"]+)"\s*:""").findAll(block).map { it.groupValues[1] }.toList() }
-          .orEmpty()
+    fun missing(): List<String> {
+      val declared =
+        wasmDir.resolve("packages").listFiles().orEmpty().flatMap { pkg ->
+          val json =
+            pkg.resolve("package.json").takeIf { it.isFile }?.readText() ?: return@flatMap emptyList()
+          // `"dependencies": { "a": "1", "b": "2" }`: only the names matter here.
+          Regex(""""dependencies"\s*:\s*\{([^}]*)\}""")
+            .find(json)
+            ?.groupValues
+            ?.get(1)
+            ?.let { block ->
+              Regex(""""([^"]+)"\s*:""").findAll(block).map { it.groupValues[1] }.toList()
+            }
+            .orEmpty()
+        }
+      return declared
+        .distinct()
+        .filterNot { wasmDir.resolve("node_modules/$it/package.json").isFile }
+        .sorted()
+    }
+    val short = missing()
+    if (short.isEmpty()) return@doLast
+    val nodeModules = wasmDir.resolve("node_modules")
+    val lockPresent = wasmDir.resolve("yarn.lock").isFile
+    logger.warn(
+      "kotlinWasmNpmInstall finished but build/wasm/node_modules lacks ${short.joinToString()} " +
+        "(yarn.lock ${if (lockPresent) "present" else "absent"}; node_modules holds " +
+        "${nodeModules.list()?.size ?: 0} entries; .yarn-integrity " +
+        "${if (nodeModules.resolve(".yarn-integrity").isFile) "present" else "absent"}). " +
+        "Running yarn once more with --force."
+    )
+    wasmDir.resolve("yarn-error.log").takeIf { it.isFile }?.let {
+      logger.warn("yarn-error.log from the first install:\n" + it.readText().takeLast(4000))
+    }
+    val install = this as KotlinNpmInstallTask
+    val node = checkNotNull(nodeExecutable) { "no Wasm Node.js environment" }.get()
+    val yarn = checkNotNull(yarnExecutable) { "no Wasm yarn environment" }.get()
+    val command = buildList {
+      // A standalone yarn is its own executable; the downloaded one is a script node runs.
+      if (!yarn.endsWith(".js")) add(yarn)
+      else {
+        add(node)
+        add(yarn)
       }
-    val missing =
-      declared.distinct().filterNot { wasmDir.resolve("node_modules/$it/package.json").isFile }.sorted()
-    check(missing.isEmpty()) {
-      "kotlinWasmNpmInstall finished but build/wasm/node_modules lacks ${missing.joinToString()}, " +
-        "which the Wasm packages declare (yarn.lock " +
-        (if (wasmDir.resolve("yarn.lock").isFile) "present" else "absent: the install was empty") +
-        "). The test bundle would fail to load and Karma would time out with no tests. Re-run " +
-        "the build; if it repeats, refresh the lock with ./gradlew kotlinWasmUpgradeYarnLock."
+      addAll(listOf("--ignore-scripts", "--network-concurrency", "1", "--mutex", "network"))
+      addAll(install.args)
+      add("--force")
+    }
+    val process =
+      ProcessBuilder(command).directory(wasmDir).redirectErrorStream(true).start()
+    val output = process.inputStream.bufferedReader().readText()
+    val exit = process.waitFor()
+    logger.warn("yarn --force exited $exit:\n" + output.takeLast(8000))
+    val still = missing()
+    check(exit == 0 && still.isEmpty()) {
+      "kotlinWasmNpmInstall left build/wasm/node_modules without ${short.joinToString()}, and " +
+        "yarn --force (exit $exit) " +
+        (if (still.isEmpty()) "failed" else "still left out ${still.joinToString()}") +
+        ". The test bundle would fail to load and Karma would time out with no tests. Its output " +
+        "is above; if it repeats, refresh the lock with ./gradlew kotlinWasmUpgradeYarnLock."
     }
   }
 }
