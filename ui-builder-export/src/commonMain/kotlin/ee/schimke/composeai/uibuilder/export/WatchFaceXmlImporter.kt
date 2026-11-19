@@ -69,6 +69,38 @@ object WatchFaceXmlImporter {
   const val SCENE_ID = "scene"
 
   /**
+   * The named expressions of a `<Condition>`'s `<Expressions>` block, held as `wff/raw` [xml]: each
+   * `<Expression name>` to its text, which a `<Compare expression>` names. Empty when [xml] is not
+   * an `<Expressions>` element.
+   */
+  fun conditionExpressions(xml: String): Map<String, String> {
+    val element =
+      try {
+        WffXmlParser.parse("<r>$xml</r>").root.children.singleOrNull() as? WffElement
+      } catch (e: WffParseException) {
+        null
+      } ?: return emptyMap()
+    if (element.name != "Expressions") return emptyMap()
+    return element.children
+      .filterIsInstance<WffElement>()
+      .filter { it.name == "Expression" }
+      .mapNotNull { expression ->
+        val name = expression.attr("name") ?: return@mapNotNull null
+        name to
+          expression.children
+            .joinToString("") {
+              when (it) {
+                is WffText -> it.text
+                is WffCData -> it.text
+                else -> ""
+              }
+            }
+            .trim()
+      }
+      .toMap()
+  }
+
+  /**
    * A `wff/raw` node's `<Transform>` as the typed `wff/transform` node an import makes of it, or
    * null when [xml] is not one plain transform. The canvas reads a design imported before the
    * transform had a builtin through this, so both draw the same.
