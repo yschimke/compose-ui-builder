@@ -17,8 +17,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The Kobento catalog is data this build has never heard of: a `ui-builder.json` generated from a
- * snapshot of Kobento's component library (captured from `yschimke/kobento-catalog`), with every
+ * The Kobento catalog is data this build has never heard of: a `ui-builder.json` captured from
+ * `yschimke/kobento-catalog`, which generates it from Kobento's component library, with every
  * component a builtin because none has a Kotlin call site. A design authored against it validates
  * in the runtime and exports as Kobento component JSON. See `docs/design/UI_BUILDER_KOBENTO.md`.
  */
@@ -28,9 +28,8 @@ class KobentoCatalogTest {
       .map { File(it, "docs/design/fixtures/ui-builder") }
       .first { File(it, "kobento-published-v1.json").isFile }
 
-  private val snapshot =
-    Json.parseToJsonElement(File(fixtures, "kobento-components-snapshot-v1.json").readText())
-      .jsonObject
+  private val published =
+    Json.parseToJsonElement(File(fixtures, "kobento-published-v1.json").readText()).jsonObject
 
   private val composed =
     assertIs<PublishedUiBuilderCatalog.Result.Composed>(
@@ -43,11 +42,18 @@ class KobentoCatalogTest {
       .catalog
 
   @Test
-  fun `every snapshotted component is served, with its params and slots`() {
+  fun `every published component is served, with its params and slots`() {
+    // A library component's display name is its Kobento name with spaces ("Chart 3D" for Chart3D);
+    // the two format builtins, the document root and text, are not library components.
     val names =
-      snapshot.getValue("components").jsonArray.map {
-        it.jsonObject.getValue("name").jsonPrimitive.content
-      }
+      published
+        .getValue("statusSemantics")
+        .jsonObject
+        .getValue("builtins")
+        .jsonObject
+        .filterKeys { it != "kobento/document" && it != "kobento/text" }
+        .values
+        .map { it.jsonObject.getValue("displayName").jsonPrimitive.content.replace(" ", "") }
     assertEquals(96, names.size)
     val served = composed.components.map { it.componentId }.toSet()
     for (name in names) {

@@ -23,14 +23,14 @@ Kobento's MCP `convert` turns a call into plain format JSON.
 
 | Piece | Where | What it proves |
 | --- | --- | --- |
-| Interface snapshot | `docs/design/fixtures/ui-builder/kobento-components-snapshot-v1.json` | 96 components, their params (type, required, default, enum values, `static`) and slots |
-| Published catalog | `docs/design/fixtures/ui-builder/kobento-published-v1.json` | a `ui-builder.json` that `PublishedUiBuilderCatalog` composes with **no record**: every component is a builtin |
+| Published catalog | `docs/design/fixtures/ui-builder/kobento-published-v1.json` | a `ui-builder.json` that `PublishedUiBuilderCatalog` composes with **no record**: every component is a builtin, with its params (type, required, enum values) and slots |
 | Exporter | `ui-builder-export/.../KobentoComponentJsonExporter.kt` | a design over that catalog lowers to Kobento component JSON |
 | Test | `ui-builder-runtime/.../KobentoCatalogTest.kt` | all 96 are served under their ids, a sample design **validates in the runtime** against the served catalog, and it exports to the golden `kobento-export-sample.json` |
 
-Both fixtures are **captures** from [`yschimke/kobento-catalog`](https://github.com/yschimke/kobento-catalog),
-which owns the generator (`generator/snapshot.py`), the snapshot and the published catalog (§5).
-Re-capture them as a reviewed change when that catalog republishes, the same way
+The published catalog is a **capture** from [`yschimke/kobento-catalog`](https://github.com/yschimke/kobento-catalog),
+which owns the generator (`generator/snapshot.py`), the interface snapshot it is generated from
+(`catalog/components.snapshot.json`) and the published catalog (§5). Only the published file is
+kept here, because it is all the test reads. Re-capture it as a reviewed change when that catalog republishes, the same way
 `remote-m3-published-v1.json` is re-captured from its delivery branch. The generator's `fetch`
 needs a Kobento token and is the only step that touches the network. Its `check` regenerates the
 published file from the snapshot offline and fails if they disagree, and that check runs in the
