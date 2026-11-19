@@ -407,7 +407,8 @@ private fun WatchFaceNode(
     WatchFaceXmlExporter.COMPLICATION_SLOT -> {
       // The sample the slot shows (the editor's pick, else its default provider and type) drawn by
       // the slot's own `<Complication type>` for that type; a slot with none for it draws a tidy
-      // default, and `EMPTY` draws nothing.
+      // default. `EMPTY` draws the slot's `<Complication type="EMPTY">` (a "+" to tap, say) as the
+      // watch does while no provider is chosen, and nothing when the slot has none.
       val variants =
         node.slots["variants"]
           .orEmpty()
@@ -444,8 +445,8 @@ private fun WatchFaceNode(
           contentAlignment = Alignment.Center,
         ) {
           when {
-            sample.type == WffComplicationSample.EMPTY -> Unit
             drawn != null -> child(drawn.id, Modifier.fillMaxSize())
+            sample.type == WffComplicationSample.EMPTY -> Unit
             else -> WffComplicationDefault(sample, side, face.dpPerPx, Modifier.fillMaxSize())
           }
         }
