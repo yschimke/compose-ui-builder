@@ -138,12 +138,20 @@ object WatchFaceComplicationBounds {
             .rotate(props.float("angle") ?: 0f)
             .scale(props.float("scaleX") ?: 1f, props.float("scaleY") ?: 1f)
             .translate(-pivotX, -pivotY)
-        val drawn = placed.bounds(w, h)
         // A container is judged by what it draws, not by its box: a full-face group around one
-        // small label is not cut anywhere the label is not.
-        if (child.componentId in DRAWS && !area.covers(drawn)) {
-          outside += Outside(child.id, child.componentId, drawn)
-        } else walk(child, placed, w, h)
+        // small label is not cut anywhere the label is not. A part-draw with shapes of its own
+        // paints only them; its box is just their coordinate space.
+        val painted: Area? =
+          if (child.componentId !in DRAWS) null
+          else {
+            val shapes = shapeBoxes(document, child, w, h)
+            // The first shape past the box, or none; a part without shapes paints its whole box.
+            if (shapes == null) placed.bounds(w, h)
+            else shapes.map { placed.bounds(it) }.firstOrNull { !area.covers(it) }
+          }
+        if (painted != null && !area.covers(painted)) {
+          outside += Outside(child.id, child.componentId, painted)
+        } else if (child.componentId !in DRAWS) walk(child, placed, w, h)
       }
     }
     // Each `<Complication>` fills its slot, so its content is placed in the slot's own box.
@@ -187,10 +195,14 @@ object WatchFaceComplicationBounds {
     }
 
     /** The axis-aligned box a [width] × [height] rectangle at the origin covers once moved. */
-    fun bounds(width: Float, height: Float): Area {
+    fun bounds(width: Float, height: Float): Area = bounds(Area(0f, 0f, width, height))
+
+    /** The axis-aligned box [box] covers once moved. */
+    fun bounds(box: Area): Area {
       val xs = mutableListOf<Float>()
       val ys = mutableListOf<Float>()
-      for ((x, y) in listOf(0f to 0f, width to 0f, 0f to height, width to height)) {
+      for ((x, y) in
+        listOf(box.x to box.y, box.right to box.y, box.x to box.bottom, box.right to box.bottom)) {
         xs += a * x + c * y + e
         ys += b * x + d * y + f
       }
@@ -204,6 +216,61 @@ object WatchFaceComplicationBounds {
 
       /** Trig noise off a whole-pixel result, so a 180° turn still reads as 80,80. */
       private fun round(value: Float) = kotlin.math.round(value * 1000f) / 1000f
+    }
+  }
+
+  /**
+   * The boxes a `wff/part-draw`'s `wff/shape` children paint, in the part's own coordinates, as the
+   * canvas measures them (`shapeBox`): an arc around its centre, a line between its ends widened by
+   * half its stroke, anything else at its `x`,`y`. A shape with no size fills the part. Null for a
+   * part that is not a part-draw, or has no shapes (it paints its whole box).
+   */
+  private fun shapeBoxes(
+    document: UiBuilderDocument,
+    part: UiBuilderNode,
+    width: Float,
+    height: Float,
+  ): List<Area>? {
+    if (part.componentId != WatchFaceXmlExporter.PART_DRAW) return null
+    val shapes =
+      part.slots["content"]
+        .orEmpty()
+        .mapNotNull { document.nodes[it] }
+        .filter { it.componentId == WatchFaceXmlExporter.SHAPE }
+    if (shapes.isEmpty()) return null
+    return shapes.map { shape ->
+      val props = WatchFaceXmlExporter.Props(shape, mutableListOf())
+      fun value(name: String) = props.float(name)
+      when (props.string("shape")) {
+        "line" -> {
+          val stroke =
+            shape.slots["content"]
+              .orEmpty()
+              .mapNotNull { document.nodes[it] }
+              .firstOrNull { it.componentId == WatchFaceXmlExporter.STROKE }
+              ?.let { WatchFaceXmlExporter.Props(it, mutableListOf()).float("thickness") } ?: 1f
+          val x0 = value("startX") ?: 0f
+          val y0 = value("startY") ?: 0f
+          val x1 = value("endX") ?: 0f
+          val y1 = value("endY") ?: 0f
+          val half = stroke / 2
+          Area(
+            minOf(x0, x1) - half,
+            minOf(y0, y1) - half,
+            kotlin.math.abs(x1 - x0) + stroke,
+            kotlin.math.abs(y1 - y0) + stroke,
+          )
+        }
+        else -> {
+          val w = value("width")
+          val h = value("height")
+          if (w == null || h == null) Area(0f, 0f, width, height)
+          else if (props.string("shape") == "arc")
+            Area((value("centerX") ?: 0f) - w / 2, (value("centerY") ?: 0f) - h / 2, w, h)
+          // A stroke is drawn inset by half its width, so it stays inside the shape's box.
+          else Area(value("x") ?: 0f, value("y") ?: 0f, w, h)
+        }
+      }
     }
   }
 

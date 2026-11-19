@@ -158,4 +158,27 @@ class WatchFaceComplicationBoundsTest {
       ),
     )
   }
+
+  @Test
+  fun `a part-draw is judged by the shapes it paints, not its box`() {
+    fun drawn(shape: String) =
+      face("""<PartDraw x="0" y="0" width="450" height="450">$shape</PartDraw>""")
+    // A full-face part holding one small rectangle inside the box: nothing is cut.
+    val inside =
+      """<Rectangle x="260" y="320" width="80" height="20"><Fill color="#ffffffff"/></Rectangle>"""
+    assertEquals(emptyList(), WatchFaceComplicationBounds.issues(document(drawn(inside))))
+    // An arc whose circle reaches above the box is.
+    val arc =
+      """<Arc centerX="300" centerY="320" width="80" height="80" startAngle="0" endAngle="360"><Stroke color="#ffffffff" thickness="4"/></Arc>"""
+    val cut = WatchFaceComplicationBounds.clipped(document(drawn(arc))).single().outside.single()
+    assertEquals(WatchFaceXmlExporter.PART_DRAW, cut.componentId)
+    assertEquals(WatchFaceComplicationBounds.Area(260f, 280f, 80f, 80f), cut.area)
+    // A line is its ends widened by half its stroke.
+    val line =
+      """<Line startX="260" startY="304" endX="300" endY="304"><Stroke color="#ffffffff" thickness="6"/></Line>"""
+    assertEquals(
+      WatchFaceComplicationBounds.Area(257f, 301f, 46f, 6f),
+      WatchFaceComplicationBounds.clipped(document(drawn(line))).single().outside.single().area,
+    )
+  }
 }
