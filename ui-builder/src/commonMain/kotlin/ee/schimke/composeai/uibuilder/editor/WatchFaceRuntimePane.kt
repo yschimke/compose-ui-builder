@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,13 @@ import kotlinx.coroutines.launch
  *
  * It is the opt-in, real-renderer preview: the host starts an Android runtime for it, so nothing is
  * asked of the host until this pane is composed, which is only while the Native pane is open.
+ *
+ * A session is started once, when the pane opens, and again only on an explicit Refresh or Reload:
+ * a design edit never starts, packages or installs anything. Once the design has moved past the
+ * session's [revision], the pane says so ("Design changed · Refresh") and waits to be asked. The
+ * host's own word ([UiBuilderWatchFaceStart.staleness]) wins where it gives one; otherwise the
+ * revision the session started at is compared with the editor's. [autoRefreshWhenIdle] allows one
+ * gentle refresh after [WATCH_FACE_IDLE_REFRESH_MILLIS] without an edit; it is off by default.
  */
 @Composable
 internal fun WatchFaceRuntimePane(
@@ -59,6 +67,9 @@ internal fun WatchFaceRuntimePane(
   start: (suspend (String) -> UiBuilderWatchFaceStart)?,
   modifier: Modifier = Modifier,
   status: (suspend () -> String?)? = null,
+  /** The editor's current design revision; null where it has none, which disables staleness. */
+  revision: Int? = null,
+  autoRefreshWhenIdle: Boolean = false,
 ) {
   val scope = rememberCoroutineScope()
   val uriHandler = LocalUriHandler.current
@@ -68,6 +79,13 @@ internal fun WatchFaceRuntimePane(
   var unavailable by remember { mutableStateOf<String?>(null) }
   var result by remember { mutableStateOf<UiBuilderWatchFaceStart?>(null) }
   var ambient by remember { mutableStateOf(false) }
+  // The editor's revision when the running session was started from its export.
+  var sessionRevision by remember { mutableStateOf<Int?>(null) }
+  // The host's verdict on the running session, when it gives one: it wins over the local compare.
+  var hostStale by remember { mutableStateOf<Boolean?>(null) }
+  // The idle auto-refresh happens once, until the user next refreshes by hand.
+  var idleRefreshed by remember { mutableStateOf(false) }
+  val currentRevision by rememberUpdatedState(revision)
   // The pane is the one owner of the session. A start that finishes after it was superseded or the
   // pane closed ends the session it returns instead of leaking the socket and its runtime slot.
   val generation = remember { intArrayOf(0) }
@@ -89,6 +107,8 @@ internal fun WatchFaceRuntimePane(
       return
     }
     ambient = false
+    sessionRevision = currentRevision
+    hostStale = null
     starting = true
     val mine = ++generation[0]
     scope.launch {
@@ -131,6 +151,32 @@ internal fun WatchFaceRuntimePane(
   }
 
   val outcome = result
+  val running = outcome != null && outcome.failure == null && !outcome.disabled
+  // Asked of the host after each edit settles, never polled: it only decides whether to say so.
+  val staleness = outcome?.staleness
+  LaunchedEffect(outcome, revision) {
+    if (staleness == null || !running || revision == sessionRevision) return@LaunchedEffect
+    delay(WATCH_FACE_STALE_CHECK_DEBOUNCE_MILLIS)
+    hostStale =
+      try {
+        staleness()
+      } catch (failure: kotlin.coroutines.cancellation.CancellationException) {
+        throw failure
+      } catch (_: Throwable) {
+        null
+      }
+  }
+  val stale =
+    running &&
+      !starting &&
+      (hostStale ?: (revision != null && sessionRevision != null && revision != sessionRevision))
+  // Optional and off by default: one refresh once the user has stopped editing for a while.
+  LaunchedEffect(stale, revision, autoRefreshWhenIdle) {
+    if (!autoRefreshWhenIdle || !stale || idleRefreshed) return@LaunchedEffect
+    delay(WATCH_FACE_IDLE_REFRESH_MILLIS)
+    idleRefreshed = true
+    startSession()
+  }
   // The socket's newest stage, else the one the start answered with; null from an older host.
   val stage = outcome?.stream?.stage ?: outcome?.stage
   // The host's elapsed time, counted on locally between its messages (about one a second).
@@ -172,7 +218,11 @@ internal fun WatchFaceRuntimePane(
         }
       },
     pagePath = outcome?.pagePath,
-    onReload = { startSession() },
+    stale = stale,
+    onReload = {
+      idleRefreshed = false
+      startSession()
+    },
     onOpenTab = { uriHandler.openUri(it) },
   )
 }
@@ -201,6 +251,8 @@ internal fun WatchFaceRuntimePaneContent(
   ambient: Boolean = false,
   onAmbientChange: ((Boolean) -> Unit)? = null,
   pagePath: String? = null,
+  /** The design has moved past the session: a "Design changed · Refresh" note, never automatic. */
+  stale: Boolean = false,
   onReload: () -> Unit = {},
   onOpenTab: (String) -> Unit = {},
 ) {
@@ -244,6 +296,7 @@ internal fun WatchFaceRuntimePaneContent(
         }
       }
       if (unavailable == null) {
+        if (stale && canReload) WatchFaceDesignChanged(onRefresh = onReload)
         Row(verticalAlignment = Alignment.CenterVertically) {
           TextButton(enabled = canReload, onClick = onReload) {
             Text(if (starting) "Starting…" else "Reload with the current design")
@@ -317,6 +370,32 @@ internal fun WatchFaceRuntimePaneContent(
     }
   }
 }
+
+/** The session shows an older revision than the editor: a small note with its Refresh. */
+@Composable
+private fun WatchFaceDesignChanged(onRefresh: () -> Unit) {
+  Surface(
+    color = MaterialTheme.colorScheme.secondaryContainer,
+    shape = RoundedCornerShape(8.dp),
+    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Design changed" },
+  ) {
+    Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+      Text(
+        "Design changed since this session started",
+        Modifier.weight(1f),
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        style = MaterialTheme.typography.bodySmall,
+      )
+      TextButton(onClick = onRefresh) { Text("Refresh") }
+    }
+  }
+}
+
+/** How long an edit settles before the host is asked whether the session is behind it. */
+internal const val WATCH_FACE_STALE_CHECK_DEBOUNCE_MILLIS = 1_500L
+
+/** The idle time after the last edit before the optional auto-refresh. */
+internal const val WATCH_FACE_IDLE_REFRESH_MILLIS = 30_000L
 
 /** The pane on a host whose native-preview flag is off: greyed, and pointing to the watch. */
 @Composable

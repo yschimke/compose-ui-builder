@@ -3215,6 +3215,10 @@ internal suspend fun requestWatchFacePreview(
                 )
               }
             },
+          staleness =
+            it.sessionId?.takeIf(String::isNotBlank)?.let { session ->
+              { requestWatchFaceSessionStale(designId, session) }
+            },
         ) { socketPath ->
           val stream = BrowserNativeStream(sessionSocketUrl(socketPath))
           WatchFaceSocket(stream, stream::sendControls)
@@ -3288,8 +3292,28 @@ internal suspend fun requestWatchFaceRuntimeStatus(designId: String): String? {
   }
 }
 
+/**
+ * Whether the design has moved past [session]'s revision, as the host's status reports it (`stale`,
+ * beside `revision` and `currentRevision`), or null from a host that does not say. Read-only: it
+ * never starts or repackages a session.
+ */
+internal suspend fun requestWatchFaceSessionStale(designId: String, session: String): Boolean? {
+  val body =
+    fetchText(
+      "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/dwf-preview/status" +
+        "?session=${encodeUriComponent(session)}",
+    )
+  val status = nativePreviewJson.decodeFromString(WatchFaceStatus.serializer(), body)
+  return status.stale
+    ?: status.revision?.let { revision -> status.currentRevision?.let { it != revision } }
+}
+
 @kotlinx.serialization.Serializable
 private class WatchFaceStatus(
+  /** The session's revision is behind the design's; absent from a host that does not say. */
+  val stale: Boolean? = null,
+  val revision: Long? = null,
+  val currentRevision: Long? = null,
   val available: Boolean = false,
   /** False when the host's native-preview flag is off. */
   val enabled: Boolean = true,

@@ -106,6 +106,12 @@ data class UiBuilderWatchFaceStart(
    */
   val release: (() -> Unit)? = null,
   /**
+   * Asks the host whether the design has moved past this session's revision (`stale` on the
+   * session's status): true or false, or null where the host does not say, in which case the pane
+   * compares revisions itself. Asked after an edit settles; it never starts anything.
+   */
+  val staleness: (suspend () -> Boolean?)? = null,
+  /**
    * The host has native preview switched off ([WATCH_FACE_NATIVE_PREVIEW_DISABLED]): the pane shows
    * that instead of a failure, and offers no reload.
    */
@@ -269,6 +275,7 @@ fun watchFaceStartOf(
   socketPath: String?,
   stage: UiBuilderWatchFaceStage? = null,
   release: (() -> Unit)? = null,
+  staleness: (suspend () -> Boolean?)? = null,
   openSocket: (String) -> WatchFaceSocket?,
 ): UiBuilderWatchFaceStart {
   val socket =
@@ -279,6 +286,7 @@ fun watchFaceStartOf(
     sendControls = socket?.sendControls,
     stage = stage,
     release = release,
+    staleness = staleness,
   )
 }
 

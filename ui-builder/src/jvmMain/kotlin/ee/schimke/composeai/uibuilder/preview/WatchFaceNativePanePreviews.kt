@@ -38,7 +38,11 @@ private fun NativePaneFrame(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun StagePane(stage: UiBuilderWatchFaceStage?, frame: ImageBitmap? = null) {
+private fun StagePane(
+  stage: UiBuilderWatchFaceStage?,
+  frame: ImageBitmap? = null,
+  stale: Boolean = false,
+) {
   NativePaneFrame {
     WatchFaceRuntimePaneContent(
       modifier = Modifier.fillMaxSize(),
@@ -47,6 +51,7 @@ private fun StagePane(stage: UiBuilderWatchFaceStage?, frame: ImageBitmap? = nul
       connected = true,
       pagePath = "/ui-builder/face/watch-face?session=s1",
       onAmbientChange = if (frame != null) ({}) else null,
+      stale = stale,
     )
   }
 }
@@ -144,6 +149,28 @@ fun WatchFaceNativePaneFailedPreview() =
           "is not a valid dimension (case_steel)",
     ),
   )
+
+/**
+ * The design was edited after the session started: the frame stays as it was, and the pane offers a
+ * Refresh rather than restarting the runtime on its own.
+ */
+@Preview(widthDp = 360, heightDp = 600)
+@Composable
+fun WatchFaceNativePaneStalePreview() {
+  val frame = remember { sampleRuntimeFrame() }
+  StagePane(
+    UiBuilderWatchFaceStage(
+      stage = UiBuilderWatchFaceStage.LIVE,
+      step = 5,
+      label = "Live",
+      elapsedMillis = 41_000,
+      frameIntervalMillis = 250,
+      cachedPackage = true,
+    ),
+    frame = frame,
+    stale = true,
+  )
+}
 
 /** An older host: no stages, so the socket's first frame is all the pane can wait for. */
 @Preview(widthDp = 360, heightDp = 260)
