@@ -34,7 +34,7 @@ internal class BrowserWatchFacePublishHost(
   override suspend fun publication() = answer(request("GET", publicationPath))
 
   override suspend fun publish(visibility: String) =
-    answer(
+    accepted(
       request(
         "PUT",
         publicationPath,
@@ -45,7 +45,14 @@ internal class BrowserWatchFacePublishHost(
       ),
     )
 
-  override suspend fun unpublish() = answer(request("DELETE", publicationPath))
+  override suspend fun unpublish() = accepted(request("DELETE", publicationPath))
+
+  /**
+   * A publish answers `202` at once and builds in the background; with no publication in the body,
+   * the publication (and its `build`) is read straight after.
+   */
+  private suspend fun accepted(response: FetchedPublishResponse): WatchFacePublicationAnswer =
+    if (response.status == 202 && response.body.isBlank()) publication() else answer(response)
 
   private fun answer(response: FetchedPublishResponse): WatchFacePublicationAnswer {
     if (response.status in 200..299) {
@@ -112,3 +119,22 @@ private class PublishRefusal(
   val diagnostics: List<String> = emptyList(),
   val reasons: List<String> = emptyList(),
 )
+
+/**
+ * Calls [onFocus] each time the page comes back into view (tab shown or window focused); returns
+ * the function that stops listening. How a finished background build is noticed without polling.
+ */
+@JsFun(
+  """(onFocus) => {
+    const visible = () => { if (document.visibilityState === 'visible') onFocus(); };
+    globalThis.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      globalThis.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }""",
+)
+internal external fun listenForPageFocus(onFocus: () -> Unit): JsAny
+
+@JsFun("(stop) => stop()") internal external fun stopListening(stop: JsAny)

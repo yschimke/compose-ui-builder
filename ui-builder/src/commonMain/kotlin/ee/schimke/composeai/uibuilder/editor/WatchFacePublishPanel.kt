@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -20,17 +21,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 /**
  * "Test on your watch": the watch-face editor's main next step. It publishes the current revision
@@ -107,6 +114,7 @@ private fun ReadyBody(
 ) {
   val publication = view.publication
   Text(publicationLine(publication), style = MaterialTheme.typography.bodyMedium)
+  publication.build?.let { WatchBuildChip(it, publication.version) }
   val pinned = publication.revision
   if (publication.published && pinned != null && pinned < revision) {
     Text(
@@ -271,3 +279,69 @@ private fun Note(text: String) {
 
 /** Amber that reads on the secondary container in both schemes: a nudge, not an error. */
 private val BEHIND_TEXT = Color(0xffb26a00)
+
+/**
+ * The background build in a few words, as a chip: "Builds in 8 min", "Queued, 1 ahead",
+ * "Packaging…", "On your watch: v7", "Refused: …". Shown in the card and, persistently, in the
+ * status bar under the canvas, where [onClick] opens the Issues panel.
+ */
+@Composable
+internal fun WatchBuildChip(
+  build: WatchFacePublicationBuild,
+  publishedVersion: Long?,
+  modifier: Modifier = Modifier,
+  onClick: (() -> Unit)? = null,
+) {
+  // Re-reads the clock while a countdown is showing, so "Builds in 8 min" counts down.
+  val clock = LocalWatchBuildClock.current
+  val now by
+    produceState(clock(), build, clock) {
+      while (build.state == BUILD_PENDING || build.state == BUILD_FAILED) {
+        delay(30_000)
+        value = clock()
+      }
+    }
+  val text = buildChipText(build, now, publishedVersion) ?: return
+  val (container, content) =
+    when {
+      build.isTrouble() ->
+        MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+      build.state == BUILD_BUILT ->
+        MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+      else ->
+        MaterialTheme.colorScheme.secondaryContainer to
+          MaterialTheme.colorScheme.onSecondaryContainer
+    }
+  Surface(
+    modifier
+      .then(
+        if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick)
+        else Modifier,
+      )
+      .semantics { contentDescription = "Watch build: $text" },
+    shape = RoundedCornerShape(10.dp),
+    color = container,
+    contentColor = content,
+  ) {
+    Text(
+      text,
+      Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+  }
+}
+
+/** [WatchBuildChip] for the open design, when it has a build to talk about; else nothing. */
+@Composable
+internal fun WatchBuildStatusChip(onClick: () -> Unit) {
+  val controller = LocalWatchFacePublish.current ?: return
+  val view by controller.view.collectAsState()
+  val publication = (view as? WatchFacePublishView.Ready)?.publication ?: return
+  val build = publication.build ?: return
+  WatchBuildChip(build, publication.version, Modifier.widthIn(max = 280.dp), onClick)
+}
+
+/** The clock the chip counts down against; previews hold it still so their pictures are stable. */
+internal val LocalWatchBuildClock = staticCompositionLocalOf<() -> Long> { ::epochMillisNow }

@@ -1668,6 +1668,12 @@ private fun LiveSessionApp(
             watchFaceValidationScope,
           )
       }
+    // A publish builds in the background; it is read again while queued or building, and once
+    // whenever the page comes back into view, never on a timer otherwise.
+    DisposableEffect(watchFacePublish) {
+      val stop = watchFacePublish?.let { controller -> listenForPageFocus { controller.refresh() } }
+      onDispose { stop?.let(::stopListening) }
+    }
     CompositionLocalProvider(
       LocalDesignGuidelineCheck provides guidelines,
       LocalWatchFaceValidation provides watchFaceValidation,

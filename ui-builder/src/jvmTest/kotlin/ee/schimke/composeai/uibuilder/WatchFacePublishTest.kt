@@ -9,18 +9,24 @@ import ee.schimke.composeai.uibuilder.editor.TestOnWatchPanel
 import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_PUBLISH_OWNER_ONLY
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublication
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublicationAnswer
+import ee.schimke.composeai.uibuilder.editor.WatchFacePublicationBuild
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishController
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishHost
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishView
 import ee.schimke.composeai.uibuilder.editor.WatchFacePushCapability
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationJson
+import ee.schimke.composeai.uibuilder.editor.buildChipText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 /** "Test on your watch" against compose-preview-server's `watch-face-publication` route. */
 @OptIn(ExperimentalTestApi::class)
@@ -95,6 +101,53 @@ class WatchFacePublishTest {
       assertEquals("public", sent)
     }
 
+  @Test
+  fun `the chip says where the background build is`() {
+    val now = 1_000_000L
+    fun chip(build: WatchFacePublicationBuild) = buildChipText(build, now, publishedVersion = 6)
+    assertEquals("Builds in 8 min", chip(WatchFacePublicationBuild("pending", now + 8 * 60_000)))
+    assertEquals("Queued, 1 ahead", chip(WatchFacePublicationBuild("queued", queueAhead = 1)))
+    assertEquals("Queued, next", chip(WatchFacePublicationBuild("queued", queueAhead = 0)))
+    assertEquals("Packaging…", chip(WatchFacePublicationBuild("building")))
+    assertEquals("On your watch: v7", chip(WatchFacePublicationBuild("built", version = 7)))
+    assertEquals("On your watch: v6", chip(WatchFacePublicationBuild("built")))
+    assertEquals(
+      "Refused: error[aapt2]: x",
+      chip(WatchFacePublicationBuild("refused", diagnostics = listOf("error[aapt2]: x"))),
+    )
+    assertEquals(
+      "Build failed, retrying in 2 min",
+      chip(WatchFacePublicationBuild("failed", nextRetryAtEpochMillis = now + 90_000)),
+    )
+    assertNull(buildChipText(null, now, 6))
+  }
+
+  @Test
+  fun `a queued build is read again until it is built, and then left alone`() = runBlocking {
+    val host = FakeHost()
+    val design = CoroutineScope(coroutineContext + Job())
+    val controller = WatchFacePublishController(host, design, now = { 0L })
+    host.reads = 0
+    host.publications +=
+      listOf(
+        PUBLISHED.copy(build = WatchFacePublicationBuild("queued", queueAhead = 1)),
+        PUBLISHED.copy(build = WatchFacePublicationBuild("building")),
+        PUBLISHED.copy(version = 4, build = WatchFacePublicationBuild("built", version = 4)),
+      )
+    withTimeout(60_000) {
+      controller.load()
+      while (
+        (controller.view.value as? WatchFacePublishView.Ready)?.publication?.build?.state != "built"
+      ) {
+        delay(100)
+      }
+    }
+    // The load and two follow-up reads; a built state schedules nothing more.
+    assertEquals(3, host.publicationReads)
+    assertTrue(design.coroutineContext[Job]!!.children.none { it.isActive })
+    design.cancel()
+  }
+
   private class FakeHost(
     private val capability: WatchFacePushCapability? = WatchFacePushCapability("/p", true),
     override val unavailableReason: String? = null,
@@ -108,7 +161,16 @@ class WatchFacePublishTest {
       return capability
     }
 
-    override suspend fun publication() = WatchFacePublicationAnswer.Ok(PUBLISHED)
+    /** Answered in order by successive reads; the last one repeats. */
+    val publications = mutableListOf<WatchFacePublication>()
+    var publicationReads = 0
+
+    override suspend fun publication(): WatchFacePublicationAnswer {
+      val answer =
+        publications.getOrNull(publicationReads) ?: publications.lastOrNull() ?: PUBLISHED
+      publicationReads++
+      return WatchFacePublicationAnswer.Ok(answer)
+    }
 
     override suspend fun publish(visibility: String): WatchFacePublicationAnswer {
       published += visibility

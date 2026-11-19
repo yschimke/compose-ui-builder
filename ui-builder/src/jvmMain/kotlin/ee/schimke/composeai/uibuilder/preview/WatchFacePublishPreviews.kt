@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.preview
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -7,14 +9,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.editor.LocalWatchBuildClock
 import ee.schimke.composeai.uibuilder.editor.TestOnWatchPanel
 import ee.schimke.composeai.uibuilder.editor.WATCH_FACE_PUBLISH_OWNER_ONLY
+import ee.schimke.composeai.uibuilder.editor.WatchBuildChip
 import ee.schimke.composeai.uibuilder.editor.WatchFacePackaging
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublication
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublicationApk
+import ee.schimke.composeai.uibuilder.editor.WatchFacePublicationBuild
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishFailure
 import ee.schimke.composeai.uibuilder.editor.WatchFacePublishView
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationPanel
@@ -136,8 +142,101 @@ fun TestOnWatchInValidatePanelPreview() {
   }
 }
 
+/** Publish answered 202; the debounced build is due in 8 minutes. */
+@Preview(widthDp = 320, heightDp = 380)
+@Composable
+fun TestOnWatchBuildPendingPreview() {
+  BuildFrame(
+    WatchFacePublicationBuild("pending", scheduledAtEpochMillis = PREVIEW_NOW + 8 * 60_000),
+  )
+}
+
+@Preview(widthDp = 320, heightDp = 380)
+@Composable
+fun TestOnWatchBuildQueuedPreview() {
+  BuildFrame(WatchFacePublicationBuild("queued", queueAhead = 1))
+}
+
+@Preview(widthDp = 320, heightDp = 380)
+@Composable
+fun TestOnWatchBuildBuildingPreview() {
+  BuildFrame(WatchFacePublicationBuild("building", stage = "packaging", elapsedMillis = 12_400))
+}
+
+@Preview(widthDp = 320, heightDp = 380)
+@Composable
+fun TestOnWatchBuildBuiltPreview() {
+  BuildFrame(WatchFacePublicationBuild("built", version = 7))
+}
+
+@Preview(widthDp = 320, heightDp = 380)
+@Composable
+fun TestOnWatchBuildRefusedPreview() {
+  BuildFrame(
+    WatchFacePublicationBuild(
+      "refused",
+      diagnostics = listOf("error[wff-validator]: watchface.xml:41:9 'angle' is not allowed"),
+    ),
+  )
+}
+
+@Preview(widthDp = 320, heightDp = 380)
+@Composable
+fun TestOnWatchBuildFailedPreview() {
+  BuildFrame(WatchFacePublicationBuild("failed"))
+}
+
+/** The persistent chip as the status bar under the canvas shows it, for every state at once. */
+@Preview(widthDp = 320, heightDp = 260)
+@Composable
+fun WatchBuildChipStatesPreview() {
+  MaterialTheme(colorScheme = darkColorScheme()) {
+    Surface(Modifier.fillMaxSize()) {
+      Column(
+        Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        listOf(
+            WatchFacePublicationBuild("queued", queueAhead = 0),
+            WatchFacePublicationBuild("queued", queueAhead = 2),
+            WatchFacePublicationBuild("building"),
+            WatchFacePublicationBuild("built", version = 7),
+            WatchFacePublicationBuild(
+              "refused",
+              diagnostics = listOf("error[aapt2]: dial.png missing"),
+            ),
+            WatchFacePublicationBuild("failed"),
+          )
+          .forEach {
+            CompositionLocalProvider(LocalWatchBuildClock provides { PREVIEW_NOW }) {
+              WatchBuildChip(it, publishedVersion = 7)
+            }
+          }
+      }
+    }
+  }
+}
+
+@Composable
+private fun BuildFrame(build: WatchFacePublicationBuild) {
+  PublishFrame(
+    WatchFacePublishView.Ready(published.copy(version = 7, build = build)),
+    watchesLinked = true,
+  )
+}
+
+/** The moment every preview is drawn at, so a countdown reads the same on every run. */
+private const val PREVIEW_NOW = 1_795_081_320_000L
+
 @Composable
 private fun PublishFrame(view: WatchFacePublishView, watchesLinked: Boolean?) {
+  CompositionLocalProvider(LocalWatchBuildClock provides { PREVIEW_NOW }) {
+    PublishFrameAt(view, watchesLinked)
+  }
+}
+
+@Composable
+private fun PublishFrameAt(view: WatchFacePublishView, watchesLinked: Boolean?) {
   MaterialTheme(colorScheme = darkColorScheme()) {
     Surface(Modifier.fillMaxSize()) {
       TestOnWatchPanel(

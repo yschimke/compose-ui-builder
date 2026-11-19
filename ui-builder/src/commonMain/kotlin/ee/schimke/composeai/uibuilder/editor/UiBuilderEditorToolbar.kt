@@ -1768,6 +1768,8 @@ internal fun CanvasStatusBar(
   dropTargetLabel: String,
   dragging: Boolean,
   modifier: Modifier = Modifier,
+  /** Opens where a watch-face build's chip leads: the Issues panel's "Test on your watch". */
+  onWatchBuildChip: () -> Unit = {},
 ) {
   Surface(
     modifier.fillMaxWidth(),
@@ -1813,6 +1815,8 @@ internal fun CanvasStatusBar(
         if (outcome is CommandOutcome.Rejected) {
           StatusText("${outcome.code}: ${outcome.message}", color = MaterialTheme.colorScheme.error)
         }
+        // A watch-face publish builds in the background; this stays in view while it does.
+        WatchBuildStatusChip(onWatchBuildChip)
         Surface(
           shape = RoundedCornerShape(10.dp),
           color = LocalUiBuilderEditorPalette.current.sessionBadge,

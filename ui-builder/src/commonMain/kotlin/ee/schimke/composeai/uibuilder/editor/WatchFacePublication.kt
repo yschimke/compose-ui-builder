@@ -3,6 +3,8 @@ package ee.schimke.composeai.uibuilder.editor
 import androidx.compose.runtime.staticCompositionLocalOf
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +37,98 @@ data class WatchFacePublication(
   val packaging: WatchFacePackaging? = null,
   /** The packager's lines for the latest attempt it refused, beside what is still on watches. */
   val refusal: List<String> = emptyList(),
+  /** The background build a publish (or an automatic listing) started; null when none is known. */
+  val build: WatchFacePublicationBuild? = null,
 )
+
+/**
+ * A publish answers `202` at once and builds in the background: where that build is. Every field
+ * but [state] is optional, and a state this editor does not know is shown as sent.
+ */
+@Serializable
+data class WatchFacePublicationBuild(
+  /** `pending`, `queued`, `building`, `built`, `refused` or `failed`. */
+  val state: String,
+  /** `pending`: when the debounced build is due. */
+  val scheduledAtEpochMillis: Long? = null,
+  /** `queued`: builds ahead of this one in the server's one-at-a-time packager queue. */
+  val queueAhead: Int? = null,
+  /** `building`: what the packager is doing now, in its words. */
+  val stage: String? = null,
+  val elapsedMillis: Long? = null,
+  /** `built`: the version now on watches. */
+  val version: Long? = null,
+  /** `refused`: the packager's lines. */
+  val diagnostics: List<String> = emptyList(),
+  /** `failed`: a failure around the packager, tried again at this time. */
+  val nextRetryAtEpochMillis: Long? = null,
+)
+
+const val BUILD_PENDING = "pending"
+const val BUILD_QUEUED = "queued"
+const val BUILD_BUILDING = "building"
+const val BUILD_BUILT = "built"
+const val BUILD_REFUSED = "refused"
+const val BUILD_FAILED = "failed"
+
+/** How often a build that is queued or building is read again. Gentle: builds take minutes. */
+const val BUILD_POLL_MILLIS = 7_000L
+
+/** The longest a scheduled re-read waits, so a far-off build is still noticed when it starts. */
+private const val BUILD_WAKE_MAX_MILLIS = 10 * 60_000L
+
+/**
+ * The status chip's words for [build], against [nowMillis]: "Builds in 8 min", "Queued, 1 ahead",
+ * "Packaging…", "On your watch: v7", "Refused: <first diagnostic>". Null when there is no build to
+ * talk about.
+ */
+fun buildChipText(
+  build: WatchFacePublicationBuild?,
+  nowMillis: Long,
+  publishedVersion: Long?,
+): String? {
+  build ?: return null
+  return when (build.state) {
+    BUILD_PENDING ->
+      build.scheduledAtEpochMillis
+        ?.let { minutesUntil(it, nowMillis) }
+        ?.let { if (it <= 0) "Builds in under a minute" else "Builds in $it min" }
+        ?: "Build scheduled"
+    BUILD_QUEUED ->
+      when (val ahead = build.queueAhead) {
+        null -> "Queued"
+        0 -> "Queued, next"
+        else -> "Queued, $ahead ahead"
+      }
+    BUILD_BUILDING ->
+      buildString {
+        append(build.stage?.replaceFirstChar { it.uppercase() } ?: "Packaging")
+        append("…")
+        build.elapsedMillis?.let { append(" ${it / 1000} s") }
+      }
+    BUILD_BUILT -> (build.version ?: publishedVersion)?.let { "On your watch: v$it" } ?: "Built"
+    BUILD_REFUSED ->
+      build.diagnostics.firstOrNull()?.let { "Refused: ${it.take(CHIP_DIAGNOSTIC_CHARS)}" }
+        ?: "Refused"
+    BUILD_FAILED ->
+      build.nextRetryAtEpochMillis
+        ?.let { minutesUntil(it, nowMillis) }
+        ?.let { if (it <= 0) "Build failed, retrying" else "Build failed, retrying in $it min" }
+        ?: "Build failed"
+    else -> build.state
+  }
+}
+
+/** Whether the chip is reporting a problem. */
+fun WatchFacePublicationBuild.isTrouble(): Boolean = state == BUILD_REFUSED || state == BUILD_FAILED
+
+/** Whether the server is working on it now (the only states that are polled). */
+fun WatchFacePublicationBuild.isActive(): Boolean = state == BUILD_QUEUED || state == BUILD_BUILDING
+
+private const val CHIP_DIAGNOSTIC_CHARS = 60
+
+private fun minutesUntil(atMillis: Long, nowMillis: Long): Long =
+  ((atMillis - nowMillis).coerceAtLeast(0) + 59_999) / 60_000
 
 @Serializable
 data class WatchFacePublicationApk(
@@ -131,7 +224,12 @@ const val WATCH_FACE_PUBLISH_OWNER_ONLY =
 class WatchFacePublishController(
   private val host: WatchFacePublishHost,
   private val scope: CoroutineScope,
+  /** Epoch millis; a parameter so tests can hold time still. */
+  private val now: () -> Long = ::epochMillisNow,
 ) {
+  /** The one scheduled re-read of a background build; replaced by every new answer. */
+  private var follow: Job? = null
+
   private val _view = MutableStateFlow<WatchFacePublishView>(WatchFacePublishView.Loading)
   val view: StateFlow<WatchFacePublishView> = _view.asStateFlow()
 
@@ -156,7 +254,7 @@ class WatchFacePublishController(
     _view.value =
       attempt { host.publication() }
         .fold(
-          onSuccess = { it.toView(previous = null) },
+          onSuccess = { it.toView(previous = null).also(::followBuild) },
           onFailure = {
             WatchFacePublishView.Ready(
               WatchFacePublication(),
@@ -178,7 +276,7 @@ class WatchFacePublishController(
       _view.value =
         attempt { request() }
           .fold(
-            onSuccess = { it.toView(previous = ready.publication) },
+            onSuccess = { it.toView(previous = ready.publication).also(::followBuild) },
             onFailure = {
               ready.copy(
                 failure = WatchFacePublishFailure(it.message ?: "the request did not complete"),
@@ -187,6 +285,50 @@ class WatchFacePublishController(
           )
     }
   }
+
+  /**
+   * Re-reads the publication without disturbing the editor: when the page regains focus, say. A
+   * change in flight, or a step the caller may not use, is left alone.
+   */
+  fun refresh() {
+    val ready = _view.value as? WatchFacePublishView.Ready ?: return
+    if (ready.busy) return
+    scope.launch { reread() }
+  }
+
+  private suspend fun reread() {
+    val answer =
+      attempt { host.publication() }.getOrNull() as? WatchFacePublicationAnswer.Ok ?: return
+    val ready = _view.value as? WatchFacePublishView.Ready ?: return
+    // A publish that started while this read was out answers for itself.
+    if (ready.busy) return
+    val next = ready.copy(publication = answer.publication)
+    _view.value = next
+    followBuild(next)
+  }
+
+  /**
+   * Schedules the next read of a background build: every [BUILD_POLL_MILLIS] while it is queued or
+   * building, once when a pending build is due or a failed one retries, and never otherwise.
+   */
+  private fun followBuild(view: WatchFacePublishView) {
+    follow?.cancel()
+    val build = (view as? WatchFacePublishView.Ready)?.publication?.build ?: return
+    val wait =
+      when {
+        build.isActive() -> BUILD_POLL_MILLIS
+        build.state == BUILD_PENDING -> build.scheduledAtEpochMillis?.let(::untilDue) ?: return
+        build.state == BUILD_FAILED -> build.nextRetryAtEpochMillis?.let(::untilDue) ?: return
+        else -> return
+      }
+    follow = scope.launch {
+      delay(wait)
+      reread()
+    }
+  }
+
+  private fun untilDue(atMillis: Long): Long =
+    (atMillis - now() + BUILD_POLL_MILLIS).coerceIn(BUILD_POLL_MILLIS, BUILD_WAKE_MAX_MILLIS)
 
   private fun WatchFacePublicationAnswer.toView(
     previous: WatchFacePublication?,
@@ -223,3 +365,6 @@ class WatchFacePublishController(
  * watch-face design; null elsewhere, where the Issues panel leaves the step out.
  */
 val LocalWatchFacePublish = staticCompositionLocalOf<WatchFacePublishController?> { null }
+
+@OptIn(kotlin.time.ExperimentalTime::class)
+internal fun epochMillisNow(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
