@@ -155,7 +155,7 @@ object WatchFaceComplicationBounds {
                   listOf(0f to 0f, w to 0f, 0f to h, w to h).maxOf { (x, y) ->
                     kotlin.math.hypot(x - pivotX, y - pivotY)
                   }
-                placed.bounds(Area(pivotX - reach, pivotY - reach, 2 * reach, 2 * reach))
+                placed.circleBounds(pivotX, pivotY, reach)
               }
               // A part without shapes paints its whole box.
               shapes == null -> placed.bounds(w, h)
@@ -210,6 +210,24 @@ object WatchFaceComplicationBounds {
 
     /** The axis-aligned box a [width] × [height] rectangle at the origin covers once moved. */
     fun bounds(width: Float, height: Float): Area = bounds(Area(0f, 0f, width, height))
+
+    /**
+     * The axis-aligned box a circle covers once moved: the ellipse it becomes reaches `r·√(a²+c²)`
+     * across and `r·√(b²+d²)` down from its moved centre, which a box around the circle would
+     * overstate under a turn.
+     */
+    fun circleBounds(centerX: Float, centerY: Float, radius: Float): Area {
+      val x = a * centerX + c * centerY + e
+      val y = b * centerX + d * centerY + f
+      val halfWidth = radius * kotlin.math.hypot(a, c)
+      val halfHeight = radius * kotlin.math.hypot(b, d)
+      return Area(
+        round(x - halfWidth),
+        round(y - halfHeight),
+        round(2 * halfWidth),
+        round(2 * halfHeight),
+      )
+    }
 
     /** The axis-aligned box [box] covers once moved. */
     fun bounds(box: Area): Area {

@@ -205,4 +205,19 @@ class WatchFaceComplicationBoundsTest {
       )
     assertEquals(WatchFaceXmlExporter.CLOCK_HAND, long.single().outside.single().componentId)
   }
+
+  @Test
+  fun `a hand's sweep stays a circle under a turned group`() {
+    // The short hand of the test above, its clock turned 45° about the box's centre: the circle it
+    // sweeps is still 40.1 px around 300,354, inside the box. Its bounding square, turned, would
+    // reach 56.7 px and be reported.
+    val turned =
+      face(
+        """<Group name="g" x="250" y="304" width="100" height="100" angle="45">""" +
+          """<AnalogClock x="0" y="0" width="100" height="100">""" +
+          """<MinuteHand resource="m" x="47" y="10" width="6" height="40" pivotX="0.5" pivotY="1.0"/>""" +
+          "</AnalogClock></Group>",
+      )
+    assertEquals(emptyList(), WatchFaceComplicationBounds.issues(document(turned)))
+  }
 }
