@@ -121,10 +121,12 @@ internal fun WatchFaceCanvas(
         )
       val swaying = remember(document.nodes) { document.wffHasGyro() }
       // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
+      val settings = remember(document.nodes) { document.wffConfigurationValues() }
       val clock =
-        remember(node, fixedTime, live, swaying) {
-          live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
-            ?: WffPreviewContext.of(node.string("previewTime"), fixedTime)
+        remember(node, fixedTime, live, swaying, settings) {
+          (live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
+              ?: WffPreviewContext.of(node.string("previewTime"), fixedTime))
+            .withConfiguration(settings)
         }
       // Interactive and ambient cross-fade as the watch switches, rather than cut: while the
       // switch runs both are drawn, the mode being entered over the one being left.
@@ -279,14 +281,29 @@ internal fun WatchFaceCanvas(
         },
       )
     }
-    WatchFaceXmlExporter.PART_IMAGE ->
-      Box(modifier.border(1.dp, Color(0x66FFFFFF)), contentAlignment = Alignment.Center) {
-        Text(
-          node.string("resource").ifEmpty { "image" },
-          color = Color(0x99FFFFFF),
-          fontSize = 10.sp,
-        )
-      }
+    WatchFaceXmlExporter.PART_IMAGE -> {
+      // A complication's image source draws the sample's placeholder picture.
+      val source = node.string("resource")
+      val image =
+        when (source) {
+          "[COMPLICATION.PHOTO_IMAGE]" ->
+            WffSampleImage.PHOTO.takeIf { preview.complication.image == WffSampleImage.PHOTO }
+          "[COMPLICATION.MONOCHROMATIC_IMAGE]",
+          "[COMPLICATION.SMALL_IMAGE]" -> preview.complication.image
+          else -> null
+        }
+      if (image != null) {
+        val tint = node.wffColor("tintColor", Color.White)
+        Box(modifier.drawBehind { drawWffGlyph(image, tint, Offset.Zero, size) })
+      } else
+        Box(modifier.border(1.dp, Color(0x66FFFFFF)), contentAlignment = Alignment.Center) {
+          Text(
+            source.ifEmpty { "image" },
+            color = Color(0x99FFFFFF),
+            fontSize = 10.sp,
+          )
+        }
+    }
     WatchFaceXmlExporter.PART_TEXT -> {
       val text =
         remember(node, preview) {
@@ -351,35 +368,34 @@ internal fun WatchFaceCanvas(
       )
     }
     WatchFaceXmlExporter.COMPLICATION_SLOT -> {
-      // The slot's own complication (the one for its default type, else the first) draws what the
-      // face says to; a slot with none draws one line of sample data in its bounds.
+      // The sample the slot shows (the editor's pick, else its default provider and type) drawn by
+      // the slot's own `<Complication type>` for that type; a slot with none for it draws a tidy
+      // default, and `EMPTY` draws nothing.
       val variants =
         node.slots["variants"]
           .orEmpty()
           .mapNotNull { document.nodes[it] }
           .filter { it.componentId == WatchFaceXmlExporter.COMPLICATION }
-      val wanted = node.string("defaultSystemProviderType")
-      val drawn = variants.firstOrNull { it.string("type") == wanted } ?: variants.firstOrNull()
-      val sample = WffComplicationSample.forProvider(node.string("defaultSystemProvider"))
+      val picks = LocalWffComplicationPicks.current
+      val sample =
+        remember(node, picks) {
+          wffSlotSample(
+            node.id,
+            node.string("defaultSystemProvider"),
+            node.string("defaultSystemProviderType"),
+            node.string("supportedTypes").split(' ').filter { it.isNotBlank() },
+            picks,
+          )
+        }
+      val drawn = variants.firstOrNull { it.string("type") == sample.type }
       val context = remember(preview, sample) { preview.withComplication(sample) }
+      val side = minOf(node.float("width", 100f), node.float("height", 100f))
       CompositionLocalProvider(LocalWffPreview provides context) {
-        Box(
-          modifier.clipToBounds(),
-          contentAlignment = Alignment.Center,
-        ) {
-          if (drawn != null) child(drawn.id, Modifier.fillMaxSize())
-          else {
-            Box(
-              Modifier.fillMaxSize()
-                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(percent = 20)),
-            )
-            WffText(
-              Modifier.fillMaxSize(),
-              sample.line,
-              Color(0xCCFFFFFF),
-              (24f * face.dpPerPx).sp,
-              "CENTER",
-            )
+        Box(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
+          when {
+            sample.type == WffComplicationSample.EMPTY -> Unit
+            drawn != null -> child(drawn.id, Modifier.fillMaxSize())
+            else -> WffComplicationDefault(sample, side, face.dpPerPx, Modifier.fillMaxSize())
           }
         }
       }
@@ -412,13 +428,10 @@ internal fun WatchFaceCanvas(
           .forEach { childId -> child(childId, place(childId)) }
       }
     }
-    // A condition draws its first branch, the one a preview with no data takes.
+    // A condition draws the branch the watch would take: see [wffConditionBranch].
     WatchFaceXmlExporter.CONDITION ->
       Box(modifier) {
-        node.slots["branches"]
-          .orEmpty()
-          .firstOrNull { document.nodes[it]?.componentId != WatchFaceXmlExporter.RAW }
-          ?.let { id -> child(id, Modifier.fillMaxSize()) }
+        wffConditionBranch(document, node, preview)?.let { id -> child(id, Modifier.fillMaxSize()) }
       }
     WatchFaceXmlExporter.COMPARE,
     WatchFaceXmlExporter.DEFAULT,
@@ -431,7 +444,7 @@ internal fun WatchFaceCanvas(
 
 /** One line of face text in its box: clipped to it, never wrapped, aligned as WFF's `align`. */
 @Composable
-private fun WffText(
+internal fun WffText(
   modifier: Modifier,
   text: String,
   color: Color,

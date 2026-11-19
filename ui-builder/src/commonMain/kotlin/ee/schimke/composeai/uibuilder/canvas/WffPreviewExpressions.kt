@@ -35,6 +35,11 @@ internal class WffPreviewContext(
    */
   val tiltX: Double = 0.0,
   val tiltY: Double = 0.0,
+  /**
+   * What `[CONFIGURATION.<id>]` reads: each user setting at its default (`defaultValue`), as the
+   * face first shows before the wearer changes anything.
+   */
+  val configuration: Map<String, String> = emptyMap(),
 ) {
   /** 0 = Sunday. */
   val dayOfWeek: Int
@@ -45,22 +50,13 @@ internal class WffPreviewContext(
       return (y + y / 4 - y / 100 + y / 400 + t[month - 1] + day) % 7
     }
 
-  fun withComplication(sample: WffComplicationSample) =
-    WffPreviewContext(
-      hour,
-      minute,
-      second,
-      fraction,
-      year,
-      month,
-      day,
-      sample,
-      ambient,
-      tiltX,
-      tiltY,
-    )
-
-  fun inMode(ambient: Boolean) =
+  private fun with(
+    complication: WffComplicationSample = this.complication,
+    ambient: Boolean = this.ambient,
+    tiltX: Double = this.tiltX,
+    tiltY: Double = this.tiltY,
+    configuration: Map<String, String> = this.configuration,
+  ) =
     WffPreviewContext(
       hour,
       minute,
@@ -73,10 +69,16 @@ internal class WffPreviewContext(
       ambient,
       tiltX,
       tiltY,
+      configuration,
     )
 
-  fun withTilt(x: Double, y: Double) =
-    WffPreviewContext(hour, minute, second, fraction, year, month, day, complication, ambient, x, y)
+  fun withComplication(sample: WffComplicationSample) = with(complication = sample)
+
+  fun inMode(ambient: Boolean) = with(ambient = ambient)
+
+  fun withTilt(x: Double, y: Double) = with(tiltX = x, tiltY = y)
+
+  fun withConfiguration(values: Map<String, String>) = with(configuration = values)
 
   /**
    * This time with the wrist swaying gently, as a preview with no watch shows a `<Gyro>` move: a
@@ -137,30 +139,6 @@ internal class WffPreviewContext(
   }
 }
 
-/** What a complication slot shows: its `[COMPLICATION.TEXT]` and `[COMPLICATION.TITLE]`. */
-internal class WffComplicationSample(val text: String, val title: String = "") {
-  /** The one line a slot with nothing of its own draws. */
-  val line: String
-    get() = if (title.isEmpty()) text else "$text $title"
-
-  companion object {
-    val Default = WffComplicationSample("72", "bpm")
-
-    /** A believable value for what a slot's default provider supplies. */
-    fun forProvider(provider: String): WffComplicationSample =
-      when (provider) {
-        "WATCH_BATTERY" -> WffComplicationSample("85%", "")
-        "STEP_COUNT" -> WffComplicationSample("6,482", "")
-        "DAY_OF_WEEK" -> WffComplicationSample("Thu", "")
-        "DAY_AND_DATE" -> WffComplicationSample("Thu 16", "")
-        "TIME_AND_DATE" -> WffComplicationSample("10:08", "")
-        "UNREAD_NOTIFICATION_COUNT" -> WffComplicationSample("3", "")
-        "SUNRISE_SUNSET" -> WffComplicationSample("6:12", "")
-        else -> Default
-      }
-  }
-}
-
 /** A value an expression produces: a number or a string. */
 internal sealed interface WffValue {
   data class Num(val value: Double) : WffValue
@@ -178,6 +156,13 @@ internal sealed interface WffValue {
     when (this) {
       is Num -> value
       is Str -> value.toDoubleOrNull()
+    }
+
+  /** As a condition reads it: a nonzero number, or text that is `true` or a nonzero number. */
+  fun truthy(): Boolean =
+    when (this) {
+      is Num -> value != 0.0
+      is Str -> value.equals("true", ignoreCase = true) || (value.toDoubleOrNull() ?: 0.0) != 0.0
     }
 }
 
@@ -244,6 +229,16 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "YEAR_S" -> s(two(year % 100))
     "COMPLICATION.TEXT" -> s(complication.text)
     "COMPLICATION.TITLE" -> s(complication.title)
+    "COMPLICATION.RANGED_VALUE_VALUE" -> complication.rangedValue?.let { WffValue.Num(it) }
+    "COMPLICATION.RANGED_VALUE_MIN" ->
+      complication.rangedValue?.let { WffValue.Num(complication.rangedMin) }
+    "COMPLICATION.RANGED_VALUE_MAX" ->
+      complication.rangedValue?.let { WffValue.Num(complication.rangedMax) }
+    "COMPLICATION.GOAL_PROGRESS_VALUE" -> complication.goalValue?.let { WffValue.Num(it) }
+    "COMPLICATION.GOAL_PROGRESS_TARGET_VALUE" -> complication.goalTarget?.let { WffValue.Num(it) }
+    "COMPLICATION.MONOCHROMATIC_IMAGE",
+    "COMPLICATION.SMALL_IMAGE",
+    "COMPLICATION.PHOTO_IMAGE" -> s("[${name}]")
     "BATTERY_PERCENT" -> n(85)
     "ACCELEROMETER_IS_SUPPORTED" -> n(1)
     "ACCELEROMETER_ANGLE_X" -> WffValue.Num(tiltX)
@@ -254,7 +249,12 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "ACCELEROMETER_Z" -> WffValue.Num(WFF_GRAVITY * cos(tiltX * PI / 180) * cos(tiltY * PI / 180))
     "STEP_COUNT" -> n(6482)
     "HEART_RATE" -> n(72)
-    else -> null
+    else ->
+      if (name.startsWith("CONFIGURATION."))
+        configuration[name.removePrefix("CONFIGURATION.")]?.let { value ->
+          value.toDoubleOrNull()?.let { WffValue.Num(it) } ?: WffValue.Str(value)
+        }
+      else null
   }
 }
 
@@ -273,7 +273,7 @@ private class ExpressionParser(val text: String, val context: WffPreviewContext)
   var at = 0
 
   fun parse(): WffValue? {
-    val value = sum() ?: return null
+    val value = or() ?: return null
     skip()
     return value.takeIf { at == text.length }
   }
@@ -285,6 +285,85 @@ private class ExpressionParser(val text: String, val context: WffPreviewContext)
   private fun peek(): Char? {
     skip()
     return text.getOrNull(at)
+  }
+
+  /** `||`, then `&&`, then `==` `!=`, then `<` `<=` `>` `>=`, each binding tighter. */
+  private fun or(): WffValue? {
+    var left = and() ?: return null
+    while (match("||")) {
+      val right = and() ?: return null
+      left = bool(left.truthy() || right.truthy())
+    }
+    return left
+  }
+
+  private fun and(): WffValue? {
+    var left = equality() ?: return null
+    while (match("&&")) {
+      val right = equality() ?: return null
+      left = bool(left.truthy() && right.truthy())
+    }
+    return left
+  }
+
+  private fun equality(): WffValue? {
+    var left = relation() ?: return null
+    while (true) {
+      val equal =
+        when {
+          match("==") -> true
+          match("!=") -> false
+          else -> return left
+        }
+      val right = relation() ?: return null
+      left = bool(same(left, right) == equal)
+    }
+  }
+
+  private fun relation(): WffValue? {
+    var left = sum() ?: return null
+    while (true) {
+      val op =
+        listOf("<=", ">=", "<", ">").firstOrNull { candidate ->
+          // `<` is not the start of `<=`, which is tried first.
+          match(candidate)
+        } ?: return left
+      val a = left.asNumber() ?: return null
+      val b = sum()?.asNumber() ?: return null
+      left =
+        bool(
+          when (op) {
+            "<=" -> a <= b
+            ">=" -> a >= b
+            "<" -> a < b
+            else -> a > b
+          },
+        )
+    }
+  }
+
+  /** Consumes [token] if it is next. */
+  private fun match(token: String): Boolean {
+    skip()
+    if (!text.startsWith(token, at)) return false
+    at += token.length
+    return true
+  }
+
+  private fun bool(value: Boolean) = WffValue.Num(if (value) 1.0 else 0.0)
+
+  /**
+   * Equal as numbers when both are; as booleans when either is the text `true` or `false` (a
+   * boolean setting's `TRUE` against the literal `true`, which is 1); else as text, ignoring case.
+   */
+  private fun same(a: WffValue, b: WffValue): Boolean {
+    val x = a.asNumber()
+    val y = b.asNumber()
+    if (x != null && y != null) return x == y
+    fun boolean(v: WffValue) =
+      v is WffValue.Str && (v.value.equals("true", true) || v.value.equals("false", true))
+    if (boolean(a) || boolean(b)) return a.truthy() == b.truthy()
+    return a.asText().equals(b.asText(), ignoreCase = true)
   }
 
   private fun sum(): WffValue? {
@@ -326,6 +405,10 @@ private class ExpressionParser(val text: String, val context: WffPreviewContext)
   }
 
   private fun unary(): WffValue? {
+    if (peek() == '!' && text.getOrNull(at + 1) != '=') {
+      at++
+      return bool(!(unary() ?: return null).truthy())
+    }
     if (peek() == '-') {
       at++
       return WffValue.Num(-(unary()?.asNumber() ?: return null))
@@ -338,7 +421,7 @@ private class ExpressionParser(val text: String, val context: WffPreviewContext)
     when {
       c == '(' -> {
         at++
-        val inner = sum() ?: return null
+        val inner = or() ?: return null
         if (peek() != ')') return null
         at++
         return inner
@@ -366,13 +449,15 @@ private class ExpressionParser(val text: String, val context: WffPreviewContext)
         val start = at
         while (at < text.length && (text[at].isLetterOrDigit() || text[at] == '_')) at++
         val name = text.substring(start, at)
+        if (name.equals("true", ignoreCase = true) && peek() != '(') return bool(true)
+        if (name.equals("false", ignoreCase = true) && peek() != '(') return bool(false)
         if (peek() != '(') return null
         at++
         val args = mutableListOf<Double>()
         if (peek() == ')') at++
         else {
           while (true) {
-            args += sum()?.asNumber() ?: return null
+            args += or()?.asNumber() ?: return null
             when (peek()) {
               ',' -> at++
               ')' -> {

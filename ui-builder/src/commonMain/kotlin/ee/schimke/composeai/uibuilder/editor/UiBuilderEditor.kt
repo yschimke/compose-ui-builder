@@ -85,7 +85,9 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNavigator
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
+import ee.schimke.composeai.uibuilder.canvas.LocalWffComplicationPicks
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
+import ee.schimke.composeai.uibuilder.canvas.WffComplicationPick
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.canvas.isWatchFace
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
@@ -102,6 +104,7 @@ import ee.schimke.composeai.uibuilder.designUrlPath
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.frameGeometry
@@ -1776,6 +1779,9 @@ fun UiBuilderEditor(
   // A watch face's editing canvas draws Interactive or Ambient, whichever the toggle says; editor
   // state rather than the document's, since looking at a mode is not an edit.
   var canvasAmbient by remember { mutableStateOf(false) }
+  // What each complication slot is previewed with: editor state, never part of the design.
+  var complicationPicks by
+    remember(document.id) { mutableStateOf(emptyMap<String, WffComplicationPick>()) }
   val canvasDocument =
     remember(drawnDocument, canvasAmbient) { drawnDocument.withWffAmbient(canvasAmbient) }
   val designCanvasBody: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
@@ -2062,6 +2068,22 @@ fun UiBuilderEditor(
           onAmbientChange = { canvasAmbient = it },
           modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
+        val slot =
+          state.selectedNodeId
+            ?.let { drawnDocument.nodes[it] }
+            ?.takeIf { it.componentId == WatchFaceXmlExporter.COMPLICATION_SLOT }
+        if (slot != null) {
+          WffComplicationPicker(
+            slot = slot,
+            picks = complicationPicks,
+            onPick = { pick ->
+              complicationPicks =
+                if (pick == null) complicationPicks - slot.id
+                else complicationPicks + (slot.id to pick)
+            },
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+          )
+        }
       }
       if (state.tunables.isNotEmpty() && state.revisionPeek == null) {
         TunePanel(
@@ -2609,6 +2631,7 @@ fun UiBuilderEditor(
   // preview frame all draw a pack component, and all of them should draw its placeholder.
   CompositionLocalProvider(
     LocalHoveredCommentThread provides hoveredThread,
+    LocalWffComplicationPicks provides complicationPicks,
     LocalUiBuilderChrome provides chrome,
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,

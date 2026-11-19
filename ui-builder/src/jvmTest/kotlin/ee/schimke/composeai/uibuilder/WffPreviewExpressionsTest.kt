@@ -86,5 +86,6 @@ class WffPreviewExpressionsTest {
     assertEquals("72 bpm", WffComplicationSample.forProvider("").line)
   }
 
-  private fun complication(text: String) = context.withComplication(WffComplicationSample(text))
+  private fun complication(text: String) =
+    context.withComplication(WffComplicationSample(text = text))
 }
