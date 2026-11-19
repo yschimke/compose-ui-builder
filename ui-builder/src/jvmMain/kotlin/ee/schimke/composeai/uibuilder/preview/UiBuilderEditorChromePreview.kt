@@ -26,6 +26,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorProblem
 import ee.schimke.composeai.uibuilder.editor.EditorVariantAxis
+import ee.schimke.composeai.uibuilder.editor.NewDesignLink
 import ee.schimke.composeai.uibuilder.editor.ProblemsInspector
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
@@ -327,6 +328,59 @@ fun UiBuilderNewDesignPreview() {
 @Composable
 fun UiBuilderNewDesignPhonePreview() {
   NewDesignScreenSample()
+}
+
+/**
+ * The home page opened from a shared link,
+ * `?new=watch&kind=wff-watchface&template=digital-watch-face &title=Morning+face`: the watch, its
+ * Watch face kind and the digital starting point already chosen, and the title someone typed
+ * carried over. Thumbnails left out, so it renders without a catalog.
+ */
+@Preview(widthDp = 900, heightDp = 1000)
+@Composable
+fun UiBuilderNewDesignFromLinkPreview() {
+  val template = { id: String, label: String -> UiBuilderNewDesignTemplate(id, label, "") }
+  UiBuilderNewDesignScreen(
+    initialDesignId = "sunny-otter",
+    catalogs =
+      listOf(
+        UiBuilderNewDesignCatalog(
+          systemId = "m3-catalog",
+          label = "Mobile app",
+          primary = true,
+          templates = listOf(template("blank", "Blank screen")),
+        ),
+        UiBuilderNewDesignCatalog(
+          systemId = "wear-m3",
+          label = "Wear",
+          primary = true,
+          platform = UiBuilderCatalogPlatform.WEAR,
+          templates = listOf(template("wear-screen", "Blank screen")),
+        ),
+        UiBuilderNewDesignCatalog(
+          systemId = "wff-watchface",
+          label = "Watch face",
+          primary = true,
+          platform = UiBuilderCatalogPlatform.WATCH_FACE,
+          templates =
+            listOf(
+              template("analog-watch-face", "Analog Watch Face"),
+              template("digital-watch-face", "Digital Watch Face"),
+            ),
+        ),
+      ),
+    initialCatalogSystemId = "m3-catalog",
+    initialLink =
+      NewDesignLink.parse(
+        mapOf(
+          "new" to "watch",
+          "kind" to "wff-watchface",
+          "template" to "digital-watch-face",
+          "title" to "Morning face",
+        ),
+      ),
+    onCreate = { _, _, _, _, _ -> },
+  )
 }
 
 @Composable

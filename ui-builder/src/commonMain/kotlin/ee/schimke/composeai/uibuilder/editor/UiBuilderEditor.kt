@@ -101,6 +101,7 @@ import ee.schimke.composeai.uibuilder.capability.scrollers
 import ee.schimke.composeai.uibuilder.componentDriftProblems
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.designUrlPath
+import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -519,6 +520,11 @@ fun UiBuilderEditor(
   onCreatePublicDesign: NewDesignCallback? = null,
   onCreateDesign: NewDesignCallback? = null,
   /**
+   * The starting point the editor's one-click "New watch face" uses for a catalog: the one the host
+   * last made a design of that catalog from, or null for the catalog's first.
+   */
+  newDesignTemplateFor: (catalogSystemId: String) -> String? = { null },
+  /**
    * Retitles this design without changing its id, or null where the host cannot (a reader, a host
    * with no rename route). Answers null once the title is stored, else why not; the editor then
    * shows the new title. Host-side because a title is metadata outside the operation log: it takes
@@ -840,6 +846,30 @@ fun UiBuilderEditor(
     }
   var inspectorOpen by remember(document.id) { mutableStateOf(initialInspectorOpen) }
   var showNewDesign by remember(document.id) { mutableStateOf(false) }
+  // "New watch face": another design of this one's catalog, in one click, named afresh.
+  val newLikeThis: EditorNoticeAction? =
+    if (onCreateDesign == null) null
+    else
+      newDesignCatalogs
+        .firstOrNull {
+          it.systemId == document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull &&
+            it.templates.isNotEmpty()
+        }
+        ?.let { catalog ->
+          EditorNoticeAction(newDesignLikeThisLabel(catalog)) {
+            val kept = newDesignTemplateFor(catalog.systemId)
+            val template =
+              catalog.templates.firstOrNull { it.id == kept } ?: catalog.templates.first()
+            val designId = NewDesignNames.random()
+            onCreateDesign(
+              catalog.systemId,
+              designId,
+              template.id,
+              emptyList(),
+              newDesignDefaultTitle(designId),
+            )
+          }
+        }
   var showRename by remember(document.id) { mutableStateOf(false) }
   val openRename: (() -> Unit)? = onRenameDesign?.let { { showRename = true } }
   var showAgentPrompt by remember(document.id) { mutableStateOf(false) }
@@ -2845,6 +2875,7 @@ fun UiBuilderEditor(
                   if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
                     { showNewDesign = true }
                   } else null,
+                newLikeThis = newLikeThis,
                 onBrowseDesigns = onBrowseDesigns,
                 onRenameDesign = openRename,
                 onForkDesign = onForkDesign,
@@ -2873,6 +2904,7 @@ fun UiBuilderEditor(
                   if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
                     { showNewDesign = true }
                   } else null,
+                newLikeThis = newLikeThis,
                 onBrowseDesigns = onBrowseDesigns,
                 onRenameDesign = openRename,
                 onForkDesign = onForkDesign,
