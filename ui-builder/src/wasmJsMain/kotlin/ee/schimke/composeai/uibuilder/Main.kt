@@ -50,6 +50,7 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.EditorOverlays
+import ee.schimke.composeai.uibuilder.editor.NewDesignLink
 import ee.schimke.composeai.uibuilder.editor.ProvideUiBuilderBrand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasInspection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasSurface
@@ -2033,7 +2034,7 @@ internal fun canonicalizeUiBuilderUrl(
   selectors: DesignUrlSelectors,
 ) =
   canonicalizeUiBuilderUrlWith(
-    uiBuilderPagePath(uiBuilderBasePath, designId),
+    designPageAddress(uiBuilderBasePath, designId),
     DESIGN_URL_IDENTITY_KEYS.joinToString(","),
     selectors.revision?.toString().orEmpty(),
     selectors.nodeId.orEmpty(),
@@ -2141,7 +2142,7 @@ internal external fun goToLatestRevision()
 private external fun enterLocalDesignUrlAt(path: String)
 
 internal fun enterLocalDesignUrl(designId: String) =
-  enterLocalDesignUrlAt(uiBuilderPagePath(uiBuilderBasePath, designId))
+  enterLocalDesignUrlAt(designPageAddress(uiBuilderBasePath, designId))
 
 /** Follow a `navigatePage` action while retaining only the identity and transport query values. */
 @JsFun(
@@ -2329,7 +2330,7 @@ private external fun navigateToDesignWith(path: String, carried: String)
 
 internal fun navigateToDesign(designId: String) =
   navigateToDesignWith(
-    uiBuilderPagePath(uiBuilderBasePath, designId),
+    designPageAddress(uiBuilderBasePath, designId),
     DESIGN_URL_IDENTITY_KEYS.joinToString(","),
   )
 
@@ -2878,6 +2879,79 @@ internal fun readHomeFolders(): Map<String, String> = runCatching {
 internal fun writeHomeFolders(folders: Map<String, String>) {
   writeBrowserSetting(HOME_FOLDERS_KEY, Json.encodeToString(folders))
 }
+
+/**
+ * The starting point each catalog's last new design was made from, so the editor's one-click "New
+ * watch face" makes another like the one open. Kept per browser: a design does not record its
+ * template, and the catalog's first starting point stands in where nothing was kept.
+ */
+private const val LAST_TEMPLATES_KEY = "ui-builder.last-templates.v1"
+
+internal fun readLastTemplates(): Map<String, String> = runCatching {
+  Json.decodeFromString<Map<String, String>>(readBrowserSetting(LAST_TEMPLATES_KEY))
+}
+  .getOrDefault(emptyMap())
+
+internal fun rememberLastTemplate(catalogSystemId: String, templateId: String) {
+  val kept = readLastTemplates()
+  if (kept[catalogSystemId] == templateId) return
+  writeBrowserSetting(
+    LAST_TEMPLATES_KEY,
+    Json.encodeToString(kept + (catalogSystemId to templateId)),
+  )
+}
+
+@JsFun(
+  """(names) => {
+    const params = new URLSearchParams(globalThis.location.search);
+    const found = {};
+    names.split(',').forEach((name) => {
+      const value = params.get(name);
+      if (value !== null) found[name] = value;
+    });
+    return JSON.stringify(found);
+  }""",
+)
+private external fun readQueryValuesJson(names: String): String
+
+/** The New design form's choices as this page's address names them; see [NewDesignLink]. */
+internal fun newDesignLinkFromPage(): NewDesignLink = runCatching {
+  NewDesignLink.parse(
+    Json.decodeFromString<Map<String, String>>(
+      readQueryValuesJson(NewDesignLink.QUERY_NAMES.joinToString(",")),
+    ),
+  )
+}
+  .getOrDefault(NewDesignLink())
+
+/** Whether this page is the create-and-open route, `<base>new?…`. */
+internal fun onNewDesignRoute(): Boolean = isNewDesignRoute(locationPathname(), uiBuilderBasePath)
+
+@JsFun(
+  """(path, names, pairs) => {
+    const current = new URL(globalThis.location.href);
+    const next = new URL(current.toString());
+    next.pathname = path;
+    names.split(',').forEach((name) => next.searchParams.delete(name));
+    JSON.parse(pairs).forEach(([name, value]) => next.searchParams.set(name, value));
+    if (next.toString() !== current.toString()) {
+      globalThis.history.replaceState(globalThis.history.state, '', next.toString());
+    }
+  }""",
+)
+private external fun replaceNewDesignQuery(path: String, names: String, pairs: String)
+
+/**
+ * Puts the form's choices in the address bar of the home page, without a history entry, so a copied
+ * URL reopens the form as it is. Other query values (identity, `catalog`) are kept; a `/new` route
+ * that could not create is turned back into the home page.
+ */
+internal fun writeNewDesignLink(link: NewDesignLink) =
+  replaceNewDesignQuery(
+    uiBuilderBasePath,
+    NewDesignLink.QUERY_NAMES.joinToString(","),
+    Json.encodeToString(link.toQueryPairs().map { (name, value) -> listOf(name, value) }),
+  )
 
 /**
  * What the status line calls this session: live against the server, or this browser's own copy. A

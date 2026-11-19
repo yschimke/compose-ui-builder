@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class UiBuilderBasePathTest {
 
@@ -46,6 +48,7 @@ class UiBuilderBasePathTest {
         "/ui-builder/",
         "/ui-builder",
         "/ui-builder/designs",
+        "/ui-builder/new",
         "/ui-builder/d1/access",
         "/d1",
         "/",
@@ -58,9 +61,20 @@ class UiBuilderBasePathTest {
   fun `at the root a design is the first and only segment`() {
     assertEquals("d1", designIdFromUiBuilderPath("/d1", "/"))
     assertEquals("a b", designIdFromUiBuilderPath("/a%20b", "/"))
-    for (path in listOf("/", "/designs", "/d1/access", "/d1/history")) {
+    for (path in listOf("/", "/designs", "/new", "/d1/access", "/d1/history")) {
       assertEquals("", designIdFromUiBuilderPath(path, "/"), "for $path")
     }
+  }
+
+  @Test
+  fun `new is the create-and-open route under every base`() {
+    assertTrue(isNewDesignRoute("/new", "/"))
+    assertTrue(isNewDesignRoute("/new/", "/"))
+    assertTrue(isNewDesignRoute("/ui-builder/new", DEFAULT_UI_BUILDER_BASE_PATH))
+    for (path in listOf("/", "/news", "/new/x", "/ui-builder/new")) {
+      assertFalse(isNewDesignRoute(path, "/"), "for $path")
+    }
+    assertFalse(isNewDesignRoute("/new", DEFAULT_UI_BUILDER_BASE_PATH))
   }
 
   @Test

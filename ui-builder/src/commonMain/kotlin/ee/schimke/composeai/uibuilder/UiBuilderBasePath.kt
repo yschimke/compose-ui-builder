@@ -39,15 +39,30 @@ fun normalizeUiBuilderBasePath(raw: String?): String {
 
 /**
  * The design a page [pathname] names under [basePath], or `""` when it names none: exactly one
- * segment after the base, which is not the designs index. `/ui-builder/<id>` under the default
- * base, `/<id>` at the root.
+ * segment after the base, which is not the designs index or the [UI_BUILDER_NEW_SEGMENT] route.
+ * `/ui-builder/<id>` under the default base, `/<id>` at the root.
  */
 fun designIdFromUiBuilderPath(pathname: String, basePath: String): String {
-  if (!pathname.startsWith(basePath)) return ""
-  val segments = pathname.removePrefix(basePath).split('/').filter(String::isNotEmpty)
-  if (segments.size != 1 || segments[0] == UI_BUILDER_DESIGNS_SEGMENT) return ""
+  val segments = uiBuilderPageSegments(pathname, basePath) ?: return ""
+  if (
+    segments.size != 1 ||
+      segments[0] == UI_BUILDER_DESIGNS_SEGMENT ||
+      segments[0] == UI_BUILDER_NEW_SEGMENT
+  )
+    return ""
   return decodeUrlComponent(segments[0])
 }
+
+/**
+ * Whether [pathname] is the create-and-open route, `<base>new`: a bookmarkable "make me a new one
+ * of these", read with a [ee.schimke.composeai.uibuilder.editor.NewDesignLink] query.
+ */
+fun isNewDesignRoute(pathname: String, basePath: String): Boolean =
+  uiBuilderPageSegments(pathname, basePath) == listOf(UI_BUILDER_NEW_SEGMENT)
+
+private fun uiBuilderPageSegments(pathname: String, basePath: String): List<String>? =
+  if (!pathname.startsWith(basePath)) null
+  else pathname.removePrefix(basePath).split('/').filter(String::isNotEmpty)
 
 /** A page under [basePath], each of [segments] percent-encoded: `/ui-builder/<id>/access`. */
 fun uiBuilderPagePath(basePath: String, vararg segments: String): String =
@@ -55,3 +70,9 @@ fun uiBuilderPagePath(basePath: String, vararg segments: String): String =
 
 /** The designs index, under every base. */
 const val UI_BUILDER_DESIGNS_SEGMENT: String = "designs"
+
+/**
+ * The create-and-open route, under every base (`/new?kind=wff-watchface&template=…`). Reserved, as
+ * [UI_BUILDER_DESIGNS_SEGMENT] is: a design that is itself called `new` opens by `?designId=new`.
+ */
+const val UI_BUILDER_NEW_SEGMENT: String = "new"

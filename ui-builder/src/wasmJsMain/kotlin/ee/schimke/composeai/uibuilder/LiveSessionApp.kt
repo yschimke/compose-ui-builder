@@ -77,7 +77,9 @@ import ee.schimke.composeai.uibuilder.editor.agentChatContext
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
+import ee.schimke.composeai.uibuilder.editor.newDesignDefaultTitle
 import ee.schimke.composeai.uibuilder.editor.refusing
+import ee.schimke.composeai.uibuilder.editor.resolveNewDesignLink
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.typefacesFor
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
@@ -1198,6 +1200,7 @@ private fun LiveSessionApp(
   val createPublicDesign: NewDesignCallback? =
     if (localSession == null && config.canWrite && config.designVisibilitySupported) {
       { catalog, design, template, state, title ->
+        rememberLastTemplate(catalog, template)
         navigateToNewDesign(
           catalog,
           design,
@@ -1209,6 +1212,7 @@ private fun LiveSessionApp(
       }
     } else null
   val createDesign: NewDesignCallback = { catalogSystemId, designId, templateId, state, title ->
+    rememberLastTemplate(catalogSystemId, templateId)
     if (localSession == null && config.canWrite) {
       navigateToNewDesign(
         catalogSystemId,
@@ -1381,6 +1385,14 @@ private fun LiveSessionApp(
     browserStorageEstimate = BrowserLocalStorageBackend.estimate()
   }
 
+  // The address the home page opened with: `/new?…` creates from it at once, `/?new=…` reopens the
+  // form at those choices. Read once, before the form starts rewriting it.
+  val openingNewDesignLink = remember { newDesignLinkFromPage() }
+  val openedOnNewRoute = remember { onNewDesignRoute() }
+  var newRouteHandled by remember { mutableStateOf(false) }
+  // Whether `/new` went on to create: the page is then leaving, and the form must not move the
+  // address to the home page under it.
+  var newRouteCreating by remember { mutableStateOf(false) }
   if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
     val signIn =
       config.signInUrl
@@ -1389,6 +1401,31 @@ private fun LiveSessionApp(
     // A white-labelled host's templates are its catalog's, which only the server seeds: a design
     // kept in this browser would start from none of them, so ask for a sign-in instead.
     val signInToCreate = signIn?.takeIf { uiBuilderBrand != null }
+    // `/new?kind=wff-watchface&template=analog-watch-face`: make that design, named afresh, and
+    // open
+    // it. A link naming nothing on offer, or a visitor who must sign in first, lands on the form at
+    // whatever it did name, under the home page's own address.
+    if (openedOnNewRoute && !newRouteHandled) {
+      LaunchedEffect(newDesignCatalogs) {
+        newRouteHandled = true
+        val selection = resolveNewDesignLink(openingNewDesignLink, newDesignCatalogs)
+        if (selection == null || signInToCreate != null) {
+          writeNewDesignLink(openingNewDesignLink)
+          return@LaunchedEffect
+        }
+        newRouteCreating = true
+        val designId = NewDesignNames.random()
+        val create =
+          if (openingNewDesignLink.publicRead) createPublicDesign ?: createDesign else createDesign
+        create(
+          selection.catalogSystemId,
+          designId,
+          selection.templateId,
+          emptyList(),
+          openingNewDesignLink.title ?: newDesignDefaultTitle(designId),
+        )
+      }
+    }
     UiBuilderNewDesignScreen(
       catalogs = newDesignCatalogs,
       initialCatalogSystemId = activeCatalogSystemId,
@@ -1473,6 +1510,11 @@ private fun LiveSessionApp(
             .joinToString(" "),
       accountNoticeAction = signIn.takeIf { signInToCreate == null },
       signInToCreate = signInToCreate,
+      initialLink = openingNewDesignLink,
+      // Not while `/new` is deciding or creating: the form would move the address to the home page.
+      onLinkChange =
+        if (openedOnNewRoute && (!newRouteHandled || newRouteCreating)) null
+        else ::writeNewDesignLink,
       onCreate = createDesign,
       onCreatePublic = createPublicDesign,
     )
@@ -1724,6 +1766,7 @@ private fun LiveSessionApp(
         newDesignCatalogs = newDesignCatalogs,
         onCreateDesign = createDesign,
         onCreatePublicDesign = createPublicDesign,
+        newDesignTemplateFor = { catalogSystemId -> readLastTemplates()[catalogSystemId] },
         // Retitling keeps the id, so nothing navigates: the host's copies take the new title so a
         // later reconcile keeps it, as the editor's own state already has.
         onRenameDesign =

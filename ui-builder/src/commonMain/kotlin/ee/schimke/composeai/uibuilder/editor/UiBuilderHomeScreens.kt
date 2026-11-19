@@ -94,9 +94,12 @@ private fun rememberNewDesignFormState(
   initialCatalogSystemId: String,
   initialDesignId: String?,
   allowPublic: Boolean = false,
+  initialLink: NewDesignLink? = null,
 ): NewDesignFormState =
-  remember(catalogs, initialCatalogSystemId, initialDesignId, allowPublic) {
-    NewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId, allowPublic)
+  remember(catalogs, initialCatalogSystemId, initialDesignId, allowPublic, initialLink) {
+    NewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId, allowPublic).apply {
+      initialLink?.let(::restore)
+    }
   }
 
 /**
@@ -195,6 +198,35 @@ private class NewDesignFormState(
 
   fun isSelected(choice: NewDesignTypeChoice): Boolean =
     selectedCatalogId == choice.catalogSystemId && selectedGroup == choice.group
+
+  /**
+   * The choices as a [NewDesignLink], for the address bar: the device, catalog, group and template,
+   * plus a title only once the person typed one, and visibility only where public was chosen.
+   */
+  val link: NewDesignLink
+    get() =
+      newDesignLinkOf(
+        NewDesignSelection(selectedCatalogId, selectedGroup, selectedTemplate.id),
+        catalogs,
+        title = title,
+        publicRead = allowPublic && publicRead,
+      )
+
+  /**
+   * Takes up what [link] names among [catalogs]; anything it names that is not offered is ignored.
+   */
+  fun restore(link: NewDesignLink) {
+    resolveNewDesignLink(link, catalogs)?.let { selection ->
+      selectedCatalogId = selection.catalogSystemId
+      selectedGroup = selection.group
+      selectedTemplateId = selection.templateId
+    }
+    link.title?.let { title = it.take(MAX_DESIGN_TITLE_LENGTH) }
+    if (allowPublic && link.publicRead) {
+      publicRead = true
+      moreOptionsExpanded = true
+    }
+  }
 
   fun addVariable(): Boolean {
     if (!variableNameValid || !newDesignInitialValueValid(variableKind, variableInitial))
@@ -985,6 +1017,17 @@ fun UiBuilderNewDesignScreen(
   releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
   /** The pre-filled design name; null rolls a random one, while previews pass a fixed name. */
   initialDesignId: String? = null,
+  /**
+   * The form's choices as the page's address named them (`?new=watch&kind=…&template=…`), or null
+   * for the defaults. Whatever it names that is not on offer is ignored.
+   */
+  initialLink: NewDesignLink? = null,
+  /**
+   * Told the form's choices each time they change, so the host can keep its address bar in step
+   * (without a history entry each time) and a copied URL reopens the form as it is. Not called for
+   * the defaults a page opened at with no link, so a bare home URL stays bare.
+   */
+  onLinkChange: ((NewDesignLink) -> Unit)? = null,
   onCreatePublic: NewDesignCallback? = null,
   onCreate: NewDesignCallback,
 ) {
@@ -995,7 +1038,19 @@ fun UiBuilderNewDesignScreen(
       initialCatalogSystemId,
       initialDesignId,
       onCreatePublic != null,
+      initialLink,
     )
+  if (onLinkChange != null) {
+    val link = form.link
+    val opened = remember(form) { link }
+    // Once anything changed, every state is written, the defaults again included, so the address
+    // never keeps a choice the form no longer shows.
+    var written by remember(form) { mutableStateOf(initialLink?.isEmpty == false) }
+    LaunchedEffect(link) {
+      if (link != opened) written = true
+      if (written) onLinkChange(link)
+    }
+  }
   val create = if (form.publicRead) onCreatePublic ?: onCreate else onCreate
   val brand = LocalUiBuilderBrand.current
   MaterialTheme(colorScheme = EditorColors.branded(brand)) {

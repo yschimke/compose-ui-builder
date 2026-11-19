@@ -122,6 +122,11 @@ internal fun MobileEditorToolbar(
   canUndo: Boolean,
   canRedo: Boolean,
   onNewDesign: (() -> Unit)?,
+  /**
+   * One click to another design like this one ("New watch face"): the same catalog and starting
+   * point, a fresh name, opened at once. Null where the host cannot create.
+   */
+  newLikeThis: EditorNoticeAction? = null,
   onBrowseDesigns: (() -> Unit)? = null,
   /** Opens the rename dialog, or null where this design cannot be renamed here. */
   onRenameDesign: (() -> Unit)? = null,
@@ -236,6 +241,14 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("New design") {
                 expanded = false
                 onNewDesign()
+              },
+            )
+          }
+          if (newLikeThis != null) {
+            add(
+              UiBuilderMenuEntry.Action(newLikeThis.label) {
+                expanded = false
+                newLikeThis.onClick()
               },
             )
           }
@@ -557,6 +570,11 @@ internal fun EditorToolbar(
   collaborators: List<UiBuilderCollaborator>,
   onNewDesign: (() -> Unit)?,
   /**
+   * One click to another design like this one ("New watch face"): the same catalog and starting
+   * point, a fresh name, opened at once. Null where the host cannot create.
+   */
+  newLikeThis: EditorNoticeAction? = null,
+  /**
    * Leaves for the host's index of every design this account may open; null where there is none.
    */
   onBrowseDesigns: (() -> Unit)? = null,
@@ -724,6 +742,15 @@ internal fun EditorToolbar(
                 },
               )
             }
+          }
+          // In the menu rather than as another toolbar icon, so the toolbar keeps its width.
+          if (newLikeThis != null) {
+            add(
+              UiBuilderMenuEntry.Action(newLikeThis.label) {
+                overflowOpen = false
+                newLikeThis.onClick()
+              },
+            )
           }
           if (onRenameDesign != null) {
             add(

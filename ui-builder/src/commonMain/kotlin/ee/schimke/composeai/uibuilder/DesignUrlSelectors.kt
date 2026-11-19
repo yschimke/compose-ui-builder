@@ -83,11 +83,24 @@ fun parseDesignUrlSelectors(query: String?, fragment: String?): DesignUrlSelecto
 /**
  * Whether the path form can name this design. The service accepts any non-blank id, but the editor
  * and app shell only route this shape, so callers withhold Copy link rather than emit a broken
- * address.
+ * address. A segment the editor reserves for a page of its own ([UI_BUILDER_DESIGNS_SEGMENT],
+ * [UI_BUILDER_NEW_SEGMENT]) is not this design either: `/new` creates one.
  */
 fun isDesignUrlPathSafe(designId: String): Boolean =
   PATH_SAFE_ID.matches(designId) &&
+    designId !in RESERVED_PAGE_SEGMENTS &&
     designId.substringAfterLast('.', "").lowercase() !in DESIGN_PATH_ASSET_EXTENSIONS
+
+private val RESERVED_PAGE_SEGMENTS = setOf(UI_BUILDER_DESIGNS_SEGMENT, UI_BUILDER_NEW_SEGMENT)
+
+/**
+ * The page that opens [designId] under [basePath]: its path, `<base><id>`, or — for an id the path
+ * cannot name ([isDesignUrlPathSafe]) — the base with `?designId=<id>`, which the editor still
+ * reads. For navigation and the address bar; shared links stay path-only ([designUrlPath]).
+ */
+fun designPageAddress(basePath: String, designId: String): String =
+  if (isDesignUrlPathSafe(designId)) uiBuilderPagePath(basePath, designId)
+  else "$basePath?designId=${encodeUrlComponent(designId)}"
 
 private val PATH_SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 

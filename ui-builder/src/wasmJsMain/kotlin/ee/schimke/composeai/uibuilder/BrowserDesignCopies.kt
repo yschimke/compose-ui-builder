@@ -122,4 +122,4 @@ private external fun downloadText(filename: String, text: String)
 private external fun navigateToBrowserDesignAt(path: String)
 
 internal fun navigateToBrowserDesign(designId: String) =
-  navigateToBrowserDesignAt(uiBuilderPagePath(uiBuilderBasePath, designId))
+  navigateToBrowserDesignAt(designPageAddress(uiBuilderBasePath, designId))
