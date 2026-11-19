@@ -3838,6 +3838,103 @@ class PersistentUiBuilderServiceTest {
     assertEquals(1, stored.audit.count { it.kind == AuditKindV1.EXPORT })
   }
 
+  /**
+   * An export that finishes while the design's move to the trash is on its way to disk keeps its
+   * audit record: it lands on the trashed design, and the restore writes it.
+   */
+  @Test
+  fun `an export audit record held during a delete survives the restore`() {
+    val root = temporaryDirectory.resolve("v3")
+    val store = GatedStore(UiBuilderDesignStateStore.open(root).store)
+    val service = gatedService(root, store)
+    create(service)
+
+    store.blocked = true
+    val deleter = thread {
+      assertIs<UiBuilderServiceResponse.DesignDeleted>(
+        execute(service, owner, UiBuilderServiceRequest.DeleteDesign("design")),
+      )
+    }
+    try {
+      assertTrue(store.parked.tryAcquire(5, TimeUnit.SECONDS), "the delete reached the store")
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        ),
+      )
+    } finally {
+      store.blocked = false
+      deleter.join(5_000)
+    }
+    assertFalse(deleter.isAlive)
+    assertIs<UiBuilderServiceResponse.DesignRestored>(
+      execute(service, owner, UiBuilderServiceRequest.RestoreDesign("design")),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(1, stored.audit.count { it.kind == AuditKindV1.EXPORT })
+  }
+
+  /** Held records obey the same retention as committed ones, so none comes back after eviction. */
+  @Test
+  fun `held export audit records are bounded by audit retention`() {
+    val root = temporaryDirectory.resolve("v3")
+    val clock = MutableClock(1_000)
+    val service =
+      PersistentUiBuilderService(
+        designStore = UiBuilderDesignStateStore.open(root),
+        catalogs = TestCatalogs,
+        exporter = validExporter(),
+        clock = clock,
+        limits = UiBuilderServiceLimits(retainedAuditRecords = 2),
+      )
+    create(service)
+    repeat(3) {
+      clock.nowMillis += 1
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        ),
+      )
+    }
+    clock.nowMillis += 1
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
+        ),
+      ),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(2, stored.audit.size)
+    assertEquals(
+      listOf(AuditKindV1.EXPORT, AuditKindV1.COMMIT),
+      stored.audit.map { it.kind },
+      "the newest export, then the commit; the evicted exports stay evicted",
+    )
+    assertEquals(1_004L, stored.audit.last().atEpochMillis)
+    assertEquals(1_003L, stored.audit.first().atEpochMillis)
+
+    // And the next write does not bring an evicted export back.
+    clock.nowMillis += 1
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("edit", 1, SetPropertyMutationV1("node", "text", StringValueV1("edited"))),
+        ),
+      ),
+    )
+    val next = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(listOf(1_004L, 1_005L), next.audit.map { it.atEpochMillis })
+  }
+
   /** Writers still go one at a time: the second computes against what the first committed. */
   @Test
   fun `a second write waits for the write in flight`() {

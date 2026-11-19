@@ -437,21 +437,20 @@ public class PersistentUiBuilderService(
   private val runtime = linkedMapOf<String, RuntimeDesign>()
 
   /**
-   * What the store holds for a design whose value in [persisted] carries changes not yet written,
-   * by id; absent when the two agree. Only export audit records are held back like this: an export
-   * is a read, and a read must never wait on an fsync under [lock]. The held records reach disk
-   * with the design's next commit, which diffs against this value rather than against [persisted],
-   * so none is lost unless the process stops first. Written under [lock] only.
+   * What the store holds for a design whose value in [persisted] or [trash] carries changes not yet
+   * written, by id; absent when the two agree. Only export audit records are held back like this:
+   * an export is a read, and a read must never wait on an fsync under [lock]. The held records
+   * reach disk with the design's next commit, which diffs against this value rather than against
+   * the one in memory, so none is lost unless the process stops first. Written under [lock] only.
    */
   private val undurable = mutableMapOf<String, PersistedDesignV1>()
 
   /**
-   * The export audit records [holdUndurable] added to a design that no commit has written yet, by
-   * id. A writer may have read the design before they arrived — while an earlier commit of the same
-   * request had released [lock] — so [commitDesign] carries over any its value lacks rather than
-   * replace them. Written under [lock] only.
+   * Export audit records that finished while a writer had released [lock] for store I/O, in order.
+   * The writer may still hold values it read before they arrived and is about to install, so they
+   * are applied only once its request is done ([writing]). Written under [lock] only.
    */
-  private val heldAudit = mutableMapOf<String, List<AuditRecordV1>>()
+  private val auditDuringStoreIo = mutableListOf<Pair<String, AuditRecordV1>>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
   private val exportTaskRunner = BoundedUiBuilderExportTaskRunner(limits.maximumConcurrentExports)
@@ -766,15 +765,33 @@ public class PersistentUiBuilderService(
       else -> false
     }
 
-  /** Runs [block] as a writer: [writeLock], then [lock]. */
-  private inline fun <T> writing(block: () -> T): T = writeLock.withLock { lock.withLock(block) }
+  /**
+   * Runs [block] as a writer: [writeLock], then [lock]. Export audit records that arrived during
+   * its store I/O are applied once it is done, against whatever it installed.
+   */
+  private inline fun <T> writing(block: () -> T): T = writeLock.withLock {
+    lock.withLock {
+      try {
+        block()
+      } finally {
+        applyAuditDuringStoreIo()
+      }
+    }
+  }
+
+  private fun applyAuditDuringStoreIo() {
+    if (auditDuringStoreIo.isEmpty()) return
+    val arrived = auditDuringStoreIo.toList()
+    auditDuringStoreIo.clear()
+    arrived.forEach { (designId, audit) -> holdAudit(designId, audit) }
+  }
 
   /**
    * Runs store I/O for the caller, which holds [lock]. A writer releases [lock] for the duration,
-   * so reads proceed against the state committed before it; the caller re-reads anything a reader
-   * may have changed meanwhile (see [commitDesign]). Without [writeLock] the I/O stays under
-   * [lock], and is refused if a writer's is in flight: the store diffs against the value it last
-   * committed, so two interleaved commits would corrupt a design's journal.
+   * so reads proceed against the state committed before it. Reads change no persisted state
+   * meanwhile: an export's audit record waits in [auditDuringStoreIo]. Without [writeLock] the I/O
+   * stays under [lock], and is refused if a writer's is in flight: the store diffs against the
+   * value it last committed, so two interleaved commits would corrupt a design's journal.
    */
   private fun <T> storeIo(io: () -> T): T {
     if (!writeLock.isHeldByCurrentThread) {
@@ -3003,9 +3020,9 @@ public class PersistentUiBuilderService(
     val outcome = executeExport(pinned)
     if (outcome !is UiBuilderServiceResponse.Export) return outcome
     lock.withLock {
-      val design =
-        persisted.designs[request.designId]
-          ?: return UiBuilderServiceResponse.Error(notFound(request.designId))
+      if (request.designId !in persisted.designs) {
+        return UiBuilderServiceResponse.Error(notFound(request.designId))
+      }
       val audit =
         AuditRecordV1(
           kind = AuditKindV1.EXPORT,
@@ -3019,8 +3036,9 @@ public class PersistentUiBuilderService(
         )
       // Not committed: the store would force every part to disk under the lock, so every read of
       // every design would queue behind each thumbnail. The record is kept in memory and written
-      // with the design's next commit.
-      holdUndurable(request.designId, design, audit)
+      // with the design's next commit, or once the writer whose I/O is in flight is done.
+      if (storeIoInFlight) auditDuringStoreIo += request.designId to audit
+      else holdAudit(request.designId, audit)
     }
     return outcome
   }
@@ -4902,6 +4920,7 @@ public class PersistentUiBuilderService(
       if (designId in trash) {
         // Durable first: were the unlink to fail, the trash entry still holds the id.
         storeIo { store.remove(designId) }
+        undurable.remove(designId)
         trash.remove(designId)
         return@writing emptyList()
       }
@@ -4949,7 +4968,6 @@ public class PersistentUiBuilderService(
   ): List<SubscriberMailbox> {
     storeIo { store.commit(designId, undurable[designId] ?: design, trashed) }
     undurable.remove(designId)
-    heldAudit.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
     trash[designId] = trashed
     unusableDesigns.remove(designId)
@@ -4974,7 +4992,8 @@ public class PersistentUiBuilderService(
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design $designId already exists")
     }
     val restored = trashed.copy(trashedAtEpochMillis = null, trashedByActorId = null)
-    storeIo { store.commit(designId, trashed, restored) }
+    storeIo { store.commit(designId, undurable[designId] ?: trashed, restored) }
+    undurable.remove(designId)
     trash.remove(designId)
     persisted = persisted.copy(designs = persisted.designs + (designId to restored))
     runtime[designId] = RuntimeDesign()
@@ -5026,6 +5045,7 @@ public class PersistentUiBuilderService(
     expired.filter { designId ->
       try {
         storeIo { store.remove(designId) }
+        undurable.remove(designId)
         trash.remove(designId)
         true
       } catch (_: UiBuilderPersistenceException) {
@@ -5040,39 +5060,32 @@ public class PersistentUiBuilderService(
    */
   private fun commitDesign(designId: String, updated: PersistedDesignV1) {
     storeIo { store.commit(designId, undurable[designId] ?: persisted.designs[designId], updated) }
-    // Export audit records [updated] lacks were held after its writer read the design, before or
-    // during this I/O; they are carried onto the committed value, still held back from disk.
-    val committed = updated.audit.toSet()
-    val held = heldAudit[designId].orEmpty().filter { it !in committed }
-    if (held.isNotEmpty()) {
-      undurable[designId] = updated
-      heldAudit[designId] = held
-      val merged =
-        updated.copy(audit = (updated.audit + held).takeLast(limits.retainedAuditRecords))
-      persisted = persisted.copy(designs = persisted.designs + (designId to merged))
-      return
-    }
     undurable.remove(designId)
-    heldAudit.remove(designId)
     persisted = persisted.copy(designs = persisted.designs + (designId to updated))
   }
 
   /**
-   * Adds an export audit record to [design], the design's current value, in memory only,
-   * remembering what the store still holds so the next [commitDesign] writes the difference. Lost
-   * if the process stops first.
+   * Adds an export audit record to a design in memory only, live or in the trash, remembering what
+   * the store still holds so its next commit writes the difference. Lost if the process stops
+   * first, and dropped if the design is gone. Never called while a writer's store I/O is in flight.
    */
-  private fun holdUndurable(designId: String, design: PersistedDesignV1, audit: AuditRecordV1) {
-    undurable.putIfAbsent(designId, design)
-    heldAudit[designId] = heldAudit[designId].orEmpty() + audit
-    val updated = design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
-    persisted = persisted.copy(designs = persisted.designs + (designId to updated))
+  private fun holdAudit(designId: String, audit: AuditRecordV1) {
+    fun PersistedDesignV1.withAudit() =
+      copy(audit = (this.audit + audit).takeLast(limits.retainedAuditRecords))
+    persisted.designs[designId]?.let { design ->
+      undurable.putIfAbsent(designId, design)
+      persisted = persisted.copy(designs = persisted.designs + (designId to design.withAudit()))
+      return
+    }
+    trash[designId]?.let { design ->
+      undurable.putIfAbsent(designId, design)
+      trash[designId] = design.withAudit()
+    }
   }
 
   private fun removeDesign(designId: String) {
     storeIo { store.remove(designId) }
     undurable.remove(designId)
-    heldAudit.remove(designId)
     persisted = persisted.copy(designs = persisted.designs - designId)
   }
 
