@@ -836,8 +836,8 @@ private const val WEDGES = 240
  * The area a stroke of half-width [half] along the oval [centre] covers, from [start] for [sweep]
  * degrees (Compose's, which on an oval are its parametric angles, as `drawArc` takes them): each
  * edge is the centre line moved [half] along its normal. A [ring] is closed; an arc's ends are cut
- * square, as a butt cap is. [collapsed]: the stroke leaves no hole, so only the outer edge is kept
- * (an arc's out to its centre).
+ * square, as a butt cap is. [collapsed]: the stroke leaves no hole, so a ring keeps only its outer
+ * edge; an arc keeps both, for its square ends.
  */
 private fun offsetBand(
   centre: Rect,
@@ -878,9 +878,11 @@ private fun offsetBand(
       }
       return@apply
     }
+    // An arc keeps both edges even when the stroke fills its hole: its ends are cut square along
+    // the end normals, which on an oval miss the centre, so closing through the centre (a sector)
+    // would add or cut triangles at each end. A self-crossing inner edge stays filled.
     outer.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
-    if (collapsed) lineTo(centre.center.x, centre.center.y)
-    else (steps downTo 0).forEach { i -> edge(i, -1f).let { lineTo(it.x, it.y) } }
+    (steps downTo 0).forEach { i -> edge(i, -1f).let { lineTo(it.x, it.y) } }
     close()
   }
 }

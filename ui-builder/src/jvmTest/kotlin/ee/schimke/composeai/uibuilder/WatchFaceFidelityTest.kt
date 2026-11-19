@@ -327,6 +327,45 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a thick sweep-stroked elliptical arc keeps its square ends in the export`() {
+    // 400×160, stroke 80 (it fills the hole), 135° to 225°: the ends are cut along the oval's
+    // normals, not through its centre.
+    val face =
+      wffFace(
+        listOf("smile"),
+        paintedPart(
+            "smile",
+            mapOf(
+              "shape" to "arc",
+              "centerX" to 225,
+              "centerY" to 225,
+              "width" to 400,
+              "height" to 160,
+              "startAngle" to 135,
+              "endAngle" to 225,
+            ),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 80),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffffffff #ffffffff"/>""",
+          )
+          .joinToString(","),
+      )
+    val editor = renderWffFace(face)
+    val exported = export(face)
+    var differing = 0
+    var lit = 0
+    for (y in 0 until editor.height step 2) for (x in 0 until editor.width step 2) {
+      val a = editor.argb(x, y)[1]
+      val b = exported.argb(x, y)[1]
+      if (a > 128) lit++
+      if ((a > 128) != (b > 128)) differing++
+    }
+    assertTrue(lit > 500, "lit $lit")
+    assertTrue(differing < lit / 25, "$differing of $lit pixels differ")
+  }
+
+  @Test
   fun `a gradient in a stroke paints the stroke`() {
     val face =
       wffFace(
