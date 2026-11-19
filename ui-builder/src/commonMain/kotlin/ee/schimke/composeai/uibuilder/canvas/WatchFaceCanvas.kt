@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.RectangleShape
@@ -488,24 +489,30 @@ private fun wffPlace(
   val transformed = degrees != 0f || scaleX != 1f || scaleY != 1f
   return if (!transformed && alpha == 1f) box
   else if (drawnRotation)
-    box
-      .then(if (alpha == 1f) Modifier else Modifier.graphicsLayer { this.alpha = alpha })
-      .then(
-        if (!transformed) Modifier
-        else
-          Modifier.drawWithContent {
-            val pivot = Offset(size.width * pivotX, size.height * pivotY)
-            // As the layer would: scaled, then turned, both about the pivot.
-            withTransform(
-              {
-                rotate(degrees, pivot)
-                scale(scaleX, scaleY, pivot)
-              },
-            ) {
-              this@drawWithContent.drawContent()
-            }
-          },
-      )
+    box.then(
+      if (!transformed) Modifier.graphicsLayer { this.alpha = alpha }
+      else
+        Modifier.drawWithContent {
+          val pivot = Offset(size.width * pivotX, size.height * pivotY)
+          // As the layer would: scaled, then turned, both about the pivot. The opacity is applied
+          // inside the turn, over the node's own box there, as the editor's turned layer applies
+          // it; a layer outside the turn would cut off what the turn moves past the box.
+          withTransform(
+            {
+              rotate(degrees, pivot)
+              scale(scaleX, scaleY, pivot)
+            },
+          ) {
+            if (alpha < 1f)
+              drawContext.canvas.saveLayer(
+                Rect(Offset.Zero, size),
+                Paint().also { it.alpha = alpha },
+              )
+            this@drawWithContent.drawContent()
+            if (alpha < 1f) drawContext.canvas.restore()
+          }
+        },
+    )
   else
     box.graphicsLayer {
       rotationZ = degrees

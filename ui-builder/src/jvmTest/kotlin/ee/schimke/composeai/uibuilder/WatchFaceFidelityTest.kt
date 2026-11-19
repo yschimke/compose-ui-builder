@@ -633,6 +633,79 @@ class WatchFaceFidelityTest {
   }
 
   @Test
+  fun `a translucent turned part keeps the ends that leave its own box in the export`() {
+    // A 20×60 tick at 215..235 × 10..70, turned a quarter about its centre (225, 40) at half
+    // opacity: it lies across 195..255 × 30..50, mostly outside its own box.
+    val face =
+      wffFace(
+        listOf("tick"),
+        wffNode(
+          "tick",
+          "wff/part-draw",
+          mapOf(
+            "x" to 215,
+            "y" to 10,
+            "width" to 20,
+            "height" to 60,
+            "angle" to 90,
+            "alpha" to 128,
+            "pivotX" to 0.5,
+            "pivotY" to 0.5,
+            "shape" to "rectangle",
+            "fillColor" to "#ffffffff",
+          ),
+        ),
+      )
+    for ((name, bitmap) in listOf("editor" to renderWffFace(face), "export" to export(face))) {
+      for (x in listOf(200f, 250f)) {
+        val grey = bitmap.at(x, 40f)[1]
+        assertTrue(grey in 100..156, "$name at $x: ${bitmap.at(x, 40f)}")
+      }
+      assertEquals(listOf(255, 0, 0, 0), bitmap.at(225f, 20f), "$name unturned end")
+    }
+  }
+
+  @Test
+  fun `a thick sweep-stroked full-turn arc is exported as the editor strokes it`() {
+    // 300×300, stroke 180, all the way round: the centre line's radius (60) is under the half
+    // width (90). The editor's stroke (Skia's, as a device's is) leaves a hole of radius 30 at
+    // the centre, and the export has the same one.
+    val face =
+      wffFace(
+        listOf("disc"),
+        paintedPart(
+            "disc",
+            mapOf(
+              "shape" to "arc",
+              "centerX" to 225,
+              "centerY" to 225,
+              "width" to 300,
+              "height" to 300,
+              "startAngle" to 0,
+              "endAngle" to 360,
+            ),
+            "wff/stroke",
+            mapOf("color" to "#ffffffff", "thickness" to 180),
+            """<SweepGradient centerX="225" centerY="225" startAngle="0" endAngle="360" """ +
+              """colors="#ffffffff #ffffffff"/>""",
+          )
+          .joinToString(","),
+      )
+    for ((name, bitmap) in listOf("editor" to renderWffFace(face), "export" to export(face))) {
+      assertEquals(listOf(255, 0, 0, 0), bitmap.at(225f, 225f), "$name centre")
+      assertEquals(listOf(255, 255, 255, 255), bitmap.at(265f, 225f), "$name band")
+    }
+    val editor = renderWffFace(face)
+    val exported = export(face)
+    for (r in 0..160 step 5) for (degrees in 0 until 360 step 15) {
+      val (x, y) = polar(r.toFloat(), degrees.toFloat())
+      // Away from the edges, at 30 and 150, both sides agree.
+      if (abs(r - 30) <= 5 || abs(r - 150) <= 5) continue
+      assertEquals(editor.at(x, y)[1] > 128, exported.at(x, y)[1] > 128, "r $r at $degrees°")
+    }
+  }
+
+  @Test
   fun `a scaled group is drawn scaled by the editor and both exports`() {
     // The tick at 215..235 × 10..70, halved about the face's centre, lands at 220..230 × 117..147.
     val face =
