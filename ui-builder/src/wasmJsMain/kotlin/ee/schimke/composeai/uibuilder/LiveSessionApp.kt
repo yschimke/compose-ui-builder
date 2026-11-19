@@ -1591,6 +1591,7 @@ private fun LiveSessionApp(
     }
     // The Issues panel's Validate section, for a Watch Face Format design only. A design kept in
     // this browser, or one this caller may not edit, still gets the section, saying why not.
+    val watchFaceValidationScope = rememberCoroutineScope()
     val watchFaceValidation =
       remember(config.designId, config.localStorage, config.canWrite, loadedCatalog) {
         if (loadedCatalog.previewSurfaces.native.backend != WATCH_FACE_NATIVE_BACKEND) null
@@ -1605,6 +1606,7 @@ private fun LiveSessionApp(
                   else -> null
                 },
             ),
+            watchFaceValidationScope,
           )
       }
     CompositionLocalProvider(

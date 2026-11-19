@@ -1,11 +1,16 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A stored revision's watch-face validation, as
@@ -18,7 +23,7 @@ data class WatchFaceValidationReport(
   val designId: String = "",
   val revision: Long = 0,
   val digest: String = "",
-  val ranAt: String = "",
+  val ranAtEpochMillis: Long? = null,
   val schemaVersion: String? = null,
   val wffVersion: String? = null,
   val minimumWffVersion: String? = null,
@@ -47,6 +52,8 @@ data class WatchFaceValidationFinding(
   val line: Int? = null,
   val column: Int? = null,
   val path: String? = null,
+  /** What to do about it, when the validator knows (`downscale to 450x450`). */
+  val suggestion: String? = null,
 )
 
 @Serializable
@@ -56,6 +63,25 @@ data class WatchFaceMemoryFootprint(
   val maxAmbientBytes: Long = 0,
   val activeLimitBytes: Long = 0,
   val ambientLimitBytes: Long = 0,
+  /** What the footprint is made of, largest first where the server sorts; may be absent. */
+  val contributors: List<WatchFaceMemoryContributor> = emptyList(),
+)
+
+/** One asset's share of a memory footprint. Every field but [resource] is optional. */
+@Serializable
+data class WatchFaceMemoryContributor(
+  /** The resource as the exported WFF names it; matched against the design to select it. */
+  val resource: String,
+  val kind: String? = null,
+  val width: Int? = null,
+  val height: Int? = null,
+  val format: String? = null,
+  val decodedBytes: Long? = null,
+  val activeBytes: Long? = null,
+  val ambientBytes: Long? = null,
+  /** The largest size the face ever draws it at; past it, the asset carries pixels nobody sees. */
+  val renderedMaxWidth: Int? = null,
+  val renderedMaxHeight: Int? = null,
 )
 
 /** `GET /api/ui-builder/v1/designs/{id}/watch-installs`: where the owner's watches stand. */
@@ -73,7 +99,7 @@ data class WatchInstall(
   /** `activated`, `not_requested`, `manual` or `failed`. */
   val activation: String = "not_requested",
   val errorKind: String? = null,
-  val at: String = "",
+  val atEpochMillis: Long? = null,
 )
 
 const val WATCH_FACE_CHECK_PASSED = "passed"
@@ -87,8 +113,8 @@ const val WATCH_INSTALLS_UNAVAILABLE =
   "Pushing to a watch needs the same: a design stored on the server."
 
 /**
- * Lenient on purpose: a version may arrive as `4` or `"4"`, a time as millis or ISO text, and the
- * server may add fields before this editor knows them.
+ * Lenient on purpose: a version may arrive as `4` or `"4"`, and the server may add fields before
+ * this editor knows them.
  */
 val WatchFaceValidationJson = Json {
   ignoreUnknownKeys = true
@@ -156,7 +182,20 @@ sealed interface WatchInstallsView {
 }
 
 /** Holds the section's state across recompositions; one per open design. */
-class WatchFaceValidationController(private val host: WatchFaceValidationHost) {
+class WatchFaceValidationController(
+  private val host: WatchFaceValidationHost,
+  /**
+   * Where a run started from the panel lives: the open design's, not the panel's, so switching away
+   * from Issues (or scrolling the section out of its list) does not abandon a run the server is
+   * still doing.
+   */
+  private val scope: CoroutineScope,
+) {
+  /**
+   * Bumped by every read and run; an answer lands only if nothing newer started after it, so a slow
+   * read never replaces the result of a run that finished first.
+   */
+  private var generation = 0
   private val _validation =
     MutableStateFlow<WatchFaceValidationView>(
       host.unavailableReason?.let(WatchFaceValidationView::Unavailable)
@@ -176,9 +215,10 @@ class WatchFaceValidationController(private val host: WatchFaceValidationHost) {
   suspend fun load(revision: Long) {
     if (host.unavailableReason != null) return
     if (_validation.value is WatchFaceValidationView.Running) return
-    val answer = runCatching { host.latest(revision) }
-    // A run that started while the read was out wins: its answer is the newer one.
-    if (_validation.value is WatchFaceValidationView.Running) return
+    val mine = ++generation
+    val answer = attempt { host.latest(revision) }
+    // A run or read that started while this one was out wins: its answer is the newer one.
+    if (mine != generation) return
     _validation.value =
       answer.fold(
         onSuccess = { it.toView(previous = null) },
@@ -188,24 +228,31 @@ class WatchFaceValidationController(private val host: WatchFaceValidationHost) {
       )
   }
 
+  /** Starts a run in the design's scope; see [scope]. */
+  fun start(revision: Long) {
+    scope.launch { run(revision) }
+  }
+
   suspend fun run(revision: Long) {
     if (host.unavailableReason != null) return
+    val mine = ++generation
     val previous = _validation.value.report()
     _validation.value = WatchFaceValidationView.Running(previous)
+    val answer = attempt { host.run(revision) }
+    if (mine != generation) return
     _validation.value =
-      runCatching { host.run(revision) }
-        .fold(
-          onSuccess = { it.toView(previous) },
-          onFailure = {
-            WatchFaceValidationView.Failed(it.message ?: "the validation request failed", previous)
-          },
-        )
+      answer.fold(
+        onSuccess = { it.toView(previous) },
+        onFailure = {
+          WatchFaceValidationView.Failed(it.message ?: "the validation request failed", previous)
+        },
+      )
   }
 
   suspend fun loadInstalls() {
     if (host.unavailableReason != null) return
     _installs.value =
-      runCatching { host.installs() }
+      attempt { host.installs() }
         .fold(
           onSuccess = {
             when (it) {
@@ -218,6 +265,16 @@ class WatchFaceValidationController(private val host: WatchFaceValidationHost) {
           },
         )
   }
+
+  /** [runCatching] that lets cancellation through, so a cancelled request is never a failure. */
+  private inline fun <T> attempt(block: () -> T): Result<T> =
+    try {
+      Result.success(block())
+    } catch (cancelled: CancellationException) {
+      throw cancelled
+    } catch (failure: Throwable) {
+      Result.failure(failure)
+    }
 
   private fun WatchFaceValidationAnswer.toView(
     previous: WatchFaceValidationReport?,
@@ -243,3 +300,26 @@ fun WatchFaceValidationView.report(): WatchFaceValidationReport? =
  * for a Watch Face Format design, null everywhere else, where the Issues panel leaves it out.
  */
 val LocalWatchFaceValidation = staticCompositionLocalOf<WatchFaceValidationController?> { null }
+
+/**
+ * The design node a memory contributor stands for: one whose id is the resource, else the first
+ * whose `resource` property names it, with or without a path or extension. Null when nothing in the
+ * design does (a resource the exporter generated, say).
+ */
+fun UiBuilderDocument.nodeForResource(resource: String): String? {
+  if (resource in nodes) return resource
+  val bare = resource.substringAfterLast('/').substringBeforeLast('.')
+  return nodes.values
+    .firstOrNull { node ->
+      val named = (node.properties["resource"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+      named != null &&
+        (named == resource || named == bare || named.substringBeforeLast('.') == bare)
+    }
+    ?.id
+}
+
+/**
+ * Shows the exported source in whichever layout is drawn: the wide layout's Code dock or the
+ * compact layout's Code sheet. Provided by the editor; null outside it.
+ */
+internal val LocalShowGeneratedCode = staticCompositionLocalOf<(() -> Unit)?> { null }

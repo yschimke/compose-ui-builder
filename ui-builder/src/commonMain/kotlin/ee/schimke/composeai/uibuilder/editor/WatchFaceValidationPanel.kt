@@ -23,7 +23,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +33,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** How long the design must sit still before its revision's stored result is read. */
 private const val VALIDATION_READ_DEBOUNCE_MS = 800L
@@ -49,10 +47,10 @@ internal fun WatchFaceValidationSection(
   controller: WatchFaceValidationController,
   revision: Long,
   onOpenFinding: (WatchFaceValidationFinding) -> Unit,
+  onSelectContributor: (WatchFaceMemoryContributor) -> Unit = {},
 ) {
   val validation by controller.validation.collectAsState()
   val installs by controller.installs.collectAsState()
-  val scope = rememberCoroutineScope()
   LaunchedEffect(controller) { controller.loadInstalls() }
   LaunchedEffect(controller, revision) {
     delay(VALIDATION_READ_DEBOUNCE_MS)
@@ -62,8 +60,9 @@ internal fun WatchFaceValidationSection(
     validation = validation,
     installs = installs,
     revision = revision,
-    onRun = { scope.launch { controller.run(revision) } },
+    onRun = { controller.start(revision) },
     onOpenFinding = onOpenFinding,
+    onSelectContributor = onSelectContributor,
   )
 }
 
@@ -76,6 +75,7 @@ internal fun WatchFaceValidationPanel(
   onRun: () -> Unit,
   onOpenFinding: (WatchFaceValidationFinding) -> Unit,
   modifier: Modifier = Modifier,
+  onSelectContributor: (WatchFaceMemoryContributor) -> Unit = {},
 ) {
   // The first item of the Issues list, which scrolls as one; no inner scroll box of its own.
   Column(modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -83,7 +83,7 @@ internal fun WatchFaceValidationPanel(
     if (validation is WatchFaceValidationView.Unavailable) {
       UnavailableNote(validation.reason)
     } else {
-      ValidationBody(validation, revision, onRun, onOpenFinding)
+      ValidationBody(validation, revision, onRun, onOpenFinding, onSelectContributor)
     }
     HorizontalDivider(Modifier.padding(vertical = 10.dp))
     Text("On your watch", style = MaterialTheme.typography.labelLarge)
@@ -108,6 +108,7 @@ private fun ValidationBody(
   revision: Long,
   onRun: () -> Unit,
   onOpenFinding: (WatchFaceValidationFinding) -> Unit,
+  onSelectContributor: (WatchFaceMemoryContributor) -> Unit,
 ) {
   val running = validation is WatchFaceValidationView.Running
   val report = validation.report()
@@ -200,7 +201,7 @@ private fun ValidationBody(
   report.checks
     .firstOrNull { it.memory != null }
     ?.memory
-    ?.let { MemoryBars(it, Modifier.padding(top = 8.dp)) }
+    ?.let { MemoryBars(it, onSelectContributor, Modifier.padding(top = 8.dp)) }
   PushValidatorLine(report)
 }
 
@@ -220,7 +221,7 @@ private fun versionLine(report: WatchFaceValidationReport): String? =
       report.wffVersion?.let { "WFF $it" },
       report.minimumWffVersion?.let { "needs WFF $it or newer" },
       report.schemaVersion?.let { "schema $it" },
-      report.ranAt.takeIf { it.isNotBlank() && !it.all(Char::isDigit) }?.let { "ran $it" },
+      report.ranAtEpochMillis?.let { "ran ${formatEpochMillis(it)}" },
     )
     .takeIf { it.isNotEmpty() }
     ?.joinToString(" · ")
@@ -336,11 +337,25 @@ private fun FindingRow(
       fontFamily = FontFamily.Monospace,
       style = MaterialTheme.typography.labelSmall,
     )
+    finding.suggestion?.let { SuggestionLine(it) }
   }
 }
 
 @Composable
-private fun MemoryBars(memory: WatchFaceMemoryFootprint, modifier: Modifier = Modifier) {
+private fun SuggestionLine(suggestion: String) {
+  Text(
+    "→ ${suggestion.replaceFirstChar { it.uppercase() }}",
+    color = PASSED_GREEN,
+    style = MaterialTheme.typography.bodySmall,
+  )
+}
+
+@Composable
+private fun MemoryBars(
+  memory: WatchFaceMemoryFootprint,
+  onSelectContributor: (WatchFaceMemoryContributor) -> Unit,
+  modifier: Modifier = Modifier,
+) {
   Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
     Text(
       "Memory · ${formatBytes(memory.totalBytes)} of assets",
@@ -348,6 +363,88 @@ private fun MemoryBars(memory: WatchFaceMemoryFootprint, modifier: Modifier = Mo
     )
     MemoryBar("Active", memory.maxActiveBytes, memory.activeLimitBytes)
     MemoryBar("Ambient", memory.maxAmbientBytes, memory.ambientLimitBytes)
+    val top = topContributors(memory)
+    if (top.isNotEmpty()) {
+      Text(
+        "Largest contributors",
+        Modifier.padding(top = 4.dp),
+        style = MaterialTheme.typography.labelMedium,
+      )
+      top.forEach { ContributorRow(it, memory, onSelectContributor) }
+    }
+  }
+}
+
+/** How many contributors the section lists; the rest are the long tail nobody acts on first. */
+private const val TOP_CONTRIBUTORS = 5
+
+/** A contributor's weight against the active budget: what it costs while the face is awake. */
+private fun WatchFaceMemoryContributor.cost(): Long =
+  activeBytes ?: decodedBytes ?: ambientBytes ?: 0
+
+internal fun topContributors(memory: WatchFaceMemoryFootprint): List<WatchFaceMemoryContributor> =
+  memory.contributors.sortedByDescending { it.cost() }.take(TOP_CONTRIBUTORS)
+
+/**
+ * What to do about [this], worked out here when the server sends sizes: an asset stored larger than
+ * the face ever draws it is downscaled to the drawn size.
+ */
+internal fun WatchFaceMemoryContributor.suggestion(): String? {
+  val w = width ?: return null
+  val h = height ?: return null
+  val drawnW = renderedMaxWidth ?: return null
+  val drawnH = renderedMaxHeight ?: return null
+  if (w <= drawnW && h <= drawnH) return null
+  return "downscale to ${drawnW}x$drawnH"
+}
+
+@Composable
+private fun ContributorRow(
+  contributor: WatchFaceMemoryContributor,
+  memory: WatchFaceMemoryFootprint,
+  onSelectContributor: (WatchFaceMemoryContributor) -> Unit,
+) {
+  val cost = contributor.cost()
+  val share =
+    if (memory.activeLimitBytes > 0) (cost * 100 / memory.activeLimitBytes).toInt() else null
+  Column(
+    Modifier.fillMaxWidth()
+      .clip(RoundedCornerShape(4.dp))
+      .clickable(role = Role.Button) { onSelectContributor(contributor) }
+      .padding(vertical = 2.dp)
+      .semantics { contentDescription = "Select ${contributor.resource}" },
+  ) {
+    Row(Modifier.fillMaxWidth()) {
+      Text(
+        contributor.resource,
+        Modifier.weight(1f),
+        fontFamily = FontFamily.Monospace,
+        style = MaterialTheme.typography.bodySmall,
+      )
+      Text(
+        formatBytes(cost) + (share?.let { " · $it% of active" } ?: ""),
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+    val facts =
+      listOfNotNull(
+        contributor.kind,
+        contributor.format,
+        if (contributor.width != null && contributor.height != null)
+          "${contributor.width}x${contributor.height}"
+        else null,
+        if (contributor.renderedMaxWidth != null && contributor.renderedMaxHeight != null)
+          "drawn at ${contributor.renderedMaxWidth}x${contributor.renderedMaxHeight}"
+        else null,
+      )
+    if (facts.isNotEmpty()) {
+      Text(
+        facts.joinToString(" · "),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+    contributor.suggestion()?.let { SuggestionLine(it) }
   }
 }
 
@@ -506,3 +603,11 @@ private fun oneDecimal(value: Double): String {
   val tenths = kotlin.math.round(value * 10).toLong()
   return if (tenths % 10 == 0L) "${tenths / 10}" else "${tenths / 10}.${tenths % 10}"
 }
+
+/** `2026-11-19 09:42 UTC`, the minute a run finished, from the report's epoch millis. */
+@OptIn(kotlin.time.ExperimentalTime::class)
+internal fun formatEpochMillis(epochMillis: Long): String =
+  kotlin.time.Instant.fromEpochMilliseconds(epochMillis).toString().let {
+    // ISO-8601 in UTC: `2026-11-19T09:42:00Z` (seconds and fractions vary); keep to the minute.
+    it.take(16).replace('T', ' ') + " UTC"
+  }

@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.WATCH_INSTALLS_UNAVAILABLE
+import ee.schimke.composeai.uibuilder.editor.WatchFaceMemoryContributor
 import ee.schimke.composeai.uibuilder.editor.WatchFaceMemoryFootprint
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationCheck
 import ee.schimke.composeai.uibuilder.editor.WatchFaceValidationFinding
@@ -54,7 +55,7 @@ fun WatchFaceValidationFailuresPreview() {
   ValidationFrame(WatchFaceValidationView.Ran(failedReport), upToDateInstalls)
 }
 
-@Preview(widthDp = 320, heightDp = 780)
+@Preview(widthDp = 320, heightDp = 840)
 @Composable
 fun WatchFaceValidationMemoryOverLimitPreview() {
   ValidationFrame(WatchFaceValidationView.Ran(memoryOverReport), upToDateInstalls)
@@ -161,7 +162,8 @@ private val passedReport =
     designId = "preview-face",
     revision = 12,
     digest = "sha256:5f1c",
-    ranAt = "2026-11-19 09:42 UTC",
+    // 2026-11-19 09:42 UTC.
+    ranAtEpochMillis = 1_795_081_320_000,
     schemaVersion = "1.4.0",
     wffVersion = "4",
     minimumWffVersion = "2",
@@ -244,6 +246,51 @@ private val failedReport =
       ),
   )
 
+/** Largest first after sorting; the background is stored at twice the size the face draws it. */
+private val memoryContributors =
+  listOf(
+    WatchFaceMemoryContributor(
+      resource = "hand_seconds",
+      kind = "image",
+      width = 32,
+      height = 450,
+      format = "PNG",
+      activeBytes = 57_600,
+      ambientBytes = 0,
+      renderedMaxWidth = 32,
+      renderedMaxHeight = 450,
+    ),
+    WatchFaceMemoryContributor(
+      resource = "background",
+      kind = "image",
+      width = 900,
+      height = 900,
+      format = "PNG",
+      decodedBytes = 3_240_000,
+      activeBytes = 3_240_000,
+      ambientBytes = 3_240_000,
+      renderedMaxWidth = 450,
+      renderedMaxHeight = 450,
+    ),
+    WatchFaceMemoryContributor(
+      resource = "font_digits",
+      kind = "font",
+      activeBytes = 412_000,
+      ambientBytes = 412_000,
+    ),
+    WatchFaceMemoryContributor(
+      resource = "dial_numbers",
+      kind = "image",
+      width = 450,
+      height = 450,
+      format = "WEBP",
+      activeBytes = 810_000,
+      ambientBytes = 810_000,
+      renderedMaxWidth = 450,
+      renderedMaxHeight = 450,
+    ),
+  )
+
 private val memoryOverReport =
   passedReport.copy(
     passed = false,
@@ -259,10 +306,15 @@ private val memoryOverReport =
                   "error",
                   "Ambient mode needs 2.6 MB; the limit is 2 MB.",
                   path = "/WatchFace/Scene/Variant[@mode='AMBIENT']",
+                  suggestion = "downscale background.png to 450x450",
                 ),
               ),
             memory =
-              passedMemory.copy(maxActiveBytes = 11 * MB, maxAmbientBytes = 2 * MB + 600 * 1024),
+              passedMemory.copy(
+                maxActiveBytes = 11 * MB,
+                maxAmbientBytes = 2 * MB + 600 * 1024,
+                contributors = memoryContributors,
+              ),
           )
       },
   )
@@ -300,7 +352,7 @@ private val install =
     revisionPublished = 12,
     result = "installed",
     activation = "activated",
-    at = "2026-11-19T09:45:00Z",
+    atEpochMillis = 1_795_081_500_000,
   )
 
 private val upToDateInstalls = WatchInstallsView.Listed(listOf(install))

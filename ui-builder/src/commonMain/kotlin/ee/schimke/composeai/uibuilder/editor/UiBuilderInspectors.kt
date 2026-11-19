@@ -362,6 +362,7 @@ private fun InspectorBody(
       // A Watch Face Format design's server validation, above the advisory guidelines: it is
       // what a watch would refuse.
       val validation = LocalWatchFaceValidation.current
+      val showCode = LocalShowGeneratedCode.current
       ProblemsInspector(
         problems,
         dispatch,
@@ -371,10 +372,17 @@ private fun InspectorBody(
             {
               Column {
                 validation?.let {
-                  WatchFaceValidationSection(it, state.document.revision.toLong()) {
+                  WatchFaceValidationSection(
+                    controller = it,
+                    revision = state.document.revision.toLong(),
                     // The findings' lines are the exported XML's, which the Code pane shows.
-                    if (!state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
-                  }
+                    onOpenFinding = { showCode?.invoke() },
+                    onSelectContributor = { contributor ->
+                      state.document.nodeForResource(contributor.resource)?.let { nodeId ->
+                        dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+                      }
+                    },
+                  )
                 }
                 guidelines?.let {
                   GuidelinesSection(it, state.document, onTextInputFocusChanged, dispatch)
