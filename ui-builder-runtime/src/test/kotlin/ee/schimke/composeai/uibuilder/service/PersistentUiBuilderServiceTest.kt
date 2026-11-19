@@ -3690,6 +3690,75 @@ class PersistentUiBuilderServiceTest {
     )
   }
 
+  /**
+   * Production renders every thumbnail as an export. Each export's audit record used to commit,
+   * forcing every part to disk under the service lock, so on a saturated disk every read of every
+   * design queued behind thumbnails. The record now stays in memory and rides the next commit.
+   */
+  @Test
+  fun `an export audit record is not committed under the lock and lands with the next commit`() {
+    val root = temporaryDirectory.resolve("v3")
+    val store = GatedStore(UiBuilderDesignStateStore.open(root).store)
+    val service =
+      PersistentUiBuilderService(
+        designStore = UiBuilderDesignStateStore(store),
+        catalogs = TestCatalogs,
+        exporter = validExporter(),
+        clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+      )
+    create(service)
+    val commitsBefore = store.commits.get()
+
+    // A store whose every write would hang: an export and a read must still both answer.
+    store.blocked = true
+    val answered = CountDownLatch(1)
+    val reader = thread {
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        ),
+      )
+      snapshot(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", null)))
+      answered.countDown()
+    }
+    val prompt = answered.await(5, TimeUnit.SECONDS)
+    store.blocked = false
+    reader.join(5_000)
+    assertTrue(prompt, "an export and a read must not wait on the store")
+    assertEquals(commitsBefore, store.commits.get(), "an export must not commit")
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1())),
+        ),
+      ),
+    )
+    val stored = UiBuilderDesignStateStore.open(root).store.load().designs.getValue("design")
+    assertEquals(
+      listOf(AuditKindV1.EXPORT),
+      stored.audit.filter { it.kind == AuditKindV1.EXPORT }.map { it.kind },
+      "the held audit record reaches disk with the design's next commit",
+    )
+  }
+
+  /** Counts commits, and while [blocked] parks each one until it is cleared. */
+  private class GatedStore(private val delegate: UiBuilderDesignStore) :
+    UiBuilderDesignStore by delegate {
+    val commits = AtomicInteger()
+    @Volatile var blocked = false
+
+    override fun commit(designId: String, previous: PersistedDesignV1?, next: PersistedDesignV1) {
+      commits.incrementAndGet()
+      while (blocked) Thread.sleep(10)
+      delegate.commit(designId, previous, next)
+    }
+  }
+
   @Test
   fun `timed out exporter is interrupted and cannot write a success audit`() {
     val storage = MemoryStorage()
