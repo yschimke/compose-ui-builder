@@ -151,7 +151,7 @@ composeai-tools = "2.101.0"
 # The Watch Face Format model, parser, writer, schema and validator (yschimke/watchface-tools), used by
 # `:ui-builder-export` for the watch face target. 0.3.1 is the first release whose JVM jar targets Java 17,
 # this repository's server floor; its BOM names the module versions that belong together.
-watchface-tools = "0.4.0"
+watchface-tools = "0.8.0"
 # The Gradle plugin on a pin of its own. compose-ai-tools publishes only the modules a release
 # changed, plus the BOM, so the plugin can lag the BOM: 2.62.0 published the BOM and left the
 # plugin at 2.61.2. One shared pin then asks for a plugin version that does not exist.
