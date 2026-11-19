@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -26,11 +27,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.canvas.WffConfiguration
 import ee.schimke.composeai.uibuilder.canvas.WffConfigurationKind
@@ -55,8 +63,13 @@ internal fun WffConfigurationPicker(
 ) {
   val configurations = remember(document) { document.wffConfigurations() }
   if (configurations.isEmpty()) return
+  val scroll = rememberScrollState()
   Row(
-    modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
+    modifier
+      .testTag(WFF_CONFIGURATION_PICKER_TAG)
+      .scrollEdgeFades(scroll)
+      .horizontalScroll(scroll)
+      .padding(horizontal = 8.dp, vertical = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -96,6 +109,39 @@ internal fun WffConfigurationPicker(
     if (selection.isNotEmpty()) TextButton(onClick = onReset) { Text("Defaults") }
   }
 }
+
+/** The picker's test tag, for a test measuring where the canvas puts it. */
+internal const val WFF_CONFIGURATION_PICKER_TAG = "wff-configuration-picker"
+
+/**
+ * Fades whichever end of a horizontal scroller has more to scroll to, so a row cut off by its lane
+ * says so instead of ending mid-word.
+ */
+private fun Modifier.scrollEdgeFades(scroll: ScrollState, width: Dp = 24.dp): Modifier =
+  graphicsLayer {
+    compositingStrategy = CompositingStrategy.Offscreen
+  }
+  .drawWithContent {
+    drawContent()
+    val fade = width.toPx().coerceAtMost(size.width / 2)
+    if (scroll.canScrollBackward)
+      drawRect(
+        Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), endX = fade),
+        size = Size(fade, size.height),
+        blendMode = BlendMode.DstIn,
+      )
+    if (scroll.canScrollForward)
+      drawRect(
+        Brush.horizontalGradient(
+          listOf(Color.Black, Color.Transparent),
+          startX = size.width - fade,
+          endX = size.width,
+        ),
+        topLeft = Offset(size.width - fade, 0f),
+        size = Size(fade, size.height),
+        blendMode = BlendMode.DstIn,
+      )
+  }
 
 /** One colour theme: its colours as equal slices of a disc, outlined when it is the one shown. */
 @Composable

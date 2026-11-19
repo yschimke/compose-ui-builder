@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
@@ -80,12 +81,14 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -271,6 +274,11 @@ internal fun PinnedDesignCanvas(
   onCanvasViewChanged: ((EditorCanvasView) -> Unit)? = null,
   /** What the pop-out's header calls a node. */
   nodeLabel: (String) -> String = { it },
+  /**
+   * Editor-only controls that share the zoom bar's edge, such as a watch face's configuration
+   * picker; see [CanvasBottomChrome] for where they go.
+   */
+  bottomLane: (@Composable () -> Unit)? = null,
   contentAlignment: Alignment = Alignment.TopStart,
   modifier: Modifier = Modifier,
 ) {
@@ -1151,20 +1159,81 @@ internal fun PinnedDesignCanvas(
     }
     // Over the workspace rather than in the status bar, where every canvas tool puts it, and
     // outside the scrolling box so it stays put while the design under it moves.
-    CanvasZoomControls(
-      scale = scale,
-      fitting = zoom == null,
-      onZoomChanged = onZoomChanged,
-      deviceView = if (deviceViewOffered && onCanvasViewChanged != null) deviceView else null,
-      onDeviceViewChanged = { device ->
-        onCanvasViewChanged?.invoke(
-          if (device) EditorCanvasView.Device else EditorCanvasView.Extent,
+    CanvasBottomChrome(
+      lane = bottomLane,
+      controls = {
+        CanvasZoomControls(
+          scale = scale,
+          fitting = zoom == null,
+          onZoomChanged = onZoomChanged,
+          deviceView = if (deviceViewOffered && onCanvasViewChanged != null) deviceView else null,
+          onDeviceViewChanged = { device ->
+            onCanvasViewChanged?.invoke(
+              if (device) EditorCanvasView.Device else EditorCanvasView.Extent,
+            )
+          },
         )
       },
-      modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+      modifier = Modifier.align(Alignment.BottomEnd).fillMaxWidth().padding(12.dp),
     )
   }
 }
+
+/**
+ * The canvas's bottom edge: [controls] (the zoom bar) at the end, and [lane] beside it when the
+ * lane fits in what the bar leaves, or in a row of its own above the bar when it does not. Laid out
+ * together so the two can never overlap at any width; the lane is offered the whole width when it
+ * stacks, and scrolls itself past that. Hit-testing passes through the empty parts to the canvas.
+ */
+@Composable
+internal fun CanvasBottomChrome(
+  lane: (@Composable () -> Unit)?,
+  controls: @Composable () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Layout(
+    content = {
+      Box { controls() }
+      if (lane != null) Box { lane() }
+    },
+    modifier = modifier,
+  ) { measurables, constraints ->
+    val loose = constraints.copy(minWidth = 0, minHeight = 0)
+    val bar = measurables[0].measure(loose)
+    val laneMeasurable = measurables.getOrNull(1)
+    val gap = CANVAS_CHROME_GAP.roundToPx()
+    val beside = loose.maxWidth - bar.width - gap
+    val fitsBeside =
+      laneMeasurable != null && beside > 0 && laneMeasurable.maxIntrinsicWidth(bar.height) <= beside
+    val lanePlaceable =
+      laneMeasurable?.measure(if (fitsBeside) loose.copy(maxWidth = beside) else loose)
+    val width = if (constraints.hasBoundedWidth) constraints.maxWidth else bar.width
+    val height =
+      when {
+        lanePlaceable == null -> bar.height
+        fitsBeside -> maxOf(bar.height, lanePlaceable.height)
+        else -> bar.height + gap + lanePlaceable.height
+      }.coerceIn(constraints.minHeight, constraints.maxHeight)
+    layout(width, height) {
+      bar.placeRelative(width - bar.width, height - bar.height)
+      if (lanePlaceable != null) {
+        if (fitsBeside) {
+          // Centred in what the bar leaves, on the bar's own centre line.
+          val x = (beside - lanePlaceable.width) / 2
+          val y = height - bar.height / 2 - lanePlaceable.height / 2
+          lanePlaceable.placeRelative(x.coerceAtLeast(0), y.coerceAtLeast(0))
+        } else {
+          lanePlaceable.placeRelative((width - lanePlaceable.width) / 2, 0)
+        }
+      }
+    }
+  }
+}
+
+private val CANVAS_CHROME_GAP = 8.dp
+
+/** The zoom bar's test tag, for a test measuring what shares its edge. */
+internal const val CANVAS_ZOOM_CONTROLS_TAG = "canvas-zoom-controls"
 
 /**
  * The empty recommended slots, drawn as dashed "a component goes here" regions. The reducer
@@ -1886,7 +1955,7 @@ internal fun canvasZoomLabel(scale: Float, fitting: Boolean): String {
  * returns.
  */
 @Composable
-private fun CanvasZoomControls(
+internal fun CanvasZoomControls(
   scale: Float,
   fitting: Boolean,
   onZoomChanged: (Float?) -> Unit,
@@ -1896,7 +1965,7 @@ private fun CanvasZoomControls(
   modifier: Modifier = Modifier,
 ) {
   Surface(
-    modifier,
+    modifier.testTag(CANVAS_ZOOM_CONTROLS_TAG),
     shape = RoundedCornerShape(20.dp),
     color = MaterialTheme.colorScheme.surface,
     tonalElevation = 3.dp,
