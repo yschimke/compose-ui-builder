@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "78781c5e51126ad90033070a839b9a515f0ed6b7",
+    "generatedFrom": "8d1ad0da6c7dc35a1bc25429346c8a883c4f51ea",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -6843,6 +6843,13 @@
             "path": "renders/ui-builder/WatchFaceEditorPreviewClockPreview-f9741397.png",
             "versions": [
                 {
+                    "blob": "5bfd40570e300fe4f6f76be9928b97c9d3d617d2",
+                    "commit": "8d1ad0da6c7dc35a1bc25429346c8a883c4f51ea",
+                    "date": "2026-11-20T09:48:53Z",
+                    "sourceSha": "58f63051",
+                    "commits": 1
+                },
+                {
                     "blob": "ef5f56e6a6185966e82aed3110d76d3113ae401a",
                     "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
                     "date": "2026-11-20T02:32:16Z",
@@ -6850,7 +6857,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
