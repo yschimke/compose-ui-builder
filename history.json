@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+    "generatedFrom": "4c101462ffbd324b5ea2dfadecbde3e5bbcb1fc7",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -4223,6 +4223,13 @@
             "path": "renders/ui-builder/UiBuilderNewDesignFromLinkPreview-8a588154.png",
             "versions": [
                 {
+                    "blob": "19bdd181d0844449b9e03b9bbde66ef875cbe15a",
+                    "commit": "4c101462ffbd324b5ea2dfadecbde3e5bbcb1fc7",
+                    "date": "2026-11-20T03:02:20Z",
+                    "sourceSha": "8e04595f",
+                    "commits": 1
+                },
+                {
                     "blob": "20f3251a6556fa4de321966b52600dfc956cfab4",
                     "commit": "ba587ea82fd71c0777f5e8d8a8060bc56a9dff03",
                     "date": "2026-11-19T22:28:15Z",
@@ -4251,13 +4258,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 4,
+            "observations": 5,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPhonePreview": {
             "path": "renders/ui-builder/UiBuilderNewDesignPhonePreview-eff465c5.png",
             "versions": [
+                {
+                    "blob": "caa74843eec56b484532e3853482ae4d46af6901",
+                    "commit": "4c101462ffbd324b5ea2dfadecbde3e5bbcb1fc7",
+                    "date": "2026-11-20T03:02:20Z",
+                    "sourceSha": "8e04595f",
+                    "commits": 1
+                },
                 {
                     "blob": "c43d78ee5a70e32db09155a412eb33868239899b",
                     "commit": "ba587ea82fd71c0777f5e8d8a8060bc56a9dff03",
@@ -4371,13 +4385,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 16,
+            "observations": 17,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderNewDesignPreview": {
             "path": "renders/ui-builder/UiBuilderNewDesignPreview-7e7db055.png",
             "versions": [
+                {
+                    "blob": "30cfe7431a639239f53c352aaaf447b801a90f04",
+                    "commit": "4c101462ffbd324b5ea2dfadecbde3e5bbcb1fc7",
+                    "date": "2026-11-20T03:02:20Z",
+                    "sourceSha": "8e04595f",
+                    "commits": 1
+                },
                 {
                     "blob": "0418893a000d8bb4d742e21d13b19f0ecfacade9",
                     "commit": "ba587ea82fd71c0777f5e8d8a8060bc56a9dff03",
@@ -4568,7 +4589,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 27,
+            "observations": 28,
             "unstable": false,
             "flapCount": 0
         },
