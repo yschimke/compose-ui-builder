@@ -1140,7 +1140,7 @@
     "functionName": "WatchFaceEditorPreviewClockPreview",
     "module": "ui-builder",
     "renderBasename": "WatchFaceEditorPreviewClockPreview-f9741397.png",
-    "sha256": "4d336e6800710ba85f4f7e8efaa2ffeb3d6b3a9a0e6beae3b08326eda9a938ab",
+    "sha256": "6731f109b6136ba16068b5aad5900f7b133e214173fa88801f5ed7060b4db606",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceEditorClockPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceClippedComplicationPreview": {
