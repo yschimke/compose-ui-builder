@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.141.0](https://github.com/yschimke/compose-ui-builder/compare/v3.140.0...v3.141.0) (2026-11-20)
+
+
+### Features
+
+* add a Kobento component catalog and Kobento component JSON export ([#1279](https://github.com/yschimke/compose-ui-builder/issues/1279)) ([c5e4008](https://github.com/yschimke/compose-ui-builder/commit/c5e40080c2cb5707cb9cfdc5fa66001faca68087))
+* **ui-builder:** play WFF &lt;Animation&gt; in the canvas preview and add a scrubbable preview clock ([#1319](https://github.com/yschimke/compose-ui-builder/issues/1319)) ([af64c3e](https://github.com/yschimke/compose-ui-builder/commit/af64c3e4171b3763ad2a6ebb1df7e4d1a8e54813))
+
+
+### Bug Fixes
+
+* **deps:** update dependency androidx.compose.ui:ui-tooling-preview to v1.13.0 ([#1316](https://github.com/yschimke/compose-ui-builder/issues/1316)) ([135069d](https://github.com/yschimke/compose-ui-builder/commit/135069ddfda2b4d2e581e53e251fd6c1fc543257))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v3.9.0 ([#1321](https://github.com/yschimke/compose-ui-builder/issues/1321)) ([aa3a6d9](https://github.com/yschimke/compose-ui-builder/commit/aa3a6d9cc196df52b41fb21cd9817d5c8888bc28))
+
 ## [3.140.0](https://github.com/yschimke/compose-ui-builder/compare/v3.139.0...v3.140.0) (2026-11-19)
 
 
