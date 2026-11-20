@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.canvas
 
+import androidx.compose.runtime.compositionLocalOf
 import ee.schimke.composeai.uibuilder.export.UiExpressions
 import kotlin.math.PI
 import kotlin.math.abs
@@ -11,6 +12,28 @@ import kotlin.math.min
 import kotlin.math.roundToLong
 import kotlin.math.sin
 import kotlin.math.sqrt
+
+/**
+ * Simulated watch sensor and weather values for previewing WFF expressions and `<Condition>`
+ * branches without a physical watch. Defaults match the historical preview constants so existing
+ * captures stay unchanged until the author tweaks them.
+ */
+internal data class WffSimulatedState(
+  val batteryPercent: Int = 85,
+  val batteryCharging: Boolean = false,
+  val stepCount: Int = 6482,
+  val stepGoal: Int = 10000,
+  val heartRate: Int = 72,
+  val is24Hour: Boolean = true,
+  val unreadNotifications: Int = 3,
+  val weatherTemperature: Int = 21,
+  val weatherCondition: Int = 2,
+  val weatherConditionName: String = "Partly cloudy",
+  val weatherPrecipitationChance: Int = 15,
+)
+
+/** Editor-owned watch-state simulation shared by the canvas and Preview pane. */
+internal val LocalWffSimulatedState = compositionLocalOf { WffSimulatedState() }
 
 /**
  * The clock, the date and the complication data a Watch Face Format design is drawn against when
@@ -46,6 +69,8 @@ internal class WffPreviewContext(
    * in. Null unless a surface lets time run: an export, a `fixedTime` and ambient are settled.
    */
   val animationSeconds: Double? = null,
+  /** Simulated battery, steps, heart rate, 12/24h and weather sources. */
+  val simulated: WffSimulatedState = WffSimulatedState(),
 ) {
   /** 0 = Sunday. */
   val dayOfWeek: Int
@@ -63,6 +88,7 @@ internal class WffPreviewContext(
     tiltY: Double = this.tiltY,
     configuration: Map<String, String> = this.configuration,
     animationSeconds: Double? = this.animationSeconds,
+    simulated: WffSimulatedState = this.simulated,
   ) =
     WffPreviewContext(
       hour,
@@ -78,6 +104,7 @@ internal class WffPreviewContext(
       tiltY,
       configuration,
       animationSeconds,
+      simulated,
     )
 
   fun withComplication(sample: WffComplicationSample) = with(complication = sample)
@@ -87,6 +114,8 @@ internal class WffPreviewContext(
   fun withTilt(x: Double, y: Double) = with(tiltX = x, tiltY = y)
 
   fun withConfiguration(values: Map<String, String>) = with(configuration = values)
+
+  fun withSimulated(state: WffSimulatedState) = with(simulated = state)
 
   /** This date at [time] of day instead of its own. */
   fun at(time: WffScrubTime) =
@@ -104,6 +133,7 @@ internal class WffPreviewContext(
       tiltY,
       configuration,
       animationSeconds,
+      simulated,
     )
 
   /** This time with its animations at [seconds] into their playback, or settled for null. */
@@ -287,7 +317,9 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "COMPLICATION.MONOCHROMATIC_IMAGE",
     "COMPLICATION.SMALL_IMAGE",
     "COMPLICATION.PHOTO_IMAGE" -> s("[${name}]")
-    "BATTERY_PERCENT" -> n(85)
+    "BATTERY_PERCENT" -> n(simulated.batteryPercent)
+    "BATTERY_IS_LOW" -> n(if (simulated.batteryPercent <= 15) 1 else 0)
+    "BATTERY_CHARGING_STATUS" -> n(if (simulated.batteryCharging) 1 else 0)
     "ACCELEROMETER_IS_SUPPORTED" -> n(1)
     "ACCELEROMETER_ANGLE_X" -> WffValue.Num(tiltX)
     "ACCELEROMETER_ANGLE_Y" -> WffValue.Num(tiltY)
@@ -295,8 +327,22 @@ internal fun WffPreviewContext.source(name: String): WffValue? {
     "ACCELEROMETER_X" -> WffValue.Num(-WFF_GRAVITY * sin(tiltY * PI / 180))
     "ACCELEROMETER_Y" -> WffValue.Num(WFF_GRAVITY * sin(tiltX * PI / 180))
     "ACCELEROMETER_Z" -> WffValue.Num(WFF_GRAVITY * cos(tiltX * PI / 180) * cos(tiltY * PI / 180))
-    "STEP_COUNT" -> n(6482)
-    "HEART_RATE" -> n(72)
+    "STEP_COUNT" -> n(simulated.stepCount)
+    "STEP_GOAL" -> n(simulated.stepGoal)
+    "STEP_PERCENT" ->
+      n(
+        if (simulated.stepGoal > 0)
+          (simulated.stepCount * 100 / simulated.stepGoal).coerceIn(0, 100)
+        else 0,
+      )
+    "HEART_RATE" -> n(simulated.heartRate)
+    "IS_24_HOUR_MODE" -> n(if (simulated.is24Hour) 1 else 0)
+    "UNREAD_NOTIFICATION_COUNT" -> n(simulated.unreadNotifications)
+    "WEATHER.IS_AVAILABLE" -> n(1)
+    "WEATHER.TEMPERATURE" -> n(simulated.weatherTemperature)
+    "WEATHER.CONDITION" -> n(simulated.weatherCondition)
+    "WEATHER.CONDITION_NAME" -> s(simulated.weatherConditionName)
+    "WEATHER.CHANCE_OF_PRECIPITATION" -> n(simulated.weatherPrecipitationChance)
     else ->
       if (name.startsWith("CONFIGURATION."))
         configuration[name.removePrefix("CONFIGURATION.")]?.let { value ->

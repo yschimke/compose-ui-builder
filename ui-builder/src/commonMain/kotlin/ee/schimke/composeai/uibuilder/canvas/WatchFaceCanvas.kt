@@ -191,8 +191,20 @@ private fun WatchFaceNode(
       val swaying = remember(document.nodes) { document.wffHasGyro() }
       // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
       val settings = remember(document.nodes) { document.wffConfigurationValues() }
+      val simulated = if (forExport) WffSimulatedState() else LocalWffSimulatedState.current
       val clock =
-        remember(node, fixedTime, live, scrub, swaying, settings, plays, startedAt, playedOut) {
+        remember(
+          node,
+          fixedTime,
+          live,
+          scrub,
+          swaying,
+          settings,
+          simulated,
+          plays,
+          startedAt,
+          playedOut,
+        ) {
           val frozen = WffPreviewContext.of(node.string("previewTime"), fixedTime)
           val now =
             when {
@@ -212,6 +224,7 @@ private fun WatchFaceNode(
             }
           (if (swaying && (live != null || scrub != null)) now.swaying() else now)
             .withConfiguration(settings)
+            .withSimulated(simulated)
             .playingAt(played)
         }
       // Interactive and ambient cross-fade as the watch switches, rather than cut: while the
