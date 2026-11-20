@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.143.0](https://github.com/yschimke/compose-ui-builder/compare/v3.142.0...v3.143.0) (2026-11-20)
+
+
+### Features
+
+* **ui-builder:** fan out watch-face colour/layout variants and add live expression evaluator ([#1328](https://github.com/yschimke/compose-ui-builder/issues/1328)) ([58f6305](https://github.com/yschimke/compose-ui-builder/commit/58f630512122d7e12b7c8229e9f141471aa47868))
+
 ## [3.142.0](https://github.com/yschimke/compose-ui-builder/compare/v3.141.0...v3.142.0) (2026-11-20)
 
 
