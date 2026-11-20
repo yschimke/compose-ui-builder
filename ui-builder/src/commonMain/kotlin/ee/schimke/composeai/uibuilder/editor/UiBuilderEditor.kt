@@ -87,12 +87,15 @@ import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.LocalWffComplicationPicks
 import ee.schimke.composeai.uibuilder.canvas.LocalWffPreviewClock
+import ee.schimke.composeai.uibuilder.canvas.LocalWffSimulatedState
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.WffComplicationPick
 import ee.schimke.composeai.uibuilder.canvas.WffPreviewClockState
+import ee.schimke.composeai.uibuilder.canvas.WffSimulatedState
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.canvas.isWatchFace
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
+import ee.schimke.composeai.uibuilder.canvas.wffFlavors
 import ee.schimke.composeai.uibuilder.canvas.withWffAmbient
 import ee.schimke.composeai.uibuilder.canvas.withWffConfigurationSelection
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
@@ -1528,11 +1531,28 @@ fun UiBuilderEditor(
   // place of each `defaultValue`; the design and its exported XML keep the author's own.
   var wffConfigSelection by
     remember(state.document.id) { mutableStateOf(emptyMap<String, String>()) }
+  // Which axis the Watch Face Preview pane fans out across (null = default, i.e. all colour styles
+  // first), whether each pane is Interactive/Ambient/Both, complication fallback override, and
+  // simulated watch sensor state. All editor-only state; never written to the design.
+  var wffPreviewFanOut by remember(state.document.id) { mutableStateOf<WffPreviewFanOut?>(null) }
+  var wffPreviewAmbientMode by
+    remember(state.document.id) { mutableStateOf(WffPreviewAmbientMode.Interactive) }
+  var wffPreviewComplicationPreset by
+    remember(state.document.id) { mutableStateOf(WffPreviewComplicationPreset.Default) }
+  var wffSimulatedState by remember(state.document.id) { mutableStateOf(WffSimulatedState()) }
+  val tunedDocument =
+    remember(state.document, state.tunables, state.tunedValues) {
+      state.document.tuned(state.tunables, state.tunedValues)
+    }
   val drawnDocument =
-    remember(state.document, state.tunables, state.tunedValues, wffConfigSelection) {
-      state.document
-        .tuned(state.tunables, state.tunedValues)
-        .withWffConfigurationSelection(wffConfigSelection)
+    remember(tunedDocument, wffConfigSelection) {
+      tunedDocument.withWffConfigurationSelection(wffConfigSelection)
+    }
+  val effectiveWffFanOut =
+    remember(state.document, wffPreviewFanOut) {
+      val choices = state.document.wffPreviewFanOutChoices()
+      wffPreviewFanOut?.takeIf { selected -> choices.any { it.fanOut == selected } }
+        ?: state.document.defaultWffPreviewFanOut()
     }
   // The strip beside the design: claimed devices plus enabled unstored axes, computed from the
   // design.
@@ -1561,47 +1581,71 @@ fun UiBuilderEditor(
         (if (state.wearTilePane) drawnDocument.wearTilePanes() else emptyList())
     }
   // A dedicated Preview view has no canvas beside it, so its first frame is the current design. A
-  // widget's preview is its host panes, so the watches join those rather than the device strip.
+  // widget's preview is its host panes, so the watches join those rather than the device strip. A
+  // watch face normalizes to one display size and fans out across its colour styles / layouts /
+  // flavors / ambient mode instead of watch sizes.
   val previewPanes =
     remember(
+      tunedDocument,
       drawnDocument,
       variantPanes,
       availablePanes,
       catalogPanes,
       wearScreenPanes,
       documentBackedPreview,
+      effectiveWffFanOut,
+      wffPreviewAmbientMode,
+      wffConfigSelection,
     ) {
-      val widgetPanes =
-        if (wearScreenPanes.isEmpty()) null
-        else drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
-      when {
-        catalogPanes != null -> catalogPanes + variantPanes + wearScreenPanes
-        widgetPanes != null -> widgetPanes + wearScreenPanes
-        EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null ->
-          variantPanes + wearScreenPanes
-        else -> listOf(drawnDocument.currentFramePane()) + variantPanes + wearScreenPanes
+      if (tunedDocument.isWatchFace()) {
+        tunedDocument.watchFacePreviewPanes(
+          fanOut = effectiveWffFanOut,
+          ambientMode = wffPreviewAmbientMode,
+          baseSelection = wffConfigSelection,
+        )
+      } else {
+        val widgetPanes =
+          if (wearScreenPanes.isEmpty()) null
+          else drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
+        when {
+          catalogPanes != null -> catalogPanes + variantPanes + wearScreenPanes
+          widgetPanes != null -> widgetPanes + wearScreenPanes
+          EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null ->
+            variantPanes + wearScreenPanes
+          else -> listOf(drawnDocument.currentFramePane()) + variantPanes + wearScreenPanes
+        }
       }
-      // A watch face is shown Interactive and Ambient side by side.
-      .withWffAmbientTwins(drawnDocument)
     }
-  // Panes the preview draws as given: a catalog's, or any list with the watches in it, which a
-  // widget's own host panes would otherwise replace.
-  val exactPreviewPanes = catalogPanes != null || wearScreenPanes.isNotEmpty()
+  // Panes the preview draws as given: a catalog's, a watch face's variant fan-out, or any list
+  // with the watches in it, which a widget's own host panes would otherwise replace.
+  val exactPreviewPanes =
+    catalogPanes != null || wearScreenPanes.isNotEmpty() || drawnDocument.isWatchFace()
   // Compact preview tabs, one frame each (see [MobileViewTabs]), the design's own frame first.
-  // Widgets use their host shapes or grid sizes.
+  // Widgets use their host shapes or grid sizes; watch faces use their configuration fan-out.
   val mobilePreviewPanes =
     remember(
+      tunedDocument,
       drawnDocument,
       variantPanes,
       documentBackedPreview,
       catalog.previews,
       wearScreenPanes,
+      effectiveWffFanOut,
+      wffPreviewAmbientMode,
+      wffConfigSelection,
     ) {
-      val resizable = documentBackedPreview == null
-      ((drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
+      if (tunedDocument.isWatchFace()) {
+        tunedDocument.watchFacePreviewPanes(
+          fanOut = effectiveWffFanOut,
+          ambientMode = wffPreviewAmbientMode,
+          baseSelection = wffConfigSelection,
+        )
+      } else {
+        val resizable = documentBackedPreview == null
+        (drawnDocument.catalogPreviewPanes(catalog.previews, resizable)
           ?: drawnDocument.widgetPreviewPanes(resizable)
-          ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes)
-        .withWffAmbientTwins(drawnDocument)
+          ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)) + wearScreenPanes
+      }
     }
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
   // letting time run in a preview is not an edit to the design.
@@ -1639,27 +1683,69 @@ fun UiBuilderEditor(
     }
   }
   val previewPaneBody: @Composable (Modifier) -> Unit = { modifier ->
-    CompositionLocalProvider(LocalWffPreviewClock provides wffPreviewClock) {
+    val currentComplicationPicks = LocalWffComplicationPicks.current
+    val previewComplicationPicks =
+      remember(state.document, wffPreviewComplicationPreset, currentComplicationPicks) {
+        state.document.wffComplicationPresetPicks(
+          wffPreviewComplicationPreset,
+          currentComplicationPicks,
+        )
+      }
+    CompositionLocalProvider(
+      LocalWffPreviewClock provides wffPreviewClock,
+      LocalWffComplicationPicks provides previewComplicationPicks,
+    ) {
       previewPaneContent(modifier)
     }
   }
   val hasWffConfigurations =
-    remember(state.document) { state.document.wffConfigurations().isNotEmpty() }
+    remember(state.document) {
+      state.document.wffConfigurations().isNotEmpty() || state.document.wffFlavors().isNotEmpty()
+    }
   val wffPicker: @Composable (Modifier) -> Unit = { pickerModifier ->
     WffConfigurationPicker(
       document = state.document,
       selection = wffConfigSelection,
       onSelect = { id, option -> wffConfigSelection = wffConfigSelection + (id to option) },
       onReset = { wffConfigSelection = emptyMap() },
+      onSelectFlavor = { flavor ->
+        wffConfigSelection = wffConfigSelection + flavor.configurations
+      },
       modifier = pickerModifier,
     )
   }
-  // A watch face's configurations are picked above the preview, beside the time controls.
+  // A watch face's variant fan-out, non-fanned configurations, and clock controls sit above the
+  // preview.
   val previewPane: @Composable (Modifier) -> Unit = { modifier ->
     Column(modifier) {
-      wffPicker(Modifier.fillMaxWidth())
       if (drawnDocument.isWatchFace()) {
+        WffPreviewVariantControls(
+          document = state.document,
+          fanOut = effectiveWffFanOut,
+          onFanOutChange = { wffPreviewFanOut = it },
+          ambientMode = wffPreviewAmbientMode,
+          onAmbientModeChange = { wffPreviewAmbientMode = it },
+          complicationPreset = wffPreviewComplicationPreset,
+          onComplicationPresetChange = { wffPreviewComplicationPreset = it },
+          simulated = wffSimulatedState,
+          onSimulatedChange = { wffSimulatedState = it },
+          modifier = Modifier.fillMaxWidth(),
+        )
+        WffConfigurationPicker(
+          document = state.document,
+          selection = wffConfigSelection,
+          onSelect = { id, option -> wffConfigSelection = wffConfigSelection + (id to option) },
+          onReset = { wffConfigSelection = emptyMap() },
+          excludeConfigurationId = (effectiveWffFanOut as? WffPreviewFanOut.Configuration)?.id,
+          includeFlavors = effectiveWffFanOut != WffPreviewFanOut.Flavors,
+          onSelectFlavor = { flavor ->
+            wffConfigSelection = wffConfigSelection + flavor.configurations
+          },
+          modifier = Modifier.fillMaxWidth(),
+        )
         WffPreviewClockControls(wffPreviewClock, Modifier.padding(horizontal = 12.dp))
+      } else {
+        wffPicker(Modifier.fillMaxWidth())
       }
       previewPaneBody(Modifier.weight(1f).fillMaxWidth())
     }
@@ -2324,6 +2410,8 @@ fun UiBuilderEditor(
         status = onWatchFaceRuntimeStatus,
         // Only to say the session is behind: an edit never starts or repackages one.
         revision = state.document.revision,
+        configSelection = wffConfigSelection,
+        simulated = wffSimulatedState,
         modifier = paneModifier,
       )
     } else
@@ -2694,6 +2782,10 @@ fun UiBuilderEditor(
       },
     LocalHoveredCommentThread provides hoveredThread,
     LocalWffComplicationPicks provides complicationPicks,
+    LocalWffSimulatedState provides wffSimulatedState,
+    LocalWffPreviewClock provides wffPreviewClock,
+    ee.schimke.composeai.uibuilder.canvas.LocalWffConfigurationSelection provides
+      wffConfigSelection,
     LocalUiBuilderChrome provides chrome,
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,

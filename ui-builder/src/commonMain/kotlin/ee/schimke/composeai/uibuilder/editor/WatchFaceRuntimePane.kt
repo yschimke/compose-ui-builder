@@ -70,6 +70,11 @@ internal fun WatchFaceRuntimePane(
   /** The editor's current design revision; null where it has none, which disables staleness. */
   revision: Int? = null,
   autoRefreshWhenIdle: Boolean = false,
+  /** Active user configuration selections forwarded as `controls.config` without repackaging. */
+  configSelection: Map<String, String> = emptyMap(),
+  /** Simulated sensor state forwarded as `controls` patches without repackaging. */
+  simulated: ee.schimke.composeai.uibuilder.canvas.WffSimulatedState =
+    ee.schimke.composeai.uibuilder.canvas.WffSimulatedState(),
 ) {
   val scope = rememberCoroutineScope()
   val uriHandler = LocalUriHandler.current
@@ -195,6 +200,31 @@ internal fun WatchFaceRuntimePane(
     else it.elapsedMillis + received.elapsedNow().inWholeMilliseconds
   }
   val sendControls = outcome?.sendControls
+  // Forward editor configuration and simulated sensor changes over the already-open controls
+  // socket (no repackaging). Only sent once non-default or after a previous override.
+  var sentConfig by remember(outcome) { mutableStateOf(false) }
+  LaunchedEffect(outcome, configSelection) {
+    val send = sendControls ?: return@LaunchedEffect
+    if (!running || (!sentConfig && configSelection.isEmpty())) return@LaunchedEffect
+    sentConfig = true
+    val entries =
+      configSelection.entries.joinToString(",") { (k, v) ->
+        "${kotlinx.serialization.json.JsonPrimitive(k)}:${kotlinx.serialization.json.JsonPrimitive(v)}"
+      }
+    send("{\"config\":{$entries}}")
+  }
+  var sentSimulated by remember(outcome) { mutableStateOf(false) }
+  LaunchedEffect(outcome, simulated) {
+    val send = sendControls ?: return@LaunchedEffect
+    val defaultSimulated = ee.schimke.composeai.uibuilder.canvas.WffSimulatedState()
+    if (!running || (!sentSimulated && simulated == defaultSimulated)) return@LaunchedEffect
+    sentSimulated = true
+    send(
+      "{\"batteryPercent\":${simulated.batteryPercent}," +
+        "\"steps\":${simulated.stepCount}," +
+        "\"heartRate\":${simulated.heartRate}}",
+    )
+  }
   val disabled = watchFaceNativePreviewDisabled(unavailable) || outcome?.disabled == true
   WatchFaceRuntimePaneContent(
     modifier = modifier,

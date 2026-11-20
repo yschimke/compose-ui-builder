@@ -85,11 +85,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.canvas.LocalWffPreviewClock
+import ee.schimke.composeai.uibuilder.canvas.LocalWffSimulatedState
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.boardItemCount
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
 import ee.schimke.composeai.uibuilder.canvas.isBoard
+import ee.schimke.composeai.uibuilder.canvas.isWatchFace
 import ee.schimke.composeai.uibuilder.canvas.matchingDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.withDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.withScreenFields
@@ -633,6 +636,7 @@ private fun InspectorBody(
         ) {
           Box(Modifier.weight(1f)) {
             PropertyControl(
+              document = state.document,
               field = field,
               stateVariables =
                 if (field.name in bindableProperties) stateVariables else emptyList(),
@@ -925,6 +929,7 @@ private fun AddPropertyRow(field: EditorPropertyField, onAdd: () -> Unit) {
 
 @Composable
 private fun PropertyControl(
+  document: UiBuilderDocument,
   field: EditorPropertyField,
   stateVariables: List<String>,
   needsComparison: (String) -> Boolean,
@@ -963,7 +968,7 @@ private fun PropertyControl(
     ),
   ) {
     if (formula != null) {
-      FormulaEditor(field, formula, onTextInputFocusChanged, onFormula, onUnbind)
+      FormulaEditor(document, field, formula, onTextInputFocusChanged, onFormula, onUnbind)
     } else if (bound != null) {
       // No literal control for a bound property (edits would be refused); show the binding and how
       // to unbind.
@@ -973,7 +978,7 @@ private fun PropertyControl(
         StateBindMenu(field, stateVariables, needsComparison, onTextInputFocusChanged, onBind)
       }
       if (field.formulaAllowed) {
-        FormulaEditor(field, null, onTextInputFocusChanged, onFormula, onUnbind = null)
+        FormulaEditor(document, field, null, onTextInputFocusChanged, onFormula, onUnbind = null)
       }
       // A text's axes and features are offered from the face, with the property's text field below
       // for a whole value.
@@ -993,6 +998,7 @@ private fun PropertyControl(
           else EnumPropertyControl(field, commit)
         EditorPropertyControl.Number ->
           DraftPropertyControl(
+            document,
             field,
             onTextInputFocusChanged,
             draft,
@@ -1003,6 +1009,7 @@ private fun PropertyControl(
         EditorPropertyControl.Color ->
           ColorPropertyControl(field, commit, contrastOf, recentColours) {
             DraftPropertyControl(
+              document,
               field,
               onTextInputFocusChanged,
               draft,
@@ -1013,6 +1020,7 @@ private fun PropertyControl(
           }
         EditorPropertyControl.Text ->
           DraftPropertyControl(
+            document,
             field,
             onTextInputFocusChanged,
             draft,
@@ -1116,6 +1124,7 @@ private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
  */
 @Composable
 private fun FormulaEditor(
+  document: UiBuilderDocument,
   field: EditorPropertyField,
   current: String?,
   onTextInputFocusChanged: (Boolean) -> Unit,
@@ -1135,6 +1144,8 @@ private fun FormulaEditor(
     )
     return
   }
+  val evaluation =
+    remember(document, text, field.label) { evaluateLiveFormula(document, text, field.label) }
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Box(Modifier.weight(1f)) {
       SearchField(
@@ -1164,6 +1175,7 @@ private fun FormulaEditor(
       )
     }
   }
+  LiveExpressionReadout(evaluation, field.label)
 }
 
 /**
@@ -1240,6 +1252,7 @@ private fun StateBindMenu(
 
 @Composable
 private fun DraftPropertyControl(
+  document: UiBuilderDocument,
   field: EditorPropertyField,
   onTextInputFocusChanged: (Boolean) -> Unit,
   draft: InspectorPropertyDraft?,
@@ -1305,6 +1318,31 @@ private fun DraftPropertyControl(
         ),
       )
     }
+  }
+  if (document.isWatchFace()) {
+    val simulated = LocalWffSimulatedState.current
+    val scrubbed = LocalWffPreviewClock.current?.scrubbed
+    val configSelection =
+      ee.schimke.composeai.uibuilder.canvas.LocalWffConfigurationSelection.current
+    val fixedTime = (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+    val hasExpression = value.contains('[') && value.contains(']')
+    val liveClock =
+      ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock(
+        continuous = false,
+        enabled = hasExpression && fixedTime.isBlank() && scrubbed == null,
+      )
+    val evaluation =
+      remember(document, value, simulated, scrubbed, configSelection, liveClock) {
+        evaluateLiveWffProperty(
+          document = document,
+          raw = value,
+          simulated = simulated,
+          scrubbedTime = scrubbed,
+          configurationSelection = configSelection,
+          liveClock = liveClock,
+        )
+      }
+    LiveExpressionReadout(evaluation, field.label)
   }
   if (dirty) {
     val status =
@@ -1792,6 +1830,17 @@ private fun ScreenEnvironmentInspector(
   // is only one way to fill. See
   // [`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md).
   Text("Frame", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+  if (platform == UiBuilderCatalogPlatform.WATCH_FACE || document.isWatchFace()) {
+    Text(
+      "Watch Face Format scales its normalized Scene canvas (width × height on the root Scene " +
+        "node) uniformly to every watch display, so separate watch sizes are not needed. Use the " +
+        "Preview pane to compare colour styles, layouts, flavors, and ambient mode side by side.",
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+      modifier = Modifier.padding(top = 6.dp),
+    )
+    return
+  }
   Text(
     "What the design is measured in. Applies to the complete render, never an individual component.",
     color = MaterialTheme.colorScheme.onSurfaceVariant,

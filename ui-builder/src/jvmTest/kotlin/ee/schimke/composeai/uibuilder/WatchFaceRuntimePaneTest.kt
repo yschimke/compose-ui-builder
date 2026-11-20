@@ -574,4 +574,41 @@ class WatchFaceRuntimePaneTest {
       onNodeWithContentDescription("Native preview is turned off").assertExists()
       onNodeWithText("Reload with the current design").assertDoesNotExist()
     }
+
+  @Test
+  fun `config selection and simulated state forward over sendControls without restarting`() =
+    runDesktopComposeUiTest(width = 420, height = 360) {
+      val sent = mutableListOf<String>()
+      var starts = 0
+      setContent {
+        MaterialTheme {
+          Box(Modifier.size(420.dp, 360.dp)) {
+            WatchFaceRuntimePane(
+              wffXml = { "<WatchFace/>" },
+              start = {
+                starts++
+                UiBuilderWatchFaceStart(sendControls = { sent += it })
+              },
+              status = { null },
+              configSelection = mapOf("theme" to "amber"),
+              simulated =
+                ee.schimke.composeai.uibuilder.canvas.WffSimulatedState(
+                  batteryPercent = 40,
+                  stepCount = 3200,
+                  heartRate = 95,
+                ),
+            )
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(1, starts)
+      assertEquals(
+        listOf(
+          """{"config":{"theme":"amber"}}""",
+          """{"batteryPercent":40,"steps":3200,"heartRate":95}""",
+        ),
+        sent,
+      )
+    }
 }

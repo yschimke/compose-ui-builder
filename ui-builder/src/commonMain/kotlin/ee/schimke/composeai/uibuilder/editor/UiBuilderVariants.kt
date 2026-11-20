@@ -2,8 +2,12 @@ package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvas.WffConfigurationKind
 import ee.schimke.composeai.uibuilder.canvas.isWatchFace
+import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
+import ee.schimke.composeai.uibuilder.canvas.wffFlavors
 import ee.schimke.composeai.uibuilder.canvas.withWffAmbient
+import ee.schimke.composeai.uibuilder.canvas.withWffConfigurationSelection
 import ee.schimke.composeai.uibuilder.capability.CatalogPreview
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetGrid
@@ -150,7 +154,7 @@ internal const val WEAR_SCREEN_PANE_ID_PREFIX = "preview-wear-screen-"
  * already a watch, so it gets none.
  */
 fun UiBuilderDocument.wearScreenPanes(): List<UiBuilderVariantPane> {
-  if (isWearScreen()) return emptyList()
+  if (isWearScreen() || isWatchFace()) return emptyList()
   val own = wearWidgetScaffoldSize()
   val sizes =
     when {
@@ -493,11 +497,167 @@ fun UiBuilderDocument.wearTilePanes(): List<UiBuilderVariantPane> {
 /** Whether [wearTilePanes] has a pane for this design, so the toggle is worth offering. */
 fun UiBuilderDocument.offersWearTilePane(): Boolean =
   !isWearScreen() &&
+    !isWatchFace() &&
     (wearWidgetScaffoldSize() != WearWidgetScaffoldSize.Small ||
       AdaptiveWearWidget.isAdaptive(this))
 
 /** The id of the Pixel Watch tile-compat pane; see [wearTilePanes]. */
 internal const val WEAR_TILE_PANE_ID = "preview-widget-tile"
+
+/**
+ * Which axis the Watch Face Format Preview pane fans out across at once: all options of a declared
+ * `<ColorConfiguration>`, `<ListConfiguration>`, or `<BooleanConfiguration>`, all declared
+ * `<Flavors>`, or Interactive vs Ambient. Watch sizes are never fanned out because WFF normalizes
+ * its scene canvas to a single display coordinate space.
+ */
+internal sealed interface WffPreviewFanOut {
+  data class Configuration(val id: String) : WffPreviewFanOut
+
+  data object Flavors : WffPreviewFanOut
+
+  data object Ambient : WffPreviewFanOut
+}
+
+/** Whether each watch-face Preview pane is drawn Interactive, Ambient, or both side by side. */
+internal enum class WffPreviewAmbientMode(val label: String) {
+  Interactive("Interactive"),
+  Ambient("Ambient"),
+  Both("Both"),
+}
+
+/** One entry in the Watch Face Format Preview pane's "Compare" selector. */
+internal data class WffPreviewFanOutChoice(val fanOut: WffPreviewFanOut, val label: String)
+
+/**
+ * Every comparison axis this watch face supports in the Preview pane, in priority order: colour
+ * styles first (the default), then layout/list configurations, flavors, boolean switches, and
+ * Interactive & Ambient.
+ */
+internal fun UiBuilderDocument.wffPreviewFanOutChoices(): List<WffPreviewFanOutChoice> {
+  if (!isWatchFace()) return emptyList()
+  val configs = wffConfigurations()
+  val colors =
+    configs
+      .filter { it.kind == WffConfigurationKind.COLOR && it.options.isNotEmpty() }
+      .map { WffPreviewFanOutChoice(WffPreviewFanOut.Configuration(it.id), it.displayName) }
+  val lists =
+    configs
+      .filter { it.kind == WffConfigurationKind.LIST && it.options.isNotEmpty() }
+      .map { WffPreviewFanOutChoice(WffPreviewFanOut.Configuration(it.id), it.displayName) }
+  val flavors =
+    if (wffFlavors().isNotEmpty())
+      listOf(WffPreviewFanOutChoice(WffPreviewFanOut.Flavors, "Flavors"))
+    else emptyList()
+  val booleans =
+    configs
+      .filter { it.kind == WffConfigurationKind.BOOLEAN }
+      .map { WffPreviewFanOutChoice(WffPreviewFanOut.Configuration(it.id), it.displayName) }
+  return colors +
+    lists +
+    flavors +
+    booleans +
+    WffPreviewFanOutChoice(WffPreviewFanOut.Ambient, "Interactive & Ambient")
+}
+
+/**
+ * The Preview pane's default fan-out for a watch face: all colour styles of the first
+ * `<ColorConfiguration>` if one exists, else the first `<ListConfiguration>`, else `<Flavors>`,
+ * else the first `<BooleanConfiguration>`, else Interactive & Ambient.
+ */
+internal fun UiBuilderDocument.defaultWffPreviewFanOut(): WffPreviewFanOut =
+  wffPreviewFanOutChoices().firstOrNull()?.fanOut ?: WffPreviewFanOut.Ambient
+
+/**
+ * The Preview panes for a Watch Face Format design at one normalized watch display frame (ignoring
+ * `exportDevices` and Compose `EditorVariantAxis`es): all colour styles by default, or whichever
+ * configuration/flavor/ambient axis [fanOut] selects, combined with [baseSelection] for every other
+ * configuration and [ambientMode] for Interactive/Ambient rendering.
+ */
+internal fun UiBuilderDocument.watchFacePreviewPanes(
+  fanOut: WffPreviewFanOut = defaultWffPreviewFanOut(),
+  ambientMode: WffPreviewAmbientMode = WffPreviewAmbientMode.Interactive,
+  baseSelection: Map<String, String> = emptyMap(),
+): List<UiBuilderVariantPane> {
+  if (!isWatchFace()) return emptyList()
+  val settings = screenEnvironmentSettings()
+  val width = settings.widthDp.toFloat()
+  val height = settings.heightDp.toFloat()
+  val configs = wffConfigurations()
+  val flavors = wffFlavors()
+
+  // Resolve a possibly stale fanOut (e.g. a configuration was deleted) back to the default.
+  val effectiveFanOut =
+    when (fanOut) {
+      is WffPreviewFanOut.Configuration ->
+        if (configs.any { it.id == fanOut.id && it.options.isNotEmpty() }) fanOut
+        else defaultWffPreviewFanOut()
+      WffPreviewFanOut.Flavors -> if (flavors.isNotEmpty()) fanOut else defaultWffPreviewFanOut()
+      WffPreviewFanOut.Ambient -> fanOut
+    }
+
+  if (effectiveFanOut == WffPreviewFanOut.Ambient) {
+    val base = withWffConfigurationSelection(baseSelection)
+    return listOf(
+      UiBuilderVariantPane(
+        id = "$WFF_PREVIEW_PANE_ID_PREFIX-interactive",
+        label = "Interactive",
+        widthDp = width,
+        heightDp = height,
+        document = base.withWffAmbient(false),
+      ),
+      UiBuilderVariantPane(
+        id = "$WFF_PREVIEW_PANE_ID_PREFIX-interactive$WFF_AMBIENT_PANE_ID_SUFFIX",
+        label = "Ambient",
+        widthDp = width,
+        heightDp = height,
+        document = base.withWffAmbient(true),
+      ),
+    )
+  }
+
+  val basePanes =
+    when (effectiveFanOut) {
+      is WffPreviewFanOut.Configuration -> {
+        val config = configs.first { it.id == effectiveFanOut.id }
+        config.options.map { option ->
+          UiBuilderVariantPane(
+            id = "$WFF_PREVIEW_PANE_ID_PREFIX-config-${config.id}-${option.id}",
+            label = option.displayName,
+            widthDp = width,
+            heightDp = height,
+            document = withWffConfigurationSelection(baseSelection + (config.id to option.id)),
+          )
+        }
+      }
+      WffPreviewFanOut.Flavors ->
+        flavors.map { flavor ->
+          UiBuilderVariantPane(
+            id = "$WFF_PREVIEW_PANE_ID_PREFIX-flavor-${flavor.id}",
+            label = flavor.displayName,
+            widthDp = width,
+            heightDp = height,
+            document = withWffConfigurationSelection(baseSelection + flavor.configurations),
+          )
+        }
+      WffPreviewFanOut.Ambient -> emptyList()
+    }
+
+  return when (ambientMode) {
+    WffPreviewAmbientMode.Interactive ->
+      basePanes.map { it.copy(document = it.document.withWffAmbient(false)) }
+    WffPreviewAmbientMode.Ambient ->
+      basePanes.map {
+        it.copy(
+          id = it.id + WFF_AMBIENT_PANE_ID_SUFFIX,
+          label = "${it.label} · Ambient",
+          document = it.document.withWffAmbient(true),
+        )
+      }
+    WffPreviewAmbientMode.Both -> basePanes.withWffAmbientTwins(this)
+  }
+}
+
+private const val WFF_PREVIEW_PANE_ID_PREFIX = "preview-wff"
 
 /**
  * A compact tab's label: a device or the design's own frame by name alone (the pane repeats the

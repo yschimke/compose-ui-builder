@@ -74,7 +74,7 @@ class WffPreviewExpressionsTest {
 
   @Test
   fun `a parameter that cannot be computed prints a placeholder, never a percent sign`() {
-    assertEquals("--", fillWffTemplate("%s", listOf("[WEATHER.TEMPERATURE]"), context))
+    assertEquals("--", fillWffTemplate("%s", listOf("[UNKNOWN.SOURCE]"), context))
     assertEquals("--", fillWffTemplate("%s", emptyList(), context))
     assertEquals("Thu --", fillWffTemplate("%s %d", listOf("[DAY_OF_WEEK_S]", "[X]"), context))
   }

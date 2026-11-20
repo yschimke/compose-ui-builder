@@ -97,6 +97,52 @@ internal fun UiBuilderDocument.wffConfigurations(): List<WffConfiguration> {
 }
 
 /**
+ * One `<Flavor>` preset: its id, display name, and the configuration id → optionId values it sets.
+ */
+internal data class WffFlavor(
+  val id: String,
+  val displayName: String,
+  val configurations: Map<String, String>,
+)
+
+/** The face's `<Flavors>` presets, in declared order; empty when the face declares none. */
+internal fun UiBuilderDocument.wffFlavors(): List<WffFlavor> {
+  val scene = roots.firstNotNullOfOrNull { nodes[it] } ?: return emptyList()
+  if (scene.componentId != WatchFaceXmlExporter.SCENE) return emptyList()
+  val flavorNodes =
+    listOf("face", "faceAfter")
+      .flatMap { scene.slots[it].orEmpty() }
+      .mapNotNull { nodes[it] }
+      .filter { it.componentId == WatchFaceXmlExporter.USER_CONFIGURATIONS }
+      .flatMap { it.slots["content"].orEmpty() }
+      .mapNotNull { nodes[it] }
+      .filter { it.componentId == WatchFaceXmlExporter.FLAVORS }
+      .flatMap { it.slots["content"].orEmpty() }
+      .mapNotNull { nodes[it] }
+      .filter { it.componentId == WatchFaceXmlExporter.FLAVOR }
+  return flavorNodes.mapNotNull { flavor ->
+    val id = flavor.wffValue("id")
+    if (id.isEmpty()) return@mapNotNull null
+    val configs =
+      flavor.slots["content"]
+        .orEmpty()
+        .mapNotNull { nodes[it] }
+        .filter { it.componentId == WatchFaceXmlExporter.FLAVOR_CONFIGURATION }
+        .mapNotNull { entry ->
+          val configId = entry.wffValue("id")
+          val optionId = entry.wffValue("optionId")
+          if (configId.isEmpty() || optionId.isEmpty()) null else configId to optionId
+        }
+        .toMap()
+    WffFlavor(
+      id = id,
+      displayName = flavor.wffValue("displayName").ifEmpty { id },
+      configurations = configs,
+    )
+  }
+}
+
+/**
  * [this] drawn with [selection] (configuration id to option id) in place of each configuration's
  * default, for a preview. A copy for drawing only: the design, and so its exported XML, keeps the
  * `defaultValue` its author wrote. A choice that names no option of its configuration is ignored.
@@ -171,6 +217,9 @@ internal class WffConfigurationState(configurations: List<WffConfiguration>) {
 }
 
 internal val LocalWffConfigurations = compositionLocalOf { WffConfigurationState(emptyList()) }
+
+/** Editor-owned watch-face configuration preview selection, for the live expression evaluator. */
+internal val LocalWffConfigurationSelection = compositionLocalOf { emptyMap<String, String>() }
 
 /** A property of a watch face node, from the property itself or else the import's `wffExtras`. */
 internal fun UiBuilderNode.wffValue(name: String): String {

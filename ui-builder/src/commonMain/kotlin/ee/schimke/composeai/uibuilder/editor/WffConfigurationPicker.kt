@@ -43,15 +43,17 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.canvas.WffConfiguration
 import ee.schimke.composeai.uibuilder.canvas.WffConfigurationKind
 import ee.schimke.composeai.uibuilder.canvas.WffConfigurationOption
+import ee.schimke.composeai.uibuilder.canvas.WffFlavor
 import ee.schimke.composeai.uibuilder.canvas.parseArgb
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
+import ee.schimke.composeai.uibuilder.canvas.wffFlavors
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
  * Previews each user configuration a watch face declares: a swatch per colour theme, a switch for a
- * boolean, a menu for a list. What it picks is the editor's, not the design's: the face is drawn
- * with it, while the exported XML keeps the `defaultValue` its author wrote. Draws nothing for a
- * design with no configurations.
+ * boolean, a menu for a list, and a preset menu for declared `<Flavors>`. What it picks is the
+ * editor's, not the design's: the face is drawn with it, while the exported XML keeps the
+ * `defaultValue` its author wrote. Draws nothing for a design with no visible configurations.
  */
 @Composable
 internal fun WffConfigurationPicker(
@@ -60,9 +62,26 @@ internal fun WffConfigurationPicker(
   onSelect: (configurationId: String, optionId: String) -> Unit,
   onReset: () -> Unit,
   modifier: Modifier = Modifier,
+  /** Configuration already fanned out across Preview panes, hidden here to avoid redundancy. */
+  excludeConfigurationId: String? = null,
+  /** Whether to show the `<Flavors>` preset picker when the face declares any. */
+  includeFlavors: Boolean = true,
+  /**
+   * Applies a flavor's configuration bundle in one step; defaults to calling [onSelect] per entry.
+   */
+  onSelectFlavor: ((WffFlavor) -> Unit)? = null,
 ) {
-  val configurations = remember(document) { document.wffConfigurations() }
-  if (configurations.isEmpty()) return
+  val allConfigurations = remember(document) { document.wffConfigurations() }
+  val configurations =
+    remember(allConfigurations, excludeConfigurationId) {
+      if (excludeConfigurationId == null) allConfigurations
+      else allConfigurations.filterNot { it.id == excludeConfigurationId }
+    }
+  val flavors =
+    remember(document, includeFlavors) {
+      if (includeFlavors) document.wffFlavors() else emptyList()
+    }
+  if (configurations.isEmpty() && flavors.isEmpty()) return
   val scroll = rememberScrollState()
   Row(
     modifier
@@ -73,6 +92,25 @@ internal fun WffConfigurationPicker(
     horizontalArrangement = Arrangement.spacedBy(16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
+    if (flavors.isNotEmpty()) {
+      val effective = allConfigurations.associate { config ->
+        val chosen =
+          selection[config.id]?.takeIf { config.option(it) != null } ?: config.defaultValue
+        config.id to chosen
+      }
+      val activeFlavor = flavors.firstOrNull { flavor ->
+        flavor.configurations.isNotEmpty() &&
+          flavor.configurations.all { (id, optionId) -> effective[id] == optionId }
+      }
+      FlavorSelect(
+        flavors = flavors,
+        active = activeFlavor,
+        onChoose = { flavor ->
+          if (onSelectFlavor != null) onSelectFlavor(flavor)
+          else flavor.configurations.forEach { (id, optionId) -> onSelect(id, optionId) }
+        },
+      )
+    }
     for (configuration in configurations) {
       val shown =
         selection[configuration.id]?.takeIf { configuration.option(it) != null }
@@ -107,6 +145,42 @@ internal fun WffConfigurationPicker(
       }
     }
     if (selection.isNotEmpty()) TextButton(onClick = onReset) { Text("Defaults") }
+  }
+}
+
+@Composable
+private fun FlavorSelect(
+  flavors: List<WffFlavor>,
+  active: WffFlavor?,
+  onChoose: (WffFlavor) -> Unit,
+) {
+  var open by remember { mutableStateOf(false) }
+  Row(
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(
+      "Flavor",
+      style = MaterialTheme.typography.labelMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Box {
+      OutlinedButton(
+        onClick = { open = true },
+        modifier = Modifier.semantics { contentDescription = "Watch face flavor" },
+      ) {
+        Text(active?.displayName ?: "Custom")
+      }
+      DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        for (flavor in flavors) DropdownMenuItem(
+          text = { Text(flavor.displayName) },
+          onClick = {
+            open = false
+            onChoose(flavor)
+          },
+        )
+      }
+    }
   }
 }
 
