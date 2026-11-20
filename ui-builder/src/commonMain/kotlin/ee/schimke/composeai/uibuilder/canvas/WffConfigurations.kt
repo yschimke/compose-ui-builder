@@ -218,6 +218,9 @@ internal class WffConfigurationState(configurations: List<WffConfiguration>) {
 
 internal val LocalWffConfigurations = compositionLocalOf { WffConfigurationState(emptyList()) }
 
+/** Editor-owned watch-face configuration preview selection, for the live expression evaluator. */
+internal val LocalWffConfigurationSelection = compositionLocalOf { emptyMap<String, String>() }
+
 /** A property of a watch face node, from the property itself or else the import's `wffExtras`. */
 internal fun UiBuilderNode.wffValue(name: String): String {
   val own = string(name)

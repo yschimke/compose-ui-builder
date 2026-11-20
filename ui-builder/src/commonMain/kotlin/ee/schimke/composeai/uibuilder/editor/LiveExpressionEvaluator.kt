@@ -18,6 +18,7 @@ import ee.schimke.composeai.uibuilder.canvas.evaluateWffExpression
 import ee.schimke.composeai.uibuilder.canvas.isWatchFace
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurationValues
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
+import ee.schimke.composeai.uibuilder.canvas.withWffConfigurationSelection
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiExpressions
 import kotlin.math.roundToLong
@@ -88,12 +89,17 @@ internal fun evaluateLiveWffProperty(
   raw: String,
   simulated: WffSimulatedState = WffSimulatedState(),
   scrubbedTime: WffScrubTime? = null,
+  configurationSelection: Map<String, String> = emptyMap(),
+  liveClock: UiExpressions.Clock? = null,
 ): LiveExpressionResult? {
   if (!document.isWatchFace()) return null
   val trimmed = raw.trim()
   if (!trimmed.contains('[') || !trimmed.contains(']')) return null
 
-  val configs = document.wffConfigurations()
+  val effectiveDocument =
+    if (configurationSelection.isEmpty()) document
+    else document.withWffConfigurationSelection(configurationSelection)
+  val configs = effectiveDocument.wffConfigurations()
   val configState = WffConfigurationState(configs)
   configState.resolveColour(trimmed)?.let { hex ->
     return LiveExpressionResult.Value(hex)
@@ -106,9 +112,15 @@ internal fun evaluateLiveWffProperty(
         as? JsonPrimitive)
       ?.contentOrNull
       .orEmpty()
-  val base = WffPreviewContext.of(previewTime, fixedTime)
-  val timed = if (scrubbedTime != null) base.at(scrubbedTime) else base
-  val context = timed.withConfiguration(document.wffConfigurationValues()).withSimulated(simulated)
+  val frozen = WffPreviewContext.of(previewTime, fixedTime)
+  val timed =
+    when {
+      scrubbedTime != null -> frozen.at(scrubbedTime)
+      liveClock != null && fixedTime.isBlank() -> WffPreviewContext.of(liveClock)
+      else -> frozen
+    }
+  val context =
+    timed.withConfiguration(effectiveDocument.wffConfigurationValues()).withSimulated(simulated)
 
   val value = evaluateWffExpression(trimmed, context)
   return when (value) {

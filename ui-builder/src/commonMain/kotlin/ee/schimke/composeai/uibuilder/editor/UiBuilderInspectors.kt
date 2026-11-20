@@ -1322,9 +1322,25 @@ private fun DraftPropertyControl(
   if (document.isWatchFace()) {
     val simulated = LocalWffSimulatedState.current
     val scrubbed = LocalWffPreviewClock.current?.scrubbed
+    val configSelection =
+      ee.schimke.composeai.uibuilder.canvas.LocalWffConfigurationSelection.current
+    val fixedTime = (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+    val hasExpression = value.contains('[') && value.contains(']')
+    val liveClock =
+      ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock(
+        continuous = false,
+        enabled = hasExpression && fixedTime.isBlank() && scrubbed == null,
+      )
     val evaluation =
-      remember(document, value, simulated, scrubbed) {
-        evaluateLiveWffProperty(document, value, simulated, scrubbed)
+      remember(document, value, simulated, scrubbed, configSelection, liveClock) {
+        evaluateLiveWffProperty(
+          document = document,
+          raw = value,
+          simulated = simulated,
+          scrubbedTime = scrubbed,
+          configurationSelection = configSelection,
+          liveClock = liveClock,
+        )
       }
     LiveExpressionReadout(evaluation, field.label)
   }

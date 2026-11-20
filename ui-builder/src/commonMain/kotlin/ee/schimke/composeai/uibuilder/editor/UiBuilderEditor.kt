@@ -2784,6 +2784,8 @@ fun UiBuilderEditor(
     LocalWffComplicationPicks provides complicationPicks,
     LocalWffSimulatedState provides wffSimulatedState,
     LocalWffPreviewClock provides wffPreviewClock,
+    ee.schimke.composeai.uibuilder.canvas.LocalWffConfigurationSelection provides
+      wffConfigSelection,
     LocalUiBuilderChrome provides chrome,
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,

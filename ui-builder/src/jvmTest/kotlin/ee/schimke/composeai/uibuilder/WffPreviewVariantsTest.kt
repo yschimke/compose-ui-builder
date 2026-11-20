@@ -277,11 +277,28 @@ class WffPreviewVariantsTest {
       evaluateLiveWffProperty(wffDoc, "[CONFIGURATION.theme.0]"),
     )
     assertEquals(
+      LiveExpressionResult.Value("#FFFFC107"),
+      evaluateLiveWffProperty(
+        wffDoc,
+        "[CONFIGURATION.theme.0]",
+        configurationSelection = mapOf("theme" to "amber"),
+      ),
+    )
+    assertEquals(
       LiveExpressionResult.Value("90"),
       evaluateLiveWffProperty(
         wffDoc,
         "[SECOND] * 6",
         scrubbedTime = WffScrubTime(10, 8, 15.0),
+      ),
+    )
+    assertEquals(
+      LiveExpressionResult.Value("120"),
+      evaluateLiveWffProperty(
+        wffDoc,
+        "[SECOND] * 6",
+        liveClock =
+          ee.schimke.composeai.uibuilder.export.UiExpressions.Clock.of("2024-05-16T10:08:20Z"),
       ),
     )
     assertEquals(
