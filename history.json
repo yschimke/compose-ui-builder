@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "ba587ea82fd71c0777f5e8d8a8060bc56a9dff03",
+    "generatedFrom": "071b8301ef4cbad30d82b950a6f81165df4768ef",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -6692,6 +6692,81 @@
             "unstable": false,
             "flapCount": 0
         },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtHalfMinutePreview_Animated face at 03_42_30.5": {
+            "path": "renders/ui-builder/WatchFaceAnimatedAtHalfMinutePreview_Animated_face_at_03_42_30_5-40067c0f.png",
+            "versions": [
+                {
+                    "blob": "e215b8bb5f4417340a89419dd004113f45e266ae",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtHalfSecondPreview_Animated face at 10_08_00.5": {
+            "path": "renders/ui-builder/WatchFaceAnimatedAtHalfSecondPreview_Animated_face_at_10_08_00_5-2f90ea58.png",
+            "versions": [
+                {
+                    "blob": "5a8047de18a14554353023d4f761c520785e030d",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtOneSecondPreview_Animated face at 10_08_01.0": {
+            "path": "renders/ui-builder/WatchFaceAnimatedAtOneSecondPreview_Animated_face_at_10_08_01_0-6e537a1f.png",
+            "versions": [
+                {
+                    "blob": "46d35685a7c1dc5724ca0d61b0a2b888f9b47b96",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtStartPreview_Animated face at 10_08_00.0": {
+            "path": "renders/ui-builder/WatchFaceAnimatedAtStartPreview_Animated_face_at_10_08_00_0-2c2c00a8.png",
+            "versions": [
+                {
+                    "blob": "c88af172b7dc7688d5b84940809796d87fa9db6d",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedSettledPreview_Animated face, settled": {
+            "path": "renders/ui-builder/WatchFaceAnimatedSettledPreview_Animated_face_settled-a000f9de.png",
+            "versions": [
+                {
+                    "blob": "9e0c46f6b49ff21043a5dfcbd6adc229d0d90395",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceEmptyComplicationPreview": {
             "path": "renders/ui-builder/WatchFaceEmptyComplicationPreview-8ddf7f3c.png",
             "versions": [
@@ -6700,6 +6775,36 @@
                     "commit": "fff8707f5cbf1114af8eb8308b1f95990c2e5724",
                     "date": "2026-11-19T21:23:10Z",
                     "sourceSha": "aed8e760",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WffPreviewClockControlsPreview_Preview clock, scrubbed": {
+            "path": "renders/ui-builder/WffPreviewClockControlsPreview_Preview_clock_scrubbed-37e216fb.png",
+            "versions": [
+                {
+                    "blob": "32c701535c8570053b4c0f177cb97c5db4d32983",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceEditorClockPreviewKt.WatchFaceEditorPreviewClockPreview": {
+            "path": "renders/ui-builder/WatchFaceEditorPreviewClockPreview-f9741397.png",
+            "versions": [
+                {
+                    "blob": "ef5f56e6a6185966e82aed3110d76d3113ae401a",
+                    "commit": "071b8301ef4cbad30d82b950a6f81165df4768ef",
+                    "date": "2026-11-20T02:32:16Z",
+                    "sourceSha": "af64c3e4",
                     "commits": 1
                 }
             ],
