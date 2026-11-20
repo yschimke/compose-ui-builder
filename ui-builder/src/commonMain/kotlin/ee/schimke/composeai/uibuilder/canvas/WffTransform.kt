@@ -13,8 +13,10 @@ import kotlinx.serialization.json.contentOrNull
  * [node] with its `wff/transform` children applied at [preview]'s time, in document order: each
  * evaluates the expression the exporter writes for it ([WatchFaceXmlExporter.transformOf], so a
  * "Rotate with" preset is its preset's expression) and sets the property its `target` names, or
- * adds to it with `mode="BY"`. A `<Transform>` held as `wff/raw` XML, as a design imported before
- * the transform had a builtin holds it, is read as the typed node an import would make of it.
+ * adds to it with `mode="BY"`. One with an `<Animation>` plays that change from the value before it
+ * ([WffAnimation.valueAt]) at [preview]'s `animationSeconds`, and is at its end when settled. A
+ * `<Transform>` held as `wff/raw` XML, as a design imported before the transform had a builtin
+ * holds it, is read as the typed node an import would make of it.
  *
  * A `wff/gyro` then offsets the attributes it names (`x`, `y`, `scaleX`, `scaleY`, `angle`) by its
  * expressions of the tilt in [preview], and sets `alpha` to its expression's level
@@ -52,6 +54,7 @@ internal fun wffTransformed(
             ?.let { WatchFaceXmlImporter.transformNode(it, child.id) } ?: continue
         else -> continue
       }
+    val animation = wffAnimationOf(document, child)
     val reading =
       WatchFaceXmlExporter.transformOf(
         transform.string("target").ifEmpty { null },
@@ -60,12 +63,16 @@ internal fun wffTransformed(
       ) as? WatchFaceXmlExporter.TransformReading.Read ?: continue
     val value = evaluateWffExpression(reading.value, preview)?.asNumber() ?: continue
     val target = reading.target
+    val from = node.copy(properties = properties).float(target, wffUnsetDefault(document, target))
+    val to = if (transform.string("mode") == "BY") from + value else value
     val result =
-      if (transform.string("mode") == "BY") {
-        val current = node.copy(properties = properties)
-        current.float(target, wffUnsetDefault(document, target)) + value
-      } else value.toDouble()
-    set(target, result.toDouble())
+      animation?.valueAt(
+        from.toDouble(),
+        to.toDouble(),
+        preview.animationSeconds,
+        target == "angle",
+      ) ?: to.toDouble()
+    set(target, result)
   }
   for (gyro in gyros) {
     for (name in WatchFaceXmlExporter.GYRO_ATTRIBUTES) {
@@ -83,6 +90,39 @@ internal fun wffTransformed(
   }
   return if (properties === node.properties) node else node.copy(properties = properties)
 }
+
+/**
+ * The `<Animation>` [transform] plays its change over: a raw `<Animation>` in a `wff/transform`'s
+ * content (where an import keeps it, there being no builtin), or the one inside a `<Transform>`
+ * held raw. Null when it has none, or none the reference would accept.
+ */
+internal fun wffAnimationOf(document: UiBuilderDocument, transform: UiBuilderNode): WffAnimation? {
+  val xml =
+    when (transform.componentId) {
+      WatchFaceXmlExporter.RAW -> transform.string("xml")
+      WatchFaceXmlExporter.TRANSFORM ->
+        transform.slots.values
+          .flatten()
+          .mapNotNull { document.nodes[it] }
+          .firstOrNull {
+            it.componentId == WatchFaceXmlExporter.RAW &&
+              it.string("xml").trimStart().startsWith("<Animation")
+          }
+          ?.string("xml")
+      else -> null
+    } ?: return null
+  return WatchFaceXmlImporter.animationAttributes(xml)?.let(WffAnimation::of)
+}
+
+/** Every `<Animation>` the face's transforms play, for knowing how long the face moves. */
+internal fun UiBuilderDocument.wffAnimations(): List<WffAnimation> =
+  nodes.values
+    .filter {
+      it.componentId == WatchFaceXmlExporter.TRANSFORM ||
+        (it.componentId == WatchFaceXmlExporter.RAW &&
+          it.string("xml").trimStart().startsWith("<Transform"))
+    }
+    .mapNotNull { wffAnimationOf(this, it) }
 
 /**
  * What a target reads as when the node does not set it, for a `mode="BY"` transform: what the
@@ -113,6 +153,10 @@ private val WFF_NUMERIC_ATTRIBUTES =
     "height",
     "angle",
     "alpha",
+    // A group's scale: an import keeps it in `wffExtras`, so without this it was never drawn, nor
+    // where an animated scale starts from.
+    "scaleX",
+    "scaleY",
     "pivotX",
     "pivotY",
     "startAngle",

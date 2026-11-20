@@ -86,8 +86,10 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNavigator
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetClipContent
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.LocalWffComplicationPicks
+import ee.schimke.composeai.uibuilder.canvas.LocalWffPreviewClock
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.WffComplicationPick
+import ee.schimke.composeai.uibuilder.canvas.WffPreviewClockState
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.canvas.isWatchFace
 import ee.schimke.composeai.uibuilder.canvas.wffConfigurations
@@ -1604,7 +1606,12 @@ fun UiBuilderEditor(
   // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
   // letting time run in a preview is not an edit to the design.
   var previewTimeRunning by remember { mutableStateOf(false) }
-  val previewPaneBody: @Composable (Modifier) -> Unit = { modifier ->
+  // A watch face's clock, Live or scrubbed, shared by the editing canvas and the Preview pane:
+  // editor state too, so scrubbing never writes the design. Provided to those two surfaces only,
+  // not to the palette's thumbnails, which hold their fixed time.
+  val wffPreviewClock = remember(state.document.id) { WffPreviewClockState() }
+  RunWffPreviewClock(wffPreviewClock)
+  val previewPaneContent: @Composable (Modifier) -> Unit = { modifier ->
     if (documentBackedPreview != null) {
       RemoteDocumentDesignPreviewPane(
         document = drawnDocument,
@@ -1631,6 +1638,11 @@ fun UiBuilderEditor(
       )
     }
   }
+  val previewPaneBody: @Composable (Modifier) -> Unit = { modifier ->
+    CompositionLocalProvider(LocalWffPreviewClock provides wffPreviewClock) {
+      previewPaneContent(modifier)
+    }
+  }
   val hasWffConfigurations =
     remember(state.document) { state.document.wffConfigurations().isNotEmpty() }
   val wffPicker: @Composable (Modifier) -> Unit = { pickerModifier ->
@@ -1646,37 +1658,46 @@ fun UiBuilderEditor(
   val previewPane: @Composable (Modifier) -> Unit = { modifier ->
     Column(modifier) {
       wffPicker(Modifier.fillMaxWidth())
+      if (drawnDocument.isWatchFace()) {
+        WffPreviewClockControls(wffPreviewClock, Modifier.padding(horizontal = 12.dp))
+      }
       previewPaneBody(Modifier.weight(1f).fillMaxWidth())
     }
   }
   // One preview tab's frame, drawn alone and fitted to the screen, by whichever pane the catalog
   // previews with.
-  val mobilePreview: @Composable (UiBuilderVariantPane, Modifier) -> Unit = { pane, modifier ->
-    if (documentBackedPreview != null) {
-      // Keyed by tab: tabs sharing one document (a widget's host shapes) must each request their
-      // own result.
-      key(pane.id) {
-        RemoteDocumentDesignPreviewPane(
+  val mobilePreviewContent: @Composable (UiBuilderVariantPane, Modifier) -> Unit =
+    { pane, modifier ->
+      if (documentBackedPreview != null) {
+        // Keyed by tab: tabs sharing one document (a widget's host shapes) must each request their
+        // own result.
+        key(pane.id) {
+          RemoteDocumentDesignPreviewPane(
+            document = drawnDocument,
+            variants = listOf(pane),
+            authoritativeGeneration = authoritativeGeneration,
+            request = requireNotNull(onRequestDocumentPreview),
+            modifier = modifier,
+            exactPanes = true,
+            timeRunning = previewTimeRunning,
+            onTimeRunningChange = { previewTimeRunning = it },
+          )
+        }
+      } else {
+        DesignPreviewPane(
           document = drawnDocument,
           variants = listOf(pane),
-          authoritativeGeneration = authoritativeGeneration,
-          request = requireNotNull(onRequestDocumentPreview),
           modifier = modifier,
+          deviceRenderer = canvasRenderer,
           exactPanes = true,
           timeRunning = previewTimeRunning,
           onTimeRunningChange = { previewTimeRunning = it },
         )
       }
-    } else {
-      DesignPreviewPane(
-        document = drawnDocument,
-        variants = listOf(pane),
-        modifier = modifier,
-        deviceRenderer = canvasRenderer,
-        exactPanes = true,
-        timeRunning = previewTimeRunning,
-        onTimeRunningChange = { previewTimeRunning = it },
-      )
+    }
+  val mobilePreview: @Composable (UiBuilderVariantPane, Modifier) -> Unit = { pane, modifier ->
+    CompositionLocalProvider(LocalWffPreviewClock provides wffPreviewClock) {
+      mobilePreviewContent(pane, modifier)
     }
   }
   // The editing surface draws a Wear widget in the editing frame, not the viewed host shape, so it
@@ -1819,7 +1840,10 @@ fun UiBuilderEditor(
       canvasesShown++
       onDispose { canvasesShown-- }
     }
-    CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
+    CompositionLocalProvider(
+      LocalWearWidgetHostShape provides canvasHostShape,
+      LocalWffPreviewClock provides wffPreviewClock,
+    ) {
       PinnedDesignCanvas(
         document = canvasDocument,
         selectedNodeId = state.selectedNodeId,
@@ -2093,11 +2117,10 @@ fun UiBuilderEditor(
     Box(modifier) {
       designCanvas(Modifier.fillMaxSize(), alignment)
       if (drawnDocument.isWatchFace()) {
-        WffAmbientToggle(
-          ambient = canvasAmbient,
-          onAmbientChange = { canvasAmbient = it },
-          modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
-        )
+        Column(Modifier.align(Alignment.TopStart).padding(8.dp)) {
+          WffAmbientToggle(ambient = canvasAmbient, onAmbientChange = { canvasAmbient = it })
+          WffPreviewClockControls(wffPreviewClock)
+        }
         val slot =
           state.selectedNodeId
             ?.let { drawnDocument.nodes[it] }

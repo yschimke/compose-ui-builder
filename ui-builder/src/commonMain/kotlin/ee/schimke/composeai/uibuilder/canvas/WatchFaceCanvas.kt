@@ -15,9 +15,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,7 +68,10 @@ import ee.schimke.composeai.uibuilder.export.WatchFaceComplicationBounds
 import ee.schimke.composeai.uibuilder.export.WatchFaceXmlExporter
 import ee.schimke.composeai.uibuilder.rememberAssetBitmap
 import ee.schimke.composeai.uibuilder.renderer.sdk.rememberLiveWallClock
+import ee.schimke.composeai.uibuilder.renderer.sdk.timeRuns
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
@@ -156,19 +162,57 @@ private fun WatchFaceNode(
       // The real clock, unless the environment fixes the time: then it is frozen at that.
       val fixedTime = (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull.orEmpty()
       val ambient = document.isWffAmbient()
+      // An editor's clock: the wall clock, or a time the author scrubbed to. Never an export's.
+      val previewClock = LocalWffPreviewClock.current?.takeUnless { forExport }
+      val scrub = previewClock?.scrubbed
+      // `<Animation>`s play in an editor, or where the document lets time run, and only on a live
+      // or scrubbed clock: an export, a `fixedTime` and ambient draw the settled frame.
+      val animations = remember(document.nodes) { document.wffAnimations() }
+      val plays =
+        !forExport && animations.isNotEmpty() && (previewClock != null || document.timeRuns)
+      val startedAt =
+        remember(scrub == null, fixedTime) { Clock.System.now().toEpochMilliseconds() }
+      // Once every animation has played out the face needs no frame each frame for them.
+      val playEnd = animations.maxOfOrNull { it.endSeconds } ?: 0.0
+      var playedOut by remember(startedAt, playEnd) { mutableStateOf(false) }
+      LaunchedEffect(startedAt, playEnd) {
+        if (playEnd.isFinite()) {
+          delay((playEnd * 1000).toLong() + PLAYED_OUT_MARGIN_MILLIS)
+          playedOut = true
+        }
+      }
       val live =
         rememberLiveWallClock(
-          continuous = remember(document.nodes) { document.wffReadsSubSecond() } && !ambient,
-          enabled = fixedTime.isBlank(),
+          continuous =
+            (remember(document.nodes) { document.wffReadsSubSecond() } || (plays && !playedOut)) &&
+              !ambient,
+          enabled = fixedTime.isBlank() && scrub == null,
         )
       val swaying = remember(document.nodes) { document.wffHasGyro() }
       // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
       val settings = remember(document.nodes) { document.wffConfigurationValues() }
       val clock =
-        remember(node, fixedTime, live, swaying, settings) {
-          (live?.let { WffPreviewContext.of(it).let { now -> if (swaying) now.swaying() else now } }
-              ?: WffPreviewContext.of(node.string("previewTime"), fixedTime))
+        remember(node, fixedTime, live, scrub, swaying, settings, plays, startedAt, playedOut) {
+          val frozen = WffPreviewContext.of(node.string("previewTime"), fixedTime)
+          val now =
+            when {
+              scrub != null -> frozen.at(scrub)
+              live != null -> WffPreviewContext.of(live)
+              else -> frozen
+            }
+          val played =
+            when {
+              !plays -> null
+              scrub != null -> scrub.seconds
+              // Played out: settled, not read off a clock that has dropped its milliseconds and
+              // could put the playback back before the end.
+              playedOut -> null
+              live != null -> ((live.epochMillis - startedAt) / 1000.0).coerceAtLeast(0.0)
+              else -> null
+            }
+          (if (swaying && (live != null || scrub != null)) now.swaying() else now)
             .withConfiguration(settings)
+            .playingAt(played)
         }
       // Interactive and ambient cross-fade as the watch switches, rather than cut: while the
       // switch runs both are drawn, the mode being entered over the one being left.
@@ -220,7 +264,9 @@ private fun WatchFaceNode(
               // Ambient holds the wrist still: the sway is the interactive layer's only.
               val context =
                 remember(clock, layerAmbient) {
-                  clock.inMode(layerAmbient).let { if (layerAmbient) it.withTilt(0.0, 0.0) else it }
+                  clock.inMode(layerAmbient).let {
+                    if (layerAmbient) it.withTilt(0.0, 0.0).playingAt(null) else it
+                  }
                 }
               CompositionLocalProvider(
                 LocalWffFace provides WffFace(width, height, scale),
@@ -621,6 +667,9 @@ private fun wffPlace(
 
 /** How long the switch between interactive and ambient takes to fade across. */
 private const val WFF_AMBIENT_SWITCH_MILLIS = 400
+
+/** How long past the last animation's end a live face keeps drawing every frame: one more frame. */
+private const val PLAYED_OUT_MARGIN_MILLIS = 100L
 
 /**
  * What sits among a part's children but is not drawn as one: an override, the motion that drives
