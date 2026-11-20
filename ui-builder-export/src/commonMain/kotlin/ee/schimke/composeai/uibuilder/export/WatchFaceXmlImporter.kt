@@ -101,6 +101,32 @@ object WatchFaceXmlImporter {
   }
 
   /**
+   * The attributes of the `<Animation>` a `wff/raw` node holds as [xml], or of the one a raw
+   * `<Transform>` holds: what the canvas plays a transform's change over. Null when there is none,
+   * or [xml] does not parse.
+   */
+  fun animationAttributes(xml: String): Map<String, String>? {
+    val element =
+      try {
+        WffXmlParser.parse("<r>${xml.trim()}</r>")
+          .root
+          .children
+          .filterIsInstance<WffElement>()
+          .singleOrNull()
+      } catch (e: WffParseException) {
+        null
+      } ?: return null
+    val animation =
+      when (element.name) {
+        "Animation" -> element
+        "Transform" ->
+          element.children.filterIsInstance<WffElement>().firstOrNull { it.name == "Animation" }
+        else -> null
+      } ?: return null
+    return animation.attributes.associate { it.name to it.value }
+  }
+
+  /**
    * A `wff/raw` node's `<Transform>` as the typed `wff/transform` node an import makes of it, or
    * null when [xml] is not one plain transform. The canvas reads a design imported before the
    * transform had a builtin through this, so both draw the same.

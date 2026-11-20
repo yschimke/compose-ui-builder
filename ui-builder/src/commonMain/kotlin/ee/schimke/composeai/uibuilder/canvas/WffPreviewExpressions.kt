@@ -40,6 +40,12 @@ internal class WffPreviewContext(
    * face first shows before the wearer changes anything.
    */
   val configuration: Map<String, String> = emptyMap(),
+  /**
+   * Seconds since the face started playing, what a `<Transform>`'s `<Animation>` is evaluated at
+   * ([WffAnimation.valueAt]); null for the settled frame, which every animation is drawn at its end
+   * in. Null unless a surface lets time run: an export, a `fixedTime` and ambient are settled.
+   */
+  val animationSeconds: Double? = null,
 ) {
   /** 0 = Sunday. */
   val dayOfWeek: Int
@@ -56,6 +62,7 @@ internal class WffPreviewContext(
     tiltX: Double = this.tiltX,
     tiltY: Double = this.tiltY,
     configuration: Map<String, String> = this.configuration,
+    animationSeconds: Double? = this.animationSeconds,
   ) =
     WffPreviewContext(
       hour,
@@ -70,6 +77,7 @@ internal class WffPreviewContext(
       tiltX,
       tiltY,
       configuration,
+      animationSeconds,
     )
 
   fun withComplication(sample: WffComplicationSample) = with(complication = sample)
@@ -79,6 +87,27 @@ internal class WffPreviewContext(
   fun withTilt(x: Double, y: Double) = with(tiltX = x, tiltY = y)
 
   fun withConfiguration(values: Map<String, String>) = with(configuration = values)
+
+  /** This date at [time] of day instead of its own. */
+  fun at(time: WffScrubTime) =
+    WffPreviewContext(
+      time.hour,
+      time.minute,
+      time.seconds.toInt().coerceIn(0, 59),
+      time.seconds - time.seconds.toInt(),
+      year,
+      month,
+      day,
+      complication,
+      ambient,
+      tiltX,
+      tiltY,
+      configuration,
+      animationSeconds,
+    )
+
+  /** This time with its animations at [seconds] into their playback, or settled for null. */
+  fun playingAt(seconds: Double?) = with(animationSeconds = seconds)
 
   /**
    * This time with the wrist swaying gently, as a preview with no watch shows a `<Gyro>` move: a
