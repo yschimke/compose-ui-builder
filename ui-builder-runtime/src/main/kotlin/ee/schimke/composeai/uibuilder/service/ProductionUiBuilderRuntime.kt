@@ -1315,6 +1315,21 @@ public class ProductionUiBuilderExportExecutor(
           "remote document export is not implemented; ExportCapabilitiesV1.remoteDocument is " +
             "false for this executor",
         )
+      ExportFormatV1.WFF_XML ->
+        throw UnsupportedOperationException(
+          "WFF XML export is not implemented; ExportCapabilitiesV1.wffXml is false for this " +
+            "executor",
+        )
+      ExportFormatV1.WFF_BUNDLE ->
+        throw UnsupportedOperationException(
+          "WFF bundle export is not implemented; ExportCapabilitiesV1.wffBundle is false for " +
+            "this executor",
+        )
+      ExportFormatV1.WFF_APK ->
+        throw UnsupportedOperationException(
+          "WFF APK export is not implemented; ExportCapabilitiesV1.wffApk is false for this " +
+            "executor",
+        )
     }
 
   override fun close(): Unit = renderer.close()
