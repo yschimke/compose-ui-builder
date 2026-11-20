@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.142.0](https://github.com/yschimke/compose-ui-builder/compare/v3.141.0...v3.142.0) (2026-11-20)
+
+
+### Features
+
+* open the published Kobento catalog in the offline hosts ([#1318](https://github.com/yschimke/compose-ui-builder/issues/1318)) ([5b02cfa](https://github.com/yschimke/compose-ui-builder/commit/5b02cfa7e1328cb6ca10261cfc2923dce9612c0b))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-ai-tools-bom to v2.101.1 ([#1322](https://github.com/yschimke/compose-ui-builder/issues/1322)) ([1c74de1](https://github.com/yschimke/compose-ui-builder/commit/1c74de1992ad36db0a150960c1f41ad01d12463e))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.44.0 ([#1306](https://github.com/yschimke/compose-ui-builder/issues/1306)) ([58f83b5](https://github.com/yschimke/compose-ui-builder/commit/58f83b586e394c728fc1710810a5b62662f7b3dd))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.28.1 ([#1323](https://github.com/yschimke/compose-ui-builder/issues/1323)) ([a2a89bc](https://github.com/yschimke/compose-ui-builder/commit/a2a89bce42f776224765f5fe033920c9321f4213))
+* **deps:** update dependency ee.schimke.watchface:watchface-tools-bom to v0.11.0 ([#1326](https://github.com/yschimke/compose-ui-builder/issues/1326)) ([a02fb16](https://github.com/yschimke/compose-ui-builder/commit/a02fb167e3d37ade6796165906a87cb9f3ea63f8))
+
 ## [3.141.0](https://github.com/yschimke/compose-ui-builder/compare/v3.140.0...v3.141.0) (2026-11-20)
 
 
