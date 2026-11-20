@@ -1079,6 +1079,46 @@
     "sha256": "c6284286873c8bc31f04ca83ee486d9fa96357cca2ea29002feaf3c4501bc9e4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceAssetPreviews.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtHalfMinutePreview_Animated face at 03_42_30.5": {
+    "captureLabel": "",
+    "functionName": "WatchFaceAnimatedAtHalfMinutePreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceAnimatedAtHalfMinutePreview_Animated_face_at_03_42_30_5-40067c0f.png",
+    "sha256": "d9c9f25e6dd4a1dcca93688178d98f0602523a6796ec57134e5e49d9442247cf",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtHalfSecondPreview_Animated face at 10_08_00.5": {
+    "captureLabel": "",
+    "functionName": "WatchFaceAnimatedAtHalfSecondPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceAnimatedAtHalfSecondPreview_Animated_face_at_10_08_00_5-2f90ea58.png",
+    "sha256": "ae0af2ff8eff94d71d2ef1d5afe2b059c05c7ce9e62d8de3af441e782896da21",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtOneSecondPreview_Animated face at 10_08_01.0": {
+    "captureLabel": "",
+    "functionName": "WatchFaceAnimatedAtOneSecondPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceAnimatedAtOneSecondPreview_Animated_face_at_10_08_01_0-6e537a1f.png",
+    "sha256": "79ec5ff7846885e1d1fe314a195cf4b1bc333deae40de1cec19473078c60df19",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedAtStartPreview_Animated face at 10_08_00.0": {
+    "captureLabel": "",
+    "functionName": "WatchFaceAnimatedAtStartPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceAnimatedAtStartPreview_Animated_face_at_10_08_00_0-2c2c00a8.png",
+    "sha256": "eaf2ab89edeaea794cf356263ef171a6240e479dfd420c527816b6bc7f343873",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceAnimatedSettledPreview_Animated face, settled": {
+    "captureLabel": "",
+    "functionName": "WatchFaceAnimatedSettledPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceAnimatedSettledPreview_Animated_face_settled-a000f9de.png",
+    "sha256": "2784ae7b2e243888bfdacb398e6196f43db2aa5a088c5885b705689fd553ab49",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WatchFaceEmptyComplicationPreview": {
     "captureLabel": "",
     "functionName": "WatchFaceEmptyComplicationPreview",
@@ -1086,6 +1126,22 @@
     "renderBasename": "WatchFaceEmptyComplicationPreview-8ddf7f3c.png",
     "sha256": "f33d13cece0ad7abd99178e5e8d55a37962a9f4596ac7ecae7c45964c49b8ac3",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceCanvasPreviewsKt.WffPreviewClockControlsPreview_Preview clock, scrubbed": {
+    "captureLabel": "",
+    "functionName": "WffPreviewClockControlsPreview",
+    "module": "ui-builder",
+    "renderBasename": "WffPreviewClockControlsPreview_Preview_clock_scrubbed-37e216fb.png",
+    "sha256": "ddef278c88aa21545d1a5e33ba99c43c24fcd2d880b081a23d67f94215b37365",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceCanvasPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceEditorClockPreviewKt.WatchFaceEditorPreviewClockPreview": {
+    "captureLabel": "",
+    "functionName": "WatchFaceEditorPreviewClockPreview",
+    "module": "ui-builder",
+    "renderBasename": "WatchFaceEditorPreviewClockPreview-f9741397.png",
+    "sha256": "4d336e6800710ba85f4f7e8efaa2ffeb3d6b3a9a0e6beae3b08326eda9a938ab",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WatchFaceEditorClockPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WatchFaceNativePanePreviewsKt.WatchFaceClippedComplicationPreview": {
     "captureLabel": "",
