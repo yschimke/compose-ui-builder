@@ -874,6 +874,9 @@ internal fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
       (UiBuilderBuildFeatures.remoteCompose || platform in setOf(A2UI_PLATFORM, "lovelace")) &&
         exportCapabilities.remoteJson
     ExportFormatV1.RC -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteDocument
+    ExportFormatV1.WFF_XML -> exportCapabilities.wffXml
+    ExportFormatV1.WFF_BUNDLE -> exportCapabilities.wffBundle
+    ExportFormatV1.WFF_APK -> exportCapabilities.wffApk
   }
 
 internal data class EnvironmentValidationIssue(
@@ -964,6 +967,8 @@ internal fun DesignEnvironmentV1.applyChange(change: EnvironmentChangeV1): Desig
     ResetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = emptyList())
     is SetRemoteProfileEnvironmentChangeV1 -> copy(remoteProfile = change.value)
     ResetRemoteProfileEnvironmentChangeV1 -> copy(remoteProfile = null)
+    is SetWffVersionEnvironmentChangeV1 -> copy(wffVersion = change.value)
+    ResetWffVersionEnvironmentChangeV1 -> copy(wffVersion = DesignEnvironmentV1.DEFAULT_WFF_VERSION)
   }
 
 internal fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
@@ -985,6 +990,7 @@ internal fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
     EnvironmentFieldV1.TYPEFACE -> typeface
     EnvironmentFieldV1.EXPORT_DEVICES -> exportDevices
     EnvironmentFieldV1.REMOTE_PROFILE -> remoteProfile
+    EnvironmentFieldV1.WFF_VERSION -> wffVersion
   }
 
 internal fun DesignEnvironmentV1.copyFieldsFrom(
@@ -1012,6 +1018,7 @@ internal fun DesignEnvironmentV1.copyFieldsFrom(
       EnvironmentFieldV1.TYPEFACE -> environment.copy(typeface = source.typeface)
       EnvironmentFieldV1.EXPORT_DEVICES -> environment.copy(exportDevices = source.exportDevices)
       EnvironmentFieldV1.REMOTE_PROFILE -> environment.copy(remoteProfile = source.remoteProfile)
+      EnvironmentFieldV1.WFF_VERSION -> environment.copy(wffVersion = source.wffVersion)
     }
   }
 
