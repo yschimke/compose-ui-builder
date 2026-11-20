@@ -192,7 +192,7 @@ private fun WatchFaceNode(
       // The clock, and on a live canvas the wrist's sway a `<Gyro>` follows; the mode is per layer.
       val settings = remember(document.nodes) { document.wffConfigurationValues() }
       val clock =
-        remember(node, fixedTime, live, scrub, swaying, settings, plays, startedAt) {
+        remember(node, fixedTime, live, scrub, swaying, settings, plays, startedAt, playedOut) {
           val frozen = WffPreviewContext.of(node.string("previewTime"), fixedTime)
           val now =
             when {
@@ -204,6 +204,9 @@ private fun WatchFaceNode(
             when {
               !plays -> null
               scrub != null -> scrub.seconds
+              // Played out: settled, not read off a clock that has dropped its milliseconds and
+              // could put the playback back before the end.
+              playedOut -> null
               live != null -> ((live.epochMillis - startedAt) / 1000.0).coerceAtLeast(0.0)
               else -> null
             }
