@@ -61,6 +61,18 @@ object KobentoComponentJsonExporter {
     data class Refused(val reasons: List<String>) : Result
   }
 
+  /**
+   * The `kobento` block a Kobento catalog publishes in its `statusSemantics`, or null for any other
+   * catalog. Its presence is what marks a catalog's designs as exporting through this exporter.
+   */
+  fun policy(statusSemantics: JsonObject): JsonObject? = statusSemantics["kobento"] as? JsonObject
+
+  /**
+   * [Options] for a design in the catalog whose `statusSemantics` is given; null if not Kobento.
+   */
+  fun optionsFor(statusSemantics: JsonObject): Options? =
+    policy(statusSemantics)?.let { Options().withCatalog(it) }
+
   /** `kobento/activity-rings` -> `ActivityRings`; null for an id outside the catalog. */
   fun componentName(componentId: String): String? =
     componentId

@@ -877,6 +877,7 @@ internal fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     ExportFormatV1.WFF_XML -> exportCapabilities.wffXml
     ExportFormatV1.WFF_BUNDLE -> exportCapabilities.wffBundle
     ExportFormatV1.WFF_APK -> exportCapabilities.wffApk
+    ExportFormatV1.KOBENTO_JSON -> exportCapabilities.kobentoJson
   }
 
 internal data class EnvironmentValidationIssue(

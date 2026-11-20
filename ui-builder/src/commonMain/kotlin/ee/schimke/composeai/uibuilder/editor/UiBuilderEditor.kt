@@ -106,6 +106,7 @@ import ee.schimke.composeai.uibuilder.capability.scrollers
 import ee.schimke.composeai.uibuilder.componentDriftProblems
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.designUrlPath
+import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -642,12 +643,16 @@ fun UiBuilderEditor(
 ) {
   // The refusal's own heading names what could not be written, so a watch face is never told it
   // has "no Compose source".
+  val kobento =
+    remember(catalog) { KobentoComponentJsonExporter.policy(catalog.statusSemantics) != null }
   val generatedCodeNoSource =
-    when (catalog.platform) {
-      UiBuilderCatalogPlatform.WATCH_FACE -> "No Watch Face Format XML"
-      UiBuilderCatalogPlatform.LOVELACE -> "No Lovelace JSON"
-      else -> "No Compose source"
-    }
+    if (kobento) "No Kobento component JSON"
+    else
+      when (catalog.platform) {
+        UiBuilderCatalogPlatform.WATCH_FACE -> "No Watch Face Format XML"
+        UiBuilderCatalogPlatform.LOVELACE -> "No Lovelace JSON"
+        else -> "No Compose source"
+      }
   require(availablePanes.isNotEmpty()) { "a UI Builder workspace must expose at least one pane" }
   val reducer =
     remember(catalog, catalogRecord, actorId, clientId, operationIdPrefix) {
@@ -2573,7 +2578,8 @@ fun UiBuilderEditor(
   // Named where the document is, not inside the pane: the pane is handed source and has no way to
   // tell which generator wrote it.
   val generatedCodeCaption =
-    if (state.document.isWearWidget()) "Wear widget · Remote Compose"
+    if (kobento) "Kobento component JSON"
+    else if (state.document.isWearWidget()) "Wear widget · Remote Compose"
     else if (catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) "Remote Compose source"
     else if (catalog.platform == UiBuilderCatalogPlatform.LOVELACE) "Lovelace JSON"
     else if (catalog.platform == UiBuilderCatalogPlatform.WATCH_FACE) "Watch Face Format XML"

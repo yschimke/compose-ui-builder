@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
@@ -62,6 +63,35 @@ class PublishedCatalogStoreTest {
       }
     assertTrue("kobento/button" in ids && "kobento/gauge" in ids && "kobento/document" in ids)
     assertEquals(listOf("kobento-screen", "kobento-thermostat"), loaded.templates.ids)
+  }
+
+  @Test
+  fun `a kobento design is written as kobento json, not refused as compose`() = runBlocking {
+    val previous = PublishedCatalogStore.shared
+    try {
+      PublishedCatalogStore.shared =
+        PublishedCatalogStore(Files.createTempDirectory("kobento-catalog"), fromCaptures)
+      OfflineUiBuilderSession(Files.createTempDirectory("kobento"), catalogSystemId = "kobento")
+        .use { session ->
+          val document =
+            withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+              .snapshot
+              .state
+              .document
+              .toUiBuilderDocument()
+          val reducer = UiBuilderEditorReducer(session.catalog)
+          // The seed is a Kobento screen: the Remote Compose emitter its platform names must not
+          // be asked, so the Issues panel has nothing to say about Compose.
+          assertTrue(
+            reducer.problems(document).none { it.code == "COMPOSE_EXPORT_REFUSED" },
+            reducer.problems(document).toString(),
+          )
+          val code = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(document))
+          assertTrue(Json.parseToJsonElement(code.kotlin) is JsonObject, code.kotlin)
+        }
+    } finally {
+      PublishedCatalogStore.shared = previous
+    }
   }
 
   @Test
