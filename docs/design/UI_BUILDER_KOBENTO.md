@@ -299,12 +299,15 @@ generators do.
    a new design opens `kobento-screen` (a `kobento/document` holding a column and a text), and
    `kobento-thermostat` is listed under New from template. Still open: ask Kobento for a published
    manifest.
-3. Advertise the export. This needs a contracts change: `ExportFormatV1` has `JSON` and `RC` but
-   no "component JSON". Add `KOBENTO_JSON` (or a generic `REMOTE_COMPONENT_JSON` with the
-   component-set list as an option), gated per catalog as `remoteJson`/`remoteDocument` are. Then
-   wire it into the server's `ui_builder_export` / `export_design`. The plain `.rc` is a host
-   step: `convert` with the host's token, keeping Kobento's bytes (§3b, route 1). It is not a
-   local recompile.
+3. ~~Advertise the export~~ (contracts 3.45.0, compose-preview-contracts#232):
+   `ExportFormatV1.KOBENTO_JSON` (`kobento-json`), gated by `ExportCapabilitiesV1.kobentoJson`.
+   A catalog publishing a `statusSemantics.kobento` policy advertises it, wherever the host's
+   executor writes it (`ProductionUiBuilderExportExecutor` does), and turns off Compose source and
+   Remote Compose JSON/document export, since its components exist only in Kobento's library. The
+   editor's code pane shows the Kobento JSON, and its Issues are the Kobento exporter's refusals.
+   Still open: wire `kobento-json` into the server's `ui_builder_export` / `export_design`, which
+   arrives with its `composeai-ui-builder` bump. The plain `.rc` is a host step: `convert` with the
+   host's token, keeping Kobento's bytes (§3b, route 1). It is not a local recompile.
 4. The preview pane plays the converted `.rc` through the Kobento TS player, with a look picker.
 5. Board presets in the hosts, each with its default look.
 

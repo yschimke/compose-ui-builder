@@ -4,9 +4,12 @@ import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
+import ee.schimke.composeai.uibuilder.protocol.ExportEncodingV1
+import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -437,6 +440,101 @@ class KobentoCatalogTest {
         KobentoComponentJsonExporter.export(seed, options),
         path,
       )
+    }
+  }
+
+  @Test
+  fun `a kobento catalog advertises and serves kobento json in place of compose`() {
+    val policy =
+      Json.parseToJsonElement(
+        checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
+      )
+    val served =
+      assertIs<PublishedUiBuilderCatalog.Result.Composed>(
+          PublishedUiBuilderCatalog.compose(
+            policy.toString(),
+            null,
+            ExportCapabilitiesV1.Builder().build(),
+          ),
+        )
+        .catalog
+    val renderer =
+      object : UiBuilderRenderPort {
+        override val supportsSvg = false
+
+        override fun renderPng(request: UiBuilderRenderRequest): ByteArray =
+          error("a Kobento export renders nothing")
+
+        override fun renderSvg(request: UiBuilderRenderRequest): ByteArray =
+          error("a Kobento export renders nothing")
+
+        override fun close() = Unit
+      }
+    val compose = UiBuilderExportExecutor { error("a Kobento export never asks for Compose") }
+    ProductionUiBuilderExportExecutor(renderer, compose).use { exporter ->
+      assertTrue(exporter.capabilities.kobentoJson)
+      val executor =
+        fixtureCatalogExecutor(
+          catalogSystemIds = setOf("kobento"),
+          published = mapOf("kobento" to served),
+          exportCapabilities = exporter.capabilities,
+        )
+      val catalog = executor.listCatalogs().single { it.benchmark.catalogSystemId == "kobento" }
+      with(catalog.exportCapabilities) {
+        assertTrue(kobentoJson)
+        assertFalse(composeCode)
+        assertFalse(remoteJson)
+        assertFalse(remoteDocument)
+      }
+      assertTrue(catalog.supports(ExportFormatV1.KOBENTO_JSON))
+      assertFalse(catalog.supports(ExportFormatV1.COMPOSE))
+
+      val seed =
+        Json.decodeFromString(
+            UiBuilderDocument.serializer(),
+            checkNotNull(CatalogCutoverFixtures.text("kobento/designs/kobento-thermostat.json")),
+          )
+          .toDesignDocumentV1()
+          .copy(catalogPin = assertNotNull(executor.reference(catalog)))
+      val artifact =
+        exporter.export(
+          RevisionPinnedUiBuilderExport(
+            actor = AuthenticatedUiBuilderActor("owner"),
+            designId = seed.id,
+            revision = seed.revision,
+            documentHash = "unused",
+            document = seed,
+            catalog = catalog,
+            format = ExportFormatV1.KOBENTO_JSON,
+          ),
+        )
+      assertEquals(ExportFormatV1.KOBENTO_JSON, artifact.format)
+      assertEquals("application/json", artifact.mediaType)
+      assertEquals(ExportEncodingV1.UTF8, artifact.encoding)
+      assertEquals(artifactDigest(artifact), artifact.contentDigest)
+      val screen = Json.parseToJsonElement(artifact.content).jsonObject
+      assertTrue(screen.isNotEmpty(), artifact.content)
+    }
+  }
+
+  @Test
+  fun `a catalog without a kobento policy is never offered kobento json`() {
+    val renderer =
+      object : UiBuilderRenderPort {
+        override val supportsSvg = false
+
+        override fun renderPng(request: UiBuilderRenderRequest): ByteArray = ByteArray(0)
+
+        override fun renderSvg(request: UiBuilderRenderRequest): ByteArray = ByteArray(0)
+
+        override fun close() = Unit
+      }
+    ProductionUiBuilderExportExecutor(renderer, UiBuilderExportExecutor { error("unused") }).use {
+      exporter ->
+      val catalog =
+        fixtureCatalogExecutor(exportCapabilities = exporter.capabilities).listCatalogs().single()
+      assertFalse(catalog.exportCapabilities.kobentoJson)
+      assertFalse(catalog.supports(ExportFormatV1.KOBENTO_JSON))
     }
   }
 

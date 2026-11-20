@@ -5,6 +5,7 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.FontSettings
+import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
@@ -393,6 +394,25 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                     capabilities
                       .newBuilder()
                       .also { a2ui -> a2ui.remoteJson = exportCapabilities.remoteJson }
+                      .build()
+                }
+                .let { capabilities ->
+                  // A Kobento catalog's designs are Kobento component JSON, which Kobento's
+                  // `convert` compiles: never Compose source, and never Remote Compose JSON or a
+                  // document lowered here, since its components exist only in Kobento's library.
+                  // Any other catalog never offers it, whatever the host's executor can write.
+                  if (KobentoComponentJsonExporter.policy(catalog.statusSemantics) == null)
+                    capabilities.newBuilder().also { it.kobentoJson = false }.build()
+                  else
+                    capabilities
+                      .newBuilder()
+                      .also { kobento ->
+                        kobento.composeCode = false
+                        kobento.remoteJson = false
+                        kobento.remoteDocument = false
+                        // Offered where the host's executor writes it, as A2UI JSON is.
+                        kobento.kobentoJson = exportCapabilities.kobentoJson
+                      }
                       .build()
                 }
           }
@@ -1289,6 +1309,8 @@ public class ProductionUiBuilderExportExecutor(
         it.composeCode = true
         it.svg = renderer.supportsSvg
         it.png = true
+        // Pure lowering, no renderer: offered for any catalog publishing a Kobento policy.
+        it.kobentoJson = true
       }
       .build()
 
@@ -1330,6 +1352,7 @@ public class ProductionUiBuilderExportExecutor(
           "WFF APK export is not implemented; ExportCapabilitiesV1.wffApk is false for this " +
             "executor",
         )
+      ExportFormatV1.KOBENTO_JSON -> request.kobentoArtifact()
     }
 
   override fun close(): Unit = renderer.close()
@@ -1360,6 +1383,35 @@ public class ProductionUiBuilderExportExecutor(
       contentDigest = bytes.sha256(),
       diagnostics = provenanceDiagnostics(),
     )
+
+  /**
+   * The design as Kobento component JSON. Reached only for a catalog advertising `kobentoJson`,
+   * whose `statusSemantics.kobento` supplies the exporter's options; a refusal is thrown, as every
+   * other executor failure is, and reaches the client as `export failed: <reasons>`.
+   */
+  private fun RevisionPinnedUiBuilderExport.kobentoArtifact(): ExportArtifactV1 {
+    val options =
+      KobentoComponentJsonExporter.optionsFor(catalog.statusSemantics)
+        ?: throw UnsupportedOperationException(
+          "Kobento export needs a Kobento catalog; this catalog publishes no kobento policy",
+        )
+    return when (
+      val result = KobentoComponentJsonExporter.export(document.toUiBuilderDocument(), options)
+    ) {
+      is KobentoComponentJsonExporter.Result.Emitted -> {
+        val bytes = result.source.toByteArray(Charsets.UTF_8)
+        ExportArtifactV1(
+          format = ExportFormatV1.KOBENTO_JSON,
+          mediaType = "application/json",
+          encoding = ExportEncodingV1.UTF8,
+          content = result.source,
+          contentDigest = bytes.sha256(),
+        )
+      }
+      is KobentoComponentJsonExporter.Result.Refused ->
+        throw IllegalArgumentException(result.reasons.joinToString("; "))
+    }
+  }
 
   private fun RevisionPinnedUiBuilderExport.svgArtifact(bytes: ByteArray): ExportArtifactV1 =
     ExportArtifactV1(

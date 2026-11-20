@@ -46,6 +46,7 @@ import ee.schimke.composeai.uibuilder.export.CatalogExportProjections
 import ee.schimke.composeai.uibuilder.export.CatalogScreenStructure
 import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
+import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
@@ -148,6 +149,16 @@ class UiBuilderEditorReducer(
 
   /** The structure the catalog's `code` block publishes; see [CatalogScreenStructure]. */
   private val screenStructure by lazy { CatalogScreenStructure.from(catalog.statusSemantics) }
+
+  /**
+   * The Kobento exporter's options when this is a Kobento catalog, else null. Its designs are
+   * Kobento component JSON, so that exporter, not the Compose one, writes and refuses them.
+   */
+  private val kobentoOptions by lazy {
+    KobentoComponentJsonExporter.optionsFor(
+      catalog.statusSemantics,
+    )
+  }
 
   /**
    * Catalog ids the Compose export can write a call site for, judged by [exportRecord] as
@@ -2248,6 +2259,19 @@ class UiBuilderEditorReducer(
         is WatchFaceXmlExporter.Result.Refused -> EditorGeneratedCode.Refused(result.reasons)
       }
     }
+    kobentoOptions?.let { options ->
+      return when (
+        val result =
+          KobentoComponentJsonExporter.export(
+            document,
+            options,
+          )
+      ) {
+        is KobentoComponentJsonExporter.Result.Emitted -> EditorGeneratedCode.Source(result.source)
+        is KobentoComponentJsonExporter.Result.Refused ->
+          EditorGeneratedCode.Refused(result.reasons)
+      }
+    }
     return screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
   }
 
@@ -2408,6 +2432,24 @@ class UiBuilderEditorReducer(
         is WatchFaceXmlExporter.Result.Refused ->
           ExportOutcome(dedicated = true, reasons = result.reasons)
       }
+    }
+    // A Kobento design is written by `KobentoComponentJsonExporter`; its refusals are the issues,
+    // and the Remote Compose emitter its `remote-compose` platform names never runs for it.
+    kobentoOptions?.let { options ->
+      return@runCatching ExportOutcome(
+        dedicated = true,
+        reasons =
+          when (
+            val result =
+              KobentoComponentJsonExporter.export(
+                document,
+                options,
+              )
+          ) {
+            is KobentoComponentJsonExporter.Result.Emitted -> emptyList()
+            is KobentoComponentJsonExporter.Result.Refused -> result.reasons
+          },
+      )
     }
     when (
       val recordFree =
