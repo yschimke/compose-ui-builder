@@ -543,7 +543,8 @@ public enum class OfflineCatalog(
   REMOTE_M3("remote-m3", "wear-widget-small"),
   REMOTE_WIDGETS("remote-widgets", null),
   GLIMMER("glimmer-catalog", null),
-  A2UI("a2ui-catalog", null);
+  A2UI("a2ui-catalog", null),
+  KOBENTO("kobento", "kobento-screen");
 
   /** This catalog as it publishes it, or why it cannot be opened (unreachable, never fetched). */
   fun load(): PublishedCatalogStore.Load = PublishedCatalogStore.shared.load(systemId)

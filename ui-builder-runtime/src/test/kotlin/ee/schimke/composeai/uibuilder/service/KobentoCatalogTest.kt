@@ -383,6 +383,63 @@ class KobentoCatalogTest {
     )
   }
 
+  @Test
+  fun `every seed kobento-catalog publishes opens as a valid design and exports`() {
+    // The delivery branch as captured (scripts/capture-catalog-cutover-fixtures.sh kobento): the
+    // published policy and the seed documents its `templates` name.
+    val policy =
+      Json.parseToJsonElement(
+        checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
+      )
+    val served =
+      assertIs<PublishedUiBuilderCatalog.Result.Composed>(
+          PublishedUiBuilderCatalog.compose(
+            policy.toString(),
+            null,
+            ExportCapabilitiesV1.Builder().build(),
+          ),
+        )
+        .catalog
+    val executor =
+      fixtureCatalogExecutor(
+        catalogSystemIds = setOf("kobento"),
+        published = mapOf("kobento" to served),
+      )
+    val catalog = executor.listCatalogs().single { it.benchmark.catalogSystemId == "kobento" }
+    val reference = assertNotNull(executor.reference(catalog))
+    val kobento = policy.jsonObject.getValue("statusSemantics").jsonObject
+    val templates = kobento.getValue("templates").jsonArray.map { it.jsonPrimitive.content }
+    // The blank screen first: a host opens the first template when none is named.
+    assertEquals(
+      listOf(
+        "ui-builder/designs/kobento-screen.json",
+        "ui-builder/designs/kobento-thermostat.json",
+      ),
+      templates,
+    )
+    val options =
+      KobentoComponentJsonExporter.Options().withCatalog(kobento.getValue("kobento").jsonObject)
+    for (path in templates) {
+      val seed =
+        Json.decodeFromString(
+          UiBuilderDocument.serializer(),
+          checkNotNull(
+            CatalogCutoverFixtures.text("kobento/designs/" + path.substringAfterLast('/')),
+          ) {
+            "$path is not captured"
+          },
+        )
+      assertNull(
+        executor.validate(seed.toDesignDocumentV1().copy(catalogPin = reference), catalog),
+        path,
+      )
+      assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+        KobentoComponentJsonExporter.export(seed, options),
+        path,
+      )
+    }
+  }
+
   private companion object {
     /** A settings card: a title, a switch and a button driving state, and a gauge reading it. */
     val SAMPLE =

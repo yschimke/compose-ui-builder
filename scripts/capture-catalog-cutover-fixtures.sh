@@ -32,6 +32,7 @@ catalogs=(
   "glimmer-catalog yschimke/glimmer-catalog-out glimmer-catalog"
   "remote-widgets yschimke/remote-m3-catalog-out remote-widgets"
   "compose-foundation yschimke/m3-catalog-out compose-foundation"
+  "kobento yschimke/kobento-catalog-out kobento"
 )
 
 
@@ -51,7 +52,12 @@ for entry in "${catalogs[@]}"; do
   mkdir -p "${dir}/designs"
 
   curl -fsS "${base}/ui-builder.json" | gzip -9n >"${dir}/ui-builder.json.gz"
-  curl -fsS "${base}/components.json" | gzip -9n >"${dir}/components.json.gz"
+  # The record is optional: a catalog whose components are all builtins (kobento: no Kotlin call
+  # sites) publishes none, and the host composes it from its policy alone.
+  if curl -fsS "${base}/components.json" -o "${dir}/components.json.tmp" 2>/dev/null; then
+    gzip -9n <"${dir}/components.json.tmp" >"${dir}/components.json.gz"
+  fi
+  rm -f "${dir}/components.json.tmp"
 
   # The seed documents the policy names, verbatim. A named document that is missing from the
   # delivery branch fails the capture: the readiness test would otherwise report a template the

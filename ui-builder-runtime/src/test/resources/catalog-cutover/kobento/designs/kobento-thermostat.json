@@ -1,0 +1,200 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "kobento-thermostat",
+  "title": "Thermostat",
+  "revision": 0,
+  "template": "kobento-thermostat",
+  "catalogPin": {
+    "systemId": "kobento",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 360,
+    "heightDp": 320,
+    "density": 1.0,
+    "theme": "dark",
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": []
+  },
+  "stateVariables": {
+    "heating": {
+      "type": "value",
+      "valueType": "bool",
+      "initialValue": true,
+      "persistence": "preview"
+    },
+    "target": {
+      "type": "value",
+      "valueType": "float",
+      "initialValue": 21,
+      "persistence": "preview"
+    }
+  },
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "kobento/document",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 16,
+          "endDp": 16,
+          "bottomDp": 16
+        }
+      ],
+      "slots": {
+        "content": [
+          "column"
+        ]
+      }
+    },
+    "column": {
+      "id": "column",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 12
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "title",
+          "gauge",
+          "controls"
+        ]
+      }
+    },
+    "title": {
+      "id": "title",
+      "componentId": "kobento/text",
+      "properties": {
+        "value": {
+          "type": "string",
+          "value": "Living room"
+        },
+        "fontSize": {
+          "type": "float",
+          "value": 20
+        },
+        "color": {
+          "type": "color",
+          "value": "@colors.onSurface"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "gauge": {
+      "id": "gauge",
+      "componentId": "kobento/gauge",
+      "properties": {
+        "value": {
+          "type": "state",
+          "variable": "target"
+        },
+        "min": {
+          "type": "float",
+          "value": 10
+        },
+        "max": {
+          "type": "float",
+          "value": 30
+        },
+        "label": {
+          "type": "string",
+          "value": "Target °C"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "controls": {
+      "id": "controls",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "switch",
+          "warmer"
+        ]
+      }
+    },
+    "switch": {
+      "id": "switch",
+      "componentId": "kobento/switch",
+      "properties": {
+        "checked": {
+          "type": "state",
+          "variable": "heating"
+        },
+        "label": {
+          "type": "string",
+          "value": "Heating"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "warmer": {
+      "id": "warmer",
+      "componentId": "kobento/button",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "Warmer"
+        },
+        "style": {
+          "type": "enum",
+          "value": "outlined"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {
+        "click": [
+          {
+            "type": "increment",
+            "variable": "target",
+            "amount": 1
+          },
+          {
+            "type": "hostAction",
+            "name": "thermostat.target"
+          }
+        ]
+      }
+    }
+  }
+}
