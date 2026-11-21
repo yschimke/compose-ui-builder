@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.HostActions
 import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -3097,17 +3098,29 @@ public class PersistentUiBuilderService(
       UiBuilderServiceResponse.Error(UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, message))
     // Stateless Compose source export is stable for saved designs and supplied designs alike.
     // Keep experimental PNG/Remote JSON/RC document lowering behind its existing build gate.
-    if (request.format != ExportFormatV1.COMPOSE && !UiBuilderBuildFeatures.remoteCompose)
-      return invalid("Remote Compose authoring is disabled in this build")
-    if (
-      request.format != ExportFormatV1.COMPOSE &&
-        request.format != ExportFormatV1.PNG &&
-        request.format !in RemoteDocumentExportSupport.formats
-    ) {
-      return invalid(
-        "supplied documents support only Compose source, PNG, Remote JSON and RC export",
-      )
+    fun formatGate(): UiBuilderServiceResponse? {
+      if (request.format != ExportFormatV1.COMPOSE && !UiBuilderBuildFeatures.remoteCompose)
+        return invalid("Remote Compose authoring is disabled in this build")
+      if (
+        request.format != ExportFormatV1.COMPOSE &&
+          request.format != ExportFormatV1.PNG &&
+          request.format !in RemoteDocumentExportSupport.formats
+      ) {
+        return invalid(
+          "supplied documents support only Compose source, PNG, Remote JSON and RC export",
+        )
+      }
+      return null
     }
+    // A declared document format's own export, and the `.rc` a host compiles from it, are not this
+    // build's Remote Compose lowering: they are answered once the catalog shows what it declares.
+    val documentFormatCandidate =
+      request.format == ExportFormatV1.RC ||
+        BuiltInCatalogDocumentFormats.ALL.formats.any { it.wireFormat == request.format }
+    if (!documentFormatCandidate)
+      formatGate()?.let {
+        return it
+      }
     if (document.id.isBlank() || document.revision < 0)
       return invalid("invalid document id or revision")
     if (document.nodes.size > limits.maximumNodesPerDesign)
@@ -3129,6 +3142,16 @@ public class PersistentUiBuilderService(
             "catalog pin is unavailable",
           ),
         )
+    if (documentFormatCandidate) {
+      val declared = BuiltInCatalogDocumentFormats.ALL.supported(catalog.statusSemantics)?.format
+      val viaDocumentFormat =
+        declared != null &&
+          (request.format == declared.wireFormat || request.format == ExportFormatV1.RC)
+      if (!viaDocumentFormat)
+        formatGate()?.let {
+          return it
+        }
+    }
     if (!catalog.supports(request.format))
       return invalid("catalog does not support ${request.format} export")
     // Exported without properties the catalog no longer declares; the stored document keeps them,

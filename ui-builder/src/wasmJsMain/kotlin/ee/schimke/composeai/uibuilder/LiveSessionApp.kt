@@ -925,7 +925,9 @@ private fun LiveSessionApp(
             val current = latestEditorDocument ?: document
             current?.takeIf {
               (UiBuilderBuildFeatures.remoteCompose ||
-                format in setOf(EditorExportFormat.A2uiJson, EditorExportFormat.LovelaceJson)) &&
+                format in setOf(EditorExportFormat.A2uiJson, EditorExportFormat.LovelaceJson) ||
+                // A declared document format's `.rc` is compiled from the draft by the host.
+                (documentFormat && format == EditorExportFormat.Rc)) &&
                 (config.localStorage ||
                   (revision == null && authoritativeDocument?.toUiBuilderDocument() != it))
             }

@@ -1,6 +1,9 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.KobentoDocumentFormat
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.*
 import ee.schimke.composeai.uibuilder.protocol.RejectedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.SetComponentArgumentsMutationV1
@@ -123,6 +126,64 @@ class PersistentUiBuilderServiceTest {
       ),
     )
     assertEquals(2, requests.size)
+  }
+
+  @Test
+  fun `a supplied document in a declared format exports its format and compiled rc in any build`() {
+    val published =
+      assertIs<PublishedUiBuilderCatalog.Result.Composed>(
+          PublishedUiBuilderCatalog.compose(
+            checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
+            null,
+            ExportCapabilitiesV1.Builder().build(),
+          ),
+        )
+        .catalog
+    fun kobento(compilers: Set<String>) =
+      CurrentM3UiBuilderCatalogExecutor.Builder()
+        .apply {
+          catalogSystemIds = setOf("kobento")
+          this.published = mapOf("kobento" to published)
+          exportCapabilities = ExportCapabilitiesV1.Builder().apply { kobentoJson = true }.build()
+          documentCompilers = compilers
+        }
+        .build()
+    val compiling = kobento(setOf(KobentoDocumentFormat.id))
+    val catalog = compiling.listCatalogs().single()
+    val draft =
+      Json.decodeFromString(
+          UiBuilderDocument.serializer(),
+          checkNotNull(CatalogCutoverFixtures.text("kobento/designs/kobento-thermostat.json")),
+        )
+        .toDesignDocumentV1()
+        .copy(catalogPin = checkNotNull(compiling.reference(catalog)))
+
+    val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
+    val service = service(exportRequests = requests, catalogs = compiling)
+    for (format in listOf(ExportFormatV1.KOBENTO_JSON, ExportFormatV1.RC)) {
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(service, owner, UiBuilderServiceRequest.ExportDocument(draft, format)),
+        format.name,
+      )
+    }
+    assertEquals(listOf(ExportFormatV1.KOBENTO_JSON, ExportFormatV1.RC), requests.map { it.format })
+    assertEquals(draft.id, requests.last().designId)
+
+    // Without a compiler there is no `.rc` to supply a draft for.
+    val plain = kobento(emptySet())
+    val withoutCompiler = service(catalogs = plain)
+    val refused =
+      assertIs<UiBuilderServiceResponse.Error>(
+        execute(
+          withoutCompiler,
+          owner,
+          UiBuilderServiceRequest.ExportDocument(
+            draft.copy(catalogPin = checkNotNull(plain.reference(plain.listCatalogs().single()))),
+            ExportFormatV1.RC,
+          ),
+        ),
+      )
+    assertEquals(ServiceErrorCodeV1.BAD_REQUEST, refused.error.code)
   }
 
   @Test
