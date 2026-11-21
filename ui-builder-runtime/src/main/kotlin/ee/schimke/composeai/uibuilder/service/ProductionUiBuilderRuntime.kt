@@ -2,10 +2,11 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
+import ee.schimke.composeai.uibuilder.export.CatalogDocumentFormat
 import ee.schimke.composeai.uibuilder.export.CatalogListing
 import ee.schimke.composeai.uibuilder.export.FontSettings
-import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
@@ -397,23 +398,13 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                       .build()
                 }
                 .let { capabilities ->
-                  // A Kobento catalog's designs are Kobento component JSON, which Kobento's
-                  // `convert` compiles: never Compose source, and never Remote Compose JSON or a
-                  // document lowered here, since its components exist only in Kobento's library.
-                  // Any other catalog never offers it, whatever the host's executor can write.
-                  if (KobentoComponentJsonExporter.policy(catalog.statusSemantics) == null)
-                    capabilities.newBuilder().also { it.kobentoJson = false }.build()
-                  else
-                    capabilities
-                      .newBuilder()
-                      .also { kobento ->
-                        kobento.composeCode = false
-                        kobento.remoteJson = false
-                        kobento.remoteDocument = false
-                        // Offered where the host's executor writes it, as A2UI JSON is.
-                        kobento.kobentoJson = exportCapabilities.kobentoJson
-                      }
-                      .build()
+                  // A catalog that declares a document format exports as that format alone,
+                  // where this host's executor writes it; no other catalog advertises one.
+                  documentFormats.capabilities(
+                    capabilities,
+                    catalog.statusSemantics,
+                    exportCapabilities,
+                  )
                 }
           }
           .build()
@@ -1309,10 +1300,10 @@ public class ProductionUiBuilderExportExecutor(
         it.composeCode = true
         it.svg = renderer.supportsSvg
         it.png = true
-        // Pure lowering, no renderer: offered for any catalog publishing a Kobento policy.
-        it.kobentoJson = true
       }
       .build()
+      // Document formats are pure lowering, no renderer: offered for any catalog declaring one.
+      .let(documentFormats::offerAll)
 
   override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 =
     when (request.format) {
@@ -1352,7 +1343,7 @@ public class ProductionUiBuilderExportExecutor(
           "WFF APK export is not implemented; ExportCapabilitiesV1.wffApk is false for this " +
             "executor",
         )
-      ExportFormatV1.KOBENTO_JSON -> request.kobentoArtifact()
+      ExportFormatV1.KOBENTO_JSON -> request.documentArtifact()
     }
 
   override fun close(): Unit = renderer.close()
@@ -1385,30 +1376,32 @@ public class ProductionUiBuilderExportExecutor(
     )
 
   /**
-   * The design as Kobento component JSON. Reached only for a catalog advertising `kobentoJson`,
-   * whose `statusSemantics.kobento` supplies the exporter's options; a refusal is thrown, as every
-   * other executor failure is, and reaches the client as `export failed: <reasons>`.
+   * The design in its catalog's declared document format. Reached only for a catalog advertising
+   * that format; a refusal is thrown, as every other executor failure is, and reaches the client as
+   * `export failed: <reasons>`.
    */
-  private fun RevisionPinnedUiBuilderExport.kobentoArtifact(): ExportArtifactV1 {
-    val options =
-      KobentoComponentJsonExporter.optionsFor(catalog.statusSemantics)
+  private fun RevisionPinnedUiBuilderExport.documentArtifact(): ExportArtifactV1 {
+    val declared =
+      documentFormats.supported(catalog.statusSemantics)?.takeIf { it.format.wireFormat == format }
         ?: throw UnsupportedOperationException(
-          "Kobento export needs a Kobento catalog; this catalog publishes no kobento policy",
+          "${format.name} export needs a catalog that declares it; this catalog does not",
         )
     return when (
-      val result = KobentoComponentJsonExporter.export(document.toUiBuilderDocument(), options)
+      val result = declared.format.export(document.toUiBuilderDocument(), declared.policy)
     ) {
-      is KobentoComponentJsonExporter.Result.Emitted -> {
-        val bytes = result.source.toByteArray(Charsets.UTF_8)
+      is CatalogDocumentFormat.Result.Emitted ->
         ExportArtifactV1(
-          format = ExportFormatV1.KOBENTO_JSON,
-          mediaType = "application/json",
-          encoding = ExportEncodingV1.UTF8,
-          content = result.source,
-          contentDigest = bytes.sha256(),
+          format = format,
+          mediaType = declared.format.mediaType,
+          encoding = declared.format.encoding,
+          content = result.content,
+          contentDigest =
+            when (declared.format.encoding) {
+              ExportEncodingV1.UTF8 -> result.content.toByteArray(Charsets.UTF_8)
+              ExportEncodingV1.BASE64 -> Base64.getDecoder().decode(result.content)
+            }.sha256(),
         )
-      }
-      is KobentoComponentJsonExporter.Result.Refused ->
+      is CatalogDocumentFormat.Result.Refused ->
         throw IllegalArgumentException(result.reasons.joinToString("; "))
     }
   }
@@ -1805,3 +1798,6 @@ private val KOTLIN_KEYWORDS =
 
 /** The platform word an A2UI catalog declares: its designs export as A2UI messages. */
 internal const val A2UI_PLATFORM: String = "a2ui"
+
+/** The document formats this runtime advertises and writes. */
+private val documentFormats = BuiltInCatalogDocumentFormats.ALL

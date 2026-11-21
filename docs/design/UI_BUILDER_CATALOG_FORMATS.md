@@ -1,6 +1,6 @@
 # Catalog document formats: one seam instead of a branch per catalog
 
-**Status: proposal, 2026-11-20.** Follows
+**Status: step 1 taken, 2026-11-21.** Follows
 [`UI_BUILDER_CATALOG_AGNOSTICISM.md`](UI_BUILDER_CATALOG_AGNOSTICISM.md), which moved a catalog's
 *facts* into its published declarations, and
 [`UI_BUILDER_CATALOG_RENDERER_RUNTIME.md`](UI_BUILDER_CATALOG_RENDERER_RUNTIME.md), which moves a
@@ -176,11 +176,23 @@ not runtime-loaded code.
 
 ## Order
 
-1. **The seam, and Kobento onto it.** `:ui-builder-format-api`, the registry and the `editing`
-   reader. `KobentoComponentJsonExporter` becomes the first `CatalogDocumentFormat`, and every
-   Kobento branch in the editor and runtime is deleted (12 in `UiBuilderEditorState`, 5 in
-   `UiBuilderEditor`, 18 in the runtime). kobento-catalog declares `documentFormat`. The gate lands
-   here with its first count.
+1. ~~**The seam, and Kobento onto it.**~~ Taken. `CatalogDocumentFormat`, the
+   `CatalogDocumentFormats` registry and `BuiltInCatalogDocumentFormats` (the one list of shipped
+   formats); `KobentoDocumentFormat` wraps `KobentoComponentJsonExporter`. The editor's code pane,
+   Issues and captions, the runtime's capabilities and `ProductionUiBuilderExportExecutor` all go
+   through the registry, and no core file names Kobento. `CatalogAgnosticCoreTest` is the gate:
+   236 lines across 28 core files at its first count, almost all of them watch faces, Lovelace and
+   A2UI. It also asserts the core names no Kobento, apart from the contract's wire names
+   (`KOBENTO_JSON`, `kobentoJson`), which step 2 removes. Three differences from the plan above:
+   - The seam lives in `:ui-builder-export` (package `ee.schimke.composeai.uibuilder.export`), not
+     a new `:ui-builder-format-api` module. A new module is a new published coordinate for the
+     server to resolve, and with one format it buys nothing. The split comes with the second
+     format to move, when a module boundary has something to separate.
+   - A catalog without a `documentFormat` declaration that publishes a format's policy block
+     (`statusSemantics.kobento`) resolves to that format's first version. Published catalogs then
+     keep exporting while kobento-catalog adds the declaration, which it still should.
+   - The `editing` block (§2) waits for step 3: Kobento needs none of its rules, and Lovelace and
+     watch faces are what it replaces.
 2. **Contracts `DOCUMENT`** (§3), then the server's single executor. That is one last contracts
    release and server change, so that no later format needs either.
 3. **Lovelace and A2UI** onto the seam. Each is one exporter plus a handful of branches.

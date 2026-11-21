@@ -42,11 +42,12 @@ import ee.schimke.composeai.uibuilder.componentRootOf
 import ee.schimke.composeai.uibuilder.detachedComponentRoots
 import ee.schimke.composeai.uibuilder.embeddedComponentRecord
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
+import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
+import ee.schimke.composeai.uibuilder.export.CatalogDocumentFormat
 import ee.schimke.composeai.uibuilder.export.CatalogExportProjections
 import ee.schimke.composeai.uibuilder.export.CatalogScreenStructure
 import ee.schimke.composeai.uibuilder.export.HostLogic
 import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
-import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
@@ -151,14 +152,13 @@ class UiBuilderEditorReducer(
   private val screenStructure by lazy { CatalogScreenStructure.from(catalog.statusSemantics) }
 
   /**
-   * The Kobento exporter's options when this is a Kobento catalog, else null. Its designs are
-   * Kobento component JSON, so that exporter, not the Compose one, writes and refuses them.
+   * The document formats this editor knows. A catalog that declares one has its designs written,
+   * shown and refused by that format rather than by the Compose export.
    */
-  private val kobentoOptions by lazy {
-    KobentoComponentJsonExporter.optionsFor(
-      catalog.statusSemantics,
-    )
-  }
+  private val documentFormats = BuiltInCatalogDocumentFormats.ALL
+
+  /** Whether this catalog's designs are a document format's rather than Compose source. */
+  private val writesDocumentFormat by lazy { documentFormats.declares(catalog.statusSemantics) }
 
   /**
    * Catalog ids the Compose export can write a call site for, judged by [exportRecord] as
@@ -2259,17 +2259,11 @@ class UiBuilderEditorReducer(
         is WatchFaceXmlExporter.Result.Refused -> EditorGeneratedCode.Refused(result.reasons)
       }
     }
-    kobentoOptions?.let { options ->
-      return when (
-        val result =
-          KobentoComponentJsonExporter.export(
-            document,
-            options,
-          )
-      ) {
-        is KobentoComponentJsonExporter.Result.Emitted -> EditorGeneratedCode.Source(result.source)
-        is KobentoComponentJsonExporter.Result.Refused ->
-          EditorGeneratedCode.Refused(result.reasons)
+    if (writesDocumentFormat) {
+      return when (val result = documentFormats.export(catalog.statusSemantics, document)) {
+        is CatalogDocumentFormat.Result.Emitted -> EditorGeneratedCode.Source(result.content)
+        is CatalogDocumentFormat.Result.Refused -> EditorGeneratedCode.Refused(result.reasons)
+        null -> EditorGeneratedCode.Refused(emptyList())
       }
     }
     return screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
@@ -2433,22 +2427,16 @@ class UiBuilderEditorReducer(
           ExportOutcome(dedicated = true, reasons = result.reasons)
       }
     }
-    // A Kobento design is written by `KobentoComponentJsonExporter`; its refusals are the issues,
-    // and the Remote Compose emitter its `remote-compose` platform names never runs for it.
-    kobentoOptions?.let { options ->
+    // A design in a declared document format is written by that format; its refusals are the
+    // issues, and the emitter its platform word would name never runs for it.
+    if (writesDocumentFormat) {
       return@runCatching ExportOutcome(
         dedicated = true,
         reasons =
-          when (
-            val result =
-              KobentoComponentJsonExporter.export(
-                document,
-                options,
-              )
-          ) {
-            is KobentoComponentJsonExporter.Result.Emitted -> emptyList()
-            is KobentoComponentJsonExporter.Result.Refused -> result.reasons
-          },
+          (documentFormats.export(catalog.statusSemantics, document)
+              as? CatalogDocumentFormat.Result.Refused)
+            ?.reasons
+            .orEmpty(),
       )
     }
     when (
