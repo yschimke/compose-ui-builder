@@ -100,4 +100,23 @@ class CatalogDocumentFormatsTest {
     assertFalse(capabilities.kobentoJson)
     assertTrue(capabilities.composeCode)
   }
+
+  @Test
+  fun `a compiled document is offered only where the host compiles the format`() {
+    val kobento = semantics("""{"kobento":{}}""")
+    assertFalse(formats.capabilities(host, kobento, host).remoteDocument)
+    assertTrue(
+      formats
+        .capabilities(host, kobento, host, compilers = setOf(KobentoDocumentFormat.id))
+        .remoteDocument,
+    )
+    // A compiler for one format does not give another catalog a `.rc`.
+    val compose = semantics("""{"platform":"mobile"}""")
+    assertEquals(
+      host.remoteDocument,
+      formats
+        .capabilities(host, compose, host, compilers = setOf(KobentoDocumentFormat.id))
+        .remoteDocument,
+    )
+  }
 }

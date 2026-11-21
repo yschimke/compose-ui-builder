@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.security.MessageDigest
@@ -873,7 +874,13 @@ internal fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     ExportFormatV1.JSON ->
       (UiBuilderBuildFeatures.remoteCompose || platform in setOf(A2UI_PLATFORM, "lovelace")) &&
         exportCapabilities.remoteJson
-    ExportFormatV1.RC -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteDocument
+    // A catalog in a declared document format gets its `.rc` from the host's compiler for that
+    // format, not from this build's Remote Compose lowering, so the authoring flag does not gate
+    // it.
+    ExportFormatV1.RC ->
+      (UiBuilderBuildFeatures.remoteCompose ||
+        BuiltInCatalogDocumentFormats.ALL.declares(statusSemantics)) &&
+        exportCapabilities.remoteDocument
     ExportFormatV1.WFF_XML -> exportCapabilities.wffXml
     ExportFormatV1.WFF_BUNDLE -> exportCapabilities.wffBundle
     ExportFormatV1.WFF_APK -> exportCapabilities.wffApk

@@ -87,6 +87,7 @@ import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.resolveNewDesignLink
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.typefacesFor
+import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
@@ -906,6 +907,8 @@ private fun LiveSessionApp(
       val lovelace =
         UiBuilderCatalogPlatform.from(capability.statusSemantics) ==
           UiBuilderCatalogPlatform.LOVELACE
+      // A catalog in a declared document format (CatalogDocumentFormats) exports through it.
+      val documentFormat = BuiltInCatalogDocumentFormats.ALL.declares(capability.statusSemantics)
       documentPreviewAvailable =
         RemoteDocumentExportSupport.documentFormat?.let {
           RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
@@ -949,11 +952,16 @@ private fun LiveSessionApp(
               // JSON it writes is the A2UI messages.
               a2uiJson = a2ui && capability.exportCapabilities.remoteJson,
               lovelaceJson = lovelace && capability.exportCapabilities.remoteJson,
+              // A declared document format's `.rc` is compiled by the host's compiler for it.
+              compiledRc = documentFormat && capability.exportCapabilities.remoteDocument,
             ),
           revision = revision,
-          // The bitmap-font `.rc` draws its glyphs here, in the faces the canvas shows.
+          // The bitmap-font `.rc` draws its glyphs here, in the faces the canvas shows. Not for a
+          // document format: its `.rc` is the format's service's bytes, not this editor's lowering.
           typefaces =
-            fontRegistry?.let { registry -> { families -> registry.typefacesFor(families) } },
+            fontRegistry
+              ?.takeUnless { documentFormat }
+              ?.let { registry -> { families -> registry.typefacesFor(families) } },
         )
       // The server draws every export and will not for a caller who may not write. The menu stays,
       // each row saying why, rather than vanishing or failing on the press.

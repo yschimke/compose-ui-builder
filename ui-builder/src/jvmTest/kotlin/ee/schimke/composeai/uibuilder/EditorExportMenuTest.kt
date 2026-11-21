@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.editor.perform
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
@@ -196,5 +197,13 @@ class EditorExportMenuTest {
       answers,
     )
     assertEquals(answers, calls)
+  }
+
+  @Test
+  fun `a compiled rc is offered without the remote compose authoring flag`() {
+    assertTrue(
+      EditorExportFormat.Rc in exportFormatsFor(svg = false, png = true, compiledRc = true),
+    )
+    assertFalse(EditorExportFormat.Rc in exportFormatsFor(svg = false, png = true))
   }
 }

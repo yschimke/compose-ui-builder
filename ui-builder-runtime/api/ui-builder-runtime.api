@@ -165,6 +165,7 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public final fun build ()Lee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor;
 	public final fun getCatalogSystemIds ()Ljava/util/Set;
 	public final fun getComposeExportFor ()Lkotlin/jvm/functions/Function1;
+	public final fun getDocumentCompilers ()Ljava/util/Set;
 	public final fun getExportCapabilities ()Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;
 	public final fun getNativeRuntimeIds ()Ljava/util/Map;
 	public final fun getPacks ()Ljava/util/List;
@@ -173,6 +174,7 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public final fun getUnlistedCatalogIds ()Ljava/util/Set;
 	public final fun setCatalogSystemIds (Ljava/util/Set;)V
 	public final fun setComposeExportFor (Lkotlin/jvm/functions/Function1;)V
+	public final fun setDocumentCompilers (Ljava/util/Set;)V
 	public final fun setExportCapabilities (Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;)V
 	public final fun setNativeRuntimeIds (Ljava/util/Map;)V
 	public final fun setPacks (Ljava/util/List;)V

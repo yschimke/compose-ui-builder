@@ -190,11 +190,16 @@ fun exportFormatsFor(
   rc: Boolean = false,
   a2uiJson: Boolean = false,
   lovelaceJson: Boolean = false,
+  /**
+   * A `.rc` the host compiles from a declared document format: not behind the Remote Compose
+   * authoring flag, since this build's lowering plays no part in it.
+   */
+  compiledRc: Boolean = false,
 ): List<EditorExportFormat> = buildList {
   if (svg) add(EditorExportFormat.Svg)
   if (png) add(EditorExportFormat.Png)
   if (UiBuilderBuildFeatures.remoteCompose && json) add(EditorExportFormat.Json)
-  if (UiBuilderBuildFeatures.remoteCompose && rc) add(EditorExportFormat.Rc)
+  if ((UiBuilderBuildFeatures.remoteCompose && rc) || compiledRc) add(EditorExportFormat.Rc)
   // Not behind the Remote Compose flag: an A2UI design's JSON is its A2UI messages.
   if (a2uiJson) add(EditorExportFormat.A2uiJson)
   if (lovelaceJson) add(EditorExportFormat.LovelaceJson)

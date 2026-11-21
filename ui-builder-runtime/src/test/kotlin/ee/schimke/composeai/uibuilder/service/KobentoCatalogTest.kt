@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
+import ee.schimke.composeai.uibuilder.export.KobentoDocumentFormat
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
@@ -515,6 +516,44 @@ class KobentoCatalogTest {
       val screen = Json.parseToJsonElement(artifact.content).jsonObject
       assertTrue(screen.isNotEmpty(), artifact.content)
     }
+  }
+
+  @Test
+  fun `a host that compiles kobento json offers its rc, and only then`() {
+    val policy =
+      Json.parseToJsonElement(
+        checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
+      )
+    val served =
+      assertIs<PublishedUiBuilderCatalog.Result.Composed>(
+          PublishedUiBuilderCatalog.compose(
+            policy.toString(),
+            null,
+            ExportCapabilitiesV1.Builder().build(),
+          ),
+        )
+        .catalog
+    fun catalog(compilers: Set<String>) =
+      CurrentM3UiBuilderCatalogExecutor.Builder()
+        .apply {
+          catalogSystemIds = setOf("kobento")
+          published = mapOf("kobento" to served)
+          exportCapabilities = ExportCapabilitiesV1.Builder().apply { kobentoJson = true }.build()
+          documentCompilers = compilers
+        }
+        .build()
+        .listCatalogs()
+        .single { it.benchmark.catalogSystemId == "kobento" }
+
+    val compiled = catalog(setOf(KobentoDocumentFormat.id))
+    assertTrue(compiled.exportCapabilities.remoteDocument)
+    // Not behind the Remote Compose authoring flag: Kobento writes these bytes, not this build.
+    assertTrue(compiled.supports(ExportFormatV1.RC))
+    assertTrue(compiled.supports(ExportFormatV1.KOBENTO_JSON))
+
+    val plain = catalog(emptySet())
+    assertFalse(plain.exportCapabilities.remoteDocument)
+    assertFalse(plain.supports(ExportFormatV1.RC))
   }
 
   @Test

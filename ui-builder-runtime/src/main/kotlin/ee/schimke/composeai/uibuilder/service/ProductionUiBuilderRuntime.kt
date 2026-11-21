@@ -80,6 +80,7 @@ private data class Configuration(
   val published: Map<String, CatalogCapabilityV1>,
   val nativeRuntimeIds: Map<String, String> = emptyMap(),
   val unlistedCatalogIds: Set<String> = emptySet(),
+  val documentCompilers: Set<String> = emptySet(),
 )
 
 private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
@@ -107,6 +108,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val packs = configuration.packs
   private val published = configuration.published.filterKeys(catalogSystemIds::contains)
   private val nativeRuntimeIds = configuration.nativeRuntimeIds
+  private val documentCompilers = configuration.documentCompilers
 
   /**
    * Served catalogs left out of what people are offered (`CatalogListing`): each is marked
@@ -180,6 +182,13 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
      */
     public var unlistedCatalogIds: Set<String> = emptySet()
 
+    /**
+     * The document formats (by `CatalogDocumentFormat.id`) this host compiles to a Remote Compose
+     * document itself, through the format's own service. A catalog declaring one of them advertises
+     * `remoteDocument`, and the host's executor writes the `.rc`. Empty by default.
+     */
+    public var documentCompilers: Set<String> = emptySet()
+
     public fun build(): CurrentM3UiBuilderCatalogExecutor =
       CurrentM3UiBuilderCatalogExecutor(
         Configuration(
@@ -191,6 +200,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           published = published,
           nativeRuntimeIds = nativeRuntimeIds,
           unlistedCatalogIds = unlistedCatalogIds,
+          documentCompilers = documentCompilers,
         ),
       )
   }
@@ -404,6 +414,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                     capabilities,
                     catalog.statusSemantics,
                     exportCapabilities,
+                    documentCompilers,
                   )
                 }
           }
