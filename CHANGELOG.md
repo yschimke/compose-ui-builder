@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.146.0](https://github.com/yschimke/compose-ui-builder/compare/v3.145.0...v3.146.0) (2026-11-21)
+
+
+### Features
+
+* preview a document-format design from its host-compiled .rc ([#1354](https://github.com/yschimke/compose-ui-builder/issues/1354)) ([a8d1f46](https://github.com/yschimke/compose-ui-builder/commit/a8d1f46053c826ea04f63c977e78ece258efc00c))
+
+
+### Bug Fixes
+
+* offer a document-format catalog's palette only what its format writes ([#1353](https://github.com/yschimke/compose-ui-builder/issues/1353)) ([ea940e1](https://github.com/yschimke/compose-ui-builder/commit/ea940e186099f28cd3af40eb4ae3450f8687cf78))
+
 ## [3.145.0](https://github.com/yschimke/compose-ui-builder/compare/v3.144.0...v3.145.0) (2026-11-21)
 
 
