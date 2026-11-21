@@ -253,10 +253,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 
   /**
    * A published catalog plus the builder components it does not offer itself. Additive only: the
-   * catalog wins every collision. A catalog declaring a document format receives only the builder
-   * components that format writes (`CatalogDocumentFormats.offersBuilderComponent`). The donor's
-   * asset registry travels with `asset/image` unless the catalog has its own, since without one any
-   * invented `assetKey` would be accepted.
+   * catalog wins every collision. The donor's asset registry travels with `asset/image` unless the
+   * catalog has its own, since without one any invented `assetKey` would be accepted.
    */
   private fun withBuilderVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
     val donor = donorFor(catalog)
@@ -264,8 +262,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     val missing =
       donor.components.filter { component ->
         component.componentId !in offered &&
-          BUILDER_NAMESPACES.any { component.componentId.startsWith(it) } &&
-          documentFormats.offersBuilderComponent(catalog.statusSemantics, component.componentId)
+          BUILDER_NAMESPACES.any { component.componentId.startsWith(it) }
       }
     if (missing.isEmpty()) return catalog
     val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY

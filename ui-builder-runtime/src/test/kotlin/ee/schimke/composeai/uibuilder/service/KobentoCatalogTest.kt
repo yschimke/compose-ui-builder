@@ -557,7 +557,7 @@ class KobentoCatalogTest {
   }
 
   @Test
-  fun `a kobento palette offers only the builder components kobento json writes`() {
+  fun `a kobento catalog keeps the builder vocabulary its stored designs may hold`() {
     val policy =
       Json.parseToJsonElement(
         checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
@@ -578,18 +578,13 @@ class KobentoCatalogTest {
         )
         .listCatalogs()
         .single { it.benchmark.catalogSystemId == "kobento" }
-    // Every other catalog is handed the whole builder vocabulary (drawing, shapes, images, the
-    // Remote Compose seams); Kobento JSON refuses all of it but its three layouts, so a Kobento
-    // palette offering it only made designs its export refuses.
-    assertEquals(
-      KobentoComponentJsonExporter.BUILDER_LAYOUTS,
-      catalog.components
-        .map { it.componentId }
-        .filter { id -> BUILDER_NAMESPACES.any { id.startsWith(it) } }
-        .toSet(),
-    )
-    val menu = catalog.statusSemantics["componentMenu"].toString()
-    assertFalse("draw/rect" in menu, menu)
+    // The palette offers only what Kobento JSON writes (the editor's paletteHiddenComponentIds),
+    // but a design saved holding a drawing must still validate, open and be fixed.
+    val ids = catalog.components.map { it.componentId }.toSet()
+    assertTrue(KobentoComponentJsonExporter.BUILDER_LAYOUTS.all { it in ids })
+    assertTrue("draw/rect" in ids, ids.toString())
+    assertFalse(KobentoDocumentFormat.writes("draw/rect"))
+    assertTrue(KobentoDocumentFormat.writes("kobento/button"))
   }
 
   @Test

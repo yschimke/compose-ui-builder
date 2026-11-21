@@ -40,12 +40,12 @@ interface CatalogDocumentFormat {
   val encoding: ExportEncodingV1
 
   /**
-   * The builder's own components (`layout/column`, …) this format writes. A catalog declaring the
-   * format is offered only these of the builder vocabulary every published catalog otherwise
-   * receives: anything else on its palette is a component the export refuses.
+   * Whether this format writes [componentId]. A catalog declaring the format keeps every component
+   * it is given (the builder's own vocabulary included), so a stored design holding one still
+   * validates and opens; the insert panel offers only what this answers true for, since anything
+   * else is a component the export refuses.
    */
-  val builderComponents: Set<String>
-    get() = emptySet()
+  fun writes(componentId: String): Boolean = true
 
   /** Whether [capabilities] advertise this format. */
   fun offered(capabilities: ExportCapabilitiesV1): Boolean
@@ -148,15 +148,15 @@ class CatalogDocumentFormats(val formats: List<CatalogDocumentFormat>) {
     base.newBuilder().also { builder -> formats.forEach { it.offer(builder, true) } }.build()
 
   /**
-   * Whether a catalog with [statusSemantics] is offered the builder's own [componentId]. Every
-   * catalog is, unless it declares a document format: then only the builder components that format
-   * writes, and none for a format this build does not ship.
+   * Whether the insert panel offers [componentId] in a catalog with [statusSemantics]: everything,
+   * unless the catalog declares a shipped format, and then what that format writes. A format this
+   * build does not ship hides nothing; it exports nothing either, and says so.
    */
-  fun offersBuilderComponent(statusSemantics: JsonObject, componentId: String): Boolean =
+  fun offersOnPalette(statusSemantics: JsonObject, componentId: String): Boolean =
     when (val resolution = resolve(statusSemantics)) {
-      Resolution.NotDeclared -> true
-      is Resolution.Unsupported -> false
-      is Resolution.Supported -> componentId in resolution.format.builderComponents
+      Resolution.NotDeclared,
+      is Resolution.Unsupported -> true
+      is Resolution.Supported -> resolution.format.writes(componentId)
     }
 
   /**

@@ -121,14 +121,16 @@ class CatalogDocumentFormatsTest {
   }
 
   @Test
-  fun `a declaring catalog is offered only the builder components its format writes`() {
+  fun `a declaring catalog's palette offers only what its format writes`() {
     val kobento = semantics("""{"kobento":{}}""")
-    assertTrue(formats.offersBuilderComponent(kobento, "layout/column"))
-    assertFalse(formats.offersBuilderComponent(kobento, "draw/rect"))
-    assertFalse(formats.offersBuilderComponent(kobento, "asset/image"))
+    assertTrue(formats.offersOnPalette(kobento, "kobento/button"))
+    assertTrue(formats.offersOnPalette(kobento, "layout/column"))
+    assertFalse(formats.offersOnPalette(kobento, "draw/rect"))
+    assertFalse(formats.offersOnPalette(kobento, "asset/image"))
+    // A format this build does not ship hides nothing; it exports nothing either, and says so.
     val unknown =
       semantics("""{"documentFormat":{"adapter":"kobento-component-json","version":9}}""")
-    assertFalse(formats.offersBuilderComponent(unknown, "layout/column"))
-    assertTrue(formats.offersBuilderComponent(semantics("""{"platform":"mobile"}"""), "draw/rect"))
+    assertTrue(formats.offersOnPalette(unknown, "draw/rect"))
+    assertTrue(formats.offersOnPalette(semantics("""{"platform":"mobile"}"""), "draw/rect"))
   }
 }
