@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.144.0](https://github.com/yschimke/compose-ui-builder/compare/v3.143.0...v3.144.0) (2026-11-21)
+
+
+### Features
+
+* export Kobento designs as Kobento component JSON ([#1334](https://github.com/yschimke/compose-ui-builder/issues/1334)) ([4134045](https://github.com/yschimke/compose-ui-builder/commit/4134045c255829da7c585558871d229067a4442f))
+
 ## [3.143.0](https://github.com/yschimke/compose-ui-builder/compare/v3.142.0...v3.143.0) (2026-11-20)
 
 
