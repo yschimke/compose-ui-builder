@@ -24,6 +24,7 @@ import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.toUiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.AssetBindingV1
 import ee.schimke.composeai.uibuilder.protocol.AssetKeyValueV1
+import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogAssetSourceV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
@@ -419,6 +420,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
                 }
           }
           .build()
+          .withCompiledDocumentPreview()
           .withPacks(packs.filter { it.platform == catalog.platform })
           .let { if (systemId in unlistedCatalogIds) CatalogListing.markUnlisted(it) else it }
       }
@@ -1812,3 +1814,27 @@ internal const val A2UI_PLATFORM: String = "a2ui"
 
 /** The document formats this runtime advertises and writes. */
 private val documentFormats = BuiltInCatalogDocumentFormats.ALL
+
+/**
+ * A catalog in a declared document format whose `.rc` this host compiles previews that `.rc`: the
+ * editor's canvas cannot draw the format's components, so the Preview pane plays the document the
+ * format's own service wrote. A catalog's own `browserPreview` wins.
+ */
+private fun CatalogCapabilityV1.withCompiledDocumentPreview(): CatalogCapabilityV1 =
+  if (
+    browserPreview != null ||
+      !exportCapabilities.remoteDocument ||
+      !documentFormats.declares(statusSemantics)
+  )
+    this
+  else
+    newBuilder()
+      .also {
+        it.browserPreview =
+          BrowserPreviewCapabilityV1.Builder(
+              BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER,
+            )
+            .also { preview -> preview.format = ExportFormatV1.RC }
+            .build()
+      }
+      .build()

@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.KobentoDocumentFormat
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
 import ee.schimke.composeai.uibuilder.protocol.ExportEncodingV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
@@ -519,7 +520,7 @@ class KobentoCatalogTest {
   }
 
   @Test
-  fun `a host that compiles kobento json offers its rc, and only then`() {
+  fun `a host that compiles kobento json offers and previews its rc, and only then`() {
     val policy =
       Json.parseToJsonElement(
         checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
@@ -551,9 +552,17 @@ class KobentoCatalogTest {
     assertTrue(compiled.supports(ExportFormatV1.RC))
     assertTrue(compiled.supports(ExportFormatV1.KOBENTO_JSON))
 
+    // The canvas cannot draw Kobento's components, so its Preview plays the compiled document.
+    assertEquals(
+      BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER,
+      compiled.browserPreview?.renderer,
+    )
+    assertEquals(ExportFormatV1.RC, compiled.browserPreview?.format)
+
     val plain = catalog(emptySet())
     assertFalse(plain.exportCapabilities.remoteDocument)
     assertFalse(plain.supports(ExportFormatV1.RC))
+    assertNull(plain.browserPreview)
   }
 
   @Test
