@@ -144,12 +144,15 @@ class CatalogDocumentFormats(val formats: List<CatalogDocumentFormat>) {
    * advertises a format it does not declare, whatever [host] can write. A catalog that declares one
    * exports as that format alone: its components exist only in the format's own library, so Compose
    * source and the Remote Compose lowering are off. The declared format is offered where [host]
-   * offers it.
+   * offers it, and a compiled Remote Compose document (`remoteDocument`, an `.rc`) where the host
+   * has a compiler for the format: [compilers] holds the format ids the host compiles, a step this
+   * builder cannot take itself (the format's own service writes the bytes).
    */
   fun capabilities(
     base: ExportCapabilitiesV1,
     statusSemantics: JsonObject,
     host: ExportCapabilitiesV1,
+    compilers: Set<String> = emptySet(),
   ): ExportCapabilitiesV1 {
     val builder = base.newBuilder()
     formats.forEach { it.offer(builder, false) }
@@ -159,6 +162,7 @@ class CatalogDocumentFormats(val formats: List<CatalogDocumentFormat>) {
       is Resolution.Supported -> {
         builder.offerNoOtherLane()
         resolution.format.offer(builder, resolution.format.offered(host))
+        builder.remoteDocument = resolution.format.id in compilers
       }
     }
     return builder.build()
