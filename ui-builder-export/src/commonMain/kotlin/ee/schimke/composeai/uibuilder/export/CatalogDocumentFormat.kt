@@ -39,6 +39,14 @@ interface CatalogDocumentFormat {
   /** How the artifact's content travels. */
   val encoding: ExportEncodingV1
 
+  /**
+   * Whether this format writes [componentId]. A catalog declaring the format keeps every component
+   * it is given (the builder's own vocabulary included), so a stored design holding one still
+   * validates and opens; the insert panel offers only what this answers true for, since anything
+   * else is a component the export refuses.
+   */
+  fun writes(componentId: String): Boolean = true
+
   /** Whether [capabilities] advertise this format. */
   fun offered(capabilities: ExportCapabilitiesV1): Boolean
 
@@ -138,6 +146,18 @@ class CatalogDocumentFormats(val formats: List<CatalogDocumentFormat>) {
   /** [base] with every shipped format's flag set. For an executor that writes them all. */
   fun offerAll(base: ExportCapabilitiesV1): ExportCapabilitiesV1 =
     base.newBuilder().also { builder -> formats.forEach { it.offer(builder, true) } }.build()
+
+  /**
+   * Whether the insert panel offers [componentId] in a catalog with [statusSemantics]: everything,
+   * unless the catalog declares a shipped format, and then what that format writes. A format this
+   * build does not ship hides nothing; it exports nothing either, and says so.
+   */
+  fun offersOnPalette(statusSemantics: JsonObject, componentId: String): Boolean =
+    when (val resolution = resolve(statusSemantics)) {
+      Resolution.NotDeclared,
+      is Resolution.Unsupported -> true
+      is Resolution.Supported -> resolution.format.writes(componentId)
+    }
 
   /**
    * A catalog's export capabilities. Every format's flag starts cleared, so a catalog never

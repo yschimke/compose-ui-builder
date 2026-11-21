@@ -119,4 +119,18 @@ class CatalogDocumentFormatsTest {
         .remoteDocument,
     )
   }
+
+  @Test
+  fun `a declaring catalog's palette offers only what its format writes`() {
+    val kobento = semantics("""{"kobento":{}}""")
+    assertTrue(formats.offersOnPalette(kobento, "kobento/button"))
+    assertTrue(formats.offersOnPalette(kobento, "layout/column"))
+    assertFalse(formats.offersOnPalette(kobento, "draw/rect"))
+    assertFalse(formats.offersOnPalette(kobento, "asset/image"))
+    // A format this build does not ship hides nothing; it exports nothing either, and says so.
+    val unknown =
+      semantics("""{"documentFormat":{"adapter":"kobento-component-json","version":9}}""")
+    assertTrue(formats.offersOnPalette(unknown, "draw/rect"))
+    assertTrue(formats.offersOnPalette(semantics("""{"platform":"mobile"}"""), "draw/rect"))
+  }
 }

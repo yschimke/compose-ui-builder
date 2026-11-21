@@ -566,6 +566,37 @@ class KobentoCatalogTest {
   }
 
   @Test
+  fun `a kobento catalog keeps the builder vocabulary its stored designs may hold`() {
+    val policy =
+      Json.parseToJsonElement(
+        checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
+      )
+    val served =
+      assertIs<PublishedUiBuilderCatalog.Result.Composed>(
+          PublishedUiBuilderCatalog.compose(
+            policy.toString(),
+            null,
+            ExportCapabilitiesV1.Builder().build(),
+          ),
+        )
+        .catalog
+    val catalog =
+      fixtureCatalogExecutor(
+          catalogSystemIds = setOf("kobento"),
+          published = mapOf("kobento" to served),
+        )
+        .listCatalogs()
+        .single { it.benchmark.catalogSystemId == "kobento" }
+    // The palette offers only what Kobento JSON writes (the editor's paletteHiddenComponentIds),
+    // but a design saved holding a drawing must still validate, open and be fixed.
+    val ids = catalog.components.map { it.componentId }.toSet()
+    assertTrue(KobentoComponentJsonExporter.BUILDER_LAYOUTS.all { it in ids })
+    assertTrue("draw/rect" in ids, ids.toString())
+    assertFalse(KobentoDocumentFormat.writes("draw/rect"))
+    assertTrue(KobentoDocumentFormat.writes("kobento/button"))
+  }
+
+  @Test
   fun `a catalog without a kobento policy is never offered kobento json`() {
     val renderer =
       object : UiBuilderRenderPort {

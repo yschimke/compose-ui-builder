@@ -18,6 +18,10 @@ object KobentoDocumentFormat : CatalogDocumentFormat {
   override val mediaType: String = "application/json"
   override val encoding: ExportEncodingV1 = ExportEncodingV1.UTF8
 
+  override fun writes(componentId: String): Boolean =
+    componentId.startsWith(KobentoComponentJsonExporter.COMPONENT_PREFIX) ||
+      componentId in KobentoComponentJsonExporter.BUILDER_LAYOUTS
+
   override fun offered(capabilities: ExportCapabilitiesV1): Boolean = capabilities.kobentoJson
 
   override fun offer(builder: ExportCapabilitiesV1.Builder, enabled: Boolean) {

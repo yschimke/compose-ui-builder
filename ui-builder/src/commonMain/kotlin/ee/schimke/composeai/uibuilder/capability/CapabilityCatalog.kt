@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.capability
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_DP_PROPERTIES
 import ee.schimke.composeai.uibuilder.editor.ComponentMenu
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
@@ -77,11 +78,18 @@ data class CapabilityCatalog(
    * component and only export refuses it.
    */
   val paletteHiddenComponentIds: Set<String> by lazy {
-    if (
-      !UiBuilderBuildFeatures.remoteCompose && platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE
-    ) {
-      setOf("layout/for-each")
-    } else emptySet()
+    val unauthorable =
+      if (
+        !UiBuilderBuildFeatures.remoteCompose && platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE
+      ) {
+        setOf("layout/for-each")
+      } else emptySet()
+    // A catalog in a declared document format keeps the builder vocabulary for the same reason,
+    // and offers only what its format writes (`CatalogDocumentFormat.writes`).
+    unauthorable +
+      components
+        .map { it.componentId }
+        .filterNot { BuiltInCatalogDocumentFormats.ALL.offersOnPalette(statusSemantics, it) }
   }
   /**
    * The components the insert panel lists: every one this catalog declares, less
