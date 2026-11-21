@@ -909,10 +909,13 @@ private fun LiveSessionApp(
           UiBuilderCatalogPlatform.LOVELACE
       // A catalog in a declared document format (CatalogDocumentFormats) exports through it.
       val documentFormat = BuiltInCatalogDocumentFormats.ALL.declares(capability.statusSemantics)
+      // A declared format's `.rc` is the host's to compile (through the format's own service), so
+      // its
+      // Preview plays that document in every build, not only behind the authoring flag.
       documentPreviewAvailable =
         RemoteDocumentExportSupport.documentFormat?.let {
           RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
-        } == true
+        } == true || (documentFormat && capability.exportCapabilities.remoteDocument)
       // PNG and Remote document exports can submit current drafts without saving; SVG requires a
       // saved design. When pinned, exports use the canvas's revision rather than the head.
       val browserExportHost =
