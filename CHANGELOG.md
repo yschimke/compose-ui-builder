@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.145.0](https://github.com/yschimke/compose-ui-builder/compare/v3.144.0...v3.145.0) (2026-11-21)
+
+
+### Features
+
+* dispatch document-format exports through one seam ([#1343](https://github.com/yschimke/compose-ui-builder/issues/1343)) ([cf1a13b](https://github.com/yschimke/compose-ui-builder/commit/cf1a13b280baaccf9e66f126e1f3dfcc9ccb6b69))
+* offer a host-compiled .rc for a declared document format ([#1347](https://github.com/yschimke/compose-ui-builder/issues/1347)) ([7922bdc](https://github.com/yschimke/compose-ui-builder/commit/7922bdcb4ccf17c514ed8c4c9a5eedc08a580dc4))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.28.2 ([#1345](https://github.com/yschimke/compose-ui-builder/issues/1345)) ([e4f271f](https://github.com/yschimke/compose-ui-builder/commit/e4f271fcc75d8520de7e816bae9830fcd3862fad))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v3.10.0 ([#1346](https://github.com/yschimke/compose-ui-builder/issues/1346)) ([8575b5d](https://github.com/yschimke/compose-ui-builder/commit/8575b5d70917e8f752b353397d8c32920d3fa69b))
+* export a supplied draft in its declared document format ([#1352](https://github.com/yschimke/compose-ui-builder/issues/1352)) ([245f410](https://github.com/yschimke/compose-ui-builder/commit/245f410f7ff31205fc0202460729acab027a88c7))
+
 ## [3.144.0](https://github.com/yschimke/compose-ui-builder/compare/v3.143.0...v3.144.0) (2026-11-21)
 
 
