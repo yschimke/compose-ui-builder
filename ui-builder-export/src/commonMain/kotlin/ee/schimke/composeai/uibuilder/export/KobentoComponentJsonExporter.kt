@@ -20,6 +20,9 @@ object KobentoComponentJsonExporter {
   const val DOCUMENT: String = "kobento/document"
   const val TEXT: String = "kobento/text"
 
+  /** The builder layouts this exporter writes as Kobento's own `column`, `row` and `box`. */
+  val BUILDER_LAYOUTS: Set<String> = setOf("layout/column", "layout/row", "layout/box")
+
   /** The looks Kobento expands a component call in, plus its two whole-document modes. */
   val COMPONENT_THEMES: Set<String> =
     setOf("auto", "all", "light", "dark", "mono-dark", "mono-light")
@@ -177,9 +180,7 @@ object KobentoComponentJsonExporter {
       try {
         return when (node.componentId) {
           DOCUMENT -> document(node)
-          "layout/column",
-          "layout/row",
-          "layout/box" -> layout(node)
+          in BUILDER_LAYOUTS -> layout(node)
           TEXT -> text(node)
           else -> component(node)
         }

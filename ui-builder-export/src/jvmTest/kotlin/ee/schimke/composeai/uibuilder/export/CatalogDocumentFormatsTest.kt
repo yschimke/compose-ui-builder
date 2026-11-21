@@ -119,4 +119,16 @@ class CatalogDocumentFormatsTest {
         .remoteDocument,
     )
   }
+
+  @Test
+  fun `a declaring catalog is offered only the builder components its format writes`() {
+    val kobento = semantics("""{"kobento":{}}""")
+    assertTrue(formats.offersBuilderComponent(kobento, "layout/column"))
+    assertFalse(formats.offersBuilderComponent(kobento, "draw/rect"))
+    assertFalse(formats.offersBuilderComponent(kobento, "asset/image"))
+    val unknown =
+      semantics("""{"documentFormat":{"adapter":"kobento-component-json","version":9}}""")
+    assertFalse(formats.offersBuilderComponent(unknown, "layout/column"))
+    assertTrue(formats.offersBuilderComponent(semantics("""{"platform":"mobile"}"""), "draw/rect"))
+  }
 }

@@ -557,6 +557,42 @@ class KobentoCatalogTest {
   }
 
   @Test
+  fun `a kobento palette offers only the builder components kobento json writes`() {
+    val policy =
+      Json.parseToJsonElement(
+        checkNotNull(CatalogCutoverFixtures.text("kobento/ui-builder.json.gz")),
+      )
+    val served =
+      assertIs<PublishedUiBuilderCatalog.Result.Composed>(
+          PublishedUiBuilderCatalog.compose(
+            policy.toString(),
+            null,
+            ExportCapabilitiesV1.Builder().build(),
+          ),
+        )
+        .catalog
+    val catalog =
+      fixtureCatalogExecutor(
+          catalogSystemIds = setOf("kobento"),
+          published = mapOf("kobento" to served),
+        )
+        .listCatalogs()
+        .single { it.benchmark.catalogSystemId == "kobento" }
+    // Every other catalog is handed the whole builder vocabulary (drawing, shapes, images, the
+    // Remote Compose seams); Kobento JSON refuses all of it but its three layouts, so a Kobento
+    // palette offering it only made designs its export refuses.
+    assertEquals(
+      KobentoComponentJsonExporter.BUILDER_LAYOUTS,
+      catalog.components
+        .map { it.componentId }
+        .filter { id -> BUILDER_NAMESPACES.any { id.startsWith(it) } }
+        .toSet(),
+    )
+    val menu = catalog.statusSemantics["componentMenu"].toString()
+    assertFalse("draw/rect" in menu, menu)
+  }
+
+  @Test
   fun `a catalog without a kobento policy is never offered kobento json`() {
     val renderer =
       object : UiBuilderRenderPort {
