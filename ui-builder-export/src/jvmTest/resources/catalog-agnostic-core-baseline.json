@@ -1,0 +1,33 @@
+{
+  "_comment": "CatalogAgnosticCoreTest's baseline: per core file, the lines naming a specific catalog or format. Counts may only go down; lower them when a migration removes references. See docs/design/UI_BUILDER_CATALOG_FORMATS.md section 5.",
+  "files": {
+    "ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/CatalogExportRouting.kt": 5,
+    "ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RecordFreeExport.kt": 6,
+    "ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderCatalogPlatform.kt": 2,
+    "ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ComposeFoundationCatalog.kt": 2,
+    "ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService.kt": 2,
+    "ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceSupport.kt": 2,
+    "ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ProductionUiBuilderRuntime.kt": 14,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderDevicePresets.kt": 3,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt": 4,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/LiveExpressionEvaluator.kt": 12,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/NewDesignTypes.kt": 3,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/PreviewTime.kt": 10,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditor.kt": 28,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorCanvas.kt": 2,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorReducerSupport.kt": 1,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorState.kt": 29,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorToolbar.kt": 2,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorTypes.kt": 3,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderExportActions.kt": 6,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderInspectors.kt": 6,
+    "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderVariants.kt": 30,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/BrowserExportHost.kt": 6,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/BrowserNativeStream.kt": 3,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/BrowserWatchFacePublishHost.kt": 14,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/BrowserWatchFaceValidationHost.kt": 14,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/HostBridgeApp.kt": 8,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/LiveSessionApp.kt": 7,
+    "ui-builder/src/wasmJsMain/kotlin/ee/schimke/composeai/uibuilder/Main.kt": 12
+  }
+}
