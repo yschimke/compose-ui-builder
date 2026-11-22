@@ -38,7 +38,11 @@ val hostBridgeVersion = 1
 // `__COMPOSE_UI_BUILDER_ASSET_BASE__`; optional `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__` (`focused`
 // or `full`, default `focused`) and `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__` (a URL, default none);
 // and the shell's path in the archive. Bump only for changes a version-1 server would get wrong.
-val mcpAppVersion = 1
+// Version 2: the shell also opens a design that lives on the server, from a `{ designId }` tool
+// input, through the server's editor tools (`UI_BUILDER_MCP_APP_HOST.md` → *Server designs*), so
+// a server may offer it to hosts without file resources (Claude). A version-1 shell would refuse
+// that input, so a server gates `ui_builder_edit_design` on 2.
+val mcpAppVersion = 2
 
 abstract class WriteUiBuilderWebManifest : DefaultTask() {
   @get:Input abstract val editorVersion: Property<String>

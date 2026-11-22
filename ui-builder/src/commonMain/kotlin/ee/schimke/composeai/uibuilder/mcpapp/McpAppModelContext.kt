@@ -48,7 +48,7 @@ object McpAppSelectionContext {
     val visible = "Selected in " + summary(file, document, node)
     val hidden =
       "The person is pointing at node `${node.id}` of the UI Builder design in ${file.name}. " +
-        "To change it, edit that node in the design file (a DesignDocumentV1 `.uid`); address it " +
+        "To change it, ${McpAppServerDesignBridge.editInstruction(file)}; address it " +
         "by node id, which is stable, rather than by path. Selection detail: " +
         compact.encodeToString(JsonObject.serializer(), detail)
     return McpAppModelContext(

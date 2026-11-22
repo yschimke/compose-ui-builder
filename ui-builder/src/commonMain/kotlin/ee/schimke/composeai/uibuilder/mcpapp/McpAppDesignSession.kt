@@ -208,6 +208,10 @@ class McpAppDesignSession(
               saving = false,
               notice = McpAppNotice.TooLarge(outcome.maxBytes, text.encodeToByteArray().size),
             )
+        McpAppWriteOutcome.ReadOnly -> {
+          pendingSwitch = null
+          state = state.copy(saving = false, writable = false, notice = McpAppNotice.ReadOnly)
+        }
       }
       return
     }
@@ -385,6 +389,8 @@ class McpAppDesignSession(
             saving = false,
             notice = McpAppNotice.TooLarge(outcome.maxBytes, text.encodeToByteArray().size),
           )
+        McpAppWriteOutcome.ReadOnly ->
+          state.copy(saving = false, writable = false, notice = McpAppNotice.ReadOnly)
       }
   }
 }

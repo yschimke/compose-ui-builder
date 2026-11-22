@@ -1,4 +1,4 @@
-# The UI Builder as an MCP App (OpenAI file entrypoint)
+# The UI Builder as an MCP App (OpenAI file entrypoint, and server designs in Claude)
 
 **Status: the editor side is built** (compose-ui-builder#364), with the focused canvas, Quick
 edit and Comment of compose-ui-builder#374. The server side, a `design_open` tool in
@@ -168,7 +168,7 @@ So the resource is a **small shell** (about 5 KB), `mcp-app/ui-builder-mcp-app.h
 - In this mode the editor's own requests (`sameOriginRequestUrl`) must stay under
   `assetBase`, or under `catalogBase` when it is set.
 
-The archive manifest `ui-builder-web.json` carries `"mcpApp": 1`. That number is the contract
+The archive manifest `ui-builder-web.json` carries `"mcpApp": 2` (1 before server designs). That number is the contract
 between the shell and the server: the placeholders' names, and the shell's path in the archive.
 `verifyUiBuilderWebArchive` checks that the shell is packaged, that both placeholders are intact
 and that its version was written in. The layout placeholder did not bump it: a version-1 server
@@ -236,7 +236,7 @@ compose-preview-server has not changed. This is the whole of its side:
    caching under a versioned path. For the local stdio server, this is a loopback listener,
    `http://127.0.0.1:<ephemeral port>/ui-builder/v/<version>/`, started on the first read of the
    editor resource. The port goes into both the base and the CSP.
-4. **Gate** on the archive's `ui-builder-web.json` having `mcpApp` equal to `1`. With an older
+4. **Gate** on the archive's `ui-builder-web.json` having `mcpApp` at least `1`. With an older
    archive, the server does not register the tool.
 5. **Nothing else.** `resources/read`, `resources/subscribe` and `openai/resources/write` on the
    `host-resource://` URI are answered by the host, never by the server.
@@ -254,3 +254,79 @@ left unfilled), and fails unless:
 - a comment sent from the node menu arrives as exactly one `ui/update-model-context` (an image and
   an assistant-only block) followed by exactly one `ui/message` to the active thread, and an empty
   one sends nothing.
+
+## Server designs: Claude, and any host without file resources
+
+Claude's interactive connectors (and any MCP Apps host that does not offer
+`hostCapabilities.experimental["openai/resource"]`) have no files for the editor to open. There
+the design lives on the MCP server, and the editor reads and saves it by calling that server's own
+tools through the host (`tools/call` from the app, `app.callServerTool` in the SDK). The host
+forwards those calls with the connector's credential, so the editor needs none of its own, and
+the person sees no approval prompt for them.
+
+Archive manifest `"mcpApp": 2` means the shell understands this mode. Version 1 servers and
+OpenAI hosts are unaffected: with `openai/resource` advertised and a `FileInput`, the editor opens
+the file exactly as above.
+
+### What the editor does
+
+1. `ui/initialize` as above. `openai/resource` is no longer required.
+2. `ui/notifications/tool-input` carries `{ arguments: { designId } }`, the input of the tool that
+   opened the editor (`ui_builder_edit_design`). A `FileInput` still selects the file mode; a file
+   input on a host without `openai/resource` is refused as before.
+3. **Load:** `tools/call` `ui_builder_editor_read` `{ designId }`. The revision is the etag.
+4. **Save:** `tools/call` `ui_builder_editor_write` `{ designId, baseRevision, document }`, the
+   whole document, with the last revision as `baseRevision`. The outcomes map onto the file mode's:
+   `saved` (new revision kept, no reload), `conflict` (Reload theirs / Overwrite with mine, the
+   overwrite naming the reported revision), `too-large`, and `read-only`, which turns the file bar
+   read-only like `writable: false`.
+5. **External edits:** a loop of `tools/call` `ui_builder_editor_await`
+   `{ designId, afterRevision, waitSeconds }`. Each answer with `changed: true` is handled like
+   `notifications/resources/updated`: a revision equal to the editor's own is its save's echo, a
+   clean editor adopts the new one, a dirty editor offers Reload or Keep mine. If the first call
+   fails, the file bar says "not following external edits". The loop stops on teardown.
+6. Selection context, Comment, `ui/open-link` and the layouts work as in the file mode. The
+   assistant-only text tells the agent to change the node with `ui_builder_apply` on the design id,
+   and to show the result with `ui_builder_view` / `ui_builder_render_design_matrix`, since it has
+   no `.uid` file to edit.
+
+### The tools the server provides
+
+All four are UI-builder tools: the same capability gates, actors and design ACLs as the rest.
+The three the editor calls are **app-only** (`_meta.ui.visibility: ["app"]`), so the model does
+not see or call them; agents keep `ui_builder_get_design` and `ui_builder_apply`.
+
+| Tool | Input | `structuredContent` of the result |
+| --- | --- | --- |
+| `ui_builder_edit_design` (model and app) | `{ designId }` | `{ designId, title, revision }`; text "Opened <title> in the UI Builder editor." `_meta.ui.resourceUri: "ui://compose-ui-builder/editor"`. Capability: read. |
+| `ui_builder_editor_read` (app) | `{ designId }` | `{ designId, title, revision, writable, document }`: `document` is the `DesignDocumentV1` as JSON, `revision` an integer, `writable` whether this actor may write the design. Capability: read. |
+| `ui_builder_editor_write` (app) | `{ designId, baseRevision, document }` | `{ outcome, revision?, maxBytes?, message? }`. `outcome` is `saved` (`revision` the new one), `conflict` (`revision` the current one; nothing written), `read-only` (the actor may not write it; nothing written) or `too-large` (`maxBytes`). Validation failures are a tool error with the message. Capability: write. A save is an ordinary revision of the design, attributed to the actor, like an `ui_builder_apply`; it needs no confirmation. |
+| `ui_builder_editor_await` (app) | `{ designId, afterRevision, waitSeconds }` | `{ revision, changed }`. Returns as soon as the design's revision passes `afterRevision`, or after `waitSeconds` (at most 25) with `changed: false`. Capability: read. |
+
+A tool error (`isError: true`) is an error for the editor: on load it is shown in place of the
+design, on save as the file bar's error notice.
+
+### The resource, assets and CORS
+
+`ui://compose-ui-builder/editor` is the shell, with placeholders filled as in the file mode: the
+asset base (an absolute URL ending in `/`, of the unpacked archive the server already serves), the
+catalog base and device presets of the same origin, and the layout (default `focused`). Its
+`resources/read` content item carries:
+
+- `_meta.ui.csp: { resourceDomains: [<origin>], connectDomains: [<origin>] }`;
+- `_meta.ui.preferredDisplayMode: "fullscreen"` (Claude opens it in the side panel where it can);
+- `_meta["openai/ui"]` as above, harmless elsewhere.
+
+The resource is readable without a grant, like the viewer: it is static.
+
+The asset origin answers cross-origin requests from the sandbox. Claude's sandbox frame sends
+`Origin: https://<hash>.claudemcpcontent.com`; the archive is public, so
+`Access-Control-Allow-Origin: *` on the archive's files is enough, with `application/wasm` for
+`.wasm`. Serve it under a versioned path so it can be cached for a long time.
+
+### What is not known yet
+
+Claude's documentation does not say whether its sandbox CSP allows WebAssembly compilation
+(`'wasm-unsafe-eval'`) or WebGL, and the editor needs both. It also limits a tool result to about
+150,000 characters where the code sandbox is on, which a large design's `document` can pass. Both
+are checked by opening a design in claude.ai; record the result here.

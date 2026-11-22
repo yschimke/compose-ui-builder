@@ -37,6 +37,12 @@ sealed interface McpAppWriteOutcome {
 
   /** Not saved: the host's size limit, in UTF-8 bytes. */
   data class TooLarge(val maxBytes: Long) : McpAppWriteOutcome
+
+  /**
+   * Not saved: this person may read the design but not write it. Only a server design answers this
+   * (a file says so up front, with `writable`); the editor then treats it as read-only.
+   */
+  data object ReadOnly : McpAppWriteOutcome
 }
 
 /** What `ui/initialize` told the editor about the host. */
@@ -93,8 +99,9 @@ interface McpAppTransport {
  *   read, asking for `representation: "text"` and returning `etag` and `writable`;
  *   `openai/resources/write`, with `ifMatch`; and `openai/title` on a model-context text block.
  */
-class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge {
+class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge, McpAppToolCaller {
   private val fileListeners = mutableListOf<(McpAppFile) -> Unit>()
+  private val designListeners = mutableListOf<(String) -> Unit>()
   private val updateListeners = mutableListOf<(String) -> Unit>()
 
   /** The handshake. Throws when the host speaks a protocol version this editor does not. */
@@ -138,6 +145,14 @@ class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge
     fileListeners += listener
   }
 
+  /**
+   * Called with the design id of each `{ designId }` tool input: the editor was opened on a design
+   * that lives on the server ([McpAppServerDesignBridge]).
+   */
+  fun onDesign(listener: (String) -> Unit) {
+    designListeners += listener
+  }
+
   /** Called with the URI of each `notifications/resources/updated`. */
   fun onResourceUpdated(listener: (String) -> Unit) {
     updateListeners += listener
@@ -146,8 +161,12 @@ class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge
   /** Routes one host notification. Unknown methods are ignored, as the spec allows. */
   fun handleNotification(method: String, params: JsonObject) {
     when (method) {
-      "ui/notifications/tool-input" ->
+      "ui/notifications/tool-input" -> {
         parseFileInput(params)?.let { file -> fileListeners.forEach { it(file) } }
+        McpAppServerDesignBridge.parseDesignInput(params)?.let { id ->
+          designListeners.forEach { it(id) }
+        }
+      }
       "notifications/resources/updated" ->
         params.string("uri")?.let { uri -> updateListeners.forEach { it(uri) } }
     }
@@ -221,6 +240,9 @@ class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge
   override suspend fun sendMessage(message: McpAppMessage) {
     transport.request("ui/message", message.toParams())
   }
+
+  override suspend fun callTool(name: String, arguments: JsonObject): JsonObject =
+    transport.callServerTool(name, arguments)
 
   /** `ui/open-link`: the frame cannot navigate, so the host opens the editor's help for it. */
   suspend fun openLink(url: String) {
