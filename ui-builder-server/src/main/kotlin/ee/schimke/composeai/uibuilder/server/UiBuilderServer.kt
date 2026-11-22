@@ -18,6 +18,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -29,13 +30,19 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property upstream the legacy compose-preview-server container (`SERVE_ROLE=ui-builder`) that
  *   still answers every route group not yet moved here.
  * @property version this host's release version, reported by `/version`.
+ * @property probeTimeoutMillis how long `/readyz` and `/version` wait on the upstream. Proxied
+ *   requests have no read timeout (editor updates and exports are long-lived), so the deploy probes
+ *   need their own bound: a stuck upstream must read as not ready, not hang the probe.
  */
 internal data class UiBuilderServerConfig(
   val port: Int,
   val upstream: Url,
   val version: String,
+  val probeTimeoutMillis: Long = DEFAULT_PROBE_TIMEOUT_MILLIS,
 ) {
   companion object {
+    const val DEFAULT_PROBE_TIMEOUT_MILLIS: Long = 5_000
+
     /** Reads `PORT` (default 8080) and `UI_BUILDER_UPSTREAM_URL` (required). */
     fun fromEnvironment(env: Map<String, String> = System.getenv()): UiBuilderServerConfig {
       val upstream =
@@ -114,7 +121,7 @@ private val json = Json {
 internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: HttpClient) {
   install(WebSockets) { maxFrameSize = Long.MAX_VALUE }
   val proxy = UpstreamProxy(config.upstream, client)
-  val readiness = UpstreamReadiness(config.upstream, client)
+  val readiness = UpstreamReadiness(config.upstream, client, config.probeTimeoutMillis)
   routing {
     // Liveness: this process answers. Not the rollout gate; see `/readyz`.
     get("/healthz") { call.respondText("ok") }
@@ -126,12 +133,19 @@ internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: 
     }
     get("/version") {
       call.response.header(HttpHeaders.CacheControl, "no-store")
-      val upstreamVersion = runCatching {
-        val response = client.get("${config.upstream}/version")
-        if (response.status != HttpStatusCode.OK) return@runCatching null
-        json.parseToJsonElement(response.bodyAsText()).jsonObject["version"]?.jsonPrimitive?.content
-      }
-        .getOrNull()
+      val upstreamVersion =
+        withTimeoutOrNull(config.probeTimeoutMillis) {
+          runCatching {
+            val response = client.get("${config.upstream}/version")
+            if (response.status != HttpStatusCode.OK) return@runCatching null
+            json
+              .parseToJsonElement(response.bodyAsText())
+              .jsonObject["version"]
+              ?.jsonPrimitive
+              ?.content
+          }
+            .getOrNull()
+        }
       call.respondText(
         json.encodeToString(
           UiBuilderServerVersion.serializer(),
@@ -148,7 +162,11 @@ internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: 
 }
 
 /** Upstream `/readyz`, cached briefly so a polling deploy check does not hammer it. */
-private class UpstreamReadiness(private val upstream: Url, private val client: HttpClient) {
+private class UpstreamReadiness(
+  private val upstream: Url,
+  private val client: HttpClient,
+  private val timeoutMillis: Long,
+) {
   @Volatile private var checkedAt = 0L
   @Volatile private var lastReady = false
 
@@ -156,7 +174,10 @@ private class UpstreamReadiness(private val upstream: Url, private val client: H
     val now = System.currentTimeMillis()
     if (now - checkedAt < CACHE_MILLIS) return lastReady
     lastReady =
-      runCatching { client.get("$upstream/readyz").status == HttpStatusCode.OK }.getOrDefault(false)
+      withTimeoutOrNull(timeoutMillis) {
+        runCatching { client.get("$upstream/readyz").status == HttpStatusCode.OK }
+          .getOrDefault(false)
+      } ?: false
     checkedAt = now
     return lastReady
   }

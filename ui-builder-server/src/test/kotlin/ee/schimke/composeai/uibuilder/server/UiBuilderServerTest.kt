@@ -115,12 +115,17 @@ class UiBuilderServerTest {
     }
   }
 
-  private suspend fun host(upstreamPort: Int, version: String = "3.150.0"): Int {
+  private suspend fun host(
+    upstreamPort: Int,
+    version: String = "3.150.0",
+    probeTimeoutMillis: Long = UiBuilderServerConfig.DEFAULT_PROBE_TIMEOUT_MILLIS,
+  ): Int {
     val config =
       UiBuilderServerConfig(
         port = 0,
         upstream = Url("http://127.0.0.1:$upstreamPort"),
         version = version,
+        probeTimeoutMillis = probeTimeoutMillis,
       )
     val proxyClient = upstreamClient()
     return start { uiBuilderServer(config, proxyClient) }
@@ -148,6 +153,29 @@ class UiBuilderServerTest {
       HttpStatusCode.ServiceUnavailable,
       client.get("http://127.0.0.1:$port/readyz").status,
     )
+  }
+
+  @Test
+  fun `a stuck upstream bounds the deploy probes`() = runBlocking {
+    // Accepts the connection and never answers.
+    val stuck = start {
+      routing {
+        get("/readyz") { kotlinx.coroutines.awaitCancellation() }
+        get("/version") { kotlinx.coroutines.awaitCancellation() }
+      }
+    }
+    val port = host(stuck, probeTimeoutMillis = 300)
+    val started = System.nanoTime()
+    assertEquals(
+      HttpStatusCode.ServiceUnavailable,
+      client.get("http://127.0.0.1:$port/readyz").status,
+    )
+    val version =
+      Json.parseToJsonElement(client.get("http://127.0.0.1:$port/version").bodyAsText()).jsonObject
+    assertEquals("3.150.0", version["version"]!!.jsonPrimitive.content)
+    assertEquals("null", version["upstreamVersion"].toString())
+    val elapsedMillis = (System.nanoTime() - started) / 1_000_000
+    assertTrue(elapsedMillis < 5_000, "probes took ${elapsedMillis}ms")
   }
 
   @Test
