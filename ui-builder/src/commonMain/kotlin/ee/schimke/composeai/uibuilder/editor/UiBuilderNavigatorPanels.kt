@@ -1092,6 +1092,45 @@ internal fun CatalogThumbnail(
   /** Told what the thumbnail ended up drawing. For tests that sweep a whole catalog. */
   onOutcome: ((CatalogThumbnailOutcome) -> Unit)? = null,
 ) {
+  // A catalog whose Preview plays the host's exported document pictures its components the same
+  // way ([DocumentPreviewThumbnails]); the canvas's own picture stands in until that answers. A
+  // sweep that reports outcomes measures the canvas, so it keeps the canvas's picture.
+  val thumbnails = LocalDocumentPreviewThumbnails.current
+  if (thumbnails == null || document == null || onOutcome != null) {
+    CanvasCatalogThumbnail(document, componentId, label, size, container, onOutcome)
+    return
+  }
+  val panelDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+  val themed =
+    remember(document, panelDark) {
+      document.copy(
+        environment =
+          JsonObject(
+            document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light")),
+          ),
+      )
+    }
+  DocumentPreviewThumbnail(
+    thumbnails = thumbnails,
+    document = themed,
+    tile = size,
+    frameWidthDp = PREVIEW_FRAME_WIDTH_DP,
+    frameHeightDp = PREVIEW_FRAME_HEIGHT_DP,
+  ) {
+    CanvasCatalogThumbnail(document, componentId, label, size, container, null)
+  }
+}
+
+/** [CatalogThumbnail] as the editing canvas draws it. */
+@Composable
+private fun CanvasCatalogThumbnail(
+  document: UiBuilderDocument?,
+  componentId: String,
+  label: String,
+  size: DpSize,
+  container: Boolean,
+  onOutcome: ((CatalogThumbnailOutcome) -> Unit)?,
+) {
   // A component the frame could not hold, a root-only scaffold, has no picture. Better absent than
   // faked, and the same absence every other pictureless tile shows.
   if (document == null) {
