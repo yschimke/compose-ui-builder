@@ -246,6 +246,20 @@ class KobentoComponentExpanderTest {
       ),
       KobentoComponentExpander.expand(loop, library),
     )
+    // A component in its own slot, from the caller, nests: it ends where the caller's nodes do.
+    val nested =
+      Json.parseToJsonElement(
+          """{"components": {"Wrap": {"slots": {"content": {}},
+              "body": {"box": {"children": [{"${'$'}slot": "content"}]}}}},
+            "root": {"Wrap": {"children": [{"Wrap": {}}]}}}""",
+        )
+        .jsonObject
+    val result = KobentoComponentExpander.expand(nested, library)
+    check(result is KobentoComponentExpander.Result.Expanded) { result.toString() }
+    kotlin.test.assertEquals(
+      Json.parseToJsonElement("""{"box": {"children": [{"box": {"children": []}}]}}"""),
+      result.document["root"],
+    )
   }
 
   @Test

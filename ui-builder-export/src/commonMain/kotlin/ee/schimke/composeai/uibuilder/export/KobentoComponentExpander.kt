@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -316,6 +317,16 @@ object KobentoComponentExpander {
      * body that is an array), so the result is a list, spliced where it lands in one.
      */
     fun expandTree(element: JsonElement, path: String): List<JsonElement> {
+      callerContent(element)?.let { (depth, node) ->
+        // A slot's nodes, expanded with the call chain of the caller that wrote them.
+        val inner = calling.subList(depth, calling.size).toList()
+        repeat(inner.size) { calling.removeAt(calling.lastIndex) }
+        try {
+          return expandTree(node, path)
+        } finally {
+          calling += inner
+        }
+      }
       if (element is JsonObject && "\$if" in element) {
         // A document's own `$if` (in a slot's nodes, say) can test only the look and direction.
         val condition = (element["\$if"] as? JsonPrimitive)?.contentOrNull ?: ""
@@ -369,6 +380,13 @@ object KobentoComponentExpander {
           value != negated
         }
       }
+
+    /** The caller's depth and node, where [element] is a slot's content [Call.fillSlots] marked. */
+    fun callerContent(element: JsonElement): Pair<Int, JsonElement>? {
+      val mark = (element as? JsonObject)?.takeIf { it.size == 1 }?.get(CALLER_MARK) as? JsonObject
+      val depth = (mark?.get("depth") as? JsonPrimitive)?.intOrNull ?: return null
+      return depth to (mark["node"] ?: return null)
+    }
 
     fun expandArray(array: JsonArray, path: String): JsonArray =
       JsonArray(array.flatMapIndexed { index, item -> expandTree(item, "$path[$index]") })
@@ -731,7 +749,12 @@ object KobentoComponentExpander {
     /** [node] with the slot placeholders [Scope.directive] wrote replaced by the caller's nodes. */
     fun fillSlots(node: JsonElement): List<JsonElement> {
       slotOf(node)?.let {
-        return slots[it].orEmpty()
+        // The caller's nodes are expanded as the caller's, not as this call's body: a slot that
+        // holds this same component nests finitely, it does not recurse.
+        val depth = JsonPrimitive(expander.calling.size - 1)
+        return slots[it].orEmpty().map { content ->
+          JsonObject(mapOf(CALLER_MARK to JsonObject(mapOf("depth" to depth, "node" to content))))
+        }
       }
       return listOf(
         when (node) {
@@ -1137,6 +1160,9 @@ object KobentoComponentExpander {
 
   /** The key of the placeholder a `$slot` leaves in a body until the caller's nodes go in. */
   private const val SLOT_MARK = "\u0000slot"
+
+  /** The key of a slot's content once filled in, until it is expanded as its caller's. */
+  private const val CALLER_MARK = "\u0000caller"
 
   private val REFERENCE = Regex("""@([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)""")
   private val VARIABLE_ONLY = Regex("""@[A-Za-z_][A-Za-z0-9_.]*""")
