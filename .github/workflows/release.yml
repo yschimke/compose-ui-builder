@@ -468,6 +468,20 @@ jobs:
             -f event_type=compose-ui-builder-released \
             -f "client_payload[version]=${version}"
 
+  # `ghcr.io/yschimke/compose-ui-builder-server`, the UI builder's own host
+  # (`ui-builder-server/build.gradle.kts`). Not in `finish-release`'s needs on purpose: the image is a
+  # deployment convenience, and a registry hiccup must not hold back a release whose Central upload
+  # has already gone out. `workflow_dispatch` on `ui-builder-server-image.yml` rebuilds one by tag.
+  server-image:
+    needs: [release-please, publish]
+    if: ${{ needs.publish.result == 'success' }}
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/ui-builder-server-image.yml
+    with:
+      tag: ${{ needs.release-please.outputs.publish_tag }}
+
   # The PR half, split from the release half above and run after it, for the phantom-PR reason
   # documented on `release-please`. On an ordinary push this is the only job that does anything.
   #

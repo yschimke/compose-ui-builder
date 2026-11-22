@@ -195,6 +195,11 @@ include(":ui-builder-desktop")
 // app.
 include(":ui-builder-host-jvm")
 
+// The UI builder's own HTTP host and container (`compose-ui-builder-server`). It fronts the legacy
+// compose-preview-server `ui-builder` role and takes its route groups over one at a time. Not
+// published, and not a seam.
+include(":ui-builder-server")
+
 // The IntelliJ host lives in yschimke/compose-preview-ide and consumes a pinned source checkout.
 
 include(":ui-builder-export")
