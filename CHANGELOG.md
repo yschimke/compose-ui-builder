@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.147.0](https://github.com/yschimke/compose-ui-builder/compare/v3.146.0...v3.147.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-ai-tools-bom to v2.103.0 ([#1362](https://github.com/yschimke/compose-ui-builder/issues/1362)) ([4a4fafa](https://github.com/yschimke/compose-ui-builder/commit/4a4fafa8f3d4dff7960a33a8fa8a0b2fa8f7ae1d))
+* **deps:** update rc-players to 3.12.0 ([#1364](https://github.com/yschimke/compose-ui-builder/issues/1364)) ([df7c1f5](https://github.com/yschimke/compose-ui-builder/commit/df7c1f585e88e0f3b283b1660380990095e08fcb))
+
 ## [3.146.0](https://github.com/yschimke/compose-ui-builder/compare/v3.145.0...v3.146.0) (2026-11-21)
 
 
