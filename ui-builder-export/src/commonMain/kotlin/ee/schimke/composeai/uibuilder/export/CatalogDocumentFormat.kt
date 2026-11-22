@@ -8,6 +8,17 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 
 /**
+ * The document environment key asking a format's export to tag each node's output with its id
+ * ([NativeNodeTags.tag], as the semantics content description of the component it becomes), the way
+ * the native preview lane tags Remote Compose. An editor playing the compiled document on its
+ * canvas reads the tags back to know which drawn box is which node. Set only on the copy such a
+ * canvas asks its host to export; never on a design's own export, whose screen reader would read
+ * the tags aloud. A format that cannot tag its output ignores it, and the canvas keeps its own
+ * picture.
+ */
+const val DOCUMENT_INSPECTION_TAGS_KEY: String = "uiBuilderInspectionTags"
+
+/**
  * One way a catalog's designs leave the builder that is not Compose source: a vendor's component
  * JSON today, and in time Watch Face Format XML, a Home Assistant dashboard config, A2UI messages.
  *

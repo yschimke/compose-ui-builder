@@ -77,6 +77,8 @@ object KobentoComponentJsonExporter {
 
   private class Emitter(val document: UiBuilderDocument, val options: Options) {
     val errors = mutableListOf<String>()
+    val inspectionTags =
+      (document.environment[DOCUMENT_INSPECTION_TAGS_KEY] as? JsonPrimitive)?.booleanOrNull == true
     val stateKinds = mutableMapOf<String, String>()
     val active = mutableSetOf<String>()
 
@@ -178,12 +180,14 @@ object KobentoComponentJsonExporter {
         return null
       }
       try {
-        return when (node.componentId) {
-          DOCUMENT -> document(node)
-          in BUILDER_LAYOUTS -> layout(node)
-          TEXT -> text(node)
-          else -> component(node)
-        }
+        val lowered =
+          when (node.componentId) {
+            DOCUMENT -> document(node)
+            in BUILDER_LAYOUTS -> layout(node)
+            TEXT -> text(node)
+            else -> component(node)
+          }
+        return if (inspectionTags && lowered != null) tagged(node, lowered) else lowered
       } finally {
         active.remove(id)
       }
@@ -330,6 +334,35 @@ object KobentoComponentJsonExporter {
             }
         },
       )
+    }
+
+    /**
+     * [lowered] carrying [node]'s [NativeNodeTags.tag] as a semantics label, which Kobento keeps on
+     * the component it converts it to. A builder layout or text takes the modifier itself; a
+     * component call takes params only, so it is wrapped in a `box` that takes the call's bounds.
+     */
+    fun tagged(node: UiBuilderNode, lowered: JsonObject): JsonObject {
+      val tag = buildJsonObject {
+        putJsonObject("semantics") { put("contentDescription", NativeNodeTags.tag(node.id)) }
+      }
+      val (key, fields) = lowered.entries.single()
+      return if (
+        node.componentId == DOCUMENT ||
+          node.componentId == TEXT ||
+          node.componentId in BUILDER_LAYOUTS
+      ) {
+        val body = fields.jsonObject
+        val modifiers = (body["modifiers"] as? JsonArray).orEmpty() + tag
+        single(key, JsonObject(body + ("modifiers" to JsonArray(modifiers))))
+      } else {
+        single(
+          "box",
+          buildJsonObject {
+            put("modifiers", JsonArray(listOf(tag)))
+            put("children", JsonArray(listOf(lowered)))
+          },
+        )
+      }
     }
 
     fun children(node: UiBuilderNode, slot: String): JsonArray? =

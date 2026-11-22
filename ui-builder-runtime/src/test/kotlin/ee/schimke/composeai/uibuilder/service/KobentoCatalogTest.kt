@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.DOCUMENT_INSPECTION_TAGS_KEY
 import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.KobentoDocumentFormat
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -17,6 +18,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -257,6 +260,45 @@ class KobentoCatalogTest {
         "nodes.warmer.eventBindings.click[0].amount: only a literal number is lowered to Kobento",
       ),
       refused.reasons,
+    )
+  }
+
+  @Test
+  fun `a canvas's export carries each node's id, and a design's own export does not`() {
+    val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
+    fun tags(document: UiBuilderDocument): List<String> {
+      val emitted =
+        assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+          KobentoComponentJsonExporter.export(document),
+        )
+      return Regex("\"contentDescription\": \"uib-node:([^\"]+)\"")
+        .findAll(emitted.source)
+        .map { it.groupValues[1] }
+        .toList()
+    }
+    assertEquals(emptyList(), tags(design))
+    val tagged =
+      design.copy(
+        environment =
+          JsonObject(
+            design.environment + (DOCUMENT_INSPECTION_TAGS_KEY to JsonPrimitive(true)),
+          ),
+      )
+    assertEquals(design.nodes.keys.sorted(), tags(tagged).sorted())
+    // A call takes no modifiers, so its tag is on a box around it; a layout carries its own.
+    val root =
+      Json.parseToJsonElement(
+          (KobentoComponentJsonExporter.export(tagged)
+              as KobentoComponentJsonExporter.Result.Emitted)
+            .source,
+        )
+        .jsonObject
+        .getValue("root")
+        .toString()
+    assertTrue(
+      root.contains(
+        "{\"box\":{\"modifiers\":[{\"semantics\":{\"contentDescription\":\"uib-node:gauge\"}}],\"children\":[{\"Gauge\"",
+      ),
     )
   }
 
