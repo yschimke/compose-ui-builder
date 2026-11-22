@@ -444,11 +444,29 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       # No checkout in this job, so `gh` has no git remote to infer the repository from.
       GH_REPO: ${{ github.repository }}
+      # Job-level so the notify step's `if` can see it (a step's own env is not in scope there).
+      DEPLOY_DISPATCH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
     steps:
       - name: Publish the draft GitHub release
         env:
           TAG: ${{ needs.release-please.outputs.publish_tag }}
         run: gh release edit "$TAG" --draft=false --latest
+      # Tell the deployment that an editor release exists, so its editor pin follows this release
+      # without a compose-preview-server release (yschimke/preview-coo-ee's
+      # `track-ui-builder-editor.yml`, which also polls hourly, so this only saves the wait).
+      # Inert unless the `DEPLOY_DISPATCH_TOKEN` secret (a token allowed to send
+      # `repository_dispatch` to that repository) is set, and never fails the release: the release
+      # is already public by now, and a missed bell is picked up by the poll.
+      - name: Notify the deployment
+        if: ${{ env.DEPLOY_DISPATCH_TOKEN != '' }}
+        continue-on-error: true
+        env:
+          TAG: ${{ needs.release-please.outputs.publish_tag }}
+        run: |
+          version="${TAG#v}"
+          GH_TOKEN="$DEPLOY_DISPATCH_TOKEN" gh api repos/yschimke/preview-coo-ee/dispatches \
+            -f event_type=compose-ui-builder-released \
+            -f "client_payload[version]=${version}"
 
   # The PR half, split from the release half above and run after it, for the phantom-PR reason
   # documented on `release-please`. On an ordinary push this is the only job that does anything.
