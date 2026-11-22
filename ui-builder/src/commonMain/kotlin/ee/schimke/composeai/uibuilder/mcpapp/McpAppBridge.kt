@@ -99,8 +99,7 @@ interface McpAppTransport {
  *   read, asking for `representation: "text"` and returning `etag` and `writable`;
  *   `openai/resources/write`, with `ifMatch`; and `openai/title` on a model-context text block.
  */
-class McpAppJsonRpcBridge(private val transport: McpAppTransport) :
-  McpAppBridge, McpAppToolCaller {
+class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge, McpAppToolCaller {
   private val fileListeners = mutableListOf<(McpAppFile) -> Unit>()
   private val designListeners = mutableListOf<(String) -> Unit>()
   private val updateListeners = mutableListOf<(String) -> Unit>()

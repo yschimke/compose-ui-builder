@@ -23,8 +23,8 @@ fun interface McpAppToolCaller {
 
 /**
  * [McpAppBridge] for a design that lives on the MCP server, for hosts with no file resources
- * (Claude). The design is read and saved through the server's app-only editor tools, called via
- * the host, which forwards them with the connector's credential; see
+ * (Claude). The design is read and saved through the server's app-only editor tools, called via the
+ * host, which forwards them with the connector's credential; see
  * `docs/design/UI_BUILDER_MCP_APP_HOST.md` → *Server designs*.
  *
  * The revision is the etag: a save names the revision it started from, and the server answers
@@ -42,8 +42,10 @@ class McpAppServerDesignBridge(
   override suspend fun read(uri: String): McpAppFileContents {
     val result = tools.callTool(READ_TOOL, designArguments(uri))
     val document =
-      result["document"] as? JsonObject ?: error("the server returned the design without a document")
-    val revision = result.long("revision") ?: error("the server returned the design without a revision")
+      result["document"] as? JsonObject
+        ?: error("the server returned the design without a document")
+    val revision =
+      result.long("revision") ?: error("the server returned the design without a revision")
     knownRevision = maxOf(knownRevision ?: revision, revision)
     return McpAppFileContents(
       text = document.toString(),
@@ -54,10 +56,12 @@ class McpAppServerDesignBridge(
 
   override suspend fun write(uri: String, text: String, ifMatch: String?): McpAppWriteOutcome {
     val baseRevision =
-      ifMatch?.toLongOrNull() ?: error("a server design is saved against the revision it was read at")
-    val document =
-      runCatching { Json.parseToJsonElement(text).jsonObject }
-        .getOrElse { error("the design is not a single DesignDocumentV1: ${it.message}") }
+      ifMatch?.toLongOrNull()
+        ?: error("a server design is saved against the revision it was read at")
+    val document = runCatching {
+      Json.parseToJsonElement(text).jsonObject
+    }
+      .getOrElse { error("the design is not a single DesignDocumentV1: ${it.message}") }
     val result =
       tools.callTool(
         WRITE_TOOL,
@@ -104,9 +108,10 @@ class McpAppServerDesignBridge(
 
   /**
    * Long-polls [AWAIT_TOOL] until [unsubscribe], calling [onUpdated] for each newer revision, which
-   * the session handles like `notifications/resources/updated`: its own save's echo is recognised by
-   * the revision, a clean design adopts the new one, a dirty one asks. A failed wait is retried after
-   * a growing pause rather than given up on: a dropped connection must not silently stop following.
+   * the session handles like `notifications/resources/updated`: its own save's echo is recognised
+   * by the revision, a clean design adopts the new one, a dirty one asks. A failed wait is retried
+   * after a growing pause rather than given up on: a dropped connection must not silently stop
+   * following.
    */
   suspend fun followExternalEdits(uri: String, onUpdated: suspend (String) -> Unit) {
     var failures = 0
@@ -116,23 +121,22 @@ class McpAppServerDesignBridge(
         delay(FOLLOW_IDLE_MS)
         continue
       }
-      val result =
-        runCatching {
-            tools.callTool(
-              AWAIT_TOOL,
-              buildJsonObject {
-                put("designId", designId(uri))
-                put("afterRevision", after)
-                put("waitSeconds", AWAIT_SECONDS)
-              },
-            )
-          }
-          .getOrElse {
-            if (it is kotlinx.coroutines.CancellationException) throw it
-            failures++
-            delay(minOf(FOLLOW_RETRY_MS * failures, FOLLOW_RETRY_MAX_MS))
-            continue
-          }
+      val result = runCatching {
+        tools.callTool(
+          AWAIT_TOOL,
+          buildJsonObject {
+            put("designId", designId(uri))
+            put("afterRevision", after)
+            put("waitSeconds", AWAIT_SECONDS)
+          },
+        )
+      }
+        .getOrElse {
+          if (it is kotlinx.coroutines.CancellationException) throw it
+          failures++
+          delay(minOf(FOLLOW_RETRY_MS * failures, FOLLOW_RETRY_MAX_MS))
+          continue
+        }
       failures = 0
       val revision = result.long("revision") ?: continue
       if ((result["changed"] as? JsonPrimitive)?.booleanOrNull == true && revision > after) {
@@ -154,7 +158,9 @@ class McpAppServerDesignBridge(
     const val AWAIT_TOOL: String = "ui_builder_editor_await"
     private const val URI_PREFIX = "compose-ui-builder-design:"
 
-    /** The server's limit on one wait; a shorter one keeps well inside the host's request timeout. */
+    /**
+     * The server's limit on one wait; a shorter one keeps well inside the host's request timeout.
+     */
     const val AWAIT_SECONDS: Int = 25
     private const val FOLLOW_IDLE_MS = 250L
     private const val FOLLOW_RETRY_MS = 2_000L
@@ -163,7 +169,9 @@ class McpAppServerDesignBridge(
     /** The session's handle on a server design: opaque to it, like a `host-resource://` URI. */
     fun designFile(designId: String): McpAppFile = McpAppFile(designId, URI_PREFIX + designId)
 
-    /** `{ arguments: { designId } }` from `ui/notifications/tool-input`, or null for other input. */
+    /**
+     * `{ arguments: { designId } }` from `ui/notifications/tool-input`, or null for other input.
+     */
     fun parseDesignInput(params: JsonObject): String? =
       ((params["arguments"] as? JsonObject)?.get("designId") as? JsonPrimitive)
         ?.takeIf { it.isString }
@@ -214,5 +222,6 @@ private fun JsonObject.string(key: String): String? =
   (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
 private fun JsonObject.long(key: String): Long? =
-  (this[key] as? JsonPrimitive)?.let { it.longOrNull ?: it.contentOrNull?.toDoubleOrNull()?.toLong() }
-
+  (this[key] as? JsonPrimitive)?.let {
+    it.longOrNull ?: it.contentOrNull?.toDoubleOrNull()?.toLong()
+  }

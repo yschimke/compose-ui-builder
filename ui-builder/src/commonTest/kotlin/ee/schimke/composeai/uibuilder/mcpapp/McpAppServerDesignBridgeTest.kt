@@ -261,7 +261,7 @@ class McpAppServerDesignBridgeTest {
         override suspend fun request(method: String, params: JsonObject): JsonElement {
           assertEquals("tools/call", method)
           return Json.parseToJsonElement(
-            """{"isError":true,"content":[{"type":"text","text":"design 'home' not found"}]}"""
+            """{"isError":true,"content":[{"type":"text","text":"design 'home' not found"}]}""",
           )
         }
 
@@ -280,7 +280,7 @@ class McpAppServerDesignBridgeTest {
       object : McpAppTransport {
         override suspend fun request(method: String, params: JsonObject): JsonElement =
           Json.parseToJsonElement(
-            """{"content":[{"type":"text","text":"{\"revision\":3,\"changed\":false}"}]}"""
+            """{"content":[{"type":"text","text":"{\"revision\":3,\"changed\":false}"}]}""",
           )
 
         override fun notify(method: String, params: JsonObject) = Unit
