@@ -281,8 +281,7 @@ class KobentoCatalogTest {
       design.copy(
         environment =
           JsonObject(
-            design.environment +
-              (DOCUMENT_INSPECTION_TAGS_KEY to JsonPrimitive(true)),
+            design.environment + (DOCUMENT_INSPECTION_TAGS_KEY to JsonPrimitive(true)),
           ),
       )
     assertEquals(design.nodes.keys.sorted(), tags(tagged).sorted())
