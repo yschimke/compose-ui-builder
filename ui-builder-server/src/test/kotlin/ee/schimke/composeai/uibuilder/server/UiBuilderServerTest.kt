@@ -67,13 +67,17 @@ class UiBuilderServerTest {
     return server.engine.resolvedConnectors().first().port
   }
 
-  /** A stand-in for the legacy `SERVE_ROLE=ui-builder` container. */
-  private suspend fun legacy(ready: Boolean = true): Int = start {
+  /**
+   * A stand-in for the legacy `SERVE_ROLE=ui-builder` container. Like the real one, its `/readyz`
+   * never latches (it renders no design-system catalog); `/healthz` answers while it is [alive].
+   */
+  private suspend fun legacy(alive: Boolean = true): Int = start {
     install(WebSockets)
     routing {
-      get("/readyz") {
-        if (ready) call.respondText("ready")
-        else call.respondText("warming", status = HttpStatusCode.ServiceUnavailable)
+      get("/readyz") { call.respondText("warming", status = HttpStatusCode.ServiceUnavailable) }
+      get("/healthz") {
+        if (alive) call.respondText("ok")
+        else call.respondText("down", status = HttpStatusCode.ServiceUnavailable)
       }
       get("/version") {
         call.respondText(
@@ -126,6 +130,7 @@ class UiBuilderServerTest {
     upstreamPort: Int,
     version: String = "3.150.0",
     probeTimeoutMillis: Long = UiBuilderServerConfig.DEFAULT_PROBE_TIMEOUT_MILLIS,
+    upstreamReadyPath: String = UiBuilderServerConfig.DEFAULT_UPSTREAM_READY_PATH,
   ): Int {
     val config =
       UiBuilderServerConfig(
@@ -133,6 +138,7 @@ class UiBuilderServerTest {
         upstream = Url("http://127.0.0.1:$upstreamPort"),
         version = version,
         probeTimeoutMillis = probeTimeoutMillis,
+        upstreamReadyPath = upstreamReadyPath,
       )
     val proxyClient = upstreamClient()
     return start { uiBuilderServer(config, proxyClient) }
@@ -154,11 +160,28 @@ class UiBuilderServerTest {
   }
 
   @Test
-  fun `not ready while the upstream is not`() = runBlocking {
-    val port = host(legacy(ready = false))
+  fun `not ready while the upstream is down`() = runBlocking {
+    val port = host(legacy(alive = false))
     assertEquals(
       HttpStatusCode.ServiceUnavailable,
       client.get("http://127.0.0.1:$port/readyz").status,
+    )
+  }
+
+  @Test
+  fun `ready behind an upstream whose own readyz never latches`() = runBlocking {
+    // The live case on preview.coo.ee: the ui-builder role serves every page while its /readyz
+    // answers 503 forever, so gating on it left this host `warming` for good.
+    val upstream = legacy()
+    assertEquals(
+      HttpStatusCode.ServiceUnavailable,
+      client.get("http://127.0.0.1:$upstream/readyz").status,
+    )
+    assertEquals(HttpStatusCode.OK, client.get("http://127.0.0.1:${host(upstream)}/readyz").status)
+    // A deployment whose upstream does latch can still gate on it.
+    assertEquals(
+      HttpStatusCode.ServiceUnavailable,
+      client.get("http://127.0.0.1:${host(upstream, upstreamReadyPath = "/readyz")}/readyz").status,
     )
   }
 
@@ -167,7 +190,7 @@ class UiBuilderServerTest {
     // Accepts the connection and never answers.
     val stuck = start {
       routing {
-        get("/readyz") { kotlinx.coroutines.awaitCancellation() }
+        get("/healthz") { kotlinx.coroutines.awaitCancellation() }
         get("/version") { kotlinx.coroutines.awaitCancellation() }
       }
     }
@@ -266,6 +289,23 @@ class UiBuilderServerTest {
       received += (incoming.receive() as Frame.Text).readText()
     }
     assertEquals(listOf("hello d1", "echo ping"), received)
+  }
+
+  @Test
+  fun `config reads the upstream readiness path`() {
+    val base = mapOf("UI_BUILDER_UPSTREAM_URL" to "http://ui-builder:8080")
+    assertEquals("/healthz", UiBuilderServerConfig.fromEnvironment(base).upstreamReadyPath)
+    assertEquals(
+      "/readyz",
+      UiBuilderServerConfig.fromEnvironment(base + ("UI_BUILDER_UPSTREAM_READY_PATH" to "/readyz"))
+        .upstreamReadyPath,
+    )
+    // Not a path: ignored rather than glued onto the upstream URL.
+    assertEquals(
+      "/healthz",
+      UiBuilderServerConfig.fromEnvironment(base + ("UI_BUILDER_UPSTREAM_READY_PATH" to "readyz"))
+        .upstreamReadyPath,
+    )
   }
 
   @Test
