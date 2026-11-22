@@ -37,6 +37,9 @@ class McpAppServerDesignBridgeTest {
 
     /** How many of the next reads fail, as a dropped connection would. */
     var failingReads = 0
+
+    /** How many of the next waits time out in the transport, as a request-local cancellation. */
+    var timedOutWaits = 0
     val calls = mutableListOf<Pair<String, JsonObject>>()
 
     /** What each await answers, in turn; null means "nothing changed". */
@@ -90,6 +93,10 @@ class McpAppServerDesignBridgeTest {
               put("revision", revision)
               put("changed", false)
             }
+          }
+          if (timedOutWaits > 0) {
+            timedOutWaits--
+            throw kotlinx.coroutines.CancellationException("Timed out waiting for 60000 ms")
           }
           onAwait?.invoke()
           val next = if (awaits.isEmpty()) null else awaits.removeFirst()
@@ -361,5 +368,29 @@ class McpAppServerDesignBridgeTest {
         }
         .map { it.second["afterRevision"]!!.jsonPrimitive.long }
     assertEquals(listOf(7L, 7L, 8L), waitsAfter)
+  }
+
+  @Test
+  fun `a wait that times out in the transport is retried, and following goes on`() {
+    val server = FakeServer(seedText)
+    val bridge = McpAppServerDesignBridge(server, NoHost(), pause = {})
+    val session = McpAppDesignSession(bridge, file)
+    runImmediate { session.open() }
+    // The first wait times out in the transport (withTimeout's TimeoutCancellationException is a
+    // CancellationException); the loop is still active, so it must retry, not end.
+    server.timedOutWaits = 1
+    server.externalSave("Agent's")
+    server.awaits += 8L
+    var waits = 0
+    server.onAwait = {
+      waits++
+      if (waits == 2) runImmediate { session.close() }
+    }
+    runImmediate {
+      bridge.followExternalEdits(file.resourceUri) { uri -> session.resourceUpdated(uri) }
+    }
+
+    assertEquals("Agent's", session.state.document?.title)
+    assertEquals("8", session.state.etag)
   }
 }

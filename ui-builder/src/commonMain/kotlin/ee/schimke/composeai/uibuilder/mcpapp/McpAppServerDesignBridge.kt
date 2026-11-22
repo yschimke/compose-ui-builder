@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.mcpapp
 
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -134,7 +136,11 @@ class McpAppServerDesignBridge(
         )
       }
         .getOrElse {
-          if (it is kotlinx.coroutines.CancellationException) throw it
+          // Only this loop's own cancellation ends it. A request's own timeout (the transport's
+          // `withTimeout`) is a CancellationException too, but the coroutine is still active: that
+          // is a dropped or slow answer, retried like any other failure.
+          if (it is kotlinx.coroutines.CancellationException)
+            currentCoroutineContext().ensureActive()
           failures++
           pause(minOf(FOLLOW_RETRY_MS * failures, FOLLOW_RETRY_MAX_MS))
           continue
