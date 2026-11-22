@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.150.0](https://github.com/yschimke/compose-ui-builder/compare/v3.149.0...v3.150.0) (2026-11-22)
+
+
+### Features
+
+* compile a document-format catalog's designs in the browser when it publishes how ([#1392](https://github.com/yschimke/compose-ui-builder/issues/1392)) ([c12146d](https://github.com/yschimke/compose-ui-builder/commit/c12146d50c49ad75f91edcad0ebf7caa8c6ff0ca))
+* draw a document-format catalog's canvas by playing its host's export ([#1380](https://github.com/yschimke/compose-ui-builder/issues/1380)) ([9c25897](https://github.com/yschimke/compose-ui-builder/commit/9c25897d34ba7148581ce819b19d4e80a82a15a8))
+* expand Kobento component calls locally from the catalog's definitions ([#1390](https://github.com/yschimke/compose-ui-builder/issues/1390)) ([6ac8d95](https://github.com/yschimke/compose-ui-builder/commit/6ac8d95e333944431a92a307d9a4d7b1d8baa938))
+* **ui-builder-server:** serve a catalog's published files ([#1393](https://github.com/yschimke/compose-ui-builder/issues/1393)) ([c803053](https://github.com/yschimke/compose-ui-builder/commit/c803053656b8758a96b0422dd78ff3976eacc2ea))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.46.0 ([#1389](https://github.com/yschimke/compose-ui-builder/issues/1389)) ([e21dce6](https://github.com/yschimke/compose-ui-builder/commit/e21dce62ca417c040481881d40f7b942f291010a))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.29.0 ([#1391](https://github.com/yschimke/compose-ui-builder/issues/1391)) ([fc62d3f](https://github.com/yschimke/compose-ui-builder/commit/fc62d3f01724181aeb0a9e0777d8f93f64e0ef85))
+* gate ui-builder-server readiness on the upstream's /healthz ([#1387](https://github.com/yschimke/compose-ui-builder/issues/1387)) ([1e85d4a](https://github.com/yschimke/compose-ui-builder/commit/1e85d4adcf084f2dba719924f6c52bde8749fb42))
+
 ## [3.149.0](https://github.com/yschimke/compose-ui-builder/compare/v3.148.0...v3.149.0) (2026-11-22)
 
 
