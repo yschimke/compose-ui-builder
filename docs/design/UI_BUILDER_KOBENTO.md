@@ -82,23 +82,31 @@ Gaps in the snapshot that a manifest would close:
 
 ## 2. How the canvas draws Kobento components
 
-Kobento components are not compiled Compose, so the Wasm canvas cannot compose them. The options,
-in order:
+Kobento components are not compiled Compose, so the Wasm canvas cannot compose them. It plays
+Kobento's own picture instead:
 
-1. **Placeholders (landed).** Every builtin declares `canvas: "placeholder"`, and
-   `previewSurfaces.wasm.fidelity` is `approximate` with the reason stated. The layout is real.
-   Each component is a labelled box.
-2. **Play the converted `.rc` (recommended next).** The Remote preview lane exists
-   (`RemoteDocumentPreviewPane`, `browserPreview.renderer: remote-compose-document`), and Kobento's
-   TypeScript player is already vendored in compose-ai-tools as the `camaelon-js` RC player
-   (`render-host/.../RcPlayerBackend.kt`). The preview pane would export the design, `convert` it
-   through Kobento (a host-side call, with the token on the host), and play the bytes. That gives
-   the true picture, including the four looks, and keeps the token out of the editor.
-3. **Stand-ins.** Drawing Kobento's components natively in the canvas is a second implementation
-   of a library this repository does not own. Not recommended.
+1. **Placeholders (the fallback).** Every builtin declares `canvas: "placeholder"`, and
+   `previewSurfaces.wasm.fidelity` is `approximate` with the reason stated. The layout is real and
+   each component is a labelled box. The canvas draws this until the first export answers, and
+   keeps it wherever the export fails or the player refuses it.
+2. **Play the converted `.rc` (landed).** A catalog whose `browserPreview` is
+   `remote-compose-document` gets `documentPlayerCanvasRenderer` as its editing canvas: the editor
+   asks the host to export the design (`convert` through Kobento, with the token on the host) and
+   plays the bytes with `RcComposePlayer`. The Preview pane and the palette thumbnails play the same
+   export.
 
-Until (2) lands, the authoritative picture is Kobento's own `render` or `convert {check: true}`.
-The sample below was rendered that way.
+   Selection, drops and outlines need each node's box. The canvas asks for the export with
+   `DOCUMENT_INSPECTION_TAGS_KEY` set, and the exporter writes each node's `NativeNodeTags.tag` as
+   a `semantics` content description: on the component itself for a builder layout or text, and on
+   a `box` around a library call, which takes params only. Kobento keeps the description on the
+   component it converts to, and the player reports each component's coordinates
+   (`LocalRcComponentCoordinates`), so a tagged component's box is its node's. The tags are only on
+   the canvas's copy; a design's own export never carries them.
+
+   An edit keeps the last picture up and asks again 400 ms after typing stops.
+3. **Stand-ins.** Drawing Kobento's components natively in the canvas, or as the editor's Material
+   adapters, is a second implementation of a library this repository does not own, and shows
+   Material's look as Kobento's. Not recommended; kobento-catalog#5 tried it and #6 reverted it.
 
 ## 3. Export
 

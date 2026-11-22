@@ -1356,6 +1356,18 @@ fun UiBuilderEditor(
           )
         }
     }
+  // The same catalogs' editing canvas plays the host's export too, so it draws the components as
+  // themselves; see [documentPlayerCanvasRenderer]. A host's own canvas renderer comes first.
+  val documentCanvasRenderer =
+    remember(documentThumbnails != null) {
+      if (documentThumbnails == null) null
+      else
+        documentPlayerCanvasRenderer(
+          request = { document ->
+            checkNotNull(latestDocumentPreview) { "Document preview is not available" }(document)
+          },
+        )
+    }
   val navigator: @Composable (Modifier, NavigatorTab, Boolean, (() -> Unit)?) -> Unit =
     { modifier, navigatorTab, closeAfterDrop, onClose ->
       CompositionLocalProvider(LocalDocumentPreviewThumbnails provides documentThumbnails) {
@@ -2033,7 +2045,7 @@ fun UiBuilderEditor(
           onInspectionSnapshot?.invoke(snapshot)
         },
         onInspectionInvalidated = onInspectionInvalidated,
-        canvasRenderer = canvasRenderer,
+        canvasRenderer = canvasRenderer ?: documentCanvasRenderer,
         selectionMenu = selectionMenu,
         onHoverEditorDismiss = {
           commentNodeId = null
