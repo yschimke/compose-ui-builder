@@ -125,11 +125,15 @@ internal fun DocumentPreviewThumbnail(
             scaleY = scale
           },
       ) {
-        RcComposePlayer(
-          document = played.document,
-          theme = theme,
-          modifier = Modifier.fillMaxSize(),
-        )
+        // The thumbnail's own fixed time, as the Preview pane plays a frozen design: a clock's
+        // picture must not move while the palette scrolls.
+        ProvidePreviewPlayerTime(document, running = false) {
+          RcComposePlayer(
+            document = played.document,
+            theme = theme,
+            modifier = Modifier.fillMaxSize(),
+          )
+        }
       }
     }
   }
