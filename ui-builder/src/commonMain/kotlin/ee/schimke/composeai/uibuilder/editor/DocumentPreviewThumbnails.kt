@@ -24,6 +24,8 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.contentOrNull
@@ -38,8 +40,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * One request per distinct thumbnail document, at most [concurrency] at a time, kept for the
  * editor's life: a palette scrolled back, or opened again, asks nothing twice. A failure is kept
  * too, and that tile stays on the canvas's picture.
+ *
+ * Requests run in the editor's [scope], not a tile's: the same component can show on two shelves,
+ * and a tile leaving composition (a shelf collapsed) must not cancel the export the other waits on.
  */
 internal class DocumentPreviewThumbnails(
+  private val scope: CoroutineScope,
   private val request: suspend (UiBuilderDocument) -> UiBuilderDocumentPreview,
   concurrency: Int = 2,
 ) {
@@ -56,7 +62,13 @@ internal class DocumentPreviewThumbnails(
   /** What [document] plays as, or null until its export has answered. */
   fun result(document: UiBuilderDocument): Result? = results[document]
 
-  /** Exports [document] unless it already was (or is being). Call from a composition's effect. */
+  /** Starts exporting [document] in the editor's scope, unless it already was (or is being). */
+  fun prefetch(document: UiBuilderDocument) {
+    if (document in results || document in inFlight) return
+    scope.launch { load(document) }
+  }
+
+  /** Exports [document] unless it already was (or is being). */
   suspend fun load(document: UiBuilderDocument) {
     if (document in results || !inFlight.add(document)) return
     try {
@@ -99,7 +111,7 @@ internal fun DocumentPreviewThumbnail(
   frameHeightDp: Int,
   fallback: @Composable () -> Unit,
 ) {
-  LaunchedEffect(thumbnails, document) { thumbnails.load(document) }
+  LaunchedEffect(thumbnails, document) { thumbnails.prefetch(document) }
   val played = thumbnails.result(document) as? DocumentPreviewThumbnails.Result.Played
   if (played == null) {
     fallback()

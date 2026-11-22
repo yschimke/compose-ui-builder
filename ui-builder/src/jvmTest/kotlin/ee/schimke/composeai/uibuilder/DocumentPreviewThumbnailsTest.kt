@@ -8,7 +8,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -36,6 +41,7 @@ class DocumentPreviewThumbnailsTest {
       val asked = mutableListOf<String>()
       val thumbnails =
         DocumentPreviewThumbnails(
+          scope = this,
           request = { document ->
             asked += document.nodes.getValue("cell").componentId
             UiBuilderDocumentPreview.Failed("no host")
@@ -58,6 +64,7 @@ class DocumentPreviewThumbnailsTest {
       val undecodable = thumbnail("vendor/garbled")
       val thumbnails =
         DocumentPreviewThumbnails(
+          scope = this,
           request = { document ->
             if (document == failing) error("convert refused the design")
             UiBuilderDocumentPreview.Ready(revision = 0, documentBase64 = "bm90IGFuIHJj")
@@ -67,6 +74,35 @@ class DocumentPreviewThumbnailsTest {
       thumbnails.load(undecodable)
       assertIs<DocumentPreviewThumbnails.Result.Unavailable>(thumbnails.result(failing))
       assertIs<DocumentPreviewThumbnails.Result.Unavailable>(thumbnails.result(undecodable))
+    }
+  }
+
+  @Test
+  fun `a tile leaving composition does not cancel the export another tile waits on`() {
+    runBlocking {
+      val answer = CompletableDeferred<UiBuilderDocumentPreview>()
+      var asked = 0
+      val editorJob = Job(coroutineContext[Job])
+      val editor = CoroutineScope(coroutineContext + editorJob)
+      val thumbnails =
+        DocumentPreviewThumbnails(
+          scope = editor,
+          request = {
+            asked += 1
+            answer.await()
+          },
+        )
+      val gauge = thumbnail("vendor/gauge")
+      // The pinned shelf's tile asks, then its shelf collapses before the host answers.
+      launch { thumbnails.prefetch(gauge) }.join()
+      yield()
+      // The gauge's own shelf asks too: the export is still running, so nothing new is sent.
+      thumbnails.prefetch(gauge)
+      answer.complete(UiBuilderDocumentPreview.Failed("no host"))
+      editorJob.complete()
+      editorJob.join()
+      assertEquals(1, asked)
+      assertIs<DocumentPreviewThumbnails.Result.Unavailable>(thumbnails.result(gauge))
     }
   }
 }

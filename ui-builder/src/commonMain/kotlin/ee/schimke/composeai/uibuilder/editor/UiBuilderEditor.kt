@@ -1349,6 +1349,7 @@ fun UiBuilderEditor(
         }
         ?.let {
           DocumentPreviewThumbnails(
+            scope = editorScope,
             request = { document ->
               checkNotNull(latestDocumentPreview) { "Document preview is not available" }(document)
             },
