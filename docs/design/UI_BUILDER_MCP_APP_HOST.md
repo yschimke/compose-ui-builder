@@ -285,7 +285,10 @@ the file exactly as above.
    `notifications/resources/updated`: a revision equal to the editor's own is its save's echo, a
    clean editor adopts the new one, a dirty editor offers Reload or Keep mine. If the first call
    fails, the file bar says "not following external edits". The loop stops on teardown.
-6. Selection context, Comment, `ui/open-link` and the layouts are unchanged.
+6. Selection context, Comment, `ui/open-link` and the layouts work as in the file mode. The
+   assistant-only text tells the agent to change the node with `ui_builder_apply` on the design id,
+   and to show the result with `ui_builder_view` / `ui_builder_render_design_matrix`, since it has
+   no `.uid` file to edit.
 
 ### The tools the server provides
 

@@ -169,6 +169,28 @@ class McpAppServerDesignBridge(
     /** The session's handle on a server design: opaque to it, like a `host-resource://` URI. */
     fun designFile(designId: String): McpAppFile = McpAppFile(designId, URI_PREFIX + designId)
 
+    /** The server design [file] stands for, or null for a host file. */
+    fun designIdOf(file: McpAppFile): String? =
+      file.resourceUri.takeIf { it.startsWith(URI_PREFIX) }?.removePrefix(URI_PREFIX)
+
+    /**
+     * How an agent changes a node of [file]: in the `.uid` it can edit, or, for a server design,
+     * through the UI-builder tools it already has, since it holds no file at all.
+     */
+    fun editInstruction(file: McpAppFile): String =
+      when (val id = designIdOf(file)) {
+        null -> "edit that node in the design file (a DesignDocumentV1 `.uid`)"
+        else ->
+          "edit that node with ui_builder_apply on design `$id` (the editor follows the change)"
+      }
+
+    /** Where an agent shows the result of a change, so the person need not look at the panel. */
+    fun previewInstruction(file: McpAppFile): String =
+      when (designIdOf(file)) {
+        null -> "render_preview / render_matrix"
+        else -> "ui_builder_view / ui_builder_render_design_matrix"
+      }
+
     /**
      * `{ arguments: { designId } }` from `ui/notifications/tool-input`, or null for other input.
      */

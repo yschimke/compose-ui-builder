@@ -82,10 +82,11 @@ object McpAppNodeComment {
     val detail = McpAppSelectionContext.detail(file, document, node)
     val hidden =
       "The person commented on node `${node.id}` of the UI Builder design in ${file.name}: " +
-        "\"$comment\". If the comment asks for a change, edit that node in the design file (a " +
-        "DesignDocumentV1 `.uid`), addressing it by node id, which is stable, rather than by " +
-        "path; then show the result by rendering device previews in the chat " +
-        "(render_preview / render_matrix) rather than asking the person to look at the editor " +
+        "\"$comment\". If the comment asks for a change, " +
+        "${McpAppServerDesignBridge.editInstruction(file)}, addressing it by node id, which is " +
+        "stable, rather than by path; then show the result by rendering device previews in the " +
+        "chat (${McpAppServerDesignBridge.previewInstruction(file)}) rather than asking the " +
+        "person to look at the editor " +
         "panel. Node detail: " +
         McpAppSelectionContext.encode(detail)
     return McpAppModelContext(

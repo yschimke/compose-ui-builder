@@ -289,4 +289,25 @@ class McpAppServerDesignBridgeTest {
     assertEquals(3L, result["revision"]!!.jsonPrimitive.long)
     assertIs<JsonObject>(result)
   }
+
+  @Test
+  fun `a selection in a server design tells the agent to use the UI-builder tools, not a file`() {
+    val context =
+      McpAppSelectionContext.of(file, seed, seed.nodes.keys.first())
+        .content
+        .map { it.jsonObject["text"]?.jsonPrimitive?.content.orEmpty() }
+        .joinToString("\n")
+    assertTrue("ui_builder_apply on design `home`" in context, context)
+    assertFalse("`.uid`" in context, context)
+    // A host file keeps the file instruction.
+    val fileContext =
+      McpAppSelectionContext.of(
+          McpAppFile("home.uid", "host-resource://home"),
+          seed,
+          seed.nodes.keys.first(),
+        )
+        .content
+        .joinToString("\n")
+    assertTrue("design file" in fileContext, fileContext)
+  }
 }
