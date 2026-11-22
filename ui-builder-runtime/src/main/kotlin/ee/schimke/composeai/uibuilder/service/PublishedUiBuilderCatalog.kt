@@ -560,7 +560,13 @@ public object PublishedUiBuilderCatalog {
         id,
         builtin.displayName ?: id.substringAfterLast('/'),
         shelfRole(builtin),
-        wasm(builtin.canvas, nativeOnly = false, callable = null, unrolled = builtin.unrolled)
+        wasm(
+            builtin.canvas,
+            nativeOnly = false,
+            callable = null,
+            unrolled = builtin.unrolled,
+            canvasMapping = builtin.canvasMapping,
+          )
           .overriddenBy(builtin.wasm),
       )
       .also {
@@ -783,6 +789,12 @@ public object PublishedUiBuilderCatalog {
      * it beside the adapter word.
      */
     val unrolled: UiBuilderUnrolledMock? = null,
+    /**
+     * How [canvas]'s adapter reads this builtin's vocabulary (a property or slot renamed, a default
+     * supplied), as a record component's policy may state it: a catalog whose components have no
+     * Kotlin call site draws them on the canvas as an adapter it names, in its own data.
+     */
+    val canvasMapping: CanvasAdapterMappingV1? = null,
     val traits: List<String> = emptyList(),
     val slots: Map<String, UiBuilderBuiltinSlot> = emptyMap(),
     /**
