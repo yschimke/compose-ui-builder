@@ -35,8 +35,18 @@ internal class LocalDocumentCompiler(
   /** [document] compiled, as base64 `.rc` bytes, or null to ask the host's service. */
   suspend fun compile(document: UiBuilderDocument): String? {
     val ready = load() ?: return null
+    // A served file the format cannot read (malformed, or another shape) throws: that, too, is the
+    // service's to compile.
+    val expanded =
+      try {
+        compilation.expand(document, ready.files)
+      } catch (cancelled: CancellationException) {
+        throw cancelled
+      } catch (_: Throwable) {
+        return null
+      }
     val json =
-      when (val expanded = compilation.expand(document, ready.files)) {
+      when (expanded) {
         is CatalogDocumentFormat.Result.Emitted -> expanded.content
         is CatalogDocumentFormat.Result.Refused -> return null
       }
