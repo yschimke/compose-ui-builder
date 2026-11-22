@@ -11,6 +11,7 @@ import io.ktor.http.Url
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.response.header
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
@@ -38,6 +39,8 @@ import kotlinx.serialization.json.jsonPrimitive
  *   system catalog has rendered a preview, which its `SERVE_ROLE=ui-builder` container may never do
  *   (preview-coo-ee health-checks that container on `/healthz` for the same reason). Pointed at
  *   `/readyz`, this host stayed `503 warming` behind a container serving every page.
+ * @property catalogSources where each catalog this host serves files for publishes; see
+ *   [CatalogFiles]. A catalog not named here has its files route forwarded like any other.
  */
 internal data class UiBuilderServerConfig(
   val port: Int,
@@ -45,14 +48,16 @@ internal data class UiBuilderServerConfig(
   val version: String,
   val probeTimeoutMillis: Long = DEFAULT_PROBE_TIMEOUT_MILLIS,
   val upstreamReadyPath: String = DEFAULT_UPSTREAM_READY_PATH,
+  val catalogSources: Map<String, String> = emptyMap(),
 ) {
   companion object {
     const val DEFAULT_PROBE_TIMEOUT_MILLIS: Long = 5_000
     const val DEFAULT_UPSTREAM_READY_PATH: String = "/healthz"
 
     /**
-     * Reads `PORT` (default 8080), `UI_BUILDER_UPSTREAM_URL` (required) and
-     * `UI_BUILDER_UPSTREAM_READY_PATH` (default `/healthz`).
+     * Reads `PORT` (default 8080), `UI_BUILDER_UPSTREAM_URL` (required),
+     * `UI_BUILDER_UPSTREAM_READY_PATH` (default `/healthz`) and `UI_BUILDER_CATALOG_SOURCES`
+     * (default none; see [CatalogFiles.parseSources]).
      */
     fun fromEnvironment(env: Map<String, String> = System.getenv()): UiBuilderServerConfig {
       val upstream =
@@ -67,6 +72,7 @@ internal data class UiBuilderServerConfig(
         upstreamReadyPath =
           env["UI_BUILDER_UPSTREAM_READY_PATH"]?.takeIf { it.startsWith("/") }
             ?: DEFAULT_UPSTREAM_READY_PATH,
+        catalogSources = CatalogFiles.parseSources(env["UI_BUILDER_CATALOG_SOURCES"]),
       )
     }
 
@@ -136,6 +142,7 @@ internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: 
   val proxy = UpstreamProxy(config.upstream, client)
   val readiness =
     UpstreamReadiness(config.upstream, config.upstreamReadyPath, client, config.probeTimeoutMillis)
+  val catalogFiles = CatalogFiles(config.catalogSources, client)
   routing {
     // Liveness: this process answers. Not the rollout gate; see `/readyz`.
     get("/healthz") { call.respondText("ok") }
@@ -168,6 +175,19 @@ internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: 
         ),
         ContentType.Application.Json,
       )
+    }
+    // A catalog's published files, for the editor to expand and compile with. A catalog this host
+    // has no source for is still the upstream's.
+    get("/api/ui-builder/v1/catalogs/{system}/files/{path...}") {
+      val system = call.parameters["system"].orEmpty()
+      if (!catalogFiles.serves(system)) return@get proxy.forward(call)
+      val path = call.parameters.getAll("path").orEmpty().joinToString("/")
+      call.response.header(HttpHeaders.CacheControl, "no-cache")
+      when (val answer = catalogFiles.file(system, path)) {
+        is CatalogFiles.Answer.Found -> call.respondBytes(answer.bytes, answer.contentType)
+        CatalogFiles.Answer.NotFound ->
+          call.respondText("not found", status = HttpStatusCode.NotFound)
+      }
     }
     // Everything not handled above, in this order: an upgrade request is a WebSocket for the
     // upstream; any other request is plain HTTP.

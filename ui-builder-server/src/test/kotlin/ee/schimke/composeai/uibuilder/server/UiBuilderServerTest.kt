@@ -131,6 +131,7 @@ class UiBuilderServerTest {
     version: String = "3.150.0",
     probeTimeoutMillis: Long = UiBuilderServerConfig.DEFAULT_PROBE_TIMEOUT_MILLIS,
     upstreamReadyPath: String = UiBuilderServerConfig.DEFAULT_UPSTREAM_READY_PATH,
+    catalogSources: Map<String, String> = emptyMap(),
   ): Int {
     val config =
       UiBuilderServerConfig(
@@ -139,6 +140,7 @@ class UiBuilderServerTest {
         version = version,
         probeTimeoutMillis = probeTimeoutMillis,
         upstreamReadyPath = upstreamReadyPath,
+        catalogSources = catalogSources,
       )
     val proxyClient = upstreamClient()
     return start { uiBuilderServer(config, proxyClient) }
@@ -329,5 +331,81 @@ class UiBuilderServerTest {
       }
         .exceptionOrNull(),
     )
+  }
+
+  /**
+   * Where a catalog publishes: its index, its `ui-builder.json`, a listed file and one unlisted.
+   */
+  private suspend fun publishedCatalog(fetched: MutableList<String>): Int = start {
+    routing {
+      get("/kobento/{path...}") {
+        val path = call.parameters.getAll("path").orEmpty().joinToString("/")
+        fetched += path
+        when (path) {
+          "catalog.json" ->
+            call.respondText("""{"system":"kobento","uiBuilderFile":"ui-builder.json"}""")
+          "ui-builder.json" ->
+            call.respondText(
+              """{"statusSemantics":{"files":["kobento/definitions.json","kobento/json2rc.mjs"]}}""",
+            )
+          "kobento/definitions.json" -> call.respondText("""{"components":{}}""")
+          "kobento/json2rc.mjs" -> call.respondText("export function convert() {}")
+          "kobento/unlisted.json" -> call.respondText("secret")
+          else -> call.respondText("missing", status = HttpStatusCode.NotFound)
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `a catalog's listed files are served here, typed, and nothing else is`() = runBlocking {
+    val fetched = mutableListOf<String>()
+    val published = publishedCatalog(fetched)
+    val port =
+      host(legacy(), catalogSources = mapOf("kobento" to "http://127.0.0.1:$published/kobento"))
+    val files = "http://127.0.0.1:$port/api/ui-builder/v1/catalogs/kobento/files"
+    val definitions = client.get("$files/kobento/definitions.json")
+    assertEquals(HttpStatusCode.OK, definitions.status)
+    assertEquals("""{"components":{}}""", definitions.bodyAsText())
+    assertEquals(
+      ContentType.Application.Json,
+      definitions.headers[HttpHeaders.ContentType]?.let(ContentType::parse)?.withoutParameters(),
+    )
+    assertEquals("no-cache", definitions.headers[HttpHeaders.CacheControl])
+    val compiler = client.get("$files/kobento/json2rc.mjs")
+    assertEquals(
+      ContentType.Text.JavaScript,
+      compiler.headers[HttpHeaders.ContentType]?.let(ContentType::parse)?.withoutParameters(),
+    )
+    // Published, but not listed: never fetched, never served.
+    assertEquals(HttpStatusCode.NotFound, client.get("$files/kobento/unlisted.json").status)
+    assertTrue("kobento/unlisted.json" !in fetched)
+    // The index and catalog were read once for all three requests.
+    assertEquals(1, fetched.count { it == "catalog.json" })
+  }
+
+  @Test
+  fun `a catalog with no source here keeps its files route on the upstream`() = runBlocking {
+    val port = host(legacy())
+    val response = client.get("http://127.0.0.1:$port/api/ui-builder/v1/catalogs/m3/files/a.json")
+    // The legacy stand-in has no such route: the upstream's answer, not this host's.
+    assertEquals(HttpStatusCode.NotFound, response.status)
+    assertTrue(response.bodyAsText() != "not found")
+  }
+
+  @Test
+  fun `catalog sources parse, and only plain relative paths are safe`() {
+    assertEquals(
+      mapOf("kobento" to "https://example.com/out/kobento", "m3" to "http://localhost:1/m3"),
+      CatalogFiles.parseSources(
+        " kobento=https://example.com/out/kobento/ , m3=http://localhost:1/m3",
+      ),
+    )
+    assertEquals(emptyMap(), CatalogFiles.parseSources(null))
+    assertTrue(runCatching { CatalogFiles.parseSources("kobento") }.isFailure)
+    assertTrue(CatalogFiles.isSafePath("kobento/theme.json"))
+    listOf("../x", "a/../b", "/abs", "a//b", "a/./b", "http://x", "a\\b", "").forEach {
+      assertTrue(!CatalogFiles.isSafePath(it), it)
+    }
   }
 }
