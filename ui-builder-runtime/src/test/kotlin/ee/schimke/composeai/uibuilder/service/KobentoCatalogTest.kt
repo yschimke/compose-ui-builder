@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.CatalogDocumentFormat
 import ee.schimke.composeai.uibuilder.export.DOCUMENT_INSPECTION_TAGS_KEY
 import ee.schimke.composeai.uibuilder.export.KobentoComponentJsonExporter
 import ee.schimke.composeai.uibuilder.export.KobentoDocumentFormat
@@ -261,6 +262,47 @@ class KobentoCatalogTest {
       ),
       refused.reasons,
     )
+  }
+
+  @Test
+  fun `a catalog that publishes its definitions compiles a design locally, tags and all`() {
+    val policy =
+      Json.parseToJsonElement(
+          """{"localCompile": {"definitions": "kobento/definitions.json",
+               "theme": "kobento/theme.json", "compiler": "kobento/json2rc.mjs"}}""",
+        )
+        .jsonObject
+    assertNull(KobentoDocumentFormat.localCompilation(JsonObject(emptyMap())))
+    val compilation = assertNotNull(KobentoDocumentFormat.localCompilation(policy))
+    assertEquals(listOf("kobento/definitions.json", "kobento/theme.json"), compilation.files)
+    assertEquals("kobento/json2rc.mjs", compilation.compiler)
+    val design =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema": "compose-ui-builder-document/v1-candidate", "id": "local", "title": "Local",
+          "revision": 1, "catalogPin": {}, "stateVariables": {},
+          "environment": {"widthDp": 200, "heightDp": 100, "${DOCUMENT_INSPECTION_TAGS_KEY}": true},
+          "roots": ["screen"],
+          "nodes": {
+            "screen": {"id": "screen", "componentId": "kobento/document", "slots": {"content": ["hi"]}},
+            "hi": {"id": "hi", "componentId": "kobento/text", "properties": {"value": {"type": "string", "value": "Hi"}}}
+          }}""",
+      )
+    val files =
+      mapOf(
+        "kobento/definitions.json" to """{"components": {}}""",
+        "kobento/theme.json" to
+          """{"numbers": {}, "colors": {"background": {"light": "#FFFFFFFF", "dark": "#FF000000"}}}""",
+      )
+    val result = compilation.expand(design, files)
+    val expanded = assertIs<CatalogDocumentFormat.Result.Emitted>(result, result.toString())
+    // Plain Remote Compose: the theme colour the document reads is declared, the tags are kept.
+    assertTrue(
+      """"background":{"light":"#FFFFFFFF","dark":"#FF000000"}""" in expanded.content,
+      expanded.content,
+    )
+    assertTrue("uib-node:hi" in expanded.content, expanded.content)
+    assertIs<CatalogDocumentFormat.Result.Refused>(compilation.expand(design, emptyMap()))
   }
 
   @Test
