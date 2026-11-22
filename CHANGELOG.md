@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.149.0](https://github.com/yschimke/compose-ui-builder/compare/v3.148.0...v3.149.0) (2026-11-22)
+
+
+### Features
+
+* add ui-builder-server, the UI builder's own host and image ([#1372](https://github.com/yschimke/compose-ui-builder/issues/1372)) ([b608b93](https://github.com/yschimke/compose-ui-builder/commit/b608b9350d09d548064a5820855ee75f70edce0c))
+* let a published builtin map its vocabulary onto the canvas adapter it names ([#1374](https://github.com/yschimke/compose-ui-builder/issues/1374)) ([ecb5f98](https://github.com/yschimke/compose-ui-builder/commit/ecb5f983a43b8c4f44efe56e62d79507bc3ebc13))
+* picture a document-format catalog's palette from its exported documents ([#1373](https://github.com/yschimke/compose-ui-builder/issues/1373)) ([a218a4d](https://github.com/yschimke/compose-ui-builder/commit/a218a4d2ffb8013b73d772c252ac0d2f6ee799c3))
+
 ## [3.148.0](https://github.com/yschimke/compose-ui-builder/compare/v3.147.0...v3.148.0) (2026-11-22)
 
 
