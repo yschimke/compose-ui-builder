@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.148.0](https://github.com/yschimke/compose-ui-builder/compare/v3.147.0...v3.148.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.watchface:watchface-tools-bom to v0.12.1 ([#1367](https://github.com/yschimke/compose-ui-builder/issues/1367)) ([f436abb](https://github.com/yschimke/compose-ui-builder/commit/f436abbef7e5a93e6c3b678507237704e64faf48))
+
 ## [3.147.0](https://github.com/yschimke/compose-ui-builder/compare/v3.146.0...v3.147.0) (2026-11-22)
 
 
