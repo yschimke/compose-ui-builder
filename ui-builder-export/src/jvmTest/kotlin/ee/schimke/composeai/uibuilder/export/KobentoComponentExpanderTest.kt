@@ -192,6 +192,34 @@ class KobentoComponentExpanderTest {
   }
 
   @Test
+  fun `a body that calls a component keeps its tree variables and their readers in the tree`() {
+    val nested =
+      KobentoComponentExpander.Library.parse(
+        """{"components": {
+          "Outer": {"locals": {"w": "componentWidth()"}, "body": {"Inner": {"width": "@w"}}},
+          "Inner": {"params": {"width": {"type": "float", "required": true}},
+                    "locals": {"r": "@width * 2"},
+                    "body": {"box": {"modifiers": [{"width": "@r"}]}}}
+        }}""",
+        """{"numbers": {}, "colors": {}}""",
+      )
+    val document =
+      KobentoComponentExpander.expand(
+        Json.parseToJsonElement("""{"root": {"Outer": {}}}""").jsonObject,
+        nested,
+      ) as KobentoComponentExpander.Result.Expanded
+    kotlin.test.assertEquals(
+      Json.parseToJsonElement(
+        """{"box": {"modifiers": [{"width": "@inner1_r"}], "children": [
+          {"variable": {"name": "outer1_w", "value": "componentWidth()"}},
+          {"variable": {"name": "inner1_r", "value": "@outer1_w * 2"}}]}}""",
+      ),
+      document.document["root"],
+    )
+    kotlin.test.assertEquals(null, document.document["resources"])
+  }
+
+  @Test
   fun `what the expander cannot write is refused with its path`() {
     val document = Json.parseToJsonElement("""{"root": {"Glyph": {"name": "home"}}}""").jsonObject
     val refused = KobentoComponentExpander.expand(document, library)

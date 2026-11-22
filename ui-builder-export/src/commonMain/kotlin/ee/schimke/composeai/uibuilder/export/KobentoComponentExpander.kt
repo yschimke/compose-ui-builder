@@ -104,6 +104,11 @@ object KobentoComponentExpander {
     val declared = LinkedHashMap<String, JsonElement>()
     /** Of [declared], the calls' own (not `vis_*`). */
     val callDeclared = mutableSetOf<String>()
+    /**
+     * Every tree variable a call declared, in any call: a local that reads one, even through a
+     * param a parent passed it, is a tree variable too.
+     */
+    val treeVariables = mutableSetOf<String>()
 
     fun run(): Result {
       if (look !in LOOKS) errors += "componentTheme: $look is not one of ${LOOKS.joinToString()}"
@@ -428,9 +433,12 @@ object KobentoComponentExpander {
           else ->
             (substituted.element as? JsonArray)?.toList() ?: listOfNotNull(substituted.element)
         }
-      val nodes = call.withHead(written).flatMap { call.fillSlots(it) }
-      // A call in the body, or in a slot, is expanded with its arguments already written in.
-      return nodes.flatMapIndexed { index, node -> expandTree(node, "$where[$index]") }
+      val nodes = written.flatMap { call.fillSlots(it) }
+      // A call in the body, or in a slot, is expanded with its arguments already written in. The
+      // tree variables go on the node that results, so a body that is itself a call keeps them.
+      return call.withHead(
+        nodes.flatMapIndexed { index, node -> expandTree(node, "$where[$index]") },
+      )
     }
 
     /**
@@ -559,7 +567,8 @@ object KobentoComponentExpander {
      * written as tree `variable`s at the head of the body, in the order the definition lists them.
      */
     val head = mutableListOf<Triple<Int, String, JsonElement>>()
-    val treeVariables = mutableSetOf<String>()
+    val treeVariables
+      get() = expander.treeVariables
 
     /** Variable params the caller left unbound: the call's own variable, declared when read. */
     val unbound = LinkedHashMap<String, Pair<String, JsonElement>>()
