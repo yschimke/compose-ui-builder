@@ -588,4 +588,47 @@ class PublishedUiBuilderCatalogTest {
       }
     assertEquals(listOf("test-catalog/screen"), composed.catalog.components.map { it.componentId })
   }
+
+  @Test
+  fun `a builtin draws on the canvas as the adapter it names, in its own vocabulary`() {
+    // A catalog whose components have no Kotlin call site (all builtins) teaches the canvas in its
+    // data: an adapter, and how that adapter reads the builtin's properties and slots.
+    val document =
+      published(
+        extra =
+          """,
+        "builtins": {
+          "test-catalog/screen": {
+            "role": "screen-root",
+            "slots": { "content": {} },
+            "canvas": "layout/column",
+            "canvasMapping": { "slots": { "children": "content" } }
+          },
+          "test-catalog/label": {
+            "role": "leaf",
+            "canvas": "m3/text",
+            "canvasMapping": {
+              "properties": { "text": "value", "fontSizeSp": "fontSize" },
+              "defaults": { "maxLines": 1 }
+            },
+            "properties": [ { "name": "value", "jsonType": "string" } ]
+          }
+        }""",
+      )
+    val result = PublishedUiBuilderCatalog.compose(document, record, exports)
+    assertTrue(
+      result is PublishedUiBuilderCatalog.Result.Composed,
+      "did not compose: ${(result as? PublishedUiBuilderCatalog.Result.Unusable)?.reason}",
+    )
+    val components = (result as PublishedUiBuilderCatalog.Result.Composed).catalog.components
+
+    val label = components.single { it.componentId == "test-catalog/label" }
+    assertEquals("m3/text", label.wasm.canvas)
+    val mapping = assertNotNull(label.wasm.canvasMapping)
+    assertEquals(mapOf("text" to "value", "fontSizeSp" to "fontSize"), mapping.properties)
+    assertEquals("1", mapping.defaults["maxLines"].toString())
+
+    val screen = components.single { it.componentId == "test-catalog/screen" }
+    assertEquals(mapOf("children" to "content"), assertNotNull(screen.wasm.canvasMapping).slots)
+  }
 }
