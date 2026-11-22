@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -40,6 +43,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -124,6 +128,39 @@ class DocumentPlayerCanvasTest {
         ),
         boxes(inspection!!.editor),
       )
+    }
+
+  @Test
+  fun `a deleted node stops being selectable before the next export answers`() =
+    runDesktopComposeUiTest(width = 100, height = 100) {
+      var inspection: UiBuilderCanvasInspection? = null
+      var current by mutableStateOf(design)
+      val renderer =
+        documentPlayerCanvasRenderer(
+          request = { document ->
+            // The first export answers; the one after the edit never does.
+            if (document.revision != design.revision) awaitCancellation()
+            UiBuilderDocumentPreview.Ready(document.revision, encoded(tagged = true))
+          },
+        )
+      setContent {
+        CompositionLocalProvider(LocalDensity provides Density(1f)) {
+          Box(Modifier.size(100.dp)) {
+            renderer(current, CANVAS_SURFACE, null, true, {}) { inspection = it }
+          }
+        }
+      }
+      waitUntil { inspection?.editor?.nodes?.count { it.bounds != null } == 3 }
+      val column = design.nodes.getValue("column")
+      current =
+        design.copy(
+          revision = design.revision + 1,
+          nodes =
+            design.nodes - "button" +
+              ("column" to column.copy(slots = mapOf("children" to listOf("gauge")))),
+        )
+      waitUntil { inspection?.editor?.nodes?.none { it.nodeId == "button" } == true }
+      assertEquals(listOf("column", "gauge"), inspection!!.editor.nodes.map { it.nodeId }.sorted())
     }
 
   /** A column holding two fixed-size canvases, tagged as the export tags them where [tagged]. */

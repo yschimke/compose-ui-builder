@@ -177,6 +177,9 @@ private fun DocumentPlayerCanvas(
         },
       )
     }
+  // An edit (a node deleted, say) changes what may be selected before anything lays out again: the
+  // retained boxes are filtered against it now, not at the next layout or export.
+  LaunchedEffect(document) { publish() }
   val listener =
     remember(collector) {
       RcComponentCoordinatesListener { componentId, coordinates ->
