@@ -100,6 +100,8 @@ object KobentoComponentExpander {
       }
     }
     val instances = mutableMapOf<String, Int>()
+    /** The calls being expanded, outermost first. */
+    val calling = mutableListOf<String>()
     /** Variables the calls declare, in the order they were declared. */
     val declared = LinkedHashMap<String, JsonElement>()
     /** Of [declared], the calls' own (not `vis_*`). */
@@ -122,13 +124,15 @@ object KobentoComponentExpander {
         source["root"]
           ?.let { tree ->
             val nodes = expandTree(tree, "root")
-            if (nodes.size != 1) {
+            // Unless a refusal already says why (a call that could not expand writes nothing).
+            if (nodes.size != 1 && errors.isEmpty()) {
               errors += "root: expands to ${nodes.size} nodes; a document has one root"
             }
             nodes.singleOrNull()
           }
           ?.let(::resolveTheme)
           ?.let(::hoistVisibility)
+      collisions(root)
       if (errors.isNotEmpty()) return Result.Refused(errors.distinct())
       val live = root?.let(::withoutDeadVariables)
       val resources = resources(live)
@@ -150,6 +154,37 @@ object KobentoComponentExpander {
       }
       if (resources.isNotEmpty() && "resources" !in out) out["resources"] = JsonObject(resources)
       return Result.Expanded(JsonObject(out))
+    }
+
+    /**
+     * A name the expansion declares that the document declares too: the call would read the
+     * document's variable, not its own, so the expansion is refused. A `vis_<value>` the document
+     * already holds with that value is the same constant.
+     */
+    fun collisions(root: JsonElement?) {
+      val own = ((source["resources"] as? JsonObject)?.get("variables") as? JsonObject) ?: return
+      declared.forEach { (name, value) ->
+        val theirs = own[name] ?: return@forEach
+        if (name.startsWith("vis_") && name !in callDeclared && theirs == value) return@forEach
+        errors +=
+          "resources.variables.$name: the document declares $name, which an expansion declares too"
+      }
+      fun scan(element: JsonElement) {
+        when (element) {
+          is JsonObject ->
+            element.forEach { (key, value) ->
+              val name = ((value as? JsonObject)?.get("name") as? JsonPrimitive)?.contentOrNull
+              if (key == "variable" && name != null && name in treeVariables && name in own) {
+                errors +=
+                  "resources.variables.$name: the document declares $name, which an expansion declares too"
+              }
+              scan(value)
+            }
+          is JsonArray -> element.forEach(::scan)
+          else -> Unit
+        }
+      }
+      root?.let(::scan)
     }
 
     /**
@@ -349,6 +384,20 @@ object KobentoComponentExpander {
     // --- a call ---------------------------------------------------------------------------------
 
     fun expandCall(name: String, arguments: JsonObject, path: String): List<JsonElement> {
+      // A definition that calls itself, directly or through another, never ends.
+      if (name in calling) {
+        errors += "$path.$name: $name calls itself (${(calling + name).joinToString(" > ")})"
+        return emptyList()
+      }
+      calling += name
+      try {
+        return expandOneCall(name, arguments, path)
+      } finally {
+        calling.removeAt(calling.lastIndex)
+      }
+    }
+
+    fun expandOneCall(name: String, arguments: JsonObject, path: String): List<JsonElement> {
       val definition = definitions.getValue(name)
       val instance = (instances[name] ?: 0) + 1
       instances[name] = instance

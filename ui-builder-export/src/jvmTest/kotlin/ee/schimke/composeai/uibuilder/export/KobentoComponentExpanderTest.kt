@@ -220,6 +220,35 @@ class KobentoComponentExpanderTest {
   }
 
   @Test
+  fun `a name the document already declares, and a definition that calls itself, are refused`() {
+    val taken =
+      Json.parseToJsonElement(
+          """{"resources": {"variables": {"toggle1_checked": 0}}, "root": {"Toggle": {}}}""",
+        )
+        .jsonObject
+    kotlin.test.assertEquals(
+      KobentoComponentExpander.Result.Refused(
+        listOf(
+          "resources.variables.toggle1_checked: the document declares toggle1_checked, which an expansion declares too",
+        ),
+      ),
+      KobentoComponentExpander.expand(taken, library),
+    )
+    val loop =
+      Json.parseToJsonElement(
+          """{"components": {"Ping": {"body": {"Pong": {}}}, "Pong": {"body": {"Ping": {}}}},
+            "root": {"Ping": {}}}""",
+        )
+        .jsonObject
+    kotlin.test.assertEquals(
+      KobentoComponentExpander.Result.Refused(
+        listOf("root.Ping[0].Pong[0].Ping: Ping calls itself (Ping > Pong > Ping)"),
+      ),
+      KobentoComponentExpander.expand(loop, library),
+    )
+  }
+
+  @Test
   fun `what the expander cannot write is refused with its path`() {
     val document = Json.parseToJsonElement("""{"root": {"Glyph": {"name": "home"}}}""").jsonObject
     val refused = KobentoComponentExpander.expand(document, library)
