@@ -25,6 +25,7 @@ import io.ktor.server.request.header
 import io.ktor.server.request.receiveText
 import io.ktor.server.request.uri
 import io.ktor.server.response.header
+import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -93,7 +94,13 @@ class UiBuilderServerTest {
       route("/echo/{rest...}", HttpMethod.Head) {
         handle {
           call.response.header("X-Echo", "head")
-          call.respondText("")
+          // A HEAD answer for a 42-byte resource: the length, and no body.
+          call.respond(
+            object : io.ktor.http.content.OutgoingContent.NoContent() {
+              override val contentLength: Long = 42
+              override val contentType: ContentType = ContentType.Application.OctetStream
+            },
+          )
         }
       }
       get("/redirect") {
@@ -245,6 +252,7 @@ class UiBuilderServerTest {
     val response = client.head("http://127.0.0.1:$port/echo/x")
     assertEquals(HttpStatusCode.OK, response.status)
     assertEquals("head", response.headers["X-Echo"])
+    assertEquals("42", response.headers[HttpHeaders.ContentLength])
     assertEquals("", response.bodyAsText())
   }
 

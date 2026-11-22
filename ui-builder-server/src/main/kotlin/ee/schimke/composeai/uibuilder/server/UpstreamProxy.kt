@@ -70,11 +70,18 @@ internal class UpstreamProxy(private val upstream: Url, private val client: Http
           }
           val contentType = response.headers[HttpHeaders.ContentType]?.let(ContentType::parse)
           if (method == HttpMethod.Head || !response.status.allowsBody()) {
+            // A HEAD answer's Content-Length is the size of the resource, not of this (empty)
+            // body, so it is carried across rather than dropped with the other body headers.
+            val headLength =
+              if (method == HttpMethod.Head) {
+                response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+              } else null
             call.respond(
               object : OutgoingContent.NoContent() {
                 override val status: HttpStatusCode = response.status
                 override val headers: Headers = responseHeaders
                 override val contentType: ContentType? = contentType
+                override val contentLength: Long? = headLength
               },
             )
           } else {
