@@ -8,7 +8,7 @@
 # compose-preview-server `ui-builder` container. When export moves here it needs the daemons, and
 # this becomes `FROM ghcr.io/yschimke/compose-preview-render-runtime:<daemon version>`
 # (compose-preview-daemon `docs/daemon/RENDER_RUNTIME_IMAGE.md`).
-FROM eclipse-temurin:25.0.4.1_1-jre
+FROM eclipse-temurin:25.0.5.1_2-jre
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 COPY build/install/compose-ui-builder-server /opt/compose-ui-builder-server
