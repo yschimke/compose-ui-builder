@@ -15,6 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
@@ -101,11 +105,15 @@ internal val LocalDocumentPreviewThumbnails =
  * [document]'s exported picture in a [tile], scaled to fit its [frameWidthDp] x [frameHeightDp]
  * frame and never magnified; [fallback] (the canvas's own picture) until the export answers, and
  * for good where it cannot be played.
+ *
+ * A picture, as the canvas's is: the player's controls are hidden from accessibility and take no
+ * press, so a tap or drag reaches the palette tile, named "Drag [label]" as the canvas's tile is.
  */
 @Composable
 internal fun DocumentPreviewThumbnail(
   thumbnails: DocumentPreviewThumbnails,
   document: UiBuilderDocument,
+  label: String,
   tile: DpSize,
   frameWidthDp: Int,
   frameHeightDp: Int,
@@ -135,7 +143,8 @@ internal fun DocumentPreviewThumbnail(
             transformOrigin = TransformOrigin(0f, 0f)
             scaleX = scale
             scaleY = scale
-          },
+          }
+          .clearAndSetSemantics {},
       ) {
         // The thumbnail's own fixed time, as the Preview pane plays a frozen design: a clock's
         // picture must not move while the palette scrolls.
@@ -148,5 +157,11 @@ internal fun DocumentPreviewThumbnail(
         }
       }
     }
+    // On top of the player: sees every press first, consumes none, and the tile's drag gets them.
+    Box(
+      Modifier.matchParentSize()
+        .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
+        .semantics { contentDescription = "Drag $label" },
+    )
   }
 }

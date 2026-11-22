@@ -1113,6 +1113,7 @@ internal fun CatalogThumbnail(
   DocumentPreviewThumbnail(
     thumbnails = thumbnails,
     document = themed,
+    label = label,
     tile = size,
     frameWidthDp = PREVIEW_FRAME_WIDTH_DP,
     frameHeightDp = PREVIEW_FRAME_HEIGHT_DP,
