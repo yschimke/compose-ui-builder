@@ -257,6 +257,13 @@ tasks.named<Test>("jvmTest") {
   // outputs, so a jvmTest restored from the build cache restores them too.
   outputs.dir(layout.buildDirectory.dir("draw-proof")).withPropertyName("drawProof")
   outputs.dir(layout.buildDirectory.dir("remote-call-proof")).withPropertyName("remoteCallProof")
+  // `KobentoComponentExpanderTest` checks its expansions against Kobento's when given a corpus:
+  // kobento-catalog's definitions.json and theme.json, demos/*.json and Kobento's expanded/*.json.
+  providers.gradleProperty("kobentoExpansionCorpus").orNull?.let {
+    val corpus = rootProject.file(it)
+    inputs.dir(corpus).withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("kobentoExpansionCorpus", corpus.absolutePath)
+  }
   // `RemoteJsonImporterTest` imports a RemoteCompose-Examples checkout when given one.
   providers.gradleProperty("remoteJsonCorpus").orNull?.let {
     val corpus = rootProject.file(it)
