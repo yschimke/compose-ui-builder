@@ -11,8 +11,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import ee.schimke.composeai.rcplayer.compose.ExperimentalRcPlayerApi
 import ee.schimke.composeai.rcplayer.compose.LocalRcComponentCoordinates
@@ -30,6 +32,8 @@ import ee.schimke.composeai.uibuilder.export.DOCUMENT_INSPECTION_TAGS_KEY
 import ee.schimke.composeai.uibuilder.export.NativeNodeTags
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlin.io.encoding.Base64
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -133,12 +137,34 @@ private fun DocumentPlayerCanvas(
       ?.let { played = it }
   }
   val current = played
+  // The canvas box, and what was last measured in it: the editor's snapshot is that, moved to the
+  // editor's root, sent again whenever the box moves (a pan or a zoom lays nothing out again).
+  var root by remember { mutableStateOf<LayoutCoordinates?>(null) }
+  var measured by remember(current) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
+  fun publish() {
+    val local = measured ?: return
+    val frame = root?.takeIf { it.isAttached } ?: return
+    // What the design still holds: a node deleted since this export cannot be selected.
+    val authored = local.authoredIn(latestDocument)
+    latestSnapshot(UiBuilderCanvasInspection(authored, authored.mapped(frame::localToRoot)))
+  }
   if (current == null) {
-    UiBuilderSurface(
-      document = document,
-      editorOverlay = false,
-      onInspectionSnapshot = { latestSnapshot(UiBuilderCanvasInspection(it, it)) },
-    )
+    Box(Modifier.fillMaxSize().onGloballyPositioned { root = it }) {
+      UiBuilderSurface(
+        document = document,
+        editorOverlay = false,
+        // The surface measures in root coordinates already; the renderer's own are the box's.
+        onInspectionSnapshot = { snapshot ->
+          val frame = root?.takeIf { it.isAttached }
+          val local =
+            frame?.let { box ->
+              val origin = box.findRootCoordinates()
+              snapshot.mapped { box.localPositionOf(origin, it) }
+            } ?: snapshot
+          latestSnapshot(UiBuilderCanvasInspection(local, snapshot))
+        },
+      )
+    }
     return
   }
   val collector =
@@ -146,13 +172,11 @@ private fun DocumentPlayerCanvas(
       UiBuilderInspectionCollector(
         current.source,
         onSnapshot = { snapshot ->
-          // What the design still holds: a node deleted since this export cannot be selected.
-          val authored = snapshot.authoredIn(latestDocument)
-          latestSnapshot(UiBuilderCanvasInspection(authored, authored))
+          measured = snapshot
+          publish()
         },
       )
     }
-  var root by remember { mutableStateOf<LayoutCoordinates?>(null) }
   val listener =
     remember(collector) {
       RcComponentCoordinatesListener { componentId, coordinates ->
@@ -169,7 +193,12 @@ private fun DocumentPlayerCanvas(
       "dark" -> RcPlayerTheme.Dark
       else -> RcPlayerTheme.System
     }
-  Box(Modifier.fillMaxSize().onGloballyPositioned { root = it }) {
+  Box(
+    Modifier.fillMaxSize().onGloballyPositioned {
+      root = it
+      publish()
+    },
+  ) {
     CompositionLocalProvider(LocalRcComponentCoordinates provides listener) {
       // Frozen at the design's fixed time, as the palette's pictures are: the canvas edits a
       // design,
@@ -190,6 +219,26 @@ private fun DocumentPlayerCanvas(
       },
     )
   }
+}
+
+/** [this] snapshot's boxes moved by [move], a mapping of points that may translate and scale. */
+private fun UiBuilderInspectionSnapshot.mapped(
+  move: (Offset) -> Offset,
+): UiBuilderInspectionSnapshot {
+  fun UiBuilderPixelBounds.moved(): UiBuilderPixelBounds {
+    val topLeft = move(Offset(x, y))
+    val bottomRight = move(Offset(x + width, y + height))
+    return copy(
+      x = topLeft.x,
+      y = topLeft.y,
+      width = bottomRight.x - topLeft.x,
+      height = bottomRight.y - topLeft.y,
+    )
+  }
+  return copy(
+    nodes = nodes.map { node -> node.copy(bounds = node.bounds?.moved()) },
+    slots = slots.map { slot -> slot.copy(bounds = slot.bounds?.moved()) },
+  )
 }
 
 /** How long after the last edit the canvas asks the host for a new picture. */

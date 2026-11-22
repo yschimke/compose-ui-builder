@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import ee.schimke.composeai.uibuilder.export.DOCUMENT_INSPECTION_TAGS_KEY
 import ee.schimke.composeai.uibuilder.export.NativeNodeTags
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -81,7 +83,7 @@ class DocumentPlayerCanvasTest {
 
   @Test
   fun `the canvas asks for a tagged export and reports where each node drew`() =
-    runDesktopComposeUiTest(width = 100, height = 100) {
+    runDesktopComposeUiTest(width = 200, height = 200) {
       val asked = mutableListOf<UiBuilderDocument>()
       var inspection: UiBuilderCanvasInspection? = null
       val renderer =
@@ -93,24 +95,34 @@ class DocumentPlayerCanvasTest {
         )
       setContent {
         CompositionLocalProvider(LocalDensity provides Density(1f)) {
-          Box(Modifier.size(100.dp)) {
+          // Offset in the window, as the canvas sits inside the editor.
+          Box(Modifier.padding(start = 10.dp, top = 20.dp).size(100.dp)) {
             renderer(design, CANVAS_SURFACE, null, true, {}) { inspection = it }
           }
         }
       }
       waitUntil { inspection?.editor?.nodes?.count { it.bounds != null } == 3 }
       assertEquals(JsonPrimitive(true), asked.first().environment[DOCUMENT_INSPECTION_TAGS_KEY])
-      val bounds =
-        inspection!!.editor.nodes.associate { node ->
+      fun boxes(snapshot: UiBuilderInspectionSnapshot) =
+        snapshot.nodes.associate { node ->
           node.nodeId to node.bounds!!.let { listOf(it.x, it.y, it.width, it.height) }
         }
+      // The renderer's own boxes are its frame's; the editor's are the editor root's.
       assertEquals(
         mapOf(
           "column" to listOf(0f, 0f, 60f, 50f),
           "gauge" to listOf(0f, 0f, 40f, 10f),
           "button" to listOf(0f, 10f, 30f, 20f),
         ),
-        bounds,
+        boxes(inspection!!.renderer),
+      )
+      assertEquals(
+        mapOf(
+          "column" to listOf(10f, 20f, 60f, 50f),
+          "gauge" to listOf(10f, 20f, 40f, 10f),
+          "button" to listOf(10f, 30f, 30f, 20f),
+        ),
+        boxes(inspection!!.editor),
       )
     }
 
