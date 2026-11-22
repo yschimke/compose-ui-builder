@@ -985,6 +985,10 @@ private fun LocalComponentTile(
       label = component.name,
       size = DpSize(104.dp, 72.dp),
       container = true,
+      // This design's own component is previewed in the whole design, which changes with every
+      // edit: exporting it would ask the host again on each one. The canvas's picture follows edits
+      // for free.
+      exportedPicture = false,
     )
   }
 }
@@ -1091,6 +1095,51 @@ internal fun CatalogThumbnail(
   container: Boolean,
   /** Told what the thumbnail ended up drawing. For tests that sweep a whole catalog. */
   onOutcome: ((CatalogThumbnailOutcome) -> Unit)? = null,
+  /**
+   * Whether [document] may be pictured by the host's export ([DocumentPreviewThumbnails]): only a
+   * catalog's fixed thumbnail document, which is exported once and cached for the editor's life.
+   */
+  exportedPicture: Boolean = true,
+) {
+  // A catalog whose Preview plays the host's exported document pictures its components the same
+  // way ([DocumentPreviewThumbnails]); the canvas's own picture stands in until that answers. A
+  // sweep that reports outcomes measures the canvas, so it keeps the canvas's picture.
+  val thumbnails = LocalDocumentPreviewThumbnails.current
+  if (thumbnails == null || document == null || onOutcome != null || !exportedPicture) {
+    CanvasCatalogThumbnail(document, componentId, label, size, container, onOutcome)
+    return
+  }
+  val panelDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+  val themed =
+    remember(document, panelDark) {
+      document.copy(
+        environment =
+          JsonObject(
+            document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light")),
+          ),
+      )
+    }
+  DocumentPreviewThumbnail(
+    thumbnails = thumbnails,
+    document = themed,
+    label = label,
+    tile = size,
+    frameWidthDp = PREVIEW_FRAME_WIDTH_DP,
+    frameHeightDp = PREVIEW_FRAME_HEIGHT_DP,
+  ) {
+    CanvasCatalogThumbnail(document, componentId, label, size, container, null)
+  }
+}
+
+/** [CatalogThumbnail] as the editing canvas draws it. */
+@Composable
+private fun CanvasCatalogThumbnail(
+  document: UiBuilderDocument?,
+  componentId: String,
+  label: String,
+  size: DpSize,
+  container: Boolean,
+  onOutcome: ((CatalogThumbnailOutcome) -> Unit)?,
 ) {
   // A component the frame could not hold, a root-only scaffold, has no picture. Better absent than
   // faked, and the same absence every other pictureless tile shows.

@@ -1335,176 +1335,202 @@ fun UiBuilderEditor(
       dispatch = ::dispatch,
     )
   }
+  // A catalog whose Preview plays the host's exported document pictures its palette the same way:
+  // the canvas cannot draw its components. One cache for the editor's life, so the palette asks
+  // the host for each thumbnail once.
+  val latestDocumentPreview by rememberUpdatedState(onRequestDocumentPreview)
+  val documentThumbnails =
+    remember(catalog.browserPreview, onRequestDocumentPreview != null) {
+      catalog.browserPreview
+        ?.takeIf {
+          it.renderer == BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER &&
+            it.format == ExportFormatV1.RC &&
+            onRequestDocumentPreview != null
+        }
+        ?.let {
+          DocumentPreviewThumbnails(
+            scope = editorScope,
+            request = { document ->
+              checkNotNull(latestDocumentPreview) { "Document preview is not available" }(document)
+            },
+          )
+        }
+    }
   val navigator: @Composable (Modifier, NavigatorTab, Boolean, (() -> Unit)?) -> Unit =
     { modifier, navigatorTab, closeAfterDrop, onClose ->
-      EditorNavigator(
-        state = state,
-        tab = navigatorTab,
-        onClose = onClose,
-        selectionMenu = selectionMenu,
-        catalogSystemId = catalog.benchmark.catalogSystemId,
-        catalogRows = reducer.catalogRows(state),
-        // The rows the palette lists. Subtracting the hidden set's size miscounted a catalog that
-        // does not declare a hidden id, since hiding it removed nothing.
-        totalCatalogComponents = reducer.listedComponentCount(state),
-        pinnedComponents = reducer.pinnedComponents(state),
-        packs = catalog.componentPacks,
-        onManagePacks = onComponentPacks,
-        thumbnailOf = reducer::previewDocument,
-        localPalette =
-          EditorLocalComponentPalette(
-            components = reducer.localComponents(state),
-            preview = { reducer.localComponentPreview(state, it) },
-            target = { reducer.localComponentTarget(state, it) },
-            library = componentLibrary,
-            onAddLibrary =
-              loadLibrarySymbol?.let { load ->
-                { component ->
-                  focusEditor()
-                  editorScope.launch {
-                    val symbol = runCatchingCancellable { load(component) }.getOrNull()
-                    if (symbol == null) {
-                      say("Could not fetch ${component.title} from the project library")
-                      return@launch
+      CompositionLocalProvider(LocalDocumentPreviewThumbnails provides documentThumbnails) {
+        EditorNavigator(
+          state = state,
+          tab = navigatorTab,
+          onClose = onClose,
+          selectionMenu = selectionMenu,
+          catalogSystemId = catalog.benchmark.catalogSystemId,
+          catalogRows = reducer.catalogRows(state),
+          // The rows the palette lists. Subtracting the hidden set's size miscounted a catalog that
+          // does not declare a hidden id, since hiding it removed nothing.
+          totalCatalogComponents = reducer.listedComponentCount(state),
+          pinnedComponents = reducer.pinnedComponents(state),
+          packs = catalog.componentPacks,
+          onManagePacks = onComponentPacks,
+          thumbnailOf = reducer::previewDocument,
+          localPalette =
+            EditorLocalComponentPalette(
+              components = reducer.localComponents(state),
+              preview = { reducer.localComponentPreview(state, it) },
+              target = { reducer.localComponentTarget(state, it) },
+              library = componentLibrary,
+              onAddLibrary =
+                loadLibrarySymbol?.let { load ->
+                  { component ->
+                    focusEditor()
+                    editorScope.launch {
+                      val symbol = runCatchingCancellable { load(component) }.getOrNull()
+                      if (symbol == null) {
+                        say("Could not fetch ${component.title} from the project library")
+                        return@launch
+                      }
+                      val target = reducer.libraryComponentTarget(state, symbol)
+                      if (target == null) say("Select a layer that can hold ${component.title}")
+                      else dispatch(UiBuilderEditorEvent.InsertLibraryComponent(symbol, target))
                     }
-                    val target = reducer.libraryComponentTarget(state, symbol)
-                    if (target == null) say("Select a layer that can hold ${component.title}")
-                    else dispatch(UiBuilderEditorEvent.InsertLibraryComponent(symbol, target))
                   }
-                }
-              },
-          ),
-        layerRows = layerRows,
-        collaborators = collaborators,
-        onOpenProperties = ::openProperties,
-        dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
-        dropTargetLabel =
-          reducer.dropTarget(state, draggedComponentId ?: "m3/text")?.let(::insertDestinationLabel),
-        onCatalogDrag = { componentId, variant, position ->
-          if (position == null) {
-            draggedComponentId = null
-            draggedComponentVariant = null
-          } else {
-            focusEditor()
-            draggedComponentId = componentId
-            draggedComponentVariant = variant
-          }
-          draggedRemoteThumbnail = null
-          catalogDragPosition = position
-        },
-        onCatalogDrop = { componentId, variant, position ->
-          // Insert where dropped (slot and seam under the pointer), not into the selection.
-          canvasDropPlan(componentId, position)?.let { plan ->
-            dispatch(
-              UiBuilderEditorEvent.InsertComponent(
-                componentId,
-                plan.target,
-                variant,
-                plan.afterNodeId,
-              ),
-            )
-            if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
-          }
-            ?: run {
-              // Empty ground (workspace but not design) means "add beside"; a design that cannot
-              // take one says so.
-              if (canvasWorkspaceBounds.contains(position) && !canvasBounds.contains(position)) {
-                val refusal = reducer.besideRefusal(state, componentId)
-                if (refusal == null) {
-                  dispatch(UiBuilderEditorEvent.InsertComponentBeside(componentId, variant))
-                  if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
-                } else {
-                  say(refusal)
-                }
-              }
+                },
+            ),
+          layerRows = layerRows,
+          collaborators = collaborators,
+          onOpenProperties = ::openProperties,
+          dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
+          dropTargetLabel =
+            reducer
+              .dropTarget(state, draggedComponentId ?: "m3/text")
+              ?.let(::insertDestinationLabel),
+          onCatalogDrag = { componentId, variant, position ->
+            if (position == null) {
+              draggedComponentId = null
+              draggedComponentVariant = null
+            } else {
+              focusEditor()
+              draggedComponentId = componentId
+              draggedComponentVariant = variant
             }
-          draggedComponentId = null
-          draggedComponentVariant = null
-          draggedRemoteThumbnail = null
-          catalogDragPosition = null
-        },
-        // Beside the design, every component can be added: a top-level item is in no slot, so there
-        // is no compatibility to satisfy. The one thing that can still refuse is the wrap itself.
-        canAddCatalogComponent = {
-          // The component as well as the document: beside the design there is no slot to satisfy,
-          // but a component whose emitter demands the root is still not one a board can hold.
-          if (state.addBeside) reducer.besideRefusal(state, it) == null
-          else reducer.dropTarget(state, it) != null
-        },
-        // Per row only the component's own refusal; the document-level refusal belongs to the
-        // panel.
-        catalogAddRefusal = {
-          if (state.addBeside && reducer.besideRefusal(state) == null)
-            reducer.besideRefusal(state, it)
-          else null
-        },
-        besideRefusal = reducer.besideRefusal(state),
-        onCatalogAdd = { componentId, variant ->
-          focusEditor()
-          if (state.addBeside) {
-            dispatch(UiBuilderEditorEvent.InsertComponentBeside(componentId, variant))
-            if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
-          } else
-            reducer.dropTarget(state, componentId)?.let { target ->
-              dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
+            draggedRemoteThumbnail = null
+            catalogDragPosition = position
+          },
+          onCatalogDrop = { componentId, variant, position ->
+            // Insert where dropped (slot and seam under the pointer), not into the selection.
+            canvasDropPlan(componentId, position)?.let { plan ->
+              dispatch(
+                UiBuilderEditorEvent.InsertComponent(
+                  componentId,
+                  plan.target,
+                  variant,
+                  plan.afterNodeId,
+                ),
+              )
               if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
             }
-        },
-        remoteComposeSources =
-          if (resolveRemoteComposeDocument == null) emptyList() else remoteComposeSources,
-        pendingRemoteComposeSource = pendingRemoteSource,
-        remoteComposeFailure = remoteSourceFailure,
-        resolveRemoteComposeThumbnail = resolveRemoteComposeThumbnail,
-        onAddRemoteComposeSource = { source ->
-          focusEditor()
-          if (pendingRemoteSource == null) {
-            pendingRemoteTarget = null
-            pendingRemoteSource = source
-          }
-          if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
-        },
-        onRemoteComposeDrag = { source, thumbnail, position ->
-          if (position != null) focusEditor()
-          draggedComponentId = REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID
-          draggedComponentVariant = null
-          draggedRemoteThumbnail = thumbnail
-          catalogDragPosition = position
-          if (position == null) {
+              ?: run {
+                // Empty ground (workspace but not design) means "add beside"; a design that cannot
+                // take one says so.
+                if (canvasWorkspaceBounds.contains(position) && !canvasBounds.contains(position)) {
+                  val refusal = reducer.besideRefusal(state, componentId)
+                  if (refusal == null) {
+                    dispatch(UiBuilderEditorEvent.InsertComponentBeside(componentId, variant))
+                    if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+                  } else {
+                    say(refusal)
+                  }
+                }
+              }
             draggedComponentId = null
             draggedComponentVariant = null
             draggedRemoteThumbnail = null
-          }
-        },
-        onRemoteComposeDrop = { source, position ->
-          val target = canvasDropPlan(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID, position)?.target
-          if (target != null && pendingRemoteSource == null) {
-            pendingRemoteTarget = target
-            pendingRemoteSource = source
+            catalogDragPosition = null
+          },
+          // Beside the design, every component can be added: a top-level item is in no slot, so
+          // there
+          // is no compatibility to satisfy. The one thing that can still refuse is the wrap itself.
+          canAddCatalogComponent = {
+            // The component as well as the document: beside the design there is no slot to satisfy,
+            // but a component whose emitter demands the root is still not one a board can hold.
+            if (state.addBeside) reducer.besideRefusal(state, it) == null
+            else reducer.dropTarget(state, it) != null
+          },
+          // Per row only the component's own refusal; the document-level refusal belongs to the
+          // panel.
+          catalogAddRefusal = {
+            if (state.addBeside && reducer.besideRefusal(state) == null)
+              reducer.besideRefusal(state, it)
+            else null
+          },
+          besideRefusal = reducer.besideRefusal(state),
+          onCatalogAdd = { componentId, variant ->
+            focusEditor()
+            if (state.addBeside) {
+              dispatch(UiBuilderEditorEvent.InsertComponentBeside(componentId, variant))
+              if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+            } else
+              reducer.dropTarget(state, componentId)?.let { target ->
+                dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
+                if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+              }
+          },
+          remoteComposeSources =
+            if (resolveRemoteComposeDocument == null) emptyList() else remoteComposeSources,
+          pendingRemoteComposeSource = pendingRemoteSource,
+          remoteComposeFailure = remoteSourceFailure,
+          resolveRemoteComposeThumbnail = resolveRemoteComposeThumbnail,
+          onAddRemoteComposeSource = { source ->
+            focusEditor()
+            if (pendingRemoteSource == null) {
+              pendingRemoteTarget = null
+              pendingRemoteSource = source
+            }
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
-          } else if (
-            target == null &&
-              pendingRemoteSource == null &&
-              canvasWorkspaceBounds.contains(position) &&
-              !canvasBounds.contains(position) &&
-              reducer.besideRefusal(state, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID) == null
-          ) {
-            // The same empty-ground answer the catalog drop gives: a played document is exactly
-            // the kind of asset a board holds, and the pointer said "not inside anything".
-            pendingRemoteTarget = null
-            pendingRemoteSource = source
-            if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
-          }
-          draggedComponentId = null
-          draggedComponentVariant = null
-          draggedRemoteThumbnail = null
-          catalogDragPosition = null
-        },
-        moveRefusal = { nodeId, target -> reducer.moveRefusal(state, nodeId, target) },
-        onEditorInteraction = ::focusEditor,
-        onTextInputFocusChanged = { textInputFocused = it },
-        dispatch = ::dispatch,
-        modifier = modifier,
-      )
+          },
+          onRemoteComposeDrag = { source, thumbnail, position ->
+            if (position != null) focusEditor()
+            draggedComponentId = REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID
+            draggedComponentVariant = null
+            draggedRemoteThumbnail = thumbnail
+            catalogDragPosition = position
+            if (position == null) {
+              draggedComponentId = null
+              draggedComponentVariant = null
+              draggedRemoteThumbnail = null
+            }
+          },
+          onRemoteComposeDrop = { source, position ->
+            val target = canvasDropPlan(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID, position)?.target
+            if (target != null && pendingRemoteSource == null) {
+              pendingRemoteTarget = target
+              pendingRemoteSource = source
+              if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+            } else if (
+              target == null &&
+                pendingRemoteSource == null &&
+                canvasWorkspaceBounds.contains(position) &&
+                !canvasBounds.contains(position) &&
+                reducer.besideRefusal(state, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID) == null
+            ) {
+              // The same empty-ground answer the catalog drop gives: a played document is exactly
+              // the kind of asset a board holds, and the pointer said "not inside anything".
+              pendingRemoteTarget = null
+              pendingRemoteSource = source
+              if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+            }
+            draggedComponentId = null
+            draggedComponentVariant = null
+            draggedRemoteThumbnail = null
+            catalogDragPosition = null
+          },
+          moveRefusal = { nodeId, target -> reducer.moveRefusal(state, nodeId, target) },
+          onEditorInteraction = ::focusEditor,
+          onTextInputFocusChanged = { textInputFocused = it },
+          dispatch = ::dispatch,
+          modifier = modifier,
+        )
+      }
     }
   // Drag ghosts, built once per drag: the palette component or the moved subtree, which the canvas
   // scales to the hovered slot. Remote Compose drags use their published capture instead.
