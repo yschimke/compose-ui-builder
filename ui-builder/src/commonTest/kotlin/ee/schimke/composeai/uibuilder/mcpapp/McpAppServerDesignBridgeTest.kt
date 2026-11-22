@@ -34,6 +34,9 @@ class McpAppServerDesignBridgeTest {
     var revision = 7L
     var writable = true
     var awaitOffered = true
+
+    /** How many of the next reads fail, as a dropped connection would. */
+    var failingReads = 0
     val calls = mutableListOf<Pair<String, JsonObject>>()
 
     /** What each await answers, in turn; null means "nothing changed". */
@@ -50,13 +53,17 @@ class McpAppServerDesignBridgeTest {
       assertEquals("home", arguments["designId"]?.jsonPrimitive?.content)
       return when (name) {
         McpAppServerDesignBridge.READ_TOOL ->
-          buildJsonObject {
-            put("designId", "home")
-            put("title", "Home")
-            put("revision", revision)
-            put("writable", writable)
-            put("document", document)
-          }
+          if (failingReads > 0) {
+            failingReads--
+            error("connection reset")
+          } else
+            buildJsonObject {
+              put("designId", "home")
+              put("title", "Home")
+              put("revision", revision)
+              put("writable", writable)
+              put("document", document)
+            }
         McpAppServerDesignBridge.WRITE_TOOL -> {
           val base = arguments["baseRevision"]!!.jsonPrimitive.long
           when {
@@ -309,5 +316,50 @@ class McpAppServerDesignBridgeTest {
         .content
         .joinToString("\n")
     assertTrue("design file" in fileContext, fileContext)
+  }
+
+  @Test
+  fun `the capability probe names a revision that survives JSON-parse in a browser`() {
+    val server = FakeServer(seedText)
+    opened(server)
+    val probe = server.calls.first { it.first == McpAppServerDesignBridge.AWAIT_TOOL }.second
+    val after = probe["afterRevision"]!!.jsonPrimitive.long
+    // Number.MAX_SAFE_INTEGER: a JavaScript double holds it exactly, so the host forwards it
+    // intact.
+    assertTrue(after <= 9_007_199_254_740_991L, "probe revision $after is not JavaScript-safe")
+    assertEquals(after.toDouble().toLong(), after)
+  }
+
+  @Test
+  fun `a newer revision whose read fails is read again, not skipped`() {
+    val server = FakeServer(seedText)
+    val bridge = McpAppServerDesignBridge(server, NoHost(), pause = {})
+    val session = McpAppDesignSession(bridge, file)
+    runImmediate { session.open() }
+    // An agent saves revision 8; the first read of it fails.
+    server.externalSave("Agent's")
+    server.failingReads = 1
+    server.awaits += 8L
+    server.awaits += 8L
+    var waits = 0
+    server.onAwait = {
+      waits++
+      if (waits == 3) runImmediate { session.close() }
+    }
+    runImmediate {
+      bridge.followExternalEdits(file.resourceUri) { uri -> session.resourceUpdated(uri) }
+    }
+
+    assertEquals("Agent's", session.state.document?.title)
+    assertEquals("8", session.state.etag)
+    // The second wait still started from 7: the failed read did not move the cursor.
+    val waitsAfter =
+      server.calls
+        .filter {
+          it.first == McpAppServerDesignBridge.AWAIT_TOOL &&
+            it.second["waitSeconds"]!!.jsonPrimitive.content != "0"
+        }
+        .map { it.second["afterRevision"]!!.jsonPrimitive.long }
+    assertEquals(listOf(7L, 7L, 8L), waitsAfter)
   }
 }

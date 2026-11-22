@@ -34,6 +34,8 @@ fun interface McpAppToolCaller {
 class McpAppServerDesignBridge(
   private val tools: McpAppToolCaller,
   private val host: McpAppBridge,
+  /** How the follow loop waits between retries; tests pass one that returns at once. */
+  private val pause: suspend (Long) -> Unit = { delay(it) },
 ) : McpAppBridge {
   /** The newest revision this editor has read or written: where following external edits starts. */
   private var knownRevision: Long? = null
@@ -95,7 +97,7 @@ class McpAppServerDesignBridge(
       AWAIT_TOOL,
       buildJsonObject {
         put("designId", designId(uri))
-        put("afterRevision", Long.MAX_VALUE)
+        put("afterRevision", PROBE_REVISION)
         put("waitSeconds", 0)
       },
     )
@@ -118,7 +120,7 @@ class McpAppServerDesignBridge(
     while (following) {
       val after = knownRevision
       if (after == null) {
-        delay(FOLLOW_IDLE_MS)
+        pause(FOLLOW_IDLE_MS)
         continue
       }
       val result = runCatching {
@@ -134,14 +136,20 @@ class McpAppServerDesignBridge(
         .getOrElse {
           if (it is kotlinx.coroutines.CancellationException) throw it
           failures++
-          delay(minOf(FOLLOW_RETRY_MS * failures, FOLLOW_RETRY_MAX_MS))
+          pause(minOf(FOLLOW_RETRY_MS * failures, FOLLOW_RETRY_MAX_MS))
           continue
         }
       failures = 0
       val revision = result.long("revision") ?: continue
       if ((result["changed"] as? JsonPrimitive)?.booleanOrNull == true && revision > after) {
-        knownRevision = maxOf(knownRevision ?: revision, revision)
+        // The cursor moves only when the session's read succeeds ([read] advances it): a read that
+        // failed must be retried, not skipped, or the editor would stay on a stale revision while
+        // still claiming to follow. Back off so a failing read does not spin.
         if (following) onUpdated(uri)
+        if ((knownRevision ?: after) <= after) {
+          failures++
+          pause(minOf(FOLLOW_RETRY_MS * failures, FOLLOW_RETRY_MAX_MS))
+        }
       }
     }
   }
@@ -162,6 +170,14 @@ class McpAppServerDesignBridge(
      * The server's limit on one wait; a shorter one keeps well inside the host's request timeout.
      */
     const val AWAIT_SECONDS: Int = 25
+
+    /**
+     * An `afterRevision` no design reaches, for the capability probe. It travels through the
+     * browser's `JSON.parse`, so it must be a JavaScript-safe integer (2^53 - 1), not
+     * `Long.MAX_VALUE`, which would round past the 64-bit range and be refused by a server decoding
+     * a `Long`.
+     */
+    const val PROBE_REVISION: Long = 9_007_199_254_740_991L
     private const val FOLLOW_IDLE_MS = 250L
     private const val FOLLOW_RETRY_MS = 2_000L
     private const val FOLLOW_RETRY_MAX_MS = 30_000L
