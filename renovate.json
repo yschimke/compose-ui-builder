@@ -83,7 +83,7 @@
       "minimumReleaseAge": null
     },
     {
-      "description": "The design-render workflow's compose-preview-server pin, at any time and automerged. It fell a week behind the weekly schedule: compose-ai-tools 2.38.0 (#617) made a call the pinned server source still used internal, and every Design Renders run was red until #628 moved the pin by hand. Safe to automerge because the pin PR's own Design Renders job builds and renders with the new server commit, so a pin that does not work fails its PR rather than main.",
+      "description": "The design-render workflow's compose-preview-server pin, at any time and automerged, once per server release. It fell a week behind the weekly schedule once: compose-ai-tools 2.38.0 (#617) made a call the pinned server source still used internal, and every Design Renders run was red until #628 moved the pin by hand. Safe to automerge because the pin PR's own Design Renders job builds and renders with the new server release, so a pin that does not work fails its PR rather than main. It tracks releases, not main commits, so it opens one PR per server release instead of one per server commit.",
       "matchManagers": [
         "custom.regex"
       ],
@@ -102,17 +102,17 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Bump the pinned commit of compose-preview-server's reusable design-render workflow, and the server-ref input that names the same commit, to the head of its main branch.",
+      "description": "Bump the pinned commit of compose-preview-server's reusable design-render workflow, and the server-ref input that names the same commit, to the newest compose-preview-server release (the tag in the trailing comment, the commit it points at in the pin).",
       "managerFilePatterns": [
         "/^\\.github/workflows/[^/]+\\.ya?ml$/"
       ],
       "matchStrings": [
-        "uses: (?<depName>yschimke/compose-preview-server)/\\.github/workflows/[^@\\s]+@(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>main)",
-        "server-ref: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>main)"
+        "uses: (?<depName>yschimke/compose-preview-server)/\\.github/workflows/[^@\\s]+@(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>v[0-9]+\\.[0-9]+\\.[0-9]+)",
+        "server-ref: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>v[0-9]+\\.[0-9]+\\.[0-9]+)"
       ],
       "depNameTemplate": "yschimke/compose-preview-server",
-      "datasourceTemplate": "git-refs",
-      "packageNameTemplate": "https://github.com/yschimke/compose-preview-server"
+      "datasourceTemplate": "github-tags",
+      "packageNameTemplate": "yschimke/compose-preview-server"
     }
   ]
 }
