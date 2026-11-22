@@ -33,17 +33,27 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property probeTimeoutMillis how long `/readyz` and `/version` wait on the upstream. Proxied
  *   requests have no read timeout (editor updates and exports are long-lived), so the deploy probes
  *   need their own bound: a stuck upstream must read as not ready, not hang the probe.
+ * @property upstreamReadyPath the upstream path whose 200 makes this host ready. `/healthz`, not
+ *   the upstream's `/readyz`: compose-preview-server's `/readyz` latches only once every design
+ *   system catalog has rendered a preview, which its `SERVE_ROLE=ui-builder` container may never do
+ *   (preview-coo-ee health-checks that container on `/healthz` for the same reason). Pointed at
+ *   `/readyz`, this host stayed `503 warming` behind a container serving every page.
  */
 internal data class UiBuilderServerConfig(
   val port: Int,
   val upstream: Url,
   val version: String,
   val probeTimeoutMillis: Long = DEFAULT_PROBE_TIMEOUT_MILLIS,
+  val upstreamReadyPath: String = DEFAULT_UPSTREAM_READY_PATH,
 ) {
   companion object {
     const val DEFAULT_PROBE_TIMEOUT_MILLIS: Long = 5_000
+    const val DEFAULT_UPSTREAM_READY_PATH: String = "/healthz"
 
-    /** Reads `PORT` (default 8080) and `UI_BUILDER_UPSTREAM_URL` (required). */
+    /**
+     * Reads `PORT` (default 8080), `UI_BUILDER_UPSTREAM_URL` (required) and
+     * `UI_BUILDER_UPSTREAM_READY_PATH` (default `/healthz`).
+     */
     fun fromEnvironment(env: Map<String, String> = System.getenv()): UiBuilderServerConfig {
       val upstream =
         requireNotNull(env["UI_BUILDER_UPSTREAM_URL"]?.takeIf(String::isNotBlank)) {
@@ -54,6 +64,9 @@ internal data class UiBuilderServerConfig(
         port = env["PORT"]?.toIntOrNull() ?: 8080,
         upstream = Url(upstream.trimEnd('/')),
         version = releaseVersion(),
+        upstreamReadyPath =
+          env["UI_BUILDER_UPSTREAM_READY_PATH"]?.takeIf { it.startsWith("/") }
+            ?: DEFAULT_UPSTREAM_READY_PATH,
       )
     }
 
@@ -121,11 +134,13 @@ private val json = Json {
 internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: HttpClient) {
   install(WebSockets) { maxFrameSize = Long.MAX_VALUE }
   val proxy = UpstreamProxy(config.upstream, client)
-  val readiness = UpstreamReadiness(config.upstream, client, config.probeTimeoutMillis)
+  val readiness =
+    UpstreamReadiness(config.upstream, config.upstreamReadyPath, client, config.probeTimeoutMillis)
   routing {
     // Liveness: this process answers. Not the rollout gate; see `/readyz`.
     get("/healthz") { call.respondText("ok") }
-    // Readiness: ready only while the upstream is, because most routes are still served there.
+    // Readiness: ready only while the upstream answers, because most routes are still served there.
+    // See UiBuilderServerConfig.upstreamReadyPath for why that is its `/healthz` by default.
     get("/readyz") {
       call.response.header(HttpHeaders.CacheControl, "no-store")
       if (readiness.ready()) call.respondText("ready")
@@ -161,9 +176,10 @@ internal fun Application.uiBuilderServer(config: UiBuilderServerConfig, client: 
   }
 }
 
-/** Upstream `/readyz`, cached briefly so a polling deploy check does not hammer it. */
+/** The upstream's readiness path, cached briefly so a polling deploy check does not hammer it. */
 private class UpstreamReadiness(
   private val upstream: Url,
+  private val path: String,
   private val client: HttpClient,
   private val timeoutMillis: Long,
 ) {
@@ -175,8 +191,7 @@ private class UpstreamReadiness(
     if (now - checkedAt < CACHE_MILLIS) return lastReady
     lastReady =
       withTimeoutOrNull(timeoutMillis) {
-        runCatching { client.get("$upstream/readyz").status == HttpStatusCode.OK }
-          .getOrDefault(false)
+        runCatching { client.get("$upstream$path").status == HttpStatusCode.OK }.getOrDefault(false)
       } ?: false
     checkedAt = now
     return lastReady
