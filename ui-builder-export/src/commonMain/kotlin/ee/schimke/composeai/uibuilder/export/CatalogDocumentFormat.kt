@@ -69,6 +69,13 @@ interface CatalogDocumentFormat {
    */
   fun export(document: UiBuilderDocument, policy: JsonObject): Result
 
+  /**
+   * How a host compiles [policy]'s documents itself, from files the catalog publishes, or null when
+   * only the host's own service can. A host that cannot (no files, no compiler, a refusal) asks its
+   * service, as it does for a format without one.
+   */
+  fun localCompilation(policy: JsonObject): LocalCompilation? = null
+
   sealed interface Result {
     /** The artifact's content, in [encoding]. */
     data class Emitted(val content: String) : Result
@@ -76,6 +83,19 @@ interface CatalogDocumentFormat {
     data class Refused(val reasons: List<String>) : Result
   }
 }
+
+/**
+ * A document format a host can compile without its service: [expand] writes a design as the
+ * document [compiler] compiles, from [files] the catalog publishes (each a path under the catalog,
+ * as its `ui-builder.json` names them). [compiler] is a JavaScript module whose `convert(text)`
+ * answers the compiled bytes, so a browser host compiles with no round trip.
+ */
+class LocalCompilation(
+  val files: List<String>,
+  val compiler: String,
+  val expand:
+    (document: UiBuilderDocument, files: Map<String, String>) -> CatalogDocumentFormat.Result,
+)
 
 /**
  * The document formats a build ships, and how a catalog resolves to one. A fixed list, not a plugin
@@ -114,6 +134,10 @@ class CatalogDocumentFormats(val formats: List<CatalogDocumentFormat>) {
         ?: return Resolution.NotDeclared
     return Resolution.Supported(inferred, policyOf(inferred, statusSemantics))
   }
+
+  /** How a host compiles [statusSemantics]' documents itself, or null when it cannot. */
+  fun localCompilation(statusSemantics: JsonObject): LocalCompilation? =
+    supported(statusSemantics)?.let { it.format.localCompilation(it.policy) }
 
   /** The format [statusSemantics] resolves to, or null. */
   fun supported(statusSemantics: JsonObject): Resolution.Supported? =

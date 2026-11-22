@@ -622,6 +622,9 @@ private fun LiveSessionApp(
   // null means no Export button yet.
   var latestEditorDocument by remember(config.designId) { mutableStateOf<UiBuilderDocument?>(null) }
   var documentPreviewAvailable by remember(config.designId) { mutableStateOf(false) }
+  // A catalog whose format compiles in the browser (from files the catalog publishes): the canvas
+  // and Preview draw an edit with no round trip, and the service compiles what it cannot.
+  var localCompiler by remember(config.designId) { mutableStateOf<LocalDocumentCompiler?>(null) }
   var exportHost by remember(config.designId) { mutableStateOf<UiBuilderExportHost?>(null) }
   var restoredReference by remember(config.designId) { mutableStateOf<RestoredReference?>(null) }
   var referenceStatus by remember(config.designId) { mutableStateOf<String?>(null) }
@@ -909,6 +912,10 @@ private fun LiveSessionApp(
           UiBuilderCatalogPlatform.LOVELACE
       // A catalog in a declared document format (CatalogDocumentFormats) exports through it.
       val documentFormat = BuiltInCatalogDocumentFormats.ALL.declares(capability.statusSemantics)
+      localCompiler =
+        BuiltInCatalogDocumentFormats.ALL.localCompilation(capability.statusSemantics)?.let {
+          LocalDocumentCompiler(capability.benchmark.catalogSystemId, it)
+        }
       // A declared format's `.rc` is the host's to compile (through the format's own service), so
       // its
       // Preview plays that document in every build, not only behind the authoring flag.
@@ -1885,7 +1892,16 @@ private fun LiveSessionApp(
           if (!documentPreviewAvailable) null
           else
             { expected ->
-              if (config.localStorage || authoritativeDocument?.toUiBuilderDocument() != expected) {
+              val saved =
+                !config.localStorage && authoritativeDocument?.toUiBuilderDocument() == expected
+              val compiledHere = localCompiler?.compile(expected)
+              if (compiledHere != null) {
+                UiBuilderDocumentPreview.Ready(
+                  revision = expected.revision,
+                  documentBase64 = compiledHere,
+                  saved = saved,
+                )
+              } else if (!saved) {
                 UiBuilderDocumentPreview.Ready(
                   revision = expected.revision,
                   documentBase64 =
