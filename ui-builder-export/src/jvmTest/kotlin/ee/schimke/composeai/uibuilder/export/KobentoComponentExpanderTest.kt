@@ -50,7 +50,7 @@ class KobentoComponentExpanderTest {
           },
           "Echo": {
             "params": {"value": {"type": "float", "default": 0}, "size": {"type": "float", "default": "@theme.space_2"}},
-            "locals": {"twice": "@size * @now"},
+            "locals": {"twice": "@size * 2"},
             "body": {"canvas": {"commands": [
               {"variable": {"name": "x", "value": "@value"}},
               {"variable": {"name": "now", "value": "@x"}},
@@ -154,6 +154,40 @@ class KobentoComponentExpanderTest {
         Json.parseToJsonElement("""{"root": {"Pair": {}}}""").jsonObject,
         library,
       ),
+    )
+  }
+
+  @Test
+  fun `a local cannot read a name the body declares, and a grouped condition is one term`() {
+    val ordered =
+      KobentoComponentExpander.Library.parse(
+        """{"components": {
+          "Late": {"locals": {"y": "@x * 2"}, "body": {"canvas": {"commands": [
+            {"variable": {"name": "x", "value": "componentWidth()"}},
+            {"drawCircle": {"cx": "@y", "cy": 0, "radius": 1}}]}}},
+          "Pick": {"params": {"a": {"type": "bool", "default": true}, "b": {"type": "bool", "default": false},
+                              "c": {"type": "bool", "default": true}},
+                   "body": {"${'$'}if": "(a || b) && c", "then": {"box": {}}, "else": {"row": {}}}}
+        }}""",
+        """{"numbers": {}, "colors": {}}""",
+      )
+    kotlin.test.assertEquals(
+      KobentoComponentExpander.Result.Refused(
+        listOf("root.Late.locals.y: reads late1_x, which the body declares after it"),
+      ),
+      KobentoComponentExpander.expand(
+        Json.parseToJsonElement("""{"root": {"Late": {}}}""").jsonObject,
+        ordered,
+      ),
+    )
+    val picked =
+      KobentoComponentExpander.expand(
+        Json.parseToJsonElement("""{"root": {"Pick": {}}}""").jsonObject,
+        ordered,
+      )
+    kotlin.test.assertEquals(
+      Json.parseToJsonElement("""{"box": {}}"""),
+      (picked as KobentoComponentExpander.Result.Expanded).document["root"],
     )
   }
 

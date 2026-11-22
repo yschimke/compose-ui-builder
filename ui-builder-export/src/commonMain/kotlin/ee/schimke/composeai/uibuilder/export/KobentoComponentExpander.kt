@@ -401,7 +401,7 @@ object KobentoComponentExpander {
       val body =
         definition["body"]
           ?: return emptyList<JsonElement>().also { errors += "$where: $name has no body" }
-      val own = ownNames(body, prefix)
+      val (bodyNames, own) = ownNames(body, prefix)
       val call =
         Call(
           expander = this,
@@ -414,6 +414,7 @@ object KobentoComponentExpander {
             own((definition["locals"] as? JsonObject) ?: JsonObject(emptyMap())) as JsonObject,
         )
       call.unbound.putAll(unboundVariables)
+      call.bodyNames = bodyNames
       // Every local is declared, in the order the definition lists them, as Kobento does: a tree
       // variable stays whether the body reads it or not; an unread resource is pruned at the end.
       call.pending.keys.forEach { call.local(it) }
@@ -438,7 +439,10 @@ object KobentoComponentExpander {
      * built from `$each` items (`rv_@i`) keeps its `@i` for substitution; `@rv_@i` reads it. A name
      * a `$name` directive takes is the caller's, not the body's.
      */
-    fun ownNames(body: JsonElement, prefix: String): (JsonElement) -> JsonElement {
+    fun ownNames(
+      body: JsonElement,
+      prefix: String,
+    ): Pair<Set<String>, (JsonElement) -> JsonElement> {
       val plain = mutableSetOf<String>()
       val stems = mutableSetOf<String>()
       fun collect(element: JsonElement) {
@@ -463,7 +467,7 @@ object KobentoComponentExpander {
         }
       }
       collect(body)
-      if (plain.isEmpty() && stems.isEmpty()) return { it }
+      if (plain.isEmpty() && stems.isEmpty()) return emptySet<String>() to { it }
       fun reference(text: String): String =
         REFERENCE.replace(text) { match ->
           val name = match.groupValues[1]
@@ -499,7 +503,7 @@ object KobentoComponentExpander {
             else element
           else -> element
         }
-      return ::rename
+      return plain.map { "${prefix}_$it" }.toSet() to ::rename
     }
   }
 
@@ -545,6 +549,8 @@ object KobentoComponentExpander {
   ) {
     val resolved = LinkedHashMap<String, Local>()
     val resolving = mutableSetOf<String>()
+    /** The names the body's ops declare, as the call's own. */
+    var bodyNames: Set<String> = emptySet()
     val root = Scope(this, emptyMap())
     val order = pending.keys.withIndex().associate { (index, name) -> name to index }
 
@@ -619,6 +625,12 @@ object KobentoComponentExpander {
         else ->
           when (val local = root.substitute(value, path).toLocal().folded()) {
             is Local.Expression -> {
+              // A name the body declares exists only from its op on; a local, declared at the head
+              // of the body or in resources, cannot read it.
+              REFERENCE.findAll(local.text)
+                .map { it.groupValues[1] }
+                .firstOrNull { it in bodyNames }
+                ?.let { expander.errors += "$path: reads $it, which the body declares after it" }
               if (needsLayout(local.text)) {
                 head += Triple(order.getValue(name), variable, JsonPrimitive(local.text))
                 treeVariables += variable
@@ -890,7 +902,9 @@ object KobentoComponentExpander {
     // --- conditions -----------------------------------------------------------------------------
 
     fun condition(text: String): Boolean =
-      text.split("||").any { alternative -> alternative.split("&&").all { term(it.trim()) } }
+      splitTopLevel(text, "||").any { alternative ->
+        splitTopLevel(alternative, "&&").all { term(it.trim()) }
+      }
 
     fun term(text: String): Boolean {
       COMPARISON.matchEntire(text)?.let { match ->
@@ -1038,6 +1052,29 @@ object KobentoComponentExpander {
       if (number == null) expander.errors += "$path: theme number '$name' is not in the theme"
       return number
     }
+  }
+
+  /** [text] split at [operator] outside parentheses: `(a || b) && c` is one `&&` of two terms. */
+  private fun splitTopLevel(text: String, operator: String): List<String> {
+    val parts = mutableListOf<String>()
+    var depth = 0
+    var start = 0
+    var i = 0
+    while (i < text.length) {
+      when {
+        text[i] == '(' -> depth++
+        text[i] == ')' -> depth--
+        depth == 0 && text.startsWith(operator, i) -> {
+          parts += text.substring(start, i)
+          start = i + operator.length
+          i = start
+          continue
+        }
+      }
+      i++
+    }
+    parts += text.substring(start)
+    return parts
   }
 
   /** The key of the placeholder a `$slot` leaves in a body until the caller's nodes go in. */
