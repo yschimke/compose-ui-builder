@@ -101,6 +101,11 @@ object KobentoComponentExpander {
       }
     }
     val instances = mutableMapOf<String, Int>()
+    /**
+     * Each prefix a call took, and that call: `Meter1`'s first and `Meter`'s 11th are both
+     * `meter11`.
+     */
+    val prefixes = mutableMapOf<String, String>()
     /** The calls being expanded, outermost first. */
     val calling = mutableListOf<String>()
     /** Variables the calls declare, in the order they were declared. */
@@ -421,6 +426,14 @@ object KobentoComponentExpander {
       instances[name] = instance
       val prefix = name.lowercase() + instance
       val where = "$path.$name"
+      val caller = "$name #$instance"
+      prefixes[prefix]
+        ?.takeIf { it != caller }
+        ?.let { other ->
+          errors += "$where: $caller and $other would both name their variables ${prefix}_*"
+          return emptyList()
+        }
+      prefixes[prefix] = caller
       val params = (definition["params"] as? JsonObject) ?: JsonObject(emptyMap())
       val slots = (definition["slots"] as? JsonObject) ?: JsonObject(emptyMap())
       arguments.keys

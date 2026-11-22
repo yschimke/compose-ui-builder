@@ -254,6 +254,22 @@ class KobentoComponentExpanderTest {
             "root": {"Wrap": {"children": [{"Wrap": {}}]}}}""",
         )
         .jsonObject
+    // `Meter1`'s first call and `Meter`'s eleventh would share `meter11_*`: refused, not aliased.
+    val meters = (1..11).joinToString(",") { """{"Meter": {}}""" }
+    val clash =
+      Json.parseToJsonElement(
+          """{"components": {"Meter": {"body": {"box": {}}}, "Meter1": {"body": {"box": {}}}},
+            "root": {"column": {"children": [{"Meter1": {}}, $meters]}}}""",
+        )
+        .jsonObject
+    kotlin.test.assertEquals(
+      KobentoComponentExpander.Result.Refused(
+        listOf(
+          "root.column.children[11].Meter: Meter #11 and Meter1 #1 would both name their variables meter11_*",
+        ),
+      ),
+      KobentoComponentExpander.expand(clash, library),
+    )
     val result = KobentoComponentExpander.expand(nested, library)
     check(result is KobentoComponentExpander.Result.Expanded) { result.toString() }
     kotlin.test.assertEquals(
