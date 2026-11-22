@@ -115,7 +115,13 @@ object KobentoComponentExpander {
       }
       val root =
         source["root"]
-          ?.let { expandTree(it, "root").singleOrNull() }
+          ?.let { tree ->
+            val nodes = expandTree(tree, "root")
+            if (nodes.size != 1) {
+              errors += "root: expands to ${nodes.size} nodes; a document has one root"
+            }
+            nodes.singleOrNull()
+          }
           ?.let(::resolveTheme)
           ?.let(::hoistVisibility)
       if (errors.isNotEmpty()) return Result.Refused(errors.distinct())
@@ -222,7 +228,8 @@ object KobentoComponentExpander {
       val variables = LinkedHashMap<String, JsonElement>()
       (own["variables"] as? JsonObject)?.let(variables::putAll)
       declared.forEach { (name, value) -> if (name !in variables) variables[name] = value }
-      if (variables.isNotEmpty()) out["variables"] = JsonObject(variables)
+      // A local built from a theme number (a param defaulting to `@theme.text_md`) is the number.
+      if (variables.isNotEmpty()) out["variables"] = resolveTheme(JsonObject(variables))
       val ownColors = (own["colors"] as? JsonObject) ?: JsonObject(emptyMap())
       val read = mutableSetOf<String>()
       fun scan(element: JsonElement?) {
@@ -394,6 +401,7 @@ object KobentoComponentExpander {
       val body =
         definition["body"]
           ?: return emptyList<JsonElement>().also { errors += "$where: $name has no body" }
+      val own = ownNames(body, prefix)
       val call =
         Call(
           expander = this,
@@ -402,99 +410,71 @@ object KobentoComponentExpander {
           params = bound,
           slots = content,
           where = where,
-          pending = (definition["locals"] as? JsonObject) ?: JsonObject(emptyMap()),
+          pending =
+            own((definition["locals"] as? JsonObject) ?: JsonObject(emptyMap())) as JsonObject,
         )
       call.unbound.putAll(unboundVariables)
       // Every local is declared, in the order the definition lists them, as Kobento does: a tree
       // variable stays whether the body reads it or not; an unread resource is pruned at the end.
       call.pending.keys.forEach { call.local(it) }
+      // The names the body declares are made the call's own before anything is written in, so a
+      // caller's value (`"@x"` for a param) or slot never takes a body's name.
       val written =
-        when (val substituted = call.root.substitute(body, "$where.body")) {
+        when (val substituted = call.root.substitute(own(body), "$where.body")) {
           null -> emptyList()
           is Spliced -> substituted.items
-          else -> listOfNotNull(substituted.element)
+          // A body that is a list of nodes expands to them, where a list of children is expected.
+          else ->
+            (substituted.element as? JsonArray)?.toList() ?: listOfNotNull(substituted.element)
         }
-      // The names the body declares itself, as its own ops write them (`rv_@i` is `rv_0`, `rv_1`):
-      // not a local's variable, the call's already, nor a name `$name` took from the caller.
-      val patterns = declarationPatterns(body)
-      val names =
-        written
-          .flatMap(::declaredNames)
-          .filter { name -> patterns.any { it.matches(name) } }
-          .filterNot { it.startsWith("${prefix}_") }
-          .toSet()
-      val renamed = Renaming(prefix, names)
-      val nodes = call.withHead(written.map { renamed.apply(it) }).flatMap { call.fillSlots(it) }
+      val nodes = call.withHead(written).flatMap { call.fillSlots(it) }
       // A call in the body, or in a slot, is expanded with its arguments already written in.
       return nodes.flatMapIndexed { index, node -> expandTree(node, "$where[$index]") }
     }
 
     /**
-     * What the names [body]'s ops declare look like before substitution: a plain name, or one built
-     * from `$each` items (`rv_@i` matches `rv_0`). A `$name` directive takes a caller's variable,
-     * which is not the call's to rename.
+     * What makes each name [body]'s ops declare the call's own, `<prefix>_<name>`: the declaration,
+     * every `@name` that reads it (in the body or a local), and a path field that names it. A name
+     * built from `$each` items (`rv_@i`) keeps its `@i` for substitution; `@rv_@i` reads it. A name
+     * a `$name` directive takes is the caller's, not the body's.
      */
-    fun declarationPatterns(body: JsonElement): List<Regex> {
-      val patterns = mutableListOf<Regex>()
-      fun walk(element: JsonElement) {
+    fun ownNames(body: JsonElement, prefix: String): (JsonElement) -> JsonElement {
+      val plain = mutableSetOf<String>()
+      val stems = mutableSetOf<String>()
+      fun collect(element: JsonElement) {
         when (element) {
           is JsonObject ->
             element.forEach { (key, value) ->
               val field = DECLARING_OPS[key]
-              val written = ((value as? JsonObject)?.get(field ?: "") as? JsonPrimitive)
-              if (field != null && written != null && written.isString) {
-                val pattern =
-                  written.content.split(REFERENCE).joinToString("[A-Za-z0-9_.]*") {
-                    Regex.escape(it)
-                  }
-                patterns += Regex(pattern)
+              val name = ((value as? JsonObject)?.get(field ?: "") as? JsonPrimitive)
+              if (field != null && name != null && name.isString) {
+                val text = name.content
+                if (PLAIN_NAME.matches(text)) plain += text
+                else if (
+                  '@' in text && PLAIN_NAME.matches(text.substringBefore('@').ifEmpty { "-" })
+                ) {
+                  stems += text.substringBefore('@')
+                }
               }
-              walk(value)
+              collect(value)
             }
-          is JsonArray -> element.forEach(::walk)
+          is JsonArray -> element.forEach(::collect)
           else -> Unit
         }
       }
-      walk(body)
-      return patterns
-    }
-
-    /** The names [body]'s ops declare (a canvas `variable`, a `textMeasure`), as written. */
-    fun declaredNames(body: JsonElement): Set<String> {
-      val names = mutableSetOf<String>()
-      fun walk(element: JsonElement) {
-        when (element) {
-          is JsonObject ->
-            element.forEach { (key, value) ->
-              declaredName(key, value)?.let { names += it }
-              walk(value)
-            }
-          is JsonArray -> element.forEach(::walk)
-          else -> Unit
+      collect(body)
+      if (plain.isEmpty() && stems.isEmpty()) return { it }
+      fun reference(text: String): String =
+        REFERENCE.replace(text) { match ->
+          val name = match.groupValues[1]
+          val next = text.getOrNull(match.range.last + 1)
+          when {
+            name in plain -> "@${prefix}_$name"
+            name in stems && next == '@' -> "@${prefix}_$name"
+            else -> match.value
+          }
         }
-      }
-      walk(body)
-      return names
-    }
-  }
-
-  /** The plain name the op [key] declares in [value], if it is one that declares a name. */
-  private fun declaredName(key: String, value: JsonElement): String? {
-    val field = DECLARING_OPS[key] ?: return null
-    return ((value as? JsonObject)?.get(field) as? JsonPrimitive)
-      ?.takeIf { it.isString && PLAIN_NAME.matches(it.content) }
-      ?.content
-  }
-
-  /**
-   * A call's body with the names its ops declare written as the call's own, `<prefix>_<name>`: the
-   * declaration, every `@name` that reads it, and a path field that names it. The caller's slot
-   * content is not in the body yet (see [Call.fillSlots]), so its names stay the caller's.
-   */
-  private class Renaming(val prefix: String, val names: Set<String>) {
-    fun apply(element: JsonElement): JsonElement =
-      if (names.isEmpty()) element
-      else
+      fun rename(element: JsonElement): JsonElement =
         when (element) {
           is JsonObject ->
             JsonObject(
@@ -503,25 +483,24 @@ object KobentoComponentExpander {
                 val renamed =
                   if (field != null && value is JsonObject) {
                     val name = (value[field] as? JsonPrimitive)?.takeIf { it.isString }?.content
-                    if (name != null && name in names) {
-                      JsonObject(value + (field to JsonPrimitive("${prefix}_$name")))
-                    } else value
+                    val own =
+                      name != null &&
+                        (name in plain || ('@' in name && name.substringBefore('@') in stems))
+                    if (own) JsonObject(value + (field to JsonPrimitive("${prefix}_$name")))
+                    else value
                   } else value
-                apply(renamed)
+                rename(renamed)
               },
             )
-          is JsonArray -> JsonArray(element.map(::apply))
+          is JsonArray -> JsonArray(element.map(::rename))
           is JsonPrimitive ->
-            if (element.isString && '@' in element.content) {
-              JsonPrimitive(
-                REFERENCE.replace(element.content) { match ->
-                  if (match.groupValues[1] in names) "@${prefix}_${match.groupValues[1]}"
-                  else match.value
-                },
-              )
-            } else element
+            if (element.isString && '@' in element.content)
+              JsonPrimitive(reference(element.content))
+            else element
           else -> element
         }
+      return ::rename
+    }
   }
 
   /**

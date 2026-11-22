@@ -48,6 +48,15 @@ class KobentoComponentExpanderTest {
             "params": {"checked": {"type": "variable", "initial": 1}},
             "body": {"box": {"modifiers": [{"onClick": {"type": "valueFloatChange", "target": "@checked", "value": 0}}]}}
           },
+          "Echo": {
+            "params": {"value": {"type": "float", "default": 0}, "size": {"type": "float", "default": "@theme.space_2"}},
+            "locals": {"twice": "@size * @now"},
+            "body": {"canvas": {"commands": [
+              {"variable": {"name": "x", "value": "@value"}},
+              {"variable": {"name": "now", "value": "@x"}},
+              {"drawCircle": {"cx": "@twice", "cy": 0, "radius": 1}}]}}
+          },
+          "Pair": {"body": [{"box": {}}, {"box": {}}]},
           "Glyph": {"params": {"name": {"type": "string", "required": true}}, "body": {"canvas": {"commands": [{"${'$'}icon": "@name"}]}}}
         }}
         """,
@@ -121,6 +130,30 @@ class KobentoComponentExpanderTest {
       document["root"]!!.toString().let {
         Regex(""""target":"(@\w+)"""").findAll(it).last().groupValues[1]
       },
+    )
+  }
+
+  @Test
+  fun `a caller's variable keeps its name where the body declares one of the same name`() {
+    val root = expanded("""{"Echo": {"value": "@x"}}""")["root"].toString()
+    // The body's x is the call's own; the caller's @x, its argument, stays the caller's.
+    kotlin.test.assertTrue(""""name":"echo1_x","value":"@x"""" in root, root)
+    kotlin.test.assertTrue(""""name":"echo1_now","value":"@echo1_x"""" in root, root)
+  }
+
+  @Test
+  fun `a theme number reaches resources, and a root of several nodes is refused`() {
+    val document = expanded("""{"Echo": {"value": 1}}""")
+    // The local reads a body name, so it is a tree variable here; a theme default is its number.
+    kotlin.test.assertTrue("@theme" !in document.toString(), document.toString())
+    kotlin.test.assertEquals(
+      KobentoComponentExpander.Result.Refused(
+        listOf("root: expands to 2 nodes; a document has one root"),
+      ),
+      KobentoComponentExpander.expand(
+        Json.parseToJsonElement("""{"root": {"Pair": {}}}""").jsonObject,
+        library,
+      ),
     )
   }
 
