@@ -29,6 +29,7 @@ import ee.schimke.composeai.uibuilder.mcpapp.McpAppEditorScreen
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppFile
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppJsonRpcBridge
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppLayout
+import ee.schimke.composeai.uibuilder.mcpapp.McpAppServerDesignBridge
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppTransport
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -53,7 +54,9 @@ import kotlinx.serialization.json.put
 
 /**
  * The editor as an **MCP App** over a `.uid` file a host opened (ChatGPT or Codex desktop's
- * file-extension entrypoint).
+ * file-extension entrypoint), or over a design that lives on the MCP server (Claude, and any host
+ * without file resources), read and saved through the server's editor tools
+ * ([McpAppServerDesignBridge]).
  *
  * Like [HostBridgeApp] the design is the host's file, but over the MCP Apps JSON-RPC dialect, with
  * the file rules (saving with `ifMatch`, conflicts, read-only files, external edits) in
@@ -92,7 +95,9 @@ internal fun McpAppHostApp() {
   }
 
   LaunchedEffect(Unit) {
-    val file = CompletableDeferred<McpAppFile>()
+    // What the opening tool handed the editor: a host file (ChatGPT, Codex desktop), or a design
+    // on the MCP server (Claude, and any host without file resources). Whichever comes first.
+    val target = CompletableDeferred<McpAppTarget>()
     lateinit var connection: McpAppJsonRpcBridge
     val transport =
       BrowserMcpAppTransport(
@@ -100,7 +105,8 @@ internal fun McpAppHostApp() {
         onTeardown = { scope.launch { session?.close() } },
       )
     connection = McpAppJsonRpcBridge(transport)
-    connection.onFile { if (!file.isCompleted) file.complete(it) }
+    connection.onFile { if (!target.isCompleted) target.complete(McpAppTarget.File(it)) }
+    connection.onDesign { if (!target.isCompleted) target.complete(McpAppTarget.ServerDesign(it)) }
     connection.onResourceUpdated { uri -> scope.launch { session?.resourceUpdated(uri) } }
     bridge = connection
     bootPhase("Connecting to the host")
@@ -112,18 +118,37 @@ internal fun McpAppHostApp() {
         return@LaunchedEffect
       }
     hostTakesMessages = host.messages
-    if (!host.fileResources) {
-      failure =
-        "${host.name.ifBlank { "This host" }} does not offer file resources " +
-          "(hostCapabilities.experimental[\"openai/resource\"]), so it cannot open a .uid file here."
-      return@LaunchedEffect
+    bootPhase("Waiting for the design")
+    when (val opened = target.await()) {
+      is McpAppTarget.File -> {
+        if (!host.fileResources) {
+          failure =
+            "${host.name.ifBlank { "This host" }} does not offer file resources " +
+              "(hostCapabilities.experimental[\"openai/resource\"]), so it cannot open a .uid " +
+              "file here. Open a design from the server instead (ui_builder_edit_design)."
+          return@LaunchedEffect
+        }
+        bootPhase("Reading ${opened.file.name}")
+        val created = McpAppDesignSession(connection, opened.file) { design = it }
+        session = created
+        created.open()
+      }
+      is McpAppTarget.ServerDesign -> {
+        val server = McpAppServerDesignBridge(tools = connection, host = connection)
+        val file = McpAppServerDesignBridge.designFile(opened.designId)
+        bootPhase("Reading design ${opened.designId}")
+        val created = McpAppDesignSession(server, file) { design = it }
+        session = created
+        created.open()
+        // Follow edits made elsewhere (an agent in the chat, another editor) for as long as the
+        // session is open; close() stops the loop.
+        if (created.state.live) {
+          scope.launch {
+            server.followExternalEdits(file.resourceUri) { uri -> created.resourceUpdated(uri) }
+          }
+        }
+      }
     }
-    bootPhase("Waiting for the design file")
-    val opened = file.await()
-    bootPhase("Reading ${opened.name}")
-    val created = McpAppDesignSession(connection, opened) { design = it }
-    session = created
-    created.open()
   }
 
   val state = design
@@ -180,6 +205,13 @@ internal fun McpAppHostApp() {
     onEditorShown = { markReady() },
     devicePresets = devicePresets,
   )
+}
+
+/** What the opening tool's input named: a host file, or a design on the MCP server. */
+private sealed interface McpAppTarget {
+  data class File(val file: McpAppFile) : McpAppTarget
+
+  data class ServerDesign(val designId: String) : McpAppTarget
 }
 
 @Composable

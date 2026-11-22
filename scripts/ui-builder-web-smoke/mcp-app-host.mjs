@@ -5,9 +5,11 @@
 // `openai/resources/write` on a `host-resource://` URI with etags, and `ui/update-model-context`.
 // The browser half of `McpAppDesignSessionTest`.
 //
-// Two passes: the full editor (layout placeholder filled as `full`) for the file round trip; then
+// Three passes: the full editor (layout placeholder filled as `full`) for the file round trip; then
 // the focused canvas (placeholder unfilled) for the default layout, switching layouts, and a
-// node-menu comment (`ui/message`).
+// node-menu comment (`ui/message`); then a server design, as Claude opens one (`?mode=server`): no
+// `openai/resource`, a `{ designId }` tool input, and the design read, saved and followed through
+// the server's editor tools (`tools/call`), with the revision as the etag.
 //
 // Three origins as in a real host: host page, sandbox frame, and the archive origin (from the
 // shell's `<base href>` and the CSP domains), which answers with CORS headers.
@@ -130,6 +132,9 @@ const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake M
   const original = ${JSON.stringify(design)};
   const query = new URLSearchParams(location.search);
   const writable = query.get('writable') !== 'false';
+  // A design on the MCP server, opened through ui_builder_edit_design (Claude), not a host file.
+  const serverMode = query.get('mode') === 'server';
+  const designId = 'design';
   const host = globalThis.fakeHost = {
     text: original, version: 1, calls: [], writes: [], contexts: [], messages: [], errors: [],
     // Every model-context update and message, in the order the app sent them.
@@ -174,14 +179,50 @@ const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake M
   host.externalWrite = (text) => {
     host.text = text; host.version++;
     log('external edit -> ' + etag());
-    send({ method: 'notifications/resources/updated', params: { uri } });
+    // A server design has no host resource to notify about: the editor's await call sees it.
+    if (!serverMode) send({ method: 'notifications/resources/updated', params: { uri } });
+  };
+  // The MCP server's editor tools, as a server answers them through the host's tools/call.
+  const result = (structured) =>
+    ({ content: [{ type: 'text', text: JSON.stringify(structured) }], structuredContent: structured });
+  const serverTools = {
+    ui_builder_editor_read: () => {
+      log('tools/call read -> r' + host.version);
+      return { designId, title: fileName, revision: host.version, writable,
+        document: JSON.parse(host.text) };
+    },
+    ui_builder_editor_write: (args) => {
+      host.writes.push({ ifMatch: String(args.baseRevision), baseRevision: args.baseRevision });
+      if (!writable) return { outcome: 'read-only' };
+      if (args.baseRevision !== host.version) {
+        log('write base=' + args.baseRevision + ' -> conflict r' + host.version);
+        return { outcome: 'conflict', revision: host.version };
+      }
+      const before = host.text;
+      host.text = JSON.stringify(args.document, null, 2); host.version++;
+      log('write base=' + args.baseRevision + ' -> saved r' + host.version);
+      renderDiff(before, host.text);
+      return { outcome: 'saved', revision: host.version };
+    },
+    // Long-polls, as the server's does, but for at most 3 s so the smoke stays quick.
+    ui_builder_editor_await: async (args) => {
+      const until = Date.now() + Math.min(args.waitSeconds ?? 0, 3) * 1000;
+      while (host.version <= args.afterRevision && Date.now() < until) {
+        await new Promise((done) => setTimeout(done, 100));
+      }
+      const changed = host.version > args.afterRevision;
+      if (changed) log('await after r' + args.afterRevision + ' -> r' + host.version);
+      return { revision: host.version, changed };
+    },
   };
   const handlers = {
     'ui/initialize': () => ({
       protocolVersion: '2026-01-26',
       hostInfo: { name: 'fake-mcp-app-host', version: '1' },
       hostCapabilities: {
-        experimental: { 'openai/resource': {}, 'openai/modelContext': {}, 'openai/message': {} },
+        experimental: serverMode ? {} :
+          { 'openai/resource': {}, 'openai/modelContext': {}, 'openai/message': {} },
+        serverTools: serverMode ? {} : undefined,
         updateModelContext: { text: {}, image: {}, structuredContent: {} },
         message: { text: {} },
         openLinks: {},
@@ -234,15 +275,21 @@ const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake M
       return {};
     },
     'ui/open-link': () => ({}),
+    'tools/call': async (params) => {
+      const tool = serverMode ? serverTools[params.name] : null;
+      if (!tool) throw new Error('unknown tool ' + params.name);
+      if (params.arguments?.designId !== designId) throw new Error('unknown design');
+      return result(await tool(params.arguments));
+    },
   };
   addEventListener('message', async (event) => {
     if (event.source !== frame.contentWindow) return;
     const message = event.data;
     if (!message || message.jsonrpc !== '2.0') return;
     if (message.method === 'ui/notifications/initialized') {
-      log('initialized; sending tool-input FileInput');
-      send({ method: 'ui/notifications/tool-input',
-        params: { arguments: { file: { name: fileName, resourceUri: uri } } } });
+      log('initialized; sending tool-input ' + (serverMode ? 'designId' : 'FileInput'));
+      send({ method: 'ui/notifications/tool-input', params: { arguments: serverMode
+        ? { designId } : { file: { name: fileName, resourceUri: uri } } } });
       return;
     }
     if (!message.method || message.id == null) return;
@@ -508,8 +555,70 @@ try {
 } catch (error) {
   failures.push(`focused canvas: ${error.message.split('\n')[0]}`);
 }
+// A server design, as Claude opens one: same full editor and fixture as the first pass, so the same
+// points select and delete the button; the save goes through ui_builder_editor_write instead.
+const server = await browser.newPage({ viewport: { width: 1600, height: 960 }, locale: 'en-US' });
+server.on('pageerror', (error) => pageErrors.push(String(error)));
+const serverHost = () => server.evaluate(() => JSON.parse(JSON.stringify(globalThis.fakeHost)));
+try {
+  await server.goto(`${hostUrl}?serverLayout=full&mode=server`);
+  const frame = await (await server.waitForSelector('#app')).contentFrame();
+  await frame.waitForFunction(
+    () => document.documentElement.getAttribute('data-ui-builder-ready') === 'true',
+    null,
+    { timeout },
+  );
+  let state = await serverHost();
+  expect(state.calls.includes('tools/call read -> r1'), 'the server design was not read');
+  await server.waitForTimeout(3_000);
+  state = await serverHost();
+  expect(state.writes.length === 0, `opening the server design wrote it (${state.writes.length})`);
+  if (shots) await server.screenshot({ path: join(shots, 'mcp-app-server-opened.png') });
+
+  const box = await (await server.$('#app')).boundingBox();
+  const before = state.contexts.length;
+  await server.mouse.click(box.x + 180, box.y + 209);
+  await server.waitForFunction(
+    (count) => globalThis.fakeHost.contexts.length > count,
+    before,
+    { timeout: 20_000 },
+  ).catch(() => {});
+  const selected = (await serverHost()).contexts.length;
+  await server.mouse.click(box.x + 160, box.y + 140);
+  await server.waitForFunction(
+    (count) => globalThis.fakeHost.contexts.length > count,
+    selected,
+    { timeout: 20_000 },
+  ).catch(() => {});
+  await server.keyboard.press('Delete');
+  await server
+    .waitForFunction(() => globalThis.fakeHost.writes.length > 0, null, { timeout: 20_000 })
+    .catch(() => {});
+  state = await serverHost();
+  expect(
+    state.writes[0]?.baseRevision === 1,
+    `the server save named revision ${state.writes[0]?.baseRevision}`,
+  );
+  expect(state.version === 2, `the server save did not land (at r${state.version})`);
+  if (shots) await server.screenshot({ path: join(shots, 'mcp-app-server-saved.png') });
+
+  // An agent saves the design while the editor is clean: the editor's wait sees it and reloads.
+  await server.evaluate((text) => globalThis.fakeHost.externalWrite(text), design);
+  await server.waitForFunction(
+    () => globalThis.fakeHost.calls.includes('tools/call read -> r3'),
+    null,
+    { timeout: 20_000 },
+  ).catch(() => {});
+  state = await serverHost();
+  expect(state.calls.includes('tools/call read -> r3'), 'the editor did not follow the agent save');
+  expect(state.writes.length === 1, `the agent's save was written back (${state.writes.length})`);
+  expect(state.errors.length === 0, `host errors: ${state.errors.join('; ')}`);
+} catch (error) {
+  failures.push(`server design: ${error.message.split('\n')[0]}`);
+}
+
 failures.push(...pageErrors.map((it) => `page error: ${it}`));
-console.log(failures.length === 0 ? 'ok   mcp-app host round trip, focused canvas and comment' : `FAIL mcp-app host\n  ${failures.join('\n  ')}`);
+console.log(failures.length === 0 ? 'ok   mcp-app host round trip, focused canvas, comment and server design' : `FAIL mcp-app host\n  ${failures.join('\n  ')}`);
 await browser.close();
 for (const it of [assets, sandbox, hostServer]) it.server.close();
 process.exit(failures.length === 0 ? 0 : 1);
