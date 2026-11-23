@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.151.0](https://github.com/yschimke/compose-ui-builder/compare/v3.150.0...v3.151.0) (2026-11-23)
+
+
+### Features
+
+* expand Kobento's $icon from the catalog's Material Symbols ([#1396](https://github.com/yschimke/compose-ui-builder/issues/1396)) ([0a89032](https://github.com/yschimke/compose-ui-builder/commit/0a8903265b06c84376e916b6bbda9c51293cd3b0))
+
+
+### Bug Fixes
+
+* outline the selected node on a document-format catalog's canvas ([#1398](https://github.com/yschimke/compose-ui-builder/issues/1398)) ([4ca4a5e](https://github.com/yschimke/compose-ui-builder/commit/4ca4a5ea7a703e40ced983d26a2e05ae2a830c01))
+* picture Kobento's palette: centre by the frame and start params at values they accept ([#1399](https://github.com/yschimke/compose-ui-builder/issues/1399)) ([91aa802](https://github.com/yschimke/compose-ui-builder/commit/91aa802f158cfc233a14ebca59bfecf88ce22d48))
+* play a component that says it is clickable with no click of its own ([#1400](https://github.com/yschimke/compose-ui-builder/issues/1400)) ([e1cbabb](https://github.com/yschimke/compose-ui-builder/commit/e1cbabb31cf3953080dc8aac90d4e83684a8e41a))
+
 ## [3.150.0](https://github.com/yschimke/compose-ui-builder/compare/v3.149.0...v3.150.0) (2026-11-22)
 
 
