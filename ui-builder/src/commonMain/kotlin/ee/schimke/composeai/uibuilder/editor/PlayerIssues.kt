@@ -7,9 +7,9 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocument
 /**
  * What stops the player drawing [this]: its support report's issues, less the one that judges only
  * its accessibility metadata. A component that says it is clickable with no click of its own (a
- * Kobento `Button` given no `onClick`, as one is when first inserted) draws exactly as it would
- * with one; the editor's canvas, palette and Preview take no press on it, so it is no reason to
- * show a placeholder or an error in its place.
+ * button whose format compiles it without one, as one is when first inserted) draws exactly as it
+ * would with one; the editor's canvas, palette and Preview take no press on it, so it is no reason
+ * to show a placeholder or an error in its place.
  */
 internal fun RcDocument.blockingPlayerIssues(): List<RcComposeSupportIssue> =
   composeSupportReport().issues.filterNot {
