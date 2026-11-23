@@ -1323,6 +1323,7 @@ class UiBuilderEditorReducer(
       group = catalog.componentMenu.groupOf(componentId) ?: kind.label,
       pack = catalog.componentPacks.packOf(componentId)?.id,
       exportsToCompose = exportsToCompose,
+      layout = LAYOUT_PRIMITIVE in traits,
       variants =
         menuVariantValues(catalog.componentMenu).mapIndexed { index, value ->
           EditorCatalogVariant(

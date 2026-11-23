@@ -169,6 +169,11 @@ data class EditorCatalogItem(
    * row, not a gate on Add.
    */
   val exportsToCompose: Boolean? = null,
+  /**
+   * Whether this is a layout primitive (a box, column or row): one that draws nothing of its own,
+   * so holding nothing it is pictured by its arrangement rather than by its export.
+   */
+  val layout: Boolean = false,
 )
 
 /**

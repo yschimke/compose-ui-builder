@@ -895,6 +895,7 @@ private fun CatalogComponentTile(
         label = item.displayName,
         size = DpSize(104.dp, 72.dp),
         container = item.kind == EditorComponentKind.Container,
+        layout = item.layout,
       )
     }
   }
@@ -1082,6 +1083,17 @@ private fun CatalogDragTile(
  * for its shadow), so the list reads as the parts themselves. The drag belongs to the tile
  * ([CatalogDragTile]).
  */
+/**
+ * Whether the thumbnail [this] holds nothing but its component: no slot of any node but the frame
+ * has a child.
+ */
+internal fun UiBuilderDocument.holdsNothing(): Boolean =
+  nodes.values.all { node ->
+    node.id == PREVIEW_FRAME_CELL_ID || node.slots.values.all { it.isEmpty() }
+  }
+
+internal const val LAYOUT_PRIMITIVE = "LayoutPrimitive"
+
 @Composable
 internal fun CatalogThumbnail(
   document: UiBuilderDocument?,
@@ -1093,6 +1105,12 @@ internal fun CatalogThumbnail(
    * schematic; otherwise it has no picture.
    */
   container: Boolean,
+  /**
+   * Whether the component is a layout primitive, drawing nothing of its own: holding nothing, it
+   * exports as nothing, so its schematic says more than a blank tile. A component that draws itself
+   * and only offers optional slots (a button's icon) keeps its exported picture.
+   */
+  layout: Boolean = false,
   /** Told what the thumbnail ended up drawing. For tests that sweep a whole catalog. */
   onOutcome: ((CatalogThumbnailOutcome) -> Unit)? = null,
   /**
@@ -1105,12 +1123,7 @@ internal fun CatalogThumbnail(
   // way ([DocumentPreviewThumbnails]); the canvas's own picture stands in until that answers. A
   // sweep that reports outcomes measures the canvas, so it keeps the canvas's picture.
   val thumbnails = LocalDocumentPreviewThumbnails.current
-  // A container holding nothing exports as nothing: its schematic says more than a blank tile.
-  val emptyContainer =
-    container &&
-      document?.nodes?.values?.all { node ->
-        node.id == PREVIEW_FRAME_CELL_ID || node.slots.values.all { it.isEmpty() }
-      } == true
+  val emptyContainer = container && layout && document?.holdsNothing() == true
   if (
     thumbnails == null ||
       document == null ||
