@@ -31,6 +31,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -164,3 +166,17 @@ internal fun DocumentPreviewThumbnail(
     )
   }
 }
+
+/**
+ * [this] as the host's service takes it: the service document requires a `density` and a
+ * `fontScale`, which a palette thumbnail leaves out on purpose (so the canvas lays it out at its
+ * own scale, see `previewDocument`). Without them the request could not be built, and a component
+ * only the service can compile never got a picture. 1 is what an exported `.rc` is authored at.
+ */
+internal fun UiBuilderDocument.withServiceScale(): UiBuilderDocument {
+  val missing = SERVICE_SCALE.filterKeys { it !in environment }
+  return if (missing.isEmpty()) this else copy(environment = JsonObject(environment + missing))
+}
+
+private val SERVICE_SCALE =
+  mapOf("density" to JsonPrimitive(1.0), "fontScale" to JsonPrimitive(1.0))

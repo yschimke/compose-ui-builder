@@ -11,7 +11,9 @@ import ee.schimke.composeai.uibuilder.editor.holdsNothing
 import ee.schimke.composeai.uibuilder.editor.sameThumbnailBounds
 import ee.schimke.composeai.uibuilder.editor.thumbnailContentTransform
 import ee.schimke.composeai.uibuilder.editor.thumbnailNeedsRoomyFrame
+import ee.schimke.composeai.uibuilder.editor.withServiceScale
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionGeneration
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderNodeInspection
@@ -19,6 +21,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSemanticsInspection
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -224,6 +227,18 @@ class CatalogThumbnailTest {
         ),
       slots = emptyList(),
     )
+
+  @Test
+  fun `a thumbnail can be sent to the host's service`() {
+    // The canvas lays a thumbnail out at its own scale, so the document states none; the service
+    // document requires one, and a component only the service compiles otherwise had no picture.
+    val thumbnail = assertNotNull(reducer.previewDocument("m3/button"))
+    assertFails { thumbnail.toDesignDocumentV1() }
+    val sent = thumbnail.withServiceScale().toDesignDocumentV1()
+    assertEquals(1.0, sent.environment.density)
+    assertEquals(1.0, sent.environment.fontScale)
+    assertEquals(thumbnail.nodes.keys, sent.nodes.keys)
+  }
 
   @Test
   fun `only a layout holding nothing is sketched, not a component with optional slots`() {

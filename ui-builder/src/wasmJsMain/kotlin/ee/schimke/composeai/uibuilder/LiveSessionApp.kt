@@ -87,6 +87,7 @@ import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.resolveNewDesignLink
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.typefacesFor
+import ee.schimke.composeai.uibuilder.editor.withServiceScale
 import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -1907,7 +1908,7 @@ private fun LiveSessionApp(
                   documentBase64 =
                     fetchBase64(
                       "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.rc",
-                      Json.encodeToString(expected.toDesignDocumentV1()),
+                      Json.encodeToString(expected.withServiceScale().toDesignDocumentV1()),
                     ),
                   saved = false,
                 )
