@@ -60,6 +60,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.LocalWatchFacePublish
 import ee.schimke.composeai.uibuilder.editor.LocalWatchFaceValidation
 import ee.schimke.composeai.uibuilder.editor.NewDesignCallback
+import ee.schimke.composeai.uibuilder.editor.ServiceRefusals
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentPreferences
@@ -626,6 +627,7 @@ private fun LiveSessionApp(
   // A catalog whose format compiles in the browser (from files the catalog publishes): the canvas
   // and Preview draw an edit with no round trip, and the service compiles what it cannot.
   var localCompiler by remember(config.designId) { mutableStateOf<LocalDocumentCompiler?>(null) }
+  val serviceRefusals = remember { ServiceRefusals() }
   var exportHost by remember(config.designId) { mutableStateOf<UiBuilderExportHost?>(null) }
   var restoredReference by remember(config.designId) { mutableStateOf<RestoredReference?>(null) }
   var referenceStatus by remember(config.designId) { mutableStateOf<String?>(null) }
@@ -849,11 +851,7 @@ private fun LiveSessionApp(
       val cache = localSession?.templates ?: LocalCatalogTemplates(BrowserLocalDesignStorage())
       for (capability in offeredCatalogs) {
         val id = capability.benchmark.catalogSystemId
-        runCatchingCancellable {
-          cache.load(capability) {
-            fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(id)}/templates")
-          }
-        }
+        runCatchingCancellable { cache.load(capability) { fetchCatalogTemplates(capability) } }
       }
       newDesignCatalogs =
         orderedNewDesignCatalogs(
@@ -1906,10 +1904,14 @@ private fun LiveSessionApp(
                 UiBuilderDocumentPreview.Ready(
                   revision = expected.revision,
                   documentBase64 =
-                    fetchBase64(
-                      "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.rc",
-                      Json.encodeToString(expected.withServiceScale().toDesignDocumentV1()),
-                    ),
+                    // A visitor the service will not export for is refused once, not once per
+                    // palette thumbnail.
+                    serviceRefusals.call {
+                      fetchBase64(
+                        "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.rc",
+                        Json.encodeToString(expected.withServiceScale().toDesignDocumentV1()),
+                      )
+                    },
                   saved = false,
                 )
               } else {

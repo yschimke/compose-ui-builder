@@ -81,6 +81,7 @@ import ee.schimke.composeai.uibuilder.local.LocalDesignStorageException
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalSyncResult
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
+import ee.schimke.composeai.uibuilder.local.isCatalogTemplatePublication
 import ee.schimke.composeai.uibuilder.local.localCheckoutRecord
 import ee.schimke.composeai.uibuilder.local.localCopyRecord
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -102,6 +103,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.io.encoding.Base64
 import kotlin.js.Promise
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -1555,6 +1557,36 @@ internal suspend fun fetchBase64(url: String, document: String? = null): String 
 )
 private external fun fetchBase64Promise(url: String, document: String?): Promise<JsString>
 
+/**
+ * A catalog's `/templates` answer, fetched once per page for each catalog revision. The chooser
+ * installs the catalog list at start and again when a design opens, and creating a design reads
+ * them too: uncached, every catalog's templates were fetched two or three times per load. A failure
+ * is not kept, so the next caller asks again.
+ */
+internal suspend fun fetchCatalogTemplates(catalog: CatalogCapabilityV1): String {
+  val id = catalog.benchmark.catalogSystemId
+  val key = id + "@" + catalog.benchmark.catalogRevision
+  catalogTemplateTexts[key]?.let {
+    return it.await()
+  }
+  val pending = CompletableDeferred<String>()
+  catalogTemplateTexts[key] = pending
+  try {
+    val text = fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(id)}/templates")
+    // Kept only when it is a publication for exactly this catalog revision. One for another (a
+    // catalog updated mid-load) is still handed back for the caller to refuse and fall back from,
+    // but a later caller asks again rather than being handed the same refusal until a reload.
+    if (!isCatalogTemplatePublication(text, catalog)) catalogTemplateTexts.remove(key)
+    pending.complete(text)
+  } catch (failure: Throwable) {
+    catalogTemplateTexts.remove(key)
+    pending.completeExceptionally(failure)
+  }
+  return pending.await()
+}
+
+private val catalogTemplateTexts = HashMap<String, CompletableDeferred<String>>()
+
 internal suspend fun fetchText(url: String): String = suspendCancellableCoroutine { continuation ->
   fetchTextPromise(sameOriginRequestUrl(url))
     .then { value ->
@@ -2986,10 +3018,7 @@ internal suspend fun createLocalDesign(
       ?: return "this browser has no stored $catalogSystemId catalog to pin a new design to"
   val document =
     try {
-      val published =
-        session.templates.load(catalog) {
-          fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/templates")
-        }
+      val published = session.templates.load(catalog) { fetchCatalogTemplates(catalog) }
       UiBuilderNewDesignSeed.document(
           designId = designId,
           templateId = templateId,

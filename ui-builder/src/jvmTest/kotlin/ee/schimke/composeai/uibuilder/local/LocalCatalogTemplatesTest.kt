@@ -50,6 +50,13 @@ class LocalCatalogTemplatesTest {
     )
 
   @Test
+  fun `only a publication for exactly the catalog's revision is one to keep`() {
+    assertEquals(true, isCatalogTemplatePublication(payload(), catalog))
+    assertEquals(false, isCatalogTemplatePublication(payload(revision = "revision-6"), catalog))
+    assertEquals(false, isCatalogTemplatePublication("not json", catalog))
+  }
+
+  @Test
   fun `an unsupported publication version cannot enter the cache`() =
     runBlocking<Unit> {
       assertFailsWith<LocalDesignStorageException> {
