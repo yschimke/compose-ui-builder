@@ -23,6 +23,18 @@ object KobentoComponentJsonExporter {
   /** The builder layouts this exporter writes as Kobento's own `column`, `row` and `box`. */
   val BUILDER_LAYOUTS: Set<String> = setOf("layout/column", "layout/row", "layout/box")
 
+  /** A builder box's `contentAlignment`, as Kobento's box's vertical and horizontal alignment. */
+  private val BOX_ALIGNMENTS: Map<String, Pair<String, String>> =
+    listOf("top", "center", "bottom")
+      .flatMap { vertical ->
+        listOf("Start", "Center", "End").map { horizontal ->
+          val name =
+            if (vertical == "center" && horizontal == "Center") "center" else vertical + horizontal
+          name to (vertical to horizontal.lowercase())
+        }
+      }
+      .toMap()
+
   /** The looks Kobento expands a component call in, plus its two whole-document modes. */
   val COMPONENT_THEMES: Set<String> =
     setOf("auto", "all", "light", "dark", "mono-dark", "mono-light")
@@ -231,14 +243,31 @@ object KobentoComponentJsonExporter {
           "column" -> mapOf("horizontalAlignment" to setOf("start", "center", "end"))
           else -> emptyMap()
         }
+      // A box aligns its children as one, as Kobento's does: `contentAlignment` is its two axes.
+      val contentAlignment = "contentAlignment".takeIf { type == "box" }
       node.properties.keys
-        .filter { it != spacing && it !in alignments }
+        .filter { it != spacing && it !in alignments && it != contentAlignment }
         .forEach { errors += "$path.properties.$it: property lowering is not available" }
       unsupportedSlots(node, setOf("children"))
       clickNotAllowed(node)
       return single(
         type,
         buildJsonObject {
+          contentAlignment
+            ?.let { node.properties[it] }
+            ?.let { value ->
+              val word =
+                (literal(value, "$path.properties.contentAlignment") as? JsonPrimitive)
+                  ?.contentOrNull
+              val axes = BOX_ALIGNMENTS[word]
+              if (axes == null) {
+                errors +=
+                  "$path.properties.contentAlignment: expected ${BOX_ALIGNMENTS.keys.joinToString()}"
+              } else {
+                put("verticalAlignment", axes.first)
+                put("horizontalAlignment", axes.second)
+              }
+            }
           alignments.forEach { (key, allowed) ->
             val value = node.properties[key] ?: return@forEach
             val word = (literal(value, "$path.properties.$key") as? JsonPrimitive)?.contentOrNull
@@ -399,6 +428,17 @@ object KobentoComponentJsonExporter {
         // `system` read such as `time.hour`, a formula) has no Kobento lowering yet; reading its
         // operand as a literal would drop the dependency.
         in LITERAL_TYPES -> literal(value, path)
+        // A Kobento list param (`items`, `labels`, `values`) is a JSON array of its items.
+        "list" -> {
+          val items = typed["values"] as? JsonArray
+          if (items == null) {
+            errors += "$path.values: a list needs its values"
+            null
+          } else
+            JsonArray(
+              items.mapIndexedNotNull { index, item -> value(item, "$path.values[$index]") },
+            )
+        }
         else -> {
           errors +=
             "$path: ${typed["type"]?.jsonPrimitive?.contentOrNull} values are not lowered to Kobento yet"

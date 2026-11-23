@@ -137,6 +137,52 @@ class KobentoCatalogTest {
   }
 
   @Test
+  fun `a box's content alignment and a list param are written as Kobento's`() {
+    fun design(alignment: String) =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema": "compose-ui-builder-document/v1-candidate", "id": "box", "title": "Box",
+          "revision": 1, "catalogPin": {}, "stateVariables": {}, "environment": {},
+          "roots": ["screen"],
+          "nodes": {
+            "screen": {"id": "screen", "componentId": "kobento/document", "slots": {"content": ["frame"]}},
+            "frame": {"id": "frame", "componentId": "layout/box",
+              "properties": {"contentAlignment": {"type": "string", "value": "$alignment"}},
+              "slots": {"children": ["tabs"]}},
+            "tabs": {"id": "tabs", "componentId": "kobento/tabs", "properties": {"labels":
+              {"type": "list", "values": [{"type": "string", "value": "Day"}, {"type": "string", "value": "Week"}]}}}
+          }}""",
+      )
+    val emitted =
+      assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+          KobentoComponentJsonExporter.export(design("bottomEnd")),
+        )
+        .source
+    val compact = Json.parseToJsonElement(emitted).toString()
+    assertTrue(
+      """{"box":{"verticalAlignment":"bottom","horizontalAlignment":"end"""" in compact,
+      compact,
+    )
+    assertTrue(""""Tabs":{"labels":["Day","Week"]}""" in compact, compact)
+    val centred =
+      Json.parseToJsonElement(
+          (KobentoComponentJsonExporter.export(design("center"))
+              as KobentoComponentJsonExporter.Result.Emitted)
+            .source,
+        )
+        .toString()
+    assertTrue(""""verticalAlignment":"center","horizontalAlignment":"center"""" in centred)
+    val refused =
+      assertIs<KobentoComponentJsonExporter.Result.Refused>(
+        KobentoComponentJsonExporter.export(design("middle")),
+      )
+    assertTrue(
+      refused.reasons.single().startsWith("nodes.frame.properties.contentAlignment: expected "),
+      refused.reasons.toString(),
+    )
+  }
+
+  @Test
   fun `nullable state is refused, not exported as zero`() {
     val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
     val nullable =

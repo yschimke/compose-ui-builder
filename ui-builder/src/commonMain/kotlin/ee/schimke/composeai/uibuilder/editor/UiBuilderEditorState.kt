@@ -920,6 +920,22 @@ class UiBuilderEditorReducer(
     val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
     val childId = cell.slots[FRAME_SLOT]?.singleOrNull() ?: return this
     val child = nodes[childId] ?: return this
+    // A document format's component call takes no modifiers (its exporter refuses them), so the
+    // frame centres what it holds instead: the same picture, in what the format writes.
+    if (BuiltInCatalogDocumentFormats.ALL.declares(catalog.statusSemantics)) {
+      return copy(
+        nodes =
+          nodes +
+            (PREVIEW_FRAME_CELL_ID to
+              cell.copy(
+                properties =
+                  JsonObject(
+                    cell.properties +
+                      ("contentAlignment" to literal("string", JsonPrimitive("center"))),
+                  ),
+              )),
+      )
+    }
     if (
       "align" !in (catalog.componentsById[child.componentId]?.modifierCapabilities ?: return this)
     )
