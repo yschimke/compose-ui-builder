@@ -7,6 +7,7 @@ import ee.schimke.composeai.uibuilder.editor.ContainerSchematic
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogVariant
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.emptyContainerSchematic
+import ee.schimke.composeai.uibuilder.editor.holdsNothing
 import ee.schimke.composeai.uibuilder.editor.sameThumbnailBounds
 import ee.schimke.composeai.uibuilder.editor.thumbnailContentTransform
 import ee.schimke.composeai.uibuilder.editor.thumbnailNeedsRoomyFrame
@@ -223,6 +224,19 @@ class CatalogThumbnailTest {
         ),
       slots = emptyList(),
     )
+
+  @Test
+  fun `only a layout holding nothing is sketched, not a component with optional slots`() {
+    val items = reducer.catalogItems("").associateBy { it.componentId }
+    fun sketched(componentId: String) =
+      items.getValue(componentId).layout &&
+        assertNotNull(reducer.previewDocument(componentId)).holdsNothing()
+
+    assertTrue(sketched("layout/box"))
+    // A container whose slots are all optional, but which draws itself.
+    assertEquals(false, items.getValue("m3/search-input-field").layout)
+    assertEquals(false, items.getValue("m3/surface").layout)
+  }
 
   @Test
   fun `an empty container sketches the arrangement its name promises`() {
