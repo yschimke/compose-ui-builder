@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.152.0](https://github.com/yschimke/compose-ui-builder/compare/v3.151.0...v3.152.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **deps:** update rc-players to 3.12.1 ([#1405](https://github.com/yschimke/compose-ui-builder/issues/1405)) ([a7f974f](https://github.com/yschimke/compose-ui-builder/commit/a7f974fc62ce9c47f3f57a7dc48233c85e216ab5))
+* label a palette thumbnail and keep an empty container's schematic ([#1402](https://github.com/yschimke/compose-ui-builder/issues/1402)) ([e9d8b6a](https://github.com/yschimke/compose-ui-builder/commit/e9d8b6a74c8169b73224a9095c6382688001e361))
+* sketch only an empty layout primitive, not a component with optional slots ([#1404](https://github.com/yschimke/compose-ui-builder/issues/1404)) ([965d3cd](https://github.com/yschimke/compose-ui-builder/commit/965d3cdc379eb117239335f2c528877f69822971))
+
 ## [3.151.0](https://github.com/yschimke/compose-ui-builder/compare/v3.150.0...v3.151.0) (2026-11-23)
 
 
