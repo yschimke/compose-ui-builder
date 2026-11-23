@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.155.0](https://github.com/yschimke/compose-ui-builder/compare/v3.154.0...v3.155.0) (2026-11-23)
+
+
+### Features
+
+* publish the Maven artifacts with Remote Compose document export on ([#1412](https://github.com/yschimke/compose-ui-builder/issues/1412)) ([369baee](https://github.com/yschimke/compose-ui-builder/commit/369baeec346481bd30c4fe2d726ac217b3247673))
+
 ## [3.154.0](https://github.com/yschimke/compose-ui-builder/compare/v3.153.0...v3.154.0) (2026-11-23)
 
 
