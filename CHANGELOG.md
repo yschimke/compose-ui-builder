@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.154.0](https://github.com/yschimke/compose-ui-builder/compare/v3.153.0...v3.154.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* send a palette thumbnail to the service with a scale it accepts ([#1408](https://github.com/yschimke/compose-ui-builder/issues/1408)) ([ca342a0](https://github.com/yschimke/compose-ui-builder/commit/ca342a0071307ce204717948593cdd3d01b7919e))
+
 ## [3.153.0](https://github.com/yschimke/compose-ui-builder/compare/v3.152.0...v3.153.0) (2026-11-23)
 
 
