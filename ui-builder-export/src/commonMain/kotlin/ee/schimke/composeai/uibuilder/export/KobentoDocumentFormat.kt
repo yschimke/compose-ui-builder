@@ -45,7 +45,12 @@ object KobentoDocumentFormat : CatalogDocumentFormat {
     val definitions = path("definitions") ?: return null
     val theme = path("theme") ?: return null
     val compiler = path("compiler") ?: return null
-    return LocalCompilation(listOf(definitions, theme), compiler) { document, files ->
+    // `kobento/icons/{variant}/{shard}.json`, where the catalog publishes Material Symbols.
+    val icons = path("icons")
+    val onDemand = icons?.let(KobentoIcons::shardPaths)?.toSet().orEmpty()
+    // The definitions are megabytes of JSON, and an editor compiles every edit: parsed once.
+    var parsedLibrary: ParsedLibrary? = null
+    return LocalCompilation(listOf(definitions, theme), compiler, onDemand) { document, files ->
       val definitionsText = files[definitions]
       val themeText = files[theme]
       if (definitionsText == null || themeText == null) {
@@ -56,7 +61,23 @@ object KobentoDocumentFormat : CatalogDocumentFormat {
       when (val written = export(document, policy)) {
         is CatalogDocumentFormat.Result.Refused -> written
         is CatalogDocumentFormat.Result.Emitted -> {
-          val library = KobentoComponentExpander.Library.parse(definitionsText, themeText)
+          val parsed =
+            parsedLibrary?.takeIf {
+              it.definitionsText === definitionsText && it.themeText === themeText
+            }
+              ?: ParsedLibrary(
+                  definitionsText,
+                  themeText,
+                  KobentoComponentExpander.Library.parse(definitionsText, themeText),
+                )
+                .also { parsedLibrary = it }
+          // The icons are this call's files: a shard fetched since the last call is read now.
+          val library =
+            KobentoComponentExpander.Library(
+              parsed.library.definitions,
+              parsed.library.theme,
+              icons?.let { template -> KobentoIcons.source(template) { files[it] } },
+            )
           val source = Json.parseToJsonElement(written.content).jsonObject
           when (val expanded = KobentoComponentExpander.expand(source, library)) {
             is KobentoComponentExpander.Result.Expanded ->
@@ -86,3 +107,10 @@ object KobentoDocumentFormat : CatalogDocumentFormat {
         CatalogDocumentFormat.Result.Refused(result.reasons)
     }
 }
+
+/** A library parsed from these exact texts, kept while the host serves the same ones. */
+private class ParsedLibrary(
+  val definitionsText: String,
+  val themeText: String,
+  val library: KobentoComponentExpander.Library,
+)

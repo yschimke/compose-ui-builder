@@ -89,10 +89,15 @@ interface CatalogDocumentFormat {
  * document [compiler] compiles, from [files] the catalog publishes (each a path under the catalog,
  * as its `ui-builder.json` names them). [compiler] is a JavaScript module whose `convert(text)`
  * answers the compiled bytes, so a browser host compiles with no round trip.
+ *
+ * [onDemand] are more of the catalog's files, too many to load up front (an icon set, a shard at a
+ * time): a host loads [files], and where [expand] reads one of [onDemand] it was not given, fetches
+ * that and expands again.
  */
 class LocalCompilation(
   val files: List<String>,
   val compiler: String,
+  val onDemand: Set<String> = emptySet(),
   val expand:
     (document: UiBuilderDocument, files: Map<String, String>) -> CatalogDocumentFormat.Result,
 )

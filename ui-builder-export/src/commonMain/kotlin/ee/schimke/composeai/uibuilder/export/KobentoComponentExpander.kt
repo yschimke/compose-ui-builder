@@ -31,10 +31,18 @@ import kotlinx.serialization.json.jsonObject
  */
 object KobentoComponentExpander {
   /** The library a document's calls are expanded with. */
-  class Library(val definitions: Map<String, JsonObject>, val theme: JsonObject) {
+  /**
+   * Kobento's components, its theme and, where there are any, the Material Symbols its `$icon`
+   * draws: without [icons] a component that draws one is refused.
+   */
+  class Library(
+    val definitions: Map<String, JsonObject>,
+    val theme: JsonObject,
+    val icons: IconSource? = null,
+  ) {
     companion object {
       /** kobento-catalog's `kobento/definitions.json` and `kobento/theme.json`. */
-      fun parse(definitions: String, theme: String): Library =
+      fun parse(definitions: String, theme: String, icons: IconSource? = null): Library =
         Library(
           definitions =
             Json.parseToJsonElement(definitions)
@@ -43,8 +51,14 @@ object KobentoComponentExpander {
               .jsonObject
               .mapValues { it.value.jsonObject },
           theme = Json.parseToJsonElement(theme).jsonObject,
+          icons = icons,
         )
     }
+  }
+
+  /** A Material Symbol's SVG path (24px, `viewBox="0 -960 960 960"`), or null where it has none. */
+  fun interface IconSource {
+    fun path(name: String, style: String, filled: Boolean): String?
   }
 
   sealed interface Result {
@@ -108,6 +122,8 @@ object KobentoComponentExpander {
     val prefixes = mutableMapOf<String, String>()
     /** The calls being expanded, outermost first. */
     val calling = mutableListOf<String>()
+    /** The icon paths the calls draw, by the name `$icon` gives them, in the order drawn. */
+    val paths = LinkedHashMap<String, JsonElement>()
     /** Variables the calls declare, in the order they were declared. */
     val declared = LinkedHashMap<String, JsonElement>()
     /** Of [declared], the calls' own (not `vis_*`). */
@@ -276,6 +292,9 @@ object KobentoComponentExpander {
       declared.forEach { (name, value) -> if (name !in variables) variables[name] = value }
       // A local built from a theme number (a param defaulting to `@theme.text_md`) is the number.
       if (variables.isNotEmpty()) out["variables"] = resolveTheme(JsonObject(variables))
+      if (paths.isNotEmpty()) {
+        out["paths"] = JsonObject(((own["paths"] as? JsonObject) ?: emptyMap()) + paths)
+      }
       val ownColors = (own["colors"] as? JsonObject) ?: JsonObject(emptyMap())
       val read = mutableSetOf<String>()
       fun scan(element: JsonElement?) {
@@ -910,6 +929,7 @@ object KobentoComponentExpander {
           // own: the caller's nodes keep the caller's names.
           return Spliced(listOf(JsonObject(mapOf(SLOT_MARK to JsonPrimitive(slot)))))
         }
+        "\$icon" in element -> return icon(element["\$icon"], path)
         "\$name" in element -> {
           val target = (element["\$name"] as? JsonPrimitive)?.contentOrNull ?: ""
           val name =
@@ -928,6 +948,48 @@ object KobentoComponentExpander {
       val unknown = element.keys.firstOrNull { it.startsWith("\$") } ?: return null
       expander.errors += "$path: $unknown is not expanded yet"
       return Dropped
+    }
+
+    /**
+     * `{"$icon": {"name", "style", "filled"}}`: the path Kobento names `icon_<name>_<style>` (and
+     * `_filled`), written to `resources.paths` once and read as `$paths.<that name>`.
+     */
+    fun icon(spec: JsonElement?, path: String): Substituted {
+      val source = expander.library.icons
+      if (source == null) {
+        expander.errors += "$path: \$icon is not expanded without the catalog's icons"
+        return Dropped
+      }
+      // `{"$icon": "home"}` is the name alone, outlined.
+      val written =
+        when (val element = spec?.let { substitute(it, path)?.element }) {
+          is JsonPrimitive -> JsonObject(mapOf("name" to element))
+          else -> element as? JsonObject
+        }
+      fun field(key: String) = (written?.get(key) as? JsonPrimitive)?.contentOrNull
+      val name = field("name")
+      val style = field("style") ?: "outlined"
+      val filled = (written?.get("filled") as? JsonPrimitive)?.booleanOrNull ?: false
+      if (name == null || !ICON_NAME.matches(name) || style !in ICON_STYLES) {
+        expander.errors += "$path: \$icon needs a Material Symbols name and style, not $written"
+        return Dropped
+      }
+      val key = KobentoIcons.pathName(name, style, filled)
+      if (key !in expander.paths) {
+        val d = source.path(name, style, filled)
+        if (d == null) {
+          expander.errors +=
+            "$path: no Material Symbol $name ($style${if (filled) ", filled" else ""})"
+          return Dropped
+        }
+        expander.paths[key] =
+          runCatching { KobentoIcons.ops(d) }
+            .getOrElse {
+              expander.errors += "$path: $name's path is not drawn: ${it.message}"
+              return Dropped
+            }
+      }
+      return Substituted(JsonPrimitive("\$paths.$key"))
     }
 
     fun each(element: JsonObject, path: String): Substituted {
@@ -1173,6 +1235,9 @@ object KobentoComponentExpander {
 
   /** The key of the placeholder a `$slot` leaves in a body until the caller's nodes go in. */
   private const val SLOT_MARK = "\u0000slot"
+
+  private val ICON_NAME = Regex("""[a-z0-9_]+""")
+  private val ICON_STYLES = setOf("outlined", "rounded", "sharp")
 
   /** The key of a slot's content once filled in, until it is expanded as its caller's. */
   private const val CALLER_MARK = "\u0000caller"

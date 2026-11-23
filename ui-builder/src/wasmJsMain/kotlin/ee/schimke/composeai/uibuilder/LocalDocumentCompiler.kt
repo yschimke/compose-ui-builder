@@ -32,22 +32,50 @@ internal class LocalDocumentCompiler(
 
   private class Loaded(val files: Map<String, String>, val compiler: JsAny)
 
+  /**
+   * Files fetched as an expansion asked for them ([LocalCompilation.onDemand]); null if not served.
+   */
+  private val fetched = HashMap<String, String?>()
+
   /** [document] compiled, as base64 `.rc` bytes, or null to ask the host's service. */
   suspend fun compile(document: UiBuilderDocument): String? {
     val ready = load() ?: return null
-    // A served file the format cannot read (malformed, or another shape) throws: that, too, is the
-    // service's to compile.
-    val expanded =
-      try {
-        compilation.expand(document, ready.files)
-      } catch (cancelled: CancellationException) {
-        throw cancelled
-      } catch (_: Throwable) {
-        return null
+    var expanded: CatalogDocumentFormat.Result = CatalogDocumentFormat.Result.Refused(emptyList())
+    // Each pass fetches what the last one read and lacked (an icon shard), then expands again; a
+    // design draws from a handful of shards, so a few passes answer it.
+    for (pass in 1..MAX_PASSES) {
+      val missing = mutableSetOf<String>()
+      val files =
+        ReadingMap(ready.files + fetched.mapNotNullValues()) { path ->
+          if (path in compilation.onDemand && path !in fetched) missing += path
+        }
+      // A served file the format cannot read (malformed, or another shape) throws: that, too, is
+      // the service's to compile.
+      expanded =
+        try {
+          compilation.expand(document, files)
+        } catch (cancelled: CancellationException) {
+          throw cancelled
+        } catch (_: Throwable) {
+          return null
+        }
+      if (expanded !is CatalogDocumentFormat.Result.Refused || missing.isEmpty()) break
+      loading.withLock {
+        for (path in missing) {
+          fetched[path] =
+            try {
+              fetchText(catalogFilePath(catalogSystemId, path))
+            } catch (cancelled: CancellationException) {
+              throw cancelled
+            } catch (_: Throwable) {
+              null
+            }
+        }
       }
+    }
     val json =
-      when (expanded) {
-        is CatalogDocumentFormat.Result.Emitted -> expanded.content
+      when (val result = expanded) {
+        is CatalogDocumentFormat.Result.Emitted -> result.content
         is CatalogDocumentFormat.Result.Refused -> return null
       }
     return runCatching { compileToBase64(ready.compiler, json) }.getOrNull()
@@ -71,6 +99,26 @@ internal class LocalDocumentCompiler(
       null
     }
   }
+}
+
+/** How many times [LocalDocumentCompiler.compile] expands, fetching what each pass lacked. */
+private const val MAX_PASSES = 4
+
+private fun <K, V : Any> Map<K, V?>.mapNotNullValues(): Map<K, V> = buildMap {
+  this@mapNotNullValues.forEach { (key, value) -> if (value != null) put(key, value) }
+}
+
+/** [files], telling [onMiss] each path read that it does not hold. */
+private class ReadingMap(
+  private val files: Map<String, String>,
+  private val onMiss: (String) -> Unit,
+) : AbstractMap<String, String>() {
+  override val entries: Set<Map.Entry<String, String>>
+    get() = files.entries
+
+  override fun get(key: String): String? = files[key].also { if (it == null) onMiss(key) }
+
+  override fun containsKey(key: String): Boolean = files.containsKey(key)
 }
 
 /** The host route serving a file [catalogSystemId]'s `ui-builder.json` declares, by its path. */
