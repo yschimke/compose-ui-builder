@@ -1105,7 +1105,19 @@ internal fun CatalogThumbnail(
   // way ([DocumentPreviewThumbnails]); the canvas's own picture stands in until that answers. A
   // sweep that reports outcomes measures the canvas, so it keeps the canvas's picture.
   val thumbnails = LocalDocumentPreviewThumbnails.current
-  if (thumbnails == null || document == null || onOutcome != null || !exportedPicture) {
+  // A container holding nothing exports as nothing: its schematic says more than a blank tile.
+  val emptyContainer =
+    container &&
+      document?.nodes?.values?.all { node ->
+        node.id == PREVIEW_FRAME_CELL_ID || node.slots.values.all { it.isEmpty() }
+      } == true
+  if (
+    thumbnails == null ||
+      document == null ||
+      onOutcome != null ||
+      !exportedPicture ||
+      emptyContainer
+  ) {
     CanvasCatalogThumbnail(document, componentId, label, size, container, onOutcome)
     return
   }

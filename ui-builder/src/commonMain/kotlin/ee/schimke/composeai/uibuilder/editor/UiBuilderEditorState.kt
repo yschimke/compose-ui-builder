@@ -908,8 +908,35 @@ class UiBuilderEditorReducer(
       val inserted = target?.let {
         reduce(state, UiBuilderEditorEvent.InsertComponent(componentId, it, variant))
       }
-      inserted?.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document?.centeredInFrame()
+      inserted
+        ?.takeIf { it.lastOutcome is CommandOutcome.Accepted }
+        ?.document
+        ?.withSampleText()
+        ?.centeredInFrame()
     }
+  }
+
+  /**
+   * The thumbnail's component with each text it was inserted with empty (a label, a value) reading
+   * its own name instead, so the picture shows a labelled component rather than a blank one. A
+   * thumbnail only: an inserted component keeps its empty text for the designer to fill.
+   */
+  private fun UiBuilderDocument.withSampleText(): UiBuilderDocument {
+    val childId =
+      nodes[PREVIEW_FRAME_CELL_ID]?.slots?.get(FRAME_SLOT)?.singleOrNull() ?: return this
+    val child = nodes[childId] ?: return this
+    val name = catalog.componentsById[child.componentId]?.displayName ?: return this
+    fun JsonElement.isEmptyText() = (this as? JsonObject)?.get("value") == JsonPrimitive("")
+    if (child.properties.values.none { it.isEmptyText() }) return this
+    val properties =
+      JsonObject(
+        child.properties.mapValues { (_, value) ->
+          if (value.isEmptyText())
+            JsonObject((value as JsonObject) + ("value" to JsonPrimitive(name)))
+          else value
+        },
+      )
+    return copy(nodes = nodes + (childId to child.copy(properties = properties)))
   }
 
   /**
