@@ -401,6 +401,9 @@ internal fun PropertyCapability.literalDefault(): JsonObject {
   return when {
     "boolean" in types -> literal("bool", JsonPrimitive(false))
     "number" in types || "integer" in types -> literal("float", JsonPrimitive(0))
+    // A list starts empty: `""` is no list.
+    types == setOf("array") ->
+      JsonObject(mapOf("type" to JsonPrimitive("list"), "values" to JsonArray(emptyList())))
     else -> JsonPrimitive("").asLiteral(this)
   }
 }
@@ -448,13 +451,16 @@ private fun PropertyCapability.defaultEncodedValue(
     "detailPaneVisible",
     "mainPaneVisible",
     "supportingPaneVisible" -> literal("bool", JsonPrimitive(true))
+    // A plain list of columns (a document format's table) starts empty; the grid's is an object.
     "columns" ->
-      JsonObject(
-        mapOf(
-          "type" to JsonPrimitive("adaptiveGrid"),
-          "minimumCellWidthDp" to JsonPrimitive(362),
-        ),
-      )
+      if (typeNames() == setOf("array")) literalDefault()
+      else
+        JsonObject(
+          mapOf(
+            "type" to JsonPrimitive("adaptiveGrid"),
+            "minimumCellWidthDp" to JsonPrimitive(362),
+          ),
+        )
     "scrollStateKey" -> literal("string", JsonPrimitive("$nodeId-scroll"))
     // Three one-key rows so an inserted loop draws something; the key is what the starter template
     // binds. Matched on component too, since another pack's scalar `data` would reject a list.
@@ -474,6 +480,8 @@ private fun PropertyCapability.defaultEncodedValue(
     // exports as it is, where a read of a variable the design does not declare does neither.
     "value" ->
       if ("string" in typeNames()) literal("string", JsonPrimitive(""))
+      // A read of a variable the design does not declare is refused: with none, a literal.
+      else if (document.stateVariables.isEmpty()) literalDefault()
       else
         JsonObject(
           mapOf(
@@ -484,7 +492,9 @@ private fun PropertyCapability.defaultEncodedValue(
     "selectedIndex" -> literal("int", JsonPrimitive(0))
     "startColor" -> literal("color", JsonPrimitive("#00000000"))
     "endColor" -> literal("color", JsonPrimitive("#FF000000"))
-    else -> JsonPrimitive("").asLiteral(this)
+    // Anything else starts at its type's neutral value, so a required number or list is inserted
+    // as one rather than refused as `""`.
+    else -> literalDefault()
   }
 }
 
