@@ -290,7 +290,8 @@ listOf(
       val directory = output.get().asFile.apply { mkdirs() }
       directory.resolve("$objectName.kt").writeText(
         "package $packageName\n\n" +
-          "/** Build-time feature selection. Enable with -PuiBuilderRemoteCompose=true. */\n" +
+          "/**\n * Build-time feature selection. Enable with -PuiBuilderRemoteCompose=true, as the Maven\n" +
+          " * Central release does (release.yml), so a server built on it exports `.rc` documents.\n */\n" +
           "object $objectName {\n  const val remoteCompose: Boolean = ${enabled.get()}\n}\n"
       )
     }
