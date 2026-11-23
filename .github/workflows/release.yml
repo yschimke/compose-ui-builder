@@ -285,6 +285,12 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
           PLANNED: ${{ steps.plan.outputs.planned }}
           PUBLISH_SET: ${{ steps.plan.outputs.publish_set }}
+          # The Maven artifacts carry the Remote Compose document exports (`.rc`, Remote JSON).
+          # compose-preview-server compiles against `ui-builder-export`'s `UiBuilderBuildFeatures`,
+          # so with them off it registers no `/api/ui-builder/v1/documents/export.rc` route, and an
+          # editor's service fallback (a Kobento `$gen` component, compiled only by Kobento) is a
+          # 404. The editor archive above keeps the shipping default.
+          ORG_GRADLE_PROJECT_uiBuilderRemoteCompose: "true"
         run: |
           set -uo pipefail
           # ABSENT and EMPTY are different properties and must not be collapsed. Absent means "no

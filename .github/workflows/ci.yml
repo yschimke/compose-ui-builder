@@ -280,7 +280,8 @@ jobs:
           rw-token: ${{ github.event_name == 'push' && (secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN) || '' }}
           ro-token: ${{ secrets.BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN_RO || secrets.BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN_RO }}
       # The normal Gradle job proves the shipping default. Keep the opt-in code compiled and
-      # exercised against released dependencies as well, without enabling it in distributions.
+      # exercised against released dependencies as well: the Maven Central release publishes with
+      # it on (release.yml), while the editor archive keeps the default.
       # `:mcp:test` and `:server:test` were in this list before the extraction and stayed with the
       # server, which runs the same flag in its own CI — a release pairs the two.
       - run: >-
