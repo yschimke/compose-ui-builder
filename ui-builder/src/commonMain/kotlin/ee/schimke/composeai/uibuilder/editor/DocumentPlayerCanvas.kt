@@ -30,7 +30,6 @@ import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcNativeNodeSnapshot
 import ee.schimke.composeai.rcplayer.compose.RcNativeSnapshotBridge
 import ee.schimke.composeai.rcplayer.compose.RcPlayerTheme
-import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.uibuilder.authoredIn
@@ -106,7 +105,7 @@ internal fun playedCanvasDocument(
 ): PlayedCanvasDocument? {
   val bytes = runCatching { Base64.Default.decode(base64) }.getOrNull() ?: return null
   val document = runCatching { RcDocumentCodec.decode(bytes) }.getOrNull() ?: return null
-  if (document.composeSupportReport().issues.isNotEmpty()) return null
+  if (document.blockingPlayerIssues().isNotEmpty()) return null
   val root = runCatching { RcNativeSnapshotBridge.decode(bytes).root }.getOrNull() ?: return null
   val nodeOfComponent = buildMap {
     fun walk(node: RcNativeNodeSnapshot) {
