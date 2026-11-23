@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcPlayerTheme
-import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -82,7 +81,7 @@ internal class DocumentPreviewThumbnails(
             decodeRemoteComposeDocument(preview.documentBase64)
               .getOrNull()
               // A document this player refuses draws nothing: the canvas's picture is better.
-              ?.takeIf { it.composeSupportReport().issues.isEmpty() }
+              ?.takeIf { it.blockingPlayerIssues().isEmpty() }
               ?.let(Result::Played) ?: Result.Unavailable
           else -> Result.Unavailable
         }

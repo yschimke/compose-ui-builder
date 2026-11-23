@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.rcplayer.protocol.RcAccessibilitySemantics
 import ee.schimke.composeai.rcplayer.protocol.RcCanvasLayout
 import ee.schimke.composeai.rcplayer.protocol.RcColumnLayout
@@ -91,6 +92,15 @@ class DocumentPlayerCanvasTest {
   }
 
   @Test
+  fun `a component clickable with no click of its own is still played`() {
+    val document = RcDocumentCodec.decode(Base64.Default.decode(encoded(true, clickable = true)))
+    // The player's own report flags it; the editor, which takes no press, plays it anyway.
+    assertEquals(1, document.composeSupportReport().issues.size)
+    val played = assertNotNull(playedCanvasDocument(design, encoded(true, clickable = true)))
+    assertEquals("button", played.nodeOfComponent[6])
+  }
+
+  @Test
   fun `the canvas asks for a tagged export and reports where each node drew`() =
     runDesktopComposeUiTest(width = 200, height = 200) {
       val asked = mutableListOf<UiBuilderDocument>()
@@ -143,7 +153,10 @@ class DocumentPlayerCanvasTest {
       val renderer =
         documentPlayerCanvasRenderer(
           request = { document ->
-            UiBuilderDocumentPreview.Ready(document.revision, encoded(tagged = true))
+            UiBuilderDocumentPreview.Ready(
+              document.revision,
+              encoded(tagged = true, clickable = true),
+            )
           },
         )
       setContent {
@@ -198,7 +211,7 @@ class DocumentPlayerCanvasTest {
     }
 
   /** A column holding two fixed-size canvases, tagged as the export tags them where [tagged]. */
-  private fun encoded(tagged: Boolean): String {
+  private fun encoded(tagged: Boolean, clickable: Boolean = false): String {
     val end = RcNoArg(RcOpcodes.CONTAINER_END)
     fun width(px: Float) = RcWidthModifier(RcDimensionType.EXACT, RcFloatWord.literal(px))
     fun height(px: Float) = RcHeightModifier(RcDimensionType.EXACT, RcFloatWord.literal(px))
@@ -213,7 +226,8 @@ class DocumentPlayerCanvasTest {
             stateDescriptionId = 0,
             mode = RcAccessibilitySemantics.MODE_SET,
             enabled = true,
-            clickable = false,
+            // The button says it is clickable, with no click of its own (an unwired Button).
+            clickable = clickable && textId == 12,
           ),
         )
     val document =

@@ -21,7 +21,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcPlayerTheme
-import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.uibuilder.canvas.WearWidgetContainerScaffold
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
@@ -221,7 +220,7 @@ private fun PlayedRemoteDocumentVariant(
 ) {
   val decoded = remember(encoded) { decodeRemoteComposeDocument(encoded) }
   val target = decoded.getOrNull()
-  val issues = remember(target) { target?.composeSupportReport()?.issues.orEmpty() }
+  val issues = remember(target) { target?.blockingPlayerIssues().orEmpty() }
   if (target == null) {
     PreviewMessage(decoded.exceptionOrNull()?.message ?: "Invalid document preview")
     return
@@ -316,7 +315,7 @@ internal fun RemoteDocumentPreviewPane(
           val decoded =
             remember(current.documentBase64) { decodeRemoteComposeDocument(current.documentBase64) }
           val target = decoded.getOrNull()
-          val issues = remember(target) { target?.composeSupportReport()?.issues.orEmpty() }
+          val issues = remember(target) { target?.blockingPlayerIssues().orEmpty() }
           if (target == null) {
             PreviewMessage(decoded.exceptionOrNull()?.message ?: "Invalid document preview")
           } else if (issues.isNotEmpty()) {
