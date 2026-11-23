@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.156.0](https://github.com/yschimke/compose-ui-builder/compare/v3.155.0...v3.156.0) (2026-11-23)
+
+
+### Performance Improvements
+
+* ask the service once a page is refused, and fetch catalog templates once ([#1414](https://github.com/yschimke/compose-ui-builder/issues/1414)) ([fd9a9ba](https://github.com/yschimke/compose-ui-builder/commit/fd9a9baf61812a6a52edf2812d2c78b6f9559cc7))
+
 ## [3.155.0](https://github.com/yschimke/compose-ui-builder/compare/v3.154.0...v3.155.0) (2026-11-23)
 
 
