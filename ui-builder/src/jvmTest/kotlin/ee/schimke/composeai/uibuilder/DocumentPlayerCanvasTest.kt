@@ -8,8 +8,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -41,6 +45,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlinx.coroutines.awaitCancellation
@@ -128,6 +133,35 @@ class DocumentPlayerCanvasTest {
         ),
         boxes(inspection!!.editor),
       )
+    }
+
+  @Test
+  fun `the selected node is outlined over the picture, and not while selection is off`() =
+    runDesktopComposeUiTest(width = 100, height = 100) {
+      var inspection: UiBuilderCanvasInspection? = null
+      var selectionEnabled by mutableStateOf(true)
+      val renderer =
+        documentPlayerCanvasRenderer(
+          request = { document ->
+            UiBuilderDocumentPreview.Ready(document.revision, encoded(tagged = true))
+          },
+        )
+      setContent {
+        CompositionLocalProvider(LocalDensity provides Density(1f)) {
+          Box(Modifier.size(100.dp)) {
+            renderer(design, CANVAS_SURFACE, "button", selectionEnabled, {}) { inspection = it }
+          }
+        }
+      }
+      waitUntil { inspection?.editor?.nodes?.count { it.bounds != null } == 3 }
+      waitForIdle()
+      fun pixel(x: Int, y: Int) = onRoot().captureToImage().toPixelMap()[x, y]
+      // The button is at (0, 10), 30 by 20: its top edge is outlined, the gauge above it is not.
+      assertEquals(Color(0xff6750a4), pixel(15, 10))
+      assertNotEquals(Color(0xff6750a4), pixel(15, 4))
+      selectionEnabled = false
+      waitForIdle()
+      assertNotEquals(Color(0xff6750a4), pixel(15, 10))
     }
 
   @Test
