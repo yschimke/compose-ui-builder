@@ -294,6 +294,15 @@ jobs:
           PLAN_ARGS=()
           if [ "${PLANNED}" = "true" ]; then
             PLAN_ARGS+=("-Pcomposeai.publishSet=${PUBLISH_SET}")
+          else
+            # A recovery for a release whose upload already went through (it failed later, on a
+            # harness archive or the un-draft) would be refused: Central never takes a version
+            # twice. The BOM is the marker; recovery then goes on to the lanes that did not finish.
+            bom="https://repo.maven.apache.org/maven2/ee/schimke/composeai/compose-preview-ui-builder-bom/${PLUGIN_VERSION}/compose-preview-ui-builder-bom-${PLUGIN_VERSION}.pom"
+            if curl -fsSL -o /dev/null --retry 3 "${bom}"; then
+              echo "::notice::${PLUGIN_VERSION} is already on Maven Central; recovery skips the upload"
+              exit 0
+            fi
           fi
           # Ask Gradle for the task paths rather than deriving them here.
           TASKS="$(./gradlew -q printPublishTasks "${PLAN_ARGS[@]}" | grep '^:' | cut -f1 | tr '\n' ' ')"
