@@ -419,7 +419,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
-      - run: ./gradlew ":${{ matrix.module }}:${{ matrix.task }}"
+      # Retried with backoff: the three lanes resolve their wasm klibs from Maven Central at once,
+      # and Central answers a burst with 429 Too Many Requests. That failed v3.152.0 and v3.153.0
+      # (twice) on a download, after the publish had succeeded, leaving each release a draft.
+      - name: Build the dist
+        env:
+          TASK: ":${{ matrix.module }}:${{ matrix.task }}"
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            ./gradlew "${TASK}" && exit 0
+            [ "${attempt}" -lt 3 ] || break
+            echo "::warning::${TASK} failed (attempt ${attempt}); retrying in $((attempt * 90))s"
+            sleep $((attempt * 90))
+          done
+          exit 1
       # `compose-preview-<module>-<version>.zip`, the editor archive's naming, holding the dist
       # directory's CONTENTS at its root. The file name is the contract compose-preview-server's
       # harness downloads by, so it is a coordinate, not a label.
