@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -12,10 +14,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.rcplayer.compose.ExperimentalRcPlayerApi
 import ee.schimke.composeai.rcplayer.compose.LocalRcComponentCoordinates
 import ee.schimke.composeai.rcplayer.compose.RcComponentCoordinatesListener
@@ -58,9 +65,15 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 internal fun documentPlayerCanvasRenderer(
   request: suspend (UiBuilderDocument) -> UiBuilderDocumentPreview,
-): UiBuilderCanvasRenderer = { document, _, _, _, _, onInspectionSnapshot ->
-  DocumentPlayerCanvas(document, request, onInspectionSnapshot)
-}
+): UiBuilderCanvasRenderer =
+  { document, _, selectedNodeId, selectionEnabled, _, onInspectionSnapshot ->
+    DocumentPlayerCanvas(
+      document,
+      request,
+      selectedNodeId.takeIf { selectionEnabled },
+      onInspectionSnapshot,
+    )
+  }
 
 /**
  * A played export: the design it was asked for, the document, and which component is which node.
@@ -114,6 +127,7 @@ internal fun playedCanvasDocument(
 private fun DocumentPlayerCanvas(
   document: UiBuilderDocument,
   request: suspend (UiBuilderDocument) -> UiBuilderDocumentPreview,
+  selectedNodeId: String?,
   onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
 ) {
   val latestRequest by rememberUpdatedState(request)
@@ -149,6 +163,7 @@ private fun DocumentPlayerCanvas(
     latestSnapshot(UiBuilderCanvasInspection(authored, authored.mapped(frame::localToRoot)))
   }
   if (current == null) {
+    var placeholders by remember { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
     Box(Modifier.fillMaxSize().onGloballyPositioned { root = it }) {
       UiBuilderSurface(
         document = document,
@@ -161,9 +176,11 @@ private fun DocumentPlayerCanvas(
               val origin = box.findRootCoordinates()
               snapshot.mapped { box.localPositionOf(origin, it) }
             } ?: snapshot
+          placeholders = local
           latestSnapshot(UiBuilderCanvasInspection(local, snapshot))
         },
       )
+      SelectionOutline(placeholders, selectedNodeId)
     }
     return
   }
@@ -214,6 +231,7 @@ private fun DocumentPlayerCanvas(
         )
       }
     }
+    SelectionOutline(measured, selectedNodeId)
     // On top of the player: a press is the editor's (select, drag), never the drawn control's. It
     // sees every press first and consumes none, so the canvas's own gestures still get them.
     Box(
@@ -223,6 +241,33 @@ private fun DocumentPlayerCanvas(
     )
   }
 }
+
+/**
+ * The selection, drawn as the editor's own canvas draws it: an outline around every box
+ * [selectedNodeId] drew in [snapshot] (the canvas's own coordinates), above the picture.
+ */
+@Composable
+private fun BoxScope.SelectionOutline(
+  snapshot: UiBuilderInspectionSnapshot?,
+  selectedNodeId: String?,
+) {
+  val boxes =
+    snapshot?.nodes.orEmpty().filter { it.nodeId == selectedNodeId }.mapNotNull { it.bounds }
+  if (boxes.isEmpty()) return
+  Canvas(Modifier.matchParentSize().clearAndSetSemantics {}) {
+    boxes.forEach { box ->
+      drawRect(
+        SELECTION_COLOR,
+        Offset(box.x, box.y),
+        Size(box.width, box.height),
+        style = Stroke(2.dp.toPx()),
+      )
+    }
+  }
+}
+
+/** The editor canvas's selection colour (`UiBuilderSurface`'s overlay). */
+private val SELECTION_COLOR = Color(0xff6750a4)
 
 /** [this] snapshot's boxes moved by [move], a mapping of points that may translate and scale. */
 private fun UiBuilderInspectionSnapshot.mapped(
