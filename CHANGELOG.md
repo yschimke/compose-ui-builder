@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.153.0](https://github.com/yschimke/compose-ui-builder/compare/v3.152.0...v3.153.0) (2026-11-23)
+
+
+### Features
+
+* write a Kobento series as a float array and a list item as an object ([#1406](https://github.com/yschimke/compose-ui-builder/issues/1406)) ([853dad1](https://github.com/yschimke/compose-ui-builder/commit/853dad16a760e0e8b0eff1ba482b42ecbc18a1c8))
+
 ## [3.152.0](https://github.com/yschimke/compose-ui-builder/compare/v3.151.0...v3.152.0) (2026-11-23)
 
 
