@@ -272,7 +272,10 @@ composeai-contracts = "3.46.0"
 # embedded bitmap fonts (`coreTextAsBitmapFonts`), which the widget export's bitmap-font option uses.
 # 3.12.0 plays a touch expression's `touchEffects` haptic instead of refusing the document
 # (rc-players#951): a Kobento `.rc` with controls (`convert` writes touchEffects = 3) previews.
-rc-players = "3.12.0"
+# 3.12.1 reads a text no operation has produced yet as empty and draws nothing for an empty path
+# expression, where it threw (rc-players#955): a palette thumbnail of a chart over an empty series,
+# or of a number formatted from a text, no longer stops the editor's composition.
+rc-players = "3.12.1"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.13.0"
 # QuickJS (Javy's build) compiled ahead of time to JVM bytecode: the host-logic engine
