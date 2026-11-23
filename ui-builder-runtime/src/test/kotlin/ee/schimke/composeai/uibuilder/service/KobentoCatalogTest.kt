@@ -306,6 +306,69 @@ class KobentoCatalogTest {
   }
 
   @Test
+  fun `an icon's shard is asked for on demand and its symbol drawn as a path`() {
+    val policy =
+      Json.parseToJsonElement(
+          """{"localCompile": {"definitions": "kobento/definitions.json",
+               "theme": "kobento/theme.json", "compiler": "kobento/json2rc.mjs",
+               "icons": "kobento/icons/{variant}/{shard}.json"}}""",
+        )
+        .jsonObject
+    val compilation = assertNotNull(KobentoDocumentFormat.localCompilation(policy))
+    // Three styles, filled or not, a shard per first character.
+    assertEquals(216, compilation.onDemand.size)
+    assertTrue("kobento/icons/rounded-filled/h.json" in compilation.onDemand)
+    val design =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema": "compose-ui-builder-document/v1-candidate", "id": "icon", "title": "Icon",
+          "revision": 1, "catalogPin": {}, "stateVariables": {},
+          "environment": {"widthDp": 100, "heightDp": 100},
+          "roots": ["screen"],
+          "nodes": {
+            "screen": {"id": "screen", "componentId": "kobento/document", "slots": {"content": ["home"]}},
+            "home": {"id": "home", "componentId": "kobento/icon", "properties": {"name": {"type": "string", "value": "home"}}}
+          }}""",
+      )
+    val files =
+      mutableMapOf(
+        "kobento/definitions.json" to
+          """{"components": {"Icon": {"params": {"name": {"type": "string", "required": true, "static": true},
+               "style": {"type": "enum", "default": "outlined", "values": ["outlined", "rounded", "sharp"]},
+               "filled": {"type": "bool", "default": false, "static": true}},
+             "body": {"canvas": {"commands": [{"drawPath": {"path": {"${'$'}icon":
+               {"name": "@name", "style": "@style", "filled": "@filled"}}}}]}}}}}""",
+        "kobento/theme.json" to """{"numbers": {}, "colors": {}}""",
+      )
+    // The host's loop: what the expansion read and lacked, it fetches, and expands again.
+    val read = mutableListOf<String>()
+    val recording =
+      object : AbstractMap<String, String>() {
+        override val entries
+          get() = files.entries
+
+        override fun get(key: String): String? = files[key].also { read += key }
+      }
+    assertIs<CatalogDocumentFormat.Result.Refused>(compilation.expand(design, recording))
+    assertEquals(
+      listOf("kobento/icons/outlined/h.json"),
+      read.filter { it in compilation.onDemand },
+    )
+    files["kobento/icons/outlined/h.json"] =
+      """{"home": "M160-120v-480l320-240 320 240v480H160Z"}"""
+    val result = compilation.expand(design, files)
+    val expanded = assertIs<CatalogDocumentFormat.Result.Emitted>(result, result.toString())
+    assertTrue(
+      "\"drawPath\":{\"path\":\"${'$'}paths.icon_home_outlined\"}" in expanded.content,
+      expanded.content,
+    )
+    assertTrue(
+      "\"icon_home_outlined\":[{\"type\":\"moveTo\",\"x\":160,\"y\":840}" in expanded.content,
+      expanded.content,
+    )
+  }
+
+  @Test
   fun `a canvas's export carries each node's id, and a design's own export does not`() {
     val design = Json.decodeFromString(UiBuilderDocument.serializer(), SAMPLE)
     fun tags(document: UiBuilderDocument): List<String> {

@@ -284,7 +284,9 @@ class KobentoComponentExpanderTest {
     val refused = KobentoComponentExpander.expand(document, library)
     kotlin.test.assertEquals(
       KobentoComponentExpander.Result.Refused(
-        listOf("root.Glyph.body.canvas.commands[0]: \$icon is not expanded yet"),
+        listOf(
+          "root.Glyph.body.canvas.commands[0]: \$icon is not expanded without the catalog's icons",
+        ),
       ),
       refused,
     )
@@ -307,6 +309,10 @@ class KobentoComponentExpanderTest {
       KobentoComponentExpander.Library.parse(
         corpus.resolve("definitions.json").readText(),
         corpus.resolve("theme.json").readText(),
+        // kobento-catalog's published shards, where the corpus has them.
+        KobentoIcons.source("icons/{variant}/{shard}.json") { path ->
+          corpus.resolve(path).takeIf { it.isFile }?.readText()
+        },
       )
     val demos = corpus.resolve("demos").listFiles()!!.filter { it.extension == "json" }.sorted()
     var matched = 0
