@@ -55,20 +55,33 @@ object KobentoComponentJsonExporter {
      * publishes them. Null skips the check; [withCatalog] fills it from the catalog.
      */
     val clickable: Set<String>? = null,
+    /**
+     * Per component id, the params Kobento reads as a series (a float array): a list written there
+     * is declared in `resources.floatArrays` and passed by name, as Kobento's own designs pass one.
+     * The catalog publishes these as `statusSemantics.kobento.seriesParams`.
+     */
+    val seriesParams: Map<String, Set<String>> = emptyMap(),
   ) {
-    /** These options with [staticParams] and [clickable] read from `statusSemantics.kobento`. */
+    /**
+     * These options with [staticParams], [seriesParams] and [clickable] read from
+     * `statusSemantics.kobento`.
+     */
     fun withCatalog(kobento: JsonObject): Options =
       copy(
-        staticParams =
-          (kobento["staticParams"] as? JsonObject).orEmpty().mapValues { (_, names) ->
-            (names as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }.toSet()
-          },
+        staticParams = names(kobento["staticParams"]),
+        seriesParams = names(kobento["seriesParams"]),
         clickable =
           (kobento["clickable"] as? JsonArray)
             ?.mapNotNull { it.jsonPrimitive.contentOrNull }
             ?.toSet(),
       )
   }
+
+  /** A published `{componentId: [param, …]}` as sets. */
+  private fun names(published: JsonElement?): Map<String, Set<String>> =
+    (published as? JsonObject).orEmpty().mapValues { (_, names) ->
+      (names as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }.toSet()
+    }
 
   sealed interface Result {
     data class Emitted(val source: String) : Result
@@ -93,6 +106,10 @@ object KobentoComponentJsonExporter {
       (document.environment[DOCUMENT_INSPECTION_TAGS_KEY] as? JsonPrimitive)?.booleanOrNull == true
     val stateKinds = mutableMapOf<String, String>()
     val active = mutableSetOf<String>()
+    /**
+     * Each series a call was given, by the name it is declared under in `resources.floatArrays`.
+     */
+    val floatArrays = LinkedHashMap<String, JsonArray>()
 
     fun export(): Result {
       options.componentTheme?.let {
@@ -136,7 +153,11 @@ object KobentoComponentJsonExporter {
         if (options.componentSets.isNotEmpty())
           put("componentSets", JsonArray(options.componentSets.map(::JsonPrimitive)))
         options.componentTheme?.let { put("componentTheme", it) }
-        if (variables.isNotEmpty()) putJsonObject("resources") { put("variables", variables) }
+        if (variables.isNotEmpty() || floatArrays.isNotEmpty())
+          putJsonObject("resources") {
+            if (variables.isNotEmpty()) put("variables", variables)
+            if (floatArrays.isNotEmpty()) put("floatArrays", JsonObject(floatArrays))
+          }
         put("root", root)
       }
       return Result.Emitted(prettyJson.encodeToString(JsonObject.serializer(), source))
@@ -335,6 +356,7 @@ object KobentoComponentJsonExporter {
         name,
         buildJsonObject {
           val static = options.staticParams[node.componentId].orEmpty()
+          val series = options.seriesParams[node.componentId].orEmpty()
           node.properties.forEach { (property, value) ->
             if (
               property in static && (value as? JsonObject)?.get("type") == JsonPrimitive("state")
@@ -342,7 +364,10 @@ object KobentoComponentJsonExporter {
               errors += "$path.properties.$property: a static Kobento param cannot follow state"
               return@forEach
             }
-            value(value, "$path.properties.$property")?.let { put(property, it) }
+            val lowered = value(value, "$path.properties.$property") ?: return@forEach
+            if (property in series && lowered is JsonArray) {
+              put(property, series(node.id, property, lowered, "$path.properties.$property"))
+            } else put(property, lowered)
           }
           node.eventBindings.forEach { (event, actions) ->
             if (event != "click") {
@@ -363,6 +388,19 @@ object KobentoComponentJsonExporter {
             }
         },
       )
+    }
+
+    /**
+     * [values], a list given to a series param, declared in `resources.floatArrays` under a name of
+     * its own and passed as `"@name"`: Kobento reads a series from a float array, not a literal.
+     */
+    fun series(nodeId: String, property: String, values: JsonArray, path: String): JsonElement {
+      if (values.any { (it as? JsonPrimitive)?.doubleOrNull == null })
+        errors += "$path: a series is a list of numbers"
+      val base = "series_" + "${nodeId}_$property".replace(NOT_IDENTIFIER, "_")
+      val name = generateSequence(base) { it + "_" }.first { it !in floatArrays }
+      floatArrays[name] = values
+      return JsonPrimitive("@$name")
     }
 
     /**
@@ -437,6 +475,21 @@ object KobentoComponentJsonExporter {
           } else
             JsonArray(
               items.mapIndexedNotNull { index, item -> value(item, "$path.values[$index]") },
+            )
+        }
+        // A list item with fields (`{label, value}`) is a JSON object of its lowered fields.
+        "object" -> {
+          val fields = typed["fields"] as? JsonObject
+          if (fields == null) {
+            errors += "$path.fields: an object needs its fields"
+            null
+          } else
+            JsonObject(
+              fields
+                .mapNotNull { (name, field) ->
+                  value(field, "$path.fields.$name")?.let { name to it }
+                }
+                .toMap(),
             )
         }
         else -> {
@@ -649,6 +702,8 @@ object KobentoComponentJsonExporter {
     value == kotlin.math.floor(value) && kotlin.math.abs(value) <= MAX_EXACT_FLOAT_INT
 
   /** The property wrappers that hold a literal, as `UiExpressions.OPERAND_LITERALS` plus `enum`. */
+  private val NOT_IDENTIFIER = Regex("[^A-Za-z0-9_]")
+
   private val LITERAL_TYPES = setOf("string", "int", "float", "bool", "enum", "color")
 
   private val COLOR = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|@colors\\.[A-Za-z][A-Za-z0-9_]*")

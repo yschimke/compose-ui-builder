@@ -137,6 +137,66 @@ class KobentoCatalogTest {
   }
 
   @Test
+  fun `a series is declared as a float array and passed by name`() {
+    val design =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema": "compose-ui-builder-document/v1-candidate", "id": "bars", "title": "Bars",
+          "revision": 1, "catalogPin": {}, "stateVariables": {}, "environment": {},
+          "roots": ["screen"],
+          "nodes": {
+            "screen": {"id": "screen", "componentId": "kobento/document", "slots": {"content": ["bars-1"]}},
+            "bars-1": {"id": "bars-1", "componentId": "kobento/bar-chart", "properties": {"values":
+              {"type": "list", "values": [{"type": "float", "value": 3}, {"type": "float", "value": 5}]}}}
+          }}""",
+      )
+    val options =
+      KobentoComponentJsonExporter.Options()
+        .withCatalog(
+          Json.parseToJsonElement("""{"seriesParams": {"kobento/bar-chart": ["values"]}}""")
+            .jsonObject,
+        )
+    val emitted =
+      assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+          KobentoComponentJsonExporter.export(design, options),
+        )
+        .source
+    val compact = Json.parseToJsonElement(emitted).toString()
+    assertTrue(""""floatArrays":{"series_bars_1_values":[3,5]}""" in compact, compact)
+    assertTrue(""""BarChart":{"values":"@series_bars_1_values"}""" in compact, compact)
+    // Without the catalog's word, a list is written in place.
+    val inline =
+      (KobentoComponentJsonExporter.export(design) as KobentoComponentJsonExporter.Result.Emitted)
+        .source
+    assertTrue(""""values":[3,5]""" in Json.parseToJsonElement(inline).toString())
+  }
+
+  @Test
+  fun `a list of objects is written as Kobento's list of items`() {
+    val design =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema": "compose-ui-builder-document/v1-candidate", "id": "rings", "title": "Rings",
+          "revision": 1, "catalogPin": {}, "stateVariables": {}, "environment": {},
+          "roots": ["screen"],
+          "nodes": {
+            "screen": {"id": "screen", "componentId": "kobento/document", "slots": {"content": ["rings"]}},
+            "rings": {"id": "rings", "componentId": "kobento/activity-rings", "properties": {"rings":
+              {"type": "list", "values": [{"type": "object", "fields": {
+                "label": {"type": "string", "value": "Move"},
+                "value": {"type": "float", "value": 420}}}]}}}
+          }}""",
+      )
+    val emitted =
+      assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+          KobentoComponentJsonExporter.export(design),
+        )
+        .source
+    val compact = Json.parseToJsonElement(emitted).toString()
+    assertTrue(""""rings":[{"label":"Move","value":420}]""" in compact, compact)
+  }
+
+  @Test
   fun `a box's content alignment and a list param are written as Kobento's`() {
     fun design(alignment: String) =
       Json.decodeFromString(

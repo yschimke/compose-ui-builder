@@ -53,6 +53,17 @@ a catalog that is builtins only (`record: null`). So no contract change was need
 
 The type mapping (Kobento -> `jsonType`): `float` -> number, `bool` -> boolean,
 `string`/`text`/`color`/`enum`/`variable` -> string (enum with `allowedValues`), `list` -> array.
+A `float` param the definition reads as an array (`arrayLength`, `arrayGet`, `arrayMax`, …: a
+chart's `values`, Candlestick's `open`/`high`/`low`/`close`) is a **series**: `array`, listed in
+`statusSemantics.kobento.seriesParams`. Kobento reads a series from `resources.floatArrays` by
+name, never from a literal in an expression, so the exporter declares each list given to one there
+(`series_<node>_<param>`) and passes `"@series_<node>_<param>"`. A list item with fields
+(`ActivityRings.rings`) is written as a JSON object.
+
+A chart inserted empty draws nothing, so the catalog seeds the charts with sample data through the
+builtins' `insertContent` (kobento-catalog's `generator/starters.py`, its own round numbers rather
+than Kobento's examples). An insert and its palette picture both start from it.
+
 `action` params are **not** properties. A design states a tap as a `click` event binding, and the
 exporter writes it as `onClick`. Which components take one is listed in
 `statusSemantics.kobento.clickable`.
