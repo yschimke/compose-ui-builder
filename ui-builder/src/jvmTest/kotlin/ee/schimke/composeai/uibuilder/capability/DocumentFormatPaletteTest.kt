@@ -50,6 +50,7 @@ class DocumentFormatPaletteTest {
             PropertyCapability(name = "value", jsonType = JsonPrimitive("number"), required = true),
             PropertyCapability(name = "labels", jsonType = JsonPrimitive("array"), required = true),
             PropertyCapability(name = "max", jsonType = JsonPrimitive("number"), required = true),
+            PropertyCapability(name = "label", jsonType = JsonPrimitive("string"), required = true),
           ),
       )
     val kobento =
@@ -70,6 +71,11 @@ class DocumentFormatPaletteTest {
     )
     val node = inserted.single()
     assertEquals(emptyList(), node.modifiers.toList())
+    // A text inserted empty reads the component's name, so the picture is labelled.
+    assertEquals(
+      JsonPrimitive(gauge.displayName),
+      node.properties.getValue("label").jsonObject["value"],
+    )
     // A required number starts at zero and a list empty, as each param accepts.
     assertEquals(JsonPrimitive(0), node.properties.getValue("value").jsonObject["value"])
     assertEquals(JsonPrimitive(0), node.properties.getValue("max").jsonObject["value"])
