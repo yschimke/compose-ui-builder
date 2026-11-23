@@ -20,15 +20,7 @@ class LocalCatalogTemplates(private val storage: LocalDesignStorage) {
     catalog: CatalogCapabilityV1,
     fetch: suspend () -> String,
   ): CatalogSeedTemplates {
-    val benchmark = catalog.benchmark
-    // The current v1 capability has no digest field; the serving executor accepts `candidate`.
-    val pin =
-      CatalogReferenceV1(
-        benchmark.catalogSystemId,
-        benchmark.catalogRevision,
-        "candidate",
-        benchmark.nativeRuntimeId,
-      )
+    val pin = catalogTemplatePin(catalog)
     val key = "ui-builder.local.templates." + localDesignJson.encodeToString(pin.systemId)
     fun decode(text: String): CatalogSeedTemplates = catalogTemplateDocuments(text, pin)
     return try {
@@ -58,6 +50,27 @@ class LocalCatalogTemplates(private val storage: LocalDesignStorage) {
     }
   }
 }
+
+/** The catalog reference [catalog]'s template publication must be for. */
+internal fun catalogTemplatePin(catalog: CatalogCapabilityV1): CatalogReferenceV1 {
+  val benchmark = catalog.benchmark
+  // The current v1 capability has no digest field; the serving executor accepts `candidate`.
+  return CatalogReferenceV1(
+    benchmark.catalogSystemId,
+    benchmark.catalogRevision,
+    "candidate",
+    benchmark.nativeRuntimeId,
+  )
+}
+
+/** Whether [text] is a template publication for exactly [catalog]'s pin. */
+internal fun isCatalogTemplatePublication(text: String, catalog: CatalogCapabilityV1): Boolean =
+  try {
+    catalogTemplateDocuments(text, catalogTemplatePin(catalog))
+    true
+  } catch (_: Exception) {
+    false
+  }
 
 /**
  * [text], a `CatalogTemplateDocumentsV1` publication, as the seed templates of [pin]'s catalog. It

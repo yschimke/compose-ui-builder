@@ -81,6 +81,7 @@ import ee.schimke.composeai.uibuilder.local.LocalDesignStorageException
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalSyncResult
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
+import ee.schimke.composeai.uibuilder.local.isCatalogTemplatePublication
 import ee.schimke.composeai.uibuilder.local.localCheckoutRecord
 import ee.schimke.composeai.uibuilder.local.localCopyRecord
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -1571,7 +1572,12 @@ internal suspend fun fetchCatalogTemplates(catalog: CatalogCapabilityV1): String
   val pending = CompletableDeferred<String>()
   catalogTemplateTexts[key] = pending
   try {
-    pending.complete(fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(id)}/templates"))
+    val text = fetchText("/api/ui-builder/v1/catalogs/${encodeUriComponent(id)}/templates")
+    // Kept only when it is a publication for exactly this catalog revision. One for another (a
+    // catalog updated mid-load) is still handed back for the caller to refuse and fall back from,
+    // but a later caller asks again rather than being handed the same refusal until a reload.
+    if (!isCatalogTemplatePublication(text, catalog)) catalogTemplateTexts.remove(key)
+    pending.complete(text)
   } catch (failure: Throwable) {
     catalogTemplateTexts.remove(key)
     pending.completeExceptionally(failure)
