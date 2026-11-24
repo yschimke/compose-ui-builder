@@ -172,6 +172,52 @@ class KobentoCatalogTest {
   }
 
   @Test
+  fun `a series inside each item of a list param is declared and passed by name`() {
+    val design =
+      Json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        """{"schema": "compose-ui-builder-document/v1-candidate", "id": "grouped", "title": "Grouped",
+          "revision": 1, "catalogPin": {}, "stateVariables": {}, "environment": {},
+          "roots": ["screen"],
+          "nodes": {
+            "screen": {"id": "screen", "componentId": "kobento/document", "slots": {"content": ["g"]}},
+            "g": {"id": "g", "componentId": "kobento/grouped-bars", "properties": {"series":
+              {"type": "list", "values": [
+                {"type": "object", "fields": {"name": {"type": "string", "value": "A"},
+                  "values": {"type": "list", "values": [{"type": "float", "value": 3}, {"type": "float", "value": 5}]}}},
+                {"type": "object", "fields": {"name": {"type": "string", "value": "B"},
+                  "values": {"type": "list", "values": [{"type": "float", "value": 4}]}}}]}}}
+          }}""",
+      )
+    val options =
+      KobentoComponentJsonExporter.Options()
+        .withCatalog(
+          Json.parseToJsonElement(
+              """{"seriesParams": {"kobento/grouped-bars": ["series[].values"]}}""",
+            )
+            .jsonObject,
+        )
+    val compact =
+      Json.parseToJsonElement(
+          assertIs<KobentoComponentJsonExporter.Result.Emitted>(
+              KobentoComponentJsonExporter.export(design, options),
+            )
+            .source,
+        )
+        .toString()
+    assertTrue(
+      """"floatArrays":{"series_g_series_0_values":[3,5],"series_g_series_1_values":[4]}""" in
+        compact,
+      compact,
+    )
+    assertTrue(
+      """"series":[{"name":"A","values":"@series_g_series_0_values"},{"name":"B","values":"@series_g_series_1_values"}]""" in
+        compact,
+      compact,
+    )
+  }
+
+  @Test
   fun `a list of objects is written as Kobento's list of items`() {
     val design =
       Json.decodeFromString(

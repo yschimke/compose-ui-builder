@@ -57,8 +57,10 @@ A `float` param the definition reads as an array (`arrayLength`, `arrayGet`, `ar
 chart's `values`, Candlestick's `open`/`high`/`low`/`close`) is a **series**: `array`, listed in
 `statusSemantics.kobento.seriesParams`. Kobento reads a series from `resources.floatArrays` by
 name, never from a literal in an expression, so the exporter declares each list given to one there
-(`series_<node>_<param>`) and passes `"@series_<node>_<param>"`. A list item with fields
-(`ActivityRings.rings`) is written as a JSON object.
+(`series_<node>_<param>`) and passes `"@series_<node>_<param>"`. An entry `param[].field` names a
+series inside each item of a list param instead (`GroupedBars.series[].values`): each item's list is
+declared as `series_<node>_<param>_<index>_<field>` and the item passes it by name. A list item with
+fields (`ActivityRings.rings`) is written as a JSON object.
 
 A chart inserted empty draws nothing, so the catalog seeds the charts with sample data through the
 builtins' `insertContent` (kobento-catalog's `generator/starters.py`, its own round numbers rather

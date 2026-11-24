@@ -58,7 +58,9 @@ object KobentoComponentJsonExporter {
     /**
      * Per component id, the params Kobento reads as a series (a float array): a list written there
      * is declared in `resources.floatArrays` and passed by name, as Kobento's own designs pass one.
-     * The catalog publishes these as `statusSemantics.kobento.seriesParams`.
+     * An entry `param[].field` names a series inside each item of a list param instead, as
+     * `GroupedBars` takes `series: [{name, values: "@…"}]`. The catalog publishes these as
+     * `statusSemantics.kobento.seriesParams`.
      */
     val seriesParams: Map<String, Set<String>> = emptyMap(),
   ) {
@@ -365,9 +367,20 @@ object KobentoComponentJsonExporter {
               return@forEach
             }
             val lowered = value(value, "$path.properties.$property") ?: return@forEach
-            if (property in series && lowered is JsonArray) {
-              put(property, series(node.id, property, lowered, "$path.properties.$property"))
-            } else put(property, lowered)
+            val itemSeries =
+              series.mapNotNullTo(mutableSetOf()) { entry ->
+                entry.removePrefix("$property[].").takeIf { it != entry }
+              }
+            when {
+              property in series && lowered is JsonArray ->
+                put(property, series(node.id, property, lowered, "$path.properties.$property"))
+              itemSeries.isNotEmpty() && lowered is JsonArray ->
+                put(
+                  property,
+                  itemSeries(node.id, property, lowered, itemSeries, "$path.properties.$property"),
+                )
+              else -> put(property, lowered)
+            }
           }
           node.eventBindings.forEach { (event, actions) ->
             if (event != "click") {
@@ -402,6 +415,30 @@ object KobentoComponentJsonExporter {
       floatArrays[name] = values
       return JsonPrimitive("@$name")
     }
+
+    /**
+     * [items], a list param whose items each carry a series in [fields]: each such list is declared
+     * in `resources.floatArrays` like a [series] and the item passes it by name.
+     */
+    fun itemSeries(
+      nodeId: String,
+      property: String,
+      items: JsonArray,
+      fields: Set<String>,
+      path: String,
+    ): JsonArray =
+      JsonArray(
+        items.mapIndexed { index, item ->
+          val fieldsOf = item as? JsonObject ?: return@mapIndexed item
+          JsonObject(
+            fieldsOf.mapValues { (field, value) ->
+              if (field in fields && value is JsonArray)
+                series(nodeId, "${property}_${index}_$field", value, "$path[$index].$field")
+              else value
+            },
+          )
+        },
+      )
 
     /**
      * [lowered] carrying [node]'s [NativeNodeTags.tag] as a semantics label, which Kobento keeps on
