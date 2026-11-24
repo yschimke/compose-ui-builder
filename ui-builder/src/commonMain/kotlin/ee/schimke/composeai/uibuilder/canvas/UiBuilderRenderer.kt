@@ -283,9 +283,10 @@ internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { 
 
 /**
  * Whether a node this canvas cannot draw as itself fails the drawing instead of standing in for it
- * ([UiBuilderPlaceholderRefused]). False on the editing canvas and palette, where a stand-in is
- * right; a production export sets it unless its caller opted into placeholders, so a picture of
- * dashed boxes is never returned as the design.
+ * ([UiBuilderPlaceholderRefused]): every [NativeOnlyPlaceholder] (packs, Lovelace cards without a
+ * host preview, preserved views) and the unknown-component box. False on the editing canvas and
+ * palette, where a stand-in is right; a production export sets it unless its caller opted into
+ * placeholders, so a picture of dashed boxes is never returned as the design.
  */
 internal val LocalUiBuilderRefusePlaceholders = staticCompositionLocalOf { false }
 
@@ -2040,8 +2041,6 @@ private fun RenderNode(
       // A pack's component: declared by the catalog and drawn here as its name and place, since the
       // browser cannot link the classes that draw it. The caption names its source catalog.
       in nativeOnly -> {
-        if (LocalUiBuilderRefusePlaceholders.current)
-          throw UiBuilderPlaceholderRefused(node.id, node.componentId)
         ReportUndrawn(UiBuilderUndrawnNode.STAND_IN)
         NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
           node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
@@ -2050,6 +2049,8 @@ private fun RenderNode(
       // Checked against the component id, not the adapter id, so a component whose catalog names an
       // adapter this build lacks draws a placeholder rather than an error (contract item 17).
       else ->
+        // A strict export refuses here too: the unknown-component box below isn't a
+        // [NativeOnlyPlaceholder], which refuses the catalog's own on its way in.
         if (LocalUiBuilderRefusePlaceholders.current)
           throw UiBuilderPlaceholderRefused(node.id, node.componentId)
         else if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {

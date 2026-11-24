@@ -4,6 +4,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderPlaceholderRefused
 import ee.schimke.composeai.uibuilder.editor.undrawnStatusLabel
+import ee.schimke.composeai.uibuilder.export.LovelaceConfigExporter
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNode
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderUndrawnNodes
 import ee.schimke.composeai.uibuilder.renderer.sdk.undrawnGenerationKey
@@ -13,6 +14,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
 /**
  * The editing canvas says which nodes it did not draw as themselves, so a diagnostic box is never
@@ -57,6 +62,38 @@ class UndrawnNodesRenderTest {
       )
     runDesktopComposeUiTest(width = 600, height = 400) {
       setContent { ProductionUiBuilderSurface(drawable, refusePlaceholders = true) }
+      waitForIdle()
+    }
+  }
+
+  @Test
+  fun `a strict export render refuses a Lovelace card it has no host preview for`() {
+    val dashboard =
+      LovelaceConfigExporter.import(
+        Json.parseToJsonElement(
+            """{"views":[{"type":"sections","title":"Home","sections":[{"type":"grid",
+               "cards":[{"type":"tile","entity":"light.kitchen"}]}]}]}""",
+          )
+          .jsonObject,
+        "lovelace-strict",
+        buildJsonObject {
+          put("systemId", "lovelace")
+          put("catalogRevision", "candidate")
+          put("capabilityDigest", "candidate")
+          put("nativeRuntimeId", "candidate")
+        },
+      )
+    val refused =
+      assertFailsWith<UiBuilderPlaceholderRefused> {
+        runDesktopComposeUiTest(width = 600, height = 400) {
+          setContent { ProductionUiBuilderSurface(dashboard, refusePlaceholders = true) }
+          waitForIdle()
+        }
+      }
+    assertTrue(refused.componentId.startsWith("lovelace/card/"), refused.componentId)
+    // Opted in: drawn as its stand-in, as before.
+    runDesktopComposeUiTest(width = 600, height = 400) {
+      setContent { ProductionUiBuilderSurface(dashboard) }
       waitForIdle()
     }
   }

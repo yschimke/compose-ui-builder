@@ -702,6 +702,10 @@ internal fun NativeOnlyPlaceholder(
   caption: String? = null,
   content: @Composable ColumnScope.() -> Unit,
 ) {
+  // Every stand-in comes through here (a pack's component, a Lovelace card with no host preview, a
+  // preserved view), so a strict export refuses them all in one place.
+  if (LocalUiBuilderRefusePlaceholders.current)
+    throw UiBuilderPlaceholderRefused(node.id, node.componentId)
   val outline = MaterialTheme.colorScheme.outline
   Column(
     modifier
