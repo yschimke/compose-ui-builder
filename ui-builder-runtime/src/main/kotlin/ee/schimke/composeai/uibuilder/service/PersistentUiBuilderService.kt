@@ -653,7 +653,12 @@ public class PersistentUiBuilderService(
       catalogs.resolve(design.document.catalogPin)
         ?: return UnusableDesign(
           ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
-          "catalog unavailable for stored design $designId",
+          // The pin, because it is the one fact the page cannot get any other way: the open
+          // failed, so the editor never learned which catalog this design is for.
+          design.document.catalogPin.let { pin ->
+            "catalog unavailable for stored design $designId: it is pinned to " +
+              "${pin.systemId} ${pin.catalogRevision}, which this deployment does not serve"
+          },
           catalogFault = true,
         )
     // Judged on the probe: an undeclared property is a warning; a real defect (unknown component)

@@ -39,6 +39,11 @@ class UnusableStoredDesignTest {
     val error = assertIs<UiBuilderServiceResponse.Error>(open(reopened, "kept"))
     assertEquals(ServiceErrorCodeV1.CATALOG_UNAVAILABLE, error.error.code)
     assertTrue(error.error.message.contains("kept"), error.error.message)
+    // Names the catalog it is pinned to: the page has no other way to learn it from a failed open.
+    assertTrue(
+      error.error.message.contains("pinned to ${REFERENCE.systemId} ${REFERENCE.catalogRevision}"),
+      error.error.message,
+    )
 
     // Still listed. A design nobody can open is bad; one nobody can even see is worse.
     val listed =
