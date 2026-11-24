@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.157.0](https://github.com/yschimke/compose-ui-builder/compare/v3.156.0...v3.157.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* send one service call until the service has answered, so a refusal costs one request ([#1419](https://github.com/yschimke/compose-ui-builder/issues/1419)) ([6b073cd](https://github.com/yschimke/compose-ui-builder/commit/6b073cdc2e682631570400eaf9fe87caa03420c5))
+
 ## [3.156.0](https://github.com/yschimke/compose-ui-builder/compare/v3.155.0...v3.156.0) (2026-11-23)
 
 
