@@ -46,7 +46,6 @@ import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UploadedAssetSourceV1
-import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
 import java.io.Closeable
 import java.lang.invoke.MethodHandles
 import java.nio.file.Files
@@ -1285,6 +1284,13 @@ public data class UiBuilderRenderRequest(
    * packages none for the pin; passed under [PackagedUiBuilderRenderBundle.CATALOG_OVERRIDE_KEY].
    */
   val encodedCatalog: String? = null,
+  /**
+   * Draw a node the renderer can't draw as itself as a placeholder, instead of failing the render.
+   * Off by default: a picture of dashed boxes reads as the design. A host passes it to the bundle
+   * as [PackagedUiBuilderRenderBundle.PLACEHOLDERS_OVERRIDE_KEY] =
+   * [PackagedUiBuilderRenderBundle.PLACEHOLDERS_ALLOW].
+   */
+  val allowPlaceholders: Boolean = false,
 )
 
 /** Narrow pixel/vector port implemented by the server beside its render-host dependency. */
@@ -1322,10 +1328,8 @@ public class ProductionUiBuilderExportExecutor(
   override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 =
     when (request.format) {
       ExportFormatV1.COMPOSE -> compose.export(request)
-      ExportFormatV1.PNG ->
-        request.binaryArtifact(renderer.renderPng(request.drawnWithoutPlaceholders()))
-      ExportFormatV1.SVG ->
-        request.svgArtifact(renderer.renderSvg(request.drawnWithoutPlaceholders()))
+      ExportFormatV1.PNG -> request.binaryArtifact(renderer.renderPng(request.toRenderRequest()))
+      ExportFormatV1.SVG -> request.svgArtifact(renderer.renderSvg(request.toRenderRequest()))
       // Unreachable: [capabilities] leaves `bundle` false and the service refuses unadvertised
       // formats. Thrown rather than an `else`, so implementing bundles starts from a compile error
       // here.
@@ -1364,27 +1368,6 @@ public class ProductionUiBuilderExportExecutor(
 
   override fun close(): Unit = renderer.close()
 
-  /**
-   * The render request, refused when the picture would show placeholders instead of the design.
-   *
-   * This renderer draws through the canvas lane, and a component no canvas adapter claims (its
-   * catalog's `wasm.adapterStatus` is not `supported`: a native-only Remote Compose wrapper such as
-   * `ha-cards/status-chip`) draws there as a dashed, labelled box. Returned as `200 image/png`, a
-   * picture of boxes reads to an agent or a person as the design itself, when it is only its
-   * outline. So it fails loudly instead, naming the components, and the host either renders the
-   * design on its native lane or says it can't.
-   */
-  private fun RevisionPinnedUiBuilderExport.drawnWithoutPlaceholders(): UiBuilderRenderRequest {
-    val placeholders = placeholderComponents(document, catalog)
-    if (placeholders.isNotEmpty())
-      throw UnsupportedOperationException(
-        "${format.name} export would draw ${placeholders.joinToString()} as placeholders: this " +
-          "renderer has no canvas adapter for ${if (placeholders.size == 1) "it" else "them"}. " +
-          "Render the design on the catalog's native lane instead.",
-      )
-    return toRenderRequest()
-  }
-
   private fun RevisionPinnedUiBuilderExport.toRenderRequest(): UiBuilderRenderRequest =
     UiBuilderRenderRequest(
       designId = designId,
@@ -1400,6 +1383,7 @@ public class ProductionUiBuilderExportExecutor(
           (binding.source as? UploadedAssetSourceV1)?.let { assets?.read(it.storageKey) }
         },
       encodedCatalog = json.encodeToString(CatalogCapabilityV1.serializer(), catalog),
+      allowPlaceholders = allowPlaceholders,
     )
 
   private fun RevisionPinnedUiBuilderExport.binaryArtifact(bytes: ByteArray): ExportArtifactV1 =
@@ -1477,6 +1461,16 @@ public object PackagedUiBuilderRenderBundle {
    * draw a catalog it predates (otherwise every component renders as "Unsupported component").
    */
   public const val CATALOG_OVERRIDE_KEY: String = "uiBuilder.catalog.v1"
+
+  /**
+   * The named string override that opts a render into placeholders
+   * ([UiBuilderRenderRequest.allowPlaceholders]). Only [PLACEHOLDERS_ALLOW] draws a node the
+   * renderer can't draw as a stand-in; without it the render fails, naming the component.
+   */
+  public const val PLACEHOLDERS_OVERRIDE_KEY: String = "uiBuilder.placeholders.v1"
+
+  /** [PLACEHOLDERS_OVERRIDE_KEY]'s value that allows placeholders. */
+  public const val PLACEHOLDERS_ALLOW: String = "allow"
 
   /**
    * The system property naming the directory of Google Fonts files (`<slug>-<weight>.ttf`) the
@@ -1874,24 +1868,3 @@ private fun CatalogCapabilityV1.withCompiledDocumentPreview(): CatalogCapability
             .build()
       }
       .build()
-
-/**
- * The components of [document] that the canvas lane draws as placeholders: those [catalog] declares
- * with a canvas adapter status other than `supported`, sorted. A component the catalog doesn't
- * declare is left to the export's own checks.
- */
-internal fun placeholderComponents(
-  document: DesignDocumentV1,
-  catalog: CatalogCapabilityV1,
-): List<String> {
-  val declared = catalog.components.associateBy { it.componentId }
-  return document.nodes.values
-    .map { it.componentId }
-    .filter {
-      declared[it]?.wasm?.adapterStatus.let { status ->
-        status != null && status != WasmAdapterStatusV1.SUPPORTED
-      }
-    }
-    .distinct()
-    .sorted()
-}

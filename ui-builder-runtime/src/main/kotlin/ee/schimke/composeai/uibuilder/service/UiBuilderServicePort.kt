@@ -111,6 +111,13 @@ public sealed interface UiBuilderServiceRequest {
     val designId: String,
     val revision: Long?,
     val format: ExportFormatV1,
+    /**
+     * For a picture (PNG, SVG): draw a component the renderer can't draw as itself as a
+     * placeholder, instead of failing the export. Off by default, so a picture of the design's
+     * outline is never returned as the design; a host opts in where an outline is what it wants (a
+     * listing thumbnail).
+     */
+    val allowPlaceholders: Boolean = false,
   ) : UiBuilderServiceRequest
 
   /**
@@ -120,8 +127,12 @@ public sealed interface UiBuilderServiceRequest {
    * accepted; catalog pins, topology and quotas are checked just as for saved designs. The existing
    * DesignDocumentV1 and ExportArtifactV1 shapes travel through the host's document-export route.
    */
-  public data class ExportDocument(val document: DesignDocumentV1, val format: ExportFormatV1) :
-    UiBuilderServiceRequest
+  public data class ExportDocument(
+    val document: DesignDocumentV1,
+    val format: ExportFormatV1,
+    /** See [ExportDesign.allowPlaceholders]. */
+    val allowPlaceholders: Boolean = false,
+  ) : UiBuilderServiceRequest
 
   /**
    * Change a design's title only. Outside the operation log: the title is metadata no node or

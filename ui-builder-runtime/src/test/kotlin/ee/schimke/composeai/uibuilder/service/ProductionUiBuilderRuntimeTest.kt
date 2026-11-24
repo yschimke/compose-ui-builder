@@ -714,19 +714,19 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
-  fun `a picture that would draw placeholders is refused instead of returned as the design`() {
-    var rendered = 0
+  fun `a picture refuses placeholders unless its request opts into them`() {
+    val requests = mutableListOf<UiBuilderRenderRequest>()
     val renderer =
       object : UiBuilderRenderPort {
         override val supportsSvg = true
 
         override fun renderPng(request: UiBuilderRenderRequest): ByteArray {
-          rendered++
+          requests += request
           return "png".toByteArray()
         }
 
         override fun renderSvg(request: UiBuilderRenderRequest): ByteArray {
-          rendered++
+          requests += request
           return "<svg/>".toByteArray()
         }
 
@@ -735,43 +735,19 @@ class ProductionUiBuilderRuntimeTest {
     ProductionUiBuilderExportExecutor(renderer, EchoingComposeExportExecutor()).use { exporter ->
       val catalog =
         fixtureCatalogExecutor(exportCapabilities = exporter.capabilities).listCatalogs().single()
-      // The fixture's text drawn by no canvas adapter, as a native-only component is.
-      val nativeOnly =
-        catalog
-          .newBuilder()
-          .also { builder ->
-            builder.components =
-              catalog.components.map { component ->
-                if (component.componentId != "m3/text") component
-                else
-                  component
-                    .newBuilder()
-                    .also {
-                      it.wasm =
-                        component.wasm
-                          .newBuilder()
-                          .also { wasm -> wasm.adapterStatus = WasmAdapterStatusV1.UNSUPPORTED }
-                          .build()
-                    }
-                    .build()
-              }
-          }
-          .build()
-      assertEquals(listOf("m3/text"), placeholderComponents(document(), nativeOnly))
-      for (format in listOf(ExportFormatV1.PNG, ExportFormatV1.SVG)) {
-        val refused =
-          assertFailsWith<UnsupportedOperationException> {
-            exporter.export(pinned(document(), nativeOnly).copy(format = format))
-          }
-        assertTrue(refused.message!!.contains("m3/text"), refused.message)
-        assertTrue(refused.message!!.contains("placeholders"), refused.message)
-      }
-      assertEquals(0, rendered)
-      // Every component drawn: the picture is rendered as before.
-      assertEquals(emptyList(), placeholderComponents(document(), catalog))
-      exporter.export(pinned(document(), catalog).copy(format = ExportFormatV1.PNG))
-      assertEquals(1, rendered)
+      val strict = pinned(document(), catalog)
+      // Whatever the catalog says of its components: the renderer decides what it can draw.
+      exporter.export(strict.copy(format = ExportFormatV1.PNG))
+      exporter.export(strict.copy(format = ExportFormatV1.SVG))
+      exporter.export(strict.copy(format = ExportFormatV1.PNG, allowPlaceholders = true))
+      exporter.export(strict.copy(format = ExportFormatV1.SVG, allowPlaceholders = true))
+      assertEquals(listOf(false, false, true, true), requests.map { it.allowPlaceholders })
     }
+    assertEquals(
+      "uiBuilder.placeholders.v1",
+      PackagedUiBuilderRenderBundle.PLACEHOLDERS_OVERRIDE_KEY,
+    )
+    assertEquals("allow", PackagedUiBuilderRenderBundle.PLACEHOLDERS_ALLOW)
   }
 
   private fun pinned(

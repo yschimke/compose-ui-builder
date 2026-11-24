@@ -282,6 +282,26 @@ internal val LocalUiBuilderCanvasAdapterMappings =
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
+ * Whether a node this canvas cannot draw as itself fails the drawing instead of standing in for it
+ * ([UiBuilderPlaceholderRefused]): every [NativeOnlyPlaceholder] (packs, Lovelace cards without a
+ * host preview, preserved views) and the unknown-component box. False on the editing canvas and
+ * palette, where a stand-in is right; a production export sets it unless its caller opted into
+ * placeholders, so a picture of dashed boxes is never returned as the design.
+ */
+internal val LocalUiBuilderRefusePlaceholders = staticCompositionLocalOf { false }
+
+/**
+ * A drawing that would have shown [componentId] (node [nodeId]) as a placeholder rather than as
+ * itself, refused because [LocalUiBuilderRefusePlaceholders] is set. Its message names the
+ * component and says how to get the picture anyway.
+ */
+internal class UiBuilderPlaceholderRefused(val nodeId: String, val componentId: String) :
+  IllegalStateException(
+    "$componentId (node $nodeId) has no canvas drawing here and would render as a placeholder; " +
+      "render the design on its catalog's native lane, or opt into placeholders",
+  )
+
+/**
  * Told when a node draws a stand-in for content the author has not given it yet (an empty Remote
  * Compose document, Lottie or picture). Null on the canvas, where the stand-in is right; set by the
  * component list so tiles don't read as errors.
@@ -2029,7 +2049,11 @@ private fun RenderNode(
       // Checked against the component id, not the adapter id, so a component whose catalog names an
       // adapter this build lacks draws a placeholder rather than an error (contract item 17).
       else ->
-        if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
+        // A strict export refuses here too: the unknown-component box below isn't a
+        // [NativeOnlyPlaceholder], which refuses the catalog's own on its way in.
+        if (LocalUiBuilderRefusePlaceholders.current)
+          throw UiBuilderPlaceholderRefused(node.id, node.componentId)
+        else if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
           // On the palette and exportable, but this canvas has no case for it (no branch, or an
           // adapter this build doesn't ship).
           ReportUndrawn(UiBuilderUndrawnNode.STAND_IN)
