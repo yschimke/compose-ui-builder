@@ -101,4 +101,25 @@ class ServiceRefusalsTest {
       .awaitAll()
     assertEquals(4, most)
   }
+
+  @Test
+  fun `calls queued behind the first run side by side once it succeeds`() = runBlocking {
+    val refusals = ServiceRefusals()
+    var inFlight = 0
+    var most = 0
+    (1..5)
+      .map {
+        async {
+          refusals.call {
+            inFlight++
+            most = maxOf(most, inFlight)
+            delay(10)
+            inFlight--
+          }
+        }
+      }
+      .awaitAll()
+    // The first ran alone; the four queued behind it then ran together.
+    assertEquals(4, most)
+  }
 }

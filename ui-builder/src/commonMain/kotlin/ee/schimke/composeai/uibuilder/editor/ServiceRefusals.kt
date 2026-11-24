@@ -27,12 +27,19 @@ internal class ServiceRefusals {
    */
   suspend fun <T> call(block: suspend () -> T): T {
     refusal?.let { throw IllegalStateException(it) }
-    if (answered) return attempt(block)
-    return untilAnswered.withLock {
-      refusal?.let { throw IllegalStateException(it) }
-      attempt(block).also { answered = true }
+    if (!answered) {
+      // A call that queued here behind the first one runs side by side once that one succeeded,
+      // rather than holding the lock through its own request.
+      val first = untilAnswered.withLock {
+        refusal?.let { throw IllegalStateException(it) }
+        if (answered) null else Answer(attempt(block)).also { answered = true }
+      }
+      if (first != null) return first.value
     }
+    return attempt(block)
   }
+
+  private class Answer<T>(val value: T)
 
   /** Whether the service has answered a call with success yet. */
   private var answered = false
