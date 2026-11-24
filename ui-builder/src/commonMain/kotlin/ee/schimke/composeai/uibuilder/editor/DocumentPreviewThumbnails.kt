@@ -178,5 +178,20 @@ internal fun UiBuilderDocument.withServiceScale(): UiBuilderDocument {
   return if (missing.isEmpty()) this else copy(environment = JsonObject(environment + missing))
 }
 
+/**
+ * [this] pinned as [design] is, when both name the same catalog system.
+ *
+ * A palette thumbnail pins the catalog from its local benchmark, with the catalog revision standing
+ * in for the capability digest, which is what the browser's own runtimes compare against. The
+ * service only accepts the pins it publishes (whose digest is still its placeholder), so a
+ * thumbnail sent there as-is was refused `409 catalog pin is unavailable`, signed in or not. The
+ * open design names the same catalog under a pin the service accepted when it created or served it.
+ */
+internal fun UiBuilderDocument.withCatalogPinOf(design: UiBuilderDocument?): UiBuilderDocument {
+  val pin = design?.catalogPin ?: return this
+  if (pin["systemId"] != catalogPin["systemId"] || pin == catalogPin) return this
+  return copy(catalogPin = pin)
+}
+
 private val SERVICE_SCALE =
   mapOf("density" to JsonPrimitive(1.0), "fontScale" to JsonPrimitive(1.0))
