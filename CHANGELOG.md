@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.159.0](https://github.com/yschimke/compose-ui-builder/compare/v3.158.0...v3.159.0) (2026-11-24)
+
+
+### Features
+
+* pass a Kobento series nested in a list param's items by name ([#1430](https://github.com/yschimke/compose-ui-builder/issues/1430)) ([6f7b069](https://github.com/yschimke/compose-ui-builder/commit/6f7b069ecf24c796331b54521b7e6351d5d6d54d))
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.103.1 ([#1428](https://github.com/yschimke/compose-ui-builder/issues/1428)) ([56129a4](https://github.com/yschimke/compose-ui-builder/commit/56129a4256bc60a2a2a25c542c7dd44930a9a905))
+* refuse PNG and SVG exports that would draw placeholders ([#1429](https://github.com/yschimke/compose-ui-builder/issues/1429)) ([cd1eef3](https://github.com/yschimke/compose-ui-builder/commit/cd1eef3a0617e622d36d9aec721ff29f13605c34))
+* show why a catalog re-pin was refused, and which catalog an unopenable design is pinned to ([#1425](https://github.com/yschimke/compose-ui-builder/issues/1425)) ([3c64b53](https://github.com/yschimke/compose-ui-builder/commit/3c64b536861d3bfe9545abc56e3279f04562da4b))
+
 ## [3.158.0](https://github.com/yschimke/compose-ui-builder/compare/v3.157.0...v3.158.0) (2026-11-24)
 
 
