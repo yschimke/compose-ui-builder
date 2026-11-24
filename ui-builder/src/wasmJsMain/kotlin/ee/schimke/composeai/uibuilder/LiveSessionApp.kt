@@ -88,6 +88,7 @@ import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.resolveNewDesignLink
 import ee.schimke.composeai.uibuilder.editor.revealedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.typefacesFor
+import ee.schimke.composeai.uibuilder.editor.withCatalogPinOf
 import ee.schimke.composeai.uibuilder.editor.withServiceScale
 import ee.schimke.composeai.uibuilder.export.BuiltInCatalogDocumentFormats
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
@@ -1909,7 +1910,12 @@ private fun LiveSessionApp(
                     serviceRefusals.call {
                       fetchBase64(
                         "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.rc",
-                        Json.encodeToString(expected.withServiceScale().toDesignDocumentV1()),
+                        Json.encodeToString(
+                          expected
+                            .withServiceScale()
+                            .withCatalogPinOf(document)
+                            .toDesignDocumentV1(),
+                        ),
                       )
                     },
                   saved = false,

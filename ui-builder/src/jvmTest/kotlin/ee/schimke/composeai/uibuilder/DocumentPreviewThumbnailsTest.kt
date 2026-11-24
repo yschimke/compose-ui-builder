@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.editor.DocumentPreviewThumbnails
 import ee.schimke.composeai.uibuilder.editor.UiBuilderDocumentPreview
+import ee.schimke.composeai.uibuilder.editor.withCatalogPinOf
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A document-format catalog's palette is pictured from the host's exported documents: one request
@@ -104,5 +106,25 @@ class DocumentPreviewThumbnailsTest {
       assertEquals(1, asked)
       assertIs<DocumentPreviewThumbnails.Result.Unavailable>(thumbnails.result(gauge))
     }
+  }
+
+  private fun pin(systemId: String, digest: String) =
+    JsonObject(
+      mapOf(
+        "systemId" to JsonPrimitive(systemId),
+        "catalogRevision" to JsonPrimitive("sha256:abc"),
+        "capabilityDigest" to JsonPrimitive(digest),
+        "nativeRuntimeId" to JsonPrimitive("candidate"),
+      ),
+    )
+
+  @Test
+  fun `a thumbnail sent to the service takes the open design's pin for the same catalog`() {
+    val tile = thumbnail("vendor/gauge").copy(catalogPin = pin("vendor", "sha256:abc"))
+    val design = thumbnail("vendor/screen").copy(catalogPin = pin("vendor", "candidate"))
+    assertEquals(pin("vendor", "candidate"), tile.withCatalogPinOf(design).catalogPin)
+    assertEquals(tile, tile.withCatalogPinOf(null))
+    val elsewhere = design.copy(catalogPin = pin("other", "candidate"))
+    assertEquals(tile, tile.withCatalogPinOf(elsewhere))
   }
 }

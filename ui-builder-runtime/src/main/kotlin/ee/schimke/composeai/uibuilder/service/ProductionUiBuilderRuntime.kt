@@ -1714,9 +1714,21 @@ private fun JsonObject.objectOrEmpty(name: String): JsonObject =
 private fun JsonObject.arrayOrEmpty(name: String): JsonArray =
   this[name] as? JsonArray ?: JsonArray(emptyList())
 
-private fun JsonElement.unwrapTypedValue(): JsonElement {
+/**
+ * The JSON a typed property literal stands for: a scalar's `value`, a list's `values` and an
+ * object's `fields`. Lists and objects carry no `value`, so without the last two they reached
+ * [accepts] still wrapped and every `array` or `object` property was refused as the wrong type.
+ */
+internal fun JsonElement.unwrapTypedValue(): JsonElement {
   val objectValue = this as? JsonObject ?: return this
-  return objectValue["value"] ?: objectValue
+  objectValue["value"]?.let {
+    return it
+  }
+  return when ((objectValue["type"] as? JsonPrimitive)?.contentOrNull) {
+    "list" -> objectValue["values"] as? JsonArray
+    "object" -> objectValue["fields"] as? JsonObject
+    else -> null
+  } ?: objectValue
 }
 
 private fun JsonElement.accepts(value: JsonElement): Boolean {
