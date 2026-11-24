@@ -70,12 +70,13 @@ load from a sandbox, and the Gradle/JDK gotchas that cost hours are written down
 
 ## The seams
 
-`compose-preview-server` consumes exactly four modules: `:ui-builder-runtime`,
-`:ui-builder-export`, `:ui-builder-web` and `:ui-builder-render-bundle`. Nothing here may depend on
-that repository, in any direction, for any reason.
+`compose-preview-server` consumes exactly five modules: `:ui-builder-runtime`,
+`:ui-builder-export`, `:ui-builder-web`, `:ui-builder-render-bundle` and
+`:ui-builder-export-fonts`. Nothing here may depend on that repository, in any direction, for any
+reason.
 
-They are released to Maven Central (the web archive as a GitHub release asset), and the server pins
-a release through the BOM. Nothing here builds or tests the server: a change that breaks it surfaces
+They are released to Maven Central (`:ui-builder-web` and `:ui-builder-export-fonts` as GitHub
+release assets), and the server pins a release through the BOM. Nothing here builds or tests the server: a change that breaks it surfaces
 on the server's next `composeai-ui-builder` bump, which is where the fix lands anyway. A
 `server-against-checkout` job here used to run the server's tests against this checkout. It was
 removed because nearly every red it raised was a server test restating this repository's behaviour

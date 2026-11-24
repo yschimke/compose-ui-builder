@@ -10,9 +10,9 @@
 > happen.
 >
 > What did **not** change, and is why this document travelled with the code: the membership call in
-> *The two projects*, the seam table in rule 2 — still exactly the four modules the server
-> consumes — and *The test for a seam*. Those decide what a consumer may reach for, and they now
-> decide what this repository publishes.
+> *The two projects*, the seam table in rule 2 — the five modules the server consumes — and *The
+> test for a seam*. Those decide what a consumer may reach for, and they now decide what this
+> repository publishes.
 >
 > The cost estimate in *The decision* also stands, and is now being paid rather than predicted:
 > every change spanning the editor and the routes that serve it is two pull requests. Read it as
@@ -23,7 +23,7 @@
 > rejects older API pins and archives without a readable manifest.
 
 
-**Status: normative.** The repository boundary now enforces rule 1 structurally. The four allowed
+**Status: normative.** The repository boundary now enforces rule 1 structurally. The five allowed
 consumer seams in rule 2 are documented and release-checked here, and are also named in
 [`AGENTS.md`](../../AGENTS.md).
 
@@ -52,7 +52,7 @@ both were decisions nothing was checking.
 
 **The UI builder** — the design surface and everything that serves one design:
 
-`:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-host-jvm` · `:ui-builder-export` · `:ui-builder-export-fixtures` ·
+`:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-host-jvm` · `:ui-builder-export` · `:ui-builder-export-fixtures` · `:ui-builder-export-fonts` ·
 `:ui-builder-generated-jetcaster` ·
 `:ui-builder-reference-jetcaster` · `:ui-builder-render-bundle` · `:ui-builder-renderer` ·
 `:ui-builder-renderer-sdk` · `:ui-builder-runtime` · `:ui-builder-web`
@@ -74,7 +74,7 @@ server-side", would have put the boundary in the middle of the builder's own sta
    reaches back into its host is not a second project.
 
 2. **The server names only the seams.** `:server` and its siblings may depend on the UI-builder
-   project through exactly four modules:
+   project through exactly five modules:
 
    | Seam | What crosses |
    | --- | --- |
@@ -82,6 +82,7 @@ server-side", would have put the boundary in the middle of the builder's own sta
    | `:ui-builder-export` | the design → screen-model projection |
    | `:ui-builder-web` | the editor, as a Wasm distribution archive |
    | `:ui-builder-render-bundle` | the packaged preview a design renders through |
+   | `:ui-builder-export-fonts` | the variable fonts used by export, as a GitHub release asset |
 
    The test for a seam is not "is it convenient": it is a deliberately named contract or packaged
    distribution edge that the boundary check can keep narrow. This repository stopped publishing
@@ -138,7 +139,7 @@ artifacts, not a list of conveniences or Maven coordinates.
 `ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm`. It depends on the export projection
 and the pinned Kotlin compiler for structural declaration extraction. Gradle APIs and compiler
 libraries do not enter the JVM/Wasm export seam or the application compile classpath. This is an
-explicit project-build consumer surface; it does not change the four server seams.
+explicit project-build consumer surface; it does not change the five server seams.
 `:ui-builder-production-consumer` is the in-repository JVM Compose consumer of this build tool.
 Ordinary editor/service export stays single-file and does not invoke the build generator.
 
