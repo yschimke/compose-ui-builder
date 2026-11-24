@@ -5,6 +5,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
 class ServiceRefusalsTest {
@@ -54,5 +57,69 @@ class ServiceRefusalsTest {
       }
     }
     assertEquals("HTTP 403: UI-builder export access required", refusals.refusal)
+  }
+
+  @Test
+  fun `calls sent together before the first answer cost one refused request`() = runBlocking {
+    val refusals = ServiceRefusals()
+    var calls = 0
+    val answers =
+      (1..6)
+        .map {
+          async {
+            runCatching {
+              refusals.call<Unit> {
+                calls++
+                delay(10)
+                throw IllegalStateException("Error: HTTP 401: authentication is required")
+              }
+            }
+          }
+        }
+        .awaitAll()
+    assertEquals(1, calls)
+    assertEquals(6, answers.count { it.isFailure })
+  }
+
+  @Test
+  fun `after the first success calls run side by side`() = runBlocking {
+    val refusals = ServiceRefusals()
+    refusals.call { "first" }
+    var inFlight = 0
+    var most = 0
+    (1..4)
+      .map {
+        async {
+          refusals.call {
+            inFlight++
+            most = maxOf(most, inFlight)
+            delay(10)
+            inFlight--
+          }
+        }
+      }
+      .awaitAll()
+    assertEquals(4, most)
+  }
+
+  @Test
+  fun `calls queued behind the first run side by side once it succeeds`() = runBlocking {
+    val refusals = ServiceRefusals()
+    var inFlight = 0
+    var most = 0
+    (1..5)
+      .map {
+        async {
+          refusals.call {
+            inFlight++
+            most = maxOf(most, inFlight)
+            delay(10)
+            inFlight--
+          }
+        }
+      }
+      .awaitAll()
+    // The first ran alone; the four queued behind it then ran together.
+    assertEquals(4, most)
   }
 }
