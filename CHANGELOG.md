@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.158.0](https://github.com/yschimke/compose-ui-builder/compare/v3.157.0...v3.158.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* let the service compile a palette thumbnail's list and object properties ([#1421](https://github.com/yschimke/compose-ui-builder/issues/1421)) ([977e4b9](https://github.com/yschimke/compose-ui-builder/commit/977e4b9890e1107db1481bfa7ee7bff9f6199793))
+
 ## [3.157.0](https://github.com/yschimke/compose-ui-builder/compare/v3.156.0...v3.157.0) (2026-11-24)
 
 
