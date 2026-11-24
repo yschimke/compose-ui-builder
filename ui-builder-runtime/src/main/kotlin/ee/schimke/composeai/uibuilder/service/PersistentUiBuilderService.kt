@@ -100,6 +100,8 @@ public data class RevisionPinnedUiBuilderExport(
   val document: DesignDocumentV1,
   val catalog: CatalogCapabilityV1,
   val format: ExportFormatV1,
+  /** The request's [UiBuilderServiceRequest.ExportDesign.allowPlaceholders]. */
+  val allowPlaceholders: Boolean = false,
 )
 
 /** Produces a real immutable artifact for an already authorized, revision-pinned document. */
@@ -3020,6 +3022,7 @@ public class PersistentUiBuilderService(
           document = state.document,
           catalog = catalog,
           format = request.format,
+          allowPlaceholders = request.allowPlaceholders,
         )
       pinnedSequence = state.sequence
     }
@@ -3176,6 +3179,7 @@ public class PersistentUiBuilderService(
         document = exported,
         catalog = catalog,
         format = request.format,
+        allowPlaceholders = request.allowPlaceholders,
       ),
     )
   }

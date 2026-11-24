@@ -85,6 +85,32 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a supplied document's export carries whether it opts into placeholders`() {
+    val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
+    val service = service(exportRequests = requests)
+    val source = document()
+    for (allow in listOf(false, true)) {
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDocument(
+            source,
+            ExportFormatV1.COMPOSE,
+            allowPlaceholders = allow,
+          ),
+        ),
+      )
+    }
+    assertEquals(listOf(false, true), requests.map { it.allowPlaceholders })
+    // Off unless asked: a request that says nothing refuses placeholders.
+    assertEquals(
+      false,
+      UiBuilderServiceRequest.ExportDesign("design", null, ExportFormatV1.PNG).allowPlaceholders,
+    )
+  }
+
+  @Test
   fun `supplied Compose source retains identity and revision without creating or overwriting a design`() {
     val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
     val service = service(exportRequests = requests)

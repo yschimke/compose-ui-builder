@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderRefusePlaceholders
 import ee.schimke.composeai.uibuilder.canvas.LocalWffCanvasExport
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
@@ -32,9 +33,11 @@ import kotlinx.serialization.json.jsonPrimitive
 fun ProductionUiBuilderPreview() {
   val source = previewOverrideString(PRODUCTION_DOCUMENT_OVERRIDE, DEFAULT_DOCUMENT_JSON)
   val servedCatalog = previewOverrideString(PRODUCTION_CATALOG_OVERRIDE, "")
+  val placeholders = previewOverrideString(PRODUCTION_PLACEHOLDERS_OVERRIDE, "")
   ProductionUiBuilderSurface(
     decodeProductionRendererDocument(source),
     servedCatalog = servedCatalog,
+    refusePlaceholders = placeholders != PRODUCTION_PLACEHOLDERS_ALLOW,
   )
 }
 
@@ -48,9 +51,16 @@ internal fun ProductionUiBuilderSurface(
   fonts: Map<String, androidx.compose.ui.text.font.FontFamily> = ProductionFontFamilies.production,
   /** See [ProvideProductionCatalog]. */
   servedCatalog: String = "",
+  /**
+   * Fail the render when a node would draw as a placeholder ([UiBuilderPlaceholderRefused]), rather
+   * than return a picture of its outline. The daemon entrypoint sets it unless the host passed
+   * [PRODUCTION_PLACEHOLDERS_ALLOW]; off for previews and tests drawing their own surface.
+   */
+  refusePlaceholders: Boolean = false,
 ) {
   ProvideProductionCatalog(document, servedCatalog) {
     CompositionLocalProvider(
+      LocalUiBuilderRefusePlaceholders provides refusePlaceholders,
       LocalUiBuilderFontFamilies provides fonts,
       LocalUiBuilderFontVariants provides (fonts as? UiBuilderFontVariants),
       // The daemon's recorder writes this frame's SVG; it keeps a canvas rotation, not a layer's.
@@ -156,6 +166,16 @@ const val PRODUCTION_DOCUMENT_OVERRIDE: String = "uiBuilder.document.v1"
  * `PackagedUiBuilderRenderBundle.CATALOG_OVERRIDE_KEY`. See [productionCatalogFor].
  */
 const val PRODUCTION_CATALOG_OVERRIDE: String = "uiBuilder.catalog.v1"
+
+/**
+ * Whether the host opted into placeholders: `ui-builder-runtime`'s
+ * `PackagedUiBuilderRenderBundle.PLACEHOLDERS_OVERRIDE_KEY`. Only [PRODUCTION_PLACEHOLDERS_ALLOW]
+ * draws a node the canvas can't draw as a stand-in; unset or anything else refuses the render.
+ */
+const val PRODUCTION_PLACEHOLDERS_OVERRIDE: String = "uiBuilder.placeholders.v1"
+
+/** [PRODUCTION_PLACEHOLDERS_OVERRIDE]'s value that allows placeholders. */
+const val PRODUCTION_PLACEHOLDERS_ALLOW: String = "allow"
 
 private val productionPreviewJson = Json {
   ignoreUnknownKeys = false
