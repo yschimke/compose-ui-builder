@@ -59,7 +59,6 @@ wearcmp-port = "1.7.1-cmp02"
 # two ever disagree rather than leaving it to a `NoSuchMethodError` mid-render.
 androidx-window = "1.5.1"
 material-icons-extended = "1.7.3"
-graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
 # One ref for every compose-ai-tools coordinate, and for the Gradle plugin id it also drives.
 # 1.80.0 is the first release carrying `render-matrix`, which `:mcp` needs, and the daemon-core /
@@ -283,18 +282,6 @@ kotlinx-serialization = "1.13.0"
 # runtime to load. docs/design/UI_BUILDER_HOST_LOGIC.md, "On the server".
 quickjs4j = "0.1.1"
 ktor = "3.6.1"
-# The Model Context Protocol Kotlin SDK, behind `:mcp`. Same version compose-ai-tools' `:mcp` was
-# on when the module moved here (compose-ai-tools#5176) — a move is not the moment to also change
-# the protocol implementation.
-mcp-kotlin-sdk = "0.16.0"
-# JUnit 4 + Truth, used only by `:mcp`'s tests, which came with the module. Converting ~1.5k lines
-# of assertions to `kotlin.test` is a separate change from moving them.
-junit = "4.13.2"
-truth = "1.4.5"
-okhttp = "5.5.1"
-okio = "3.18.2"
-classgraph = "5.0.2"
-jmdns = "3.6.5"
 json-schema-validator = "3.0.9"
 # The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
 # wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
@@ -318,26 +305,6 @@ materialkolor = "5.0.1"
 flexpress = "0.4.0"
 
 [libraries]
-composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping" }
-# The render host, the bundle daemon and the git-backed preview history. Was this repository's own
-# `:render-host` module, published as `compose-preview-render-host`, until yschimke/compose-preview-server#180
-# moved it to the repository that owns everything it depends on. It has no web server and never did;
-# it lived here only because it was written inside the `serve` package and came along when the server
-# was extracted. Same version ref as the rest of compose-ai-tools, because it now ships on that line.
-composeai-render-host = { module = "ee.schimke.composeai:render-host" }
-# The Remote Compose JSON codec: authoring JSON -> `.rc` bytes, and `.rc` bytes -> the
-# operation-level document JSON the viewer's `GET /render/<id>.rc.json` lane serves. Layer 1 by
-# `REPOSITORY_LAYERS.md`'s test (behaviour, opens no socket), consumed here as a published
-# coordinate like `render-matrix` — this server never inflates a document any other way, so there is
-# exactly one `remote-core` on the classpath and no split-family skew for `RemoteComposePairing` to
-# report. Runs on a plain JVM: `remote-core` and `remote-creation-core` are `java-library`
-# publications, so nothing Android reaches this server through them.
-composeai-remotecompose-json = { module = "ee.schimke.composeai:remotecompose-json" }
-# The wire contract this server speaks to a `compose-preview build-host --stdio` process, so it can
-# ask for local Gradle work without linking the Gradle Tooling API. Shape and framing only — that is
-# what lets `checkServeModuleBoundary` keep holding while the server gains the capability
-# yschimke/compose-preview-server#9 asked for.
-composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-protocol" }
 # The four upstream BOMs. THE only `ee.schimke.composeai` entries in this file that carry a
 # version: every coordinate below deliberately carries none of its own.
 #
@@ -362,37 +329,11 @@ composeai-daemon-bom = { module = "ee.schimke.composeai:compose-preview-daemon-b
 watchface-tools-bom = { module = "ee.schimke.watchface:watchface-tools-bom", version.ref = "watchface-tools" }
 wff-core = { module = "ee.schimke.watchface:wff-core" }
 composeai-rc-players-bom = { module = "ee.schimke.composeai:rc-players-bom", version.ref = "rc-players" }
-composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api" }
-composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery" }
 composeai-preview-annotations = { module = "ee.schimke.composeai:preview-annotations" }
 # `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
 # browser editor reach the same `ScreenGenerator` the server exports with.
 composeai-screen-model = { module = "ee.schimke.composeai:screen-model" }
-composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop" }
-composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format" }
-composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates" }
-composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core" }
-composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client" }
-composeai-render-session-api = { module = "ee.schimke.composeai:render-session-api" }
-composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess" }
-# Render-matrix axis expansion and contact-sheet composition, shared by the CLI's `render-matrix`
-# command and `:mcp`'s `render_matrix` tool. Lifted out of compose-ai-tools' `:mcp` before the
-# module moved here, precisely so the offline CLI command did not have to follow it (#5188 there).
-composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix" }
-composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core" }
-composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core" }
-# Slot marker/host API shared by JVM and Wasm catalogs. The daemon repository owns and publishes
-# both variants; this server consumes the release instead of compiling a second copy.
-composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime" }
-
-composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol" }
-composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol" }
-composeai-common-io = { module = "ee.schimke.composeai:common-io" }
-composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core" }
-composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core" }
-composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core" }
 composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime" }
-composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol" }
 composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose" }
 composeai-rc-player-edit = { module = "ee.schimke.composeai:rc-player-edit" }
@@ -407,22 +348,11 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
-ktor-server-compression = { module = "io.ktor:ktor-server-compression", version.ref = "ktor" }
-ktor-server-auto-head-response = { module = "io.ktor:ktor-server-auto-head-response", version.ref = "ktor" }
-ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
-mcp-kotlin-sdk-server = { module = "io.modelcontextprotocol:kotlin-sdk-server", version.ref = "mcp-kotlin-sdk" }
-junit = { module = "junit:junit", version.ref = "junit" }
-truth = { module = "com.google.truth:truth", version.ref = "truth" }
-okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
-okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
-classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-highlights" }
 materialkolor = { module = "com.materialkolor:material-kolor", version.ref = "materialkolor" }
-jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 flexpress-core = { module = "ee.schimke.flexpress:flexpress-core", version.ref = "flexpress" }
 flexpress-codegen = { module = "ee.schimke.flexpress:flexpress-codegen", version.ref = "flexpress" }
-graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3-compose" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
