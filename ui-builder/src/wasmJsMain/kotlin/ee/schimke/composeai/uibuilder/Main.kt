@@ -1396,12 +1396,33 @@ internal data class LiveSessionConfig(
   val copiedBecause: String? = null,
 )
 
-internal suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 =
-  catalogRecoveryJson
-    .decodeFromString<BrowserCatalogRecoveryPayload>(
-      fetchText("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/catalog-recovery"),
+/**
+ * The current-catalog recovery preview for [designId]. A refusal throws with the service's own
+ * sentence (the route answers `{"error": …}`), not just `HTTP 409`: the page shows it under the
+ * unavailable notice, and "catalog remote-m3 is not served by this runtime" is the whole diagnosis.
+ */
+internal suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 {
+  val (status, body) =
+    fetchWithStatus(
+      sameOriginRequestUrl(
+        "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/catalog-recovery",
+      ),
     )
-    .preview
+  if (status !in 200..299) {
+    throw IllegalStateException(catalogRecoveryRefusal(status, body))
+  }
+  return catalogRecoveryJson.decodeFromString<BrowserCatalogRecoveryPayload>(body).preview
+}
+
+/** The refusal's `error` sentence, or `HTTP <status>` when the body carries none. */
+internal fun catalogRecoveryRefusal(status: Int, body: String): String =
+  runCatching {
+    catalogRecoveryJson.decodeFromString<BrowserCatalogRecoveryRefusal>(body).error
+  }
+    .getOrNull()
+    ?.takeIf { it.isNotBlank() } ?: "HTTP $status"
+
+@Serializable private data class BrowserCatalogRecoveryRefusal(val error: String = "")
 
 private val catalogRecoveryJson = Json { ignoreUnknownKeys = true }
 
@@ -1759,7 +1780,7 @@ internal data class ServerIdentity(
 /** Asks `/identity`. Never fatal: any failure is an identity that says nothing. */
 internal suspend fun resolveServerIdentity(): ServerIdentity =
   try {
-    val (status, body) = fetchIdentity(sameOriginRequestUrl(IDENTITY_PATH))
+    val (status, body) = fetchWithStatus(sameOriginRequestUrl(IDENTITY_PATH))
     when {
       status in 200..299 -> {
         val payload = identityJson.decodeFromString(IdentityPayload.serializer(), body)
@@ -1792,8 +1813,11 @@ internal suspend fun resolveServerIdentity(): ServerIdentity =
     ServerIdentity(actorId = null)
   }
 
-/** `/identity` with its status, because a 401's body is the part that says where to sign in. */
-private suspend fun fetchIdentity(url: String): Pair<Int, String> =
+/**
+ * A GET answered whatever its status, as `status to body`: `/identity`, because a 401's body says
+ * where to sign in, and catalog recovery, because a refusal's body says why.
+ */
+private suspend fun fetchWithStatus(url: String): Pair<Int, String> =
   suspendCancellableCoroutine { continuation ->
     fetchWithStatusPromise(url)
       .then { value ->

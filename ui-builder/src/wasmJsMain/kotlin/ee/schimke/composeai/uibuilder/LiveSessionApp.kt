@@ -2157,7 +2157,10 @@ private fun LiveSessionApp(
         designId = config.designId,
         // Only a catalog the open actually installed. Before that, this is the page's default,
         // `m3-catalog`, and a Wear design that failed to open was captioned as an M3 one.
-        catalogSystemId = activeCatalogSystemId.takeIf { catalog != null },
+        // A catalog-unavailable open installs none, but its recovery preview names the pin's.
+        catalogSystemId =
+          activeCatalogSystemId.takeIf { catalog != null }
+            ?: catalogRecovery?.sourceCatalogPin?.systemId,
         reason = failure.message,
         code = failure.code,
         recovery =
