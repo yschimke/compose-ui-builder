@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.160.0](https://github.com/yschimke/compose-ui-builder/compare/v3.159.0...v3.160.0) (2026-11-25)
+
+
+### Bug Fixes
+
+* **deps:** update compose-ai-tools to v2.104.0 ([#1436](https://github.com/yschimke/compose-ui-builder/issues/1436)) ([d7b7b1d](https://github.com/yschimke/compose-ui-builder/commit/d7b7b1d2145f4ede4455248dd9db0dc721b335e7))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.29.1 ([#1432](https://github.com/yschimke/compose-ui-builder/issues/1432)) ([46787c0](https://github.com/yschimke/compose-ui-builder/commit/46787c0c5a106d026d84661312816afea190d7ca))
+* refuse placeholders where the renderer draws them, with an opt-in ([#1431](https://github.com/yschimke/compose-ui-builder/issues/1431)) ([fb0225d](https://github.com/yschimke/compose-ui-builder/commit/fb0225d9deb034ad8db749e66a56b3036459c99d))
+
 ## [3.159.0](https://github.com/yschimke/compose-ui-builder/compare/v3.158.0...v3.159.0) (2026-11-24)
 
 
