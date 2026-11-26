@@ -281,7 +281,7 @@ kotlinx-serialization = "1.13.0"
 # `ui-builder-runtime`'s simulator runs a design's program on, with no native code and no Wasm
 # runtime to load. docs/design/UI_BUILDER_HOST_LOGIC.md, "On the server".
 quickjs4j = "0.1.1"
-ktor = "3.6.1"
+ktor = "3.6.2"
 json-schema-validator = "3.0.9"
 # The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
 # wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
