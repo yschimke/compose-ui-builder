@@ -274,7 +274,7 @@ composeai-contracts = "3.47.0"
 # 3.12.1 reads a text no operation has produced yet as empty and draws nothing for an empty path
 # expression, where it threw (rc-players#955): a palette thumbnail of a chart over an empty series,
 # or of a number formatted from a text, no longer stops the editor's composition.
-rc-players = "3.12.1"
+rc-players = "4.0.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.13.0"
 # QuickJS (Javy's build) compiled ahead of time to JVM bytecode: the host-logic engine
