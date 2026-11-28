@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.161.0](https://github.com/yschimke/compose-ui-builder/compare/v3.160.0...v3.161.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.47.0 ([#1437](https://github.com/yschimke/compose-ui-builder/issues/1437)) ([1378ac6](https://github.com/yschimke/compose-ui-builder/commit/1378ac6d49c0fc19099d8da92fcd8c6427b3bd38))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v4 ([#1446](https://github.com/yschimke/compose-ui-builder/issues/1446)) ([09b7164](https://github.com/yschimke/compose-ui-builder/commit/09b7164ef5b147763d2580cea5c9c6871972671f))
+* **deps:** update dependency org.jetbrains.kotlinx:ktfmt to v0.65.1 ([#1440](https://github.com/yschimke/compose-ui-builder/issues/1440)) ([b83b23b](https://github.com/yschimke/compose-ui-builder/commit/b83b23bce66bbc6ba80fd69b220f3139ef8a2582))
+* **deps:** update dependency org.robolectric:robolectric to v4.18.1 ([#1441](https://github.com/yschimke/compose-ui-builder/issues/1441)) ([5a53547](https://github.com/yschimke/compose-ui-builder/commit/5a53547f7b485f4e1287ab4fb0d5fa31e955c8d2))
+* **deps:** update ktor to v3.6.2 ([#1442](https://github.com/yschimke/compose-ui-builder/issues/1442)) ([543b4e1](https://github.com/yschimke/compose-ui-builder/commit/543b4e17ddabd9597b9eb2d6d1f7b7ddbd266629))
+
 ## [3.160.0](https://github.com/yschimke/compose-ui-builder/compare/v3.159.0...v3.160.0) (2026-11-25)
 
 
